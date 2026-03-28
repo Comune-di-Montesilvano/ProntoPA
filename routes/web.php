@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ImpostazioniController;
+use App\Http\Controllers\Admin\UtentiController;
 use App\Http\Controllers\AppaltiController;
 use App\Http\Controllers\GestioneController;
 use App\Http\Controllers\ImpreseCRUDController;
@@ -67,6 +68,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     Route::get('/impostazioni', [ImpostazioniController::class, 'index'])->name('impostazioni.index');
     Route::patch('/impostazioni', [ImpostazioniController::class, 'update'])->name('impostazioni.update');
+
+    Route::resource('utenti', UtentiController::class)
+        ->except(['show'])
+        ->parameters(['utenti' => 'utente']);
 });
 
 // ── Segnalatore ───────────────────────────────────────────────────────────────

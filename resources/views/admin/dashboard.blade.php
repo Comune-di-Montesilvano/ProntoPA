@@ -3,6 +3,12 @@
 
     <div class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <a href="{{ route('admin.utenti.index') }}"
+                   class="bg-white shadow-sm rounded-lg p-6 hover:shadow-md transition group">
+                    <div class="text-blue-600 text-2xl mb-2">&#128101;</div>
+                    <div class="font-semibold text-gray-800 group-hover:text-blue-600">Gestione utenti</div>
+                    <div class="text-sm text-gray-500 mt-1">Crea e gestisci account scuole, gestori, imprese</div>
+                </a>
                 <a href="{{ route('admin.impostazioni.index') }}"
                    class="bg-white shadow-sm rounded-lg p-6 hover:shadow-md transition group">
                     <div class="text-blue-600 text-2xl mb-2">&#9881;</div>

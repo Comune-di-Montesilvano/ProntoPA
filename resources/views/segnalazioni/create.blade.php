@@ -35,22 +35,34 @@
                     </div>
 
                     {{-- Provenienza --}}
-                    <div>
-                        <x-input-label for="id_provenienza" value="Provenienza *" />
-                        <select id="id_provenienza"
-                                name="id_provenienza"
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm @error('id_provenienza') border-red-500 @enderror"
-                                required>
-                            <option value="">— Seleziona —</option>
-                            @foreach($provenienze as $p)
-                                <option value="{{ $p->id_provenienza }}"
-                                    {{ old('id_provenienza') == $p->id_provenienza ? 'selected' : '' }}>
-                                    {{ $p->descrizione }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <x-input-error :messages="$errors->get('id_provenienza')" class="mt-1" />
-                    </div>
+                    @php $provenienza_sel = old('id_provenienza', $provenienza_default); @endphp
+                    @if($provenienza_default && auth()->user()->profilo?->limita_istituto)
+                        {{-- Utente scuola: provenienza fissa, non modificabile --}}
+                        <input type="hidden" name="id_provenienza" value="{{ $provenienza_default }}">
+                        <div>
+                            <x-input-label value="Provenienza" />
+                            <p class="mt-1 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+                                {{ $provenienze->firstWhere('id_provenienza', $provenienza_default)?->descrizione ?? '—' }}
+                            </p>
+                        </div>
+                    @else
+                        <div>
+                            <x-input-label for="id_provenienza" value="Provenienza *" />
+                            <select id="id_provenienza"
+                                    name="id_provenienza"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm @error('id_provenienza') border-red-500 @enderror"
+                                    required>
+                                <option value="">— Seleziona —</option>
+                                @foreach($provenienze as $p)
+                                    <option value="{{ $p->id_provenienza }}"
+                                        {{ $provenienza_sel == $p->id_provenienza ? 'selected' : '' }}>
+                                        {{ $p->descrizione }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('id_provenienza')" class="mt-1" />
+                        </div>
+                    @endif
 
                     {{-- Plesso (opzionale) --}}
                     <div>

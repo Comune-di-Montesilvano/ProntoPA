@@ -39,11 +39,23 @@ class SegnalazioneController extends Controller
 
     public function create(): View
     {
-        $tipologie  = TipologiaSegnalazione::with('gruppo')->orderBy('descrizione')->get();
-        $provenienze = Provenienza::orderBy('descrizione')->get();
-        $plessi     = Plesso::with('istituto')->orderBy('nome')->get();
+        $user    = auth()->user();
+        $profilo = $user->profilo;
 
-        return view('segnalazioni.create', compact('tipologie', 'provenienze', 'plessi'));
+        $tipologie   = TipologiaSegnalazione::with('gruppo')->orderBy('descrizione')->get();
+        $provenienze = Provenienza::orderBy('descrizione')->get();
+
+        if ($profilo && $profilo->limita_istituto && $profilo->id_istituto) {
+            $plessi = Plesso::with('istituto')
+                            ->where('id_istituto', $profilo->id_istituto)
+                            ->orderBy('nome')->get();
+        } else {
+            $plessi = Plesso::with('istituto')->orderBy('nome')->get();
+        }
+
+        $provenienza_default = $user->id_provenienza;
+
+        return view('segnalazioni.create', compact('tipologie', 'provenienze', 'plessi', 'provenienza_default'));
     }
 
     // ── Salva nuova segnalazione ───────────────────────────────────────────────
