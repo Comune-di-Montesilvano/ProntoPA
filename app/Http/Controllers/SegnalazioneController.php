@@ -39,11 +39,23 @@ class SegnalazioneController extends Controller
 
     public function create(): View
     {
-        $tipologie  = TipologiaSegnalazione::with('gruppo')->orderBy('descrizione')->get();
-        $provenienze = Provenienza::orderBy('descrizione')->get();
-        $plessi     = Plesso::with('istituto')->orderBy('nome')->get();
+        $user    = auth()->user();
+        $profilo = $user->profilo;
 
-        return view('segnalazioni.create', compact('tipologie', 'provenienze', 'plessi'));
+        $tipologie   = TipologiaSegnalazione::with('gruppo')->orderBy('descrizione')->get();
+        $provenienze = Provenienza::orderBy('descrizione')->get();
+
+        if ($profilo && $profilo->limita_istituto && $profilo->id_istituto) {
+            $plessi = Plesso::with('istituto')
+                            ->where('id_istituto', $profilo->id_istituto)
+                            ->orderBy('nome')->get();
+        } else {
+            $plessi = Plesso::with('istituto')->orderBy('nome')->get();
+        }
+
+        $provenienza_default = $user->id_provenienza;
+
+        return view('segnalazioni.create', compact('tipologie', 'provenienze', 'plessi', 'provenienza_default'));
     }
 
     // ── Salva nuova segnalazione ───────────────────────────────────────────────
@@ -55,22 +67,24 @@ class SegnalazioneController extends Controller
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
             'id_plesso'                 => ['nullable', 'integer', 'exists:plessi,id_plesso'],
             'id_provenienza'            => ['required', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
-            'segnalante'                => ['nullable', 'string', 'max:100'],
-            'email'                     => ['nullable', 'email', 'max:100'],
-            'telefono'                  => ['nullable', 'string', 'max:50'],
             'latitudine'                => ['nullable', 'numeric'],
             'longitudine'               => ['nullable', 'numeric'],
         ]);
+
+        $user = auth()->user();
 
         // Stato iniziale
         $statoIniziale = StatoSegnalazione::where('iniziale', true)->first();
 
         Segnalazione::create(array_merge($data, [
-            'id_utente_segnalazione' => auth()->id(),
+            'id_utente_segnalazione' => $user->id,
             'id_stato_segnalazione'  => $statoIniziale?->id_stato ?? 1,
             'id_plesso'              => $data['id_plesso'] ?? 0,
             'latitudine'             => $data['latitudine'] ?? 0,
             'longitudine'            => $data['longitudine'] ?? 0,
+            'segnalante'             => $user->name,
+            'email'                  => $user->email,
+            'telefono'               => $user->telefono,
         ]));
 
         return redirect()->route('segnalazioni.index')
@@ -145,6 +159,22 @@ class SegnalazioneController extends Controller
         return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
             ->with('success', 'Nota aggiunta.')
             ->withFragment('note');
+    }
+
+    // ── Stampa scheda ────────────────────────────────────────────────────────
+
+    public function stampa(Segnalazione $segnalazione): View
+    {
+        $this->authorize('view', $segnalazione);
+
+        $segnalazione->load([
+            'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
+            'operatore', 'utente', 'appalto.impresa',
+            'note',
+            'storicoStati.stato', 'storicoStati.utente',
+        ]);
+
+        return view('segnalazioni.print', compact('segnalazione'));
     }
 
     // ── Toggle evidenza ───────────────────────────────────────────────────────

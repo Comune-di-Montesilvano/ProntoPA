@@ -1,6 +1,11 @@
 <?php
 
 use App\Http\Controllers\Admin\ImpostazioniController;
+use App\Http\Controllers\Admin\OrganizzazioniController;
+use App\Http\Controllers\Admin\ProfiliController;
+use App\Http\Controllers\Admin\ProvenienzaController;
+use App\Http\Controllers\Admin\SediController;
+use App\Http\Controllers\Admin\UtentiController;
 use App\Http\Controllers\AppaltiController;
 use App\Http\Controllers\GestioneController;
 use App\Http\Controllers\ImpreseCRUDController;
@@ -35,24 +40,30 @@ Route::middleware('auth')->group(function () {
 
     Route::post('segnalazioni/{segnalazione}/evidenza', [SegnalazioneController::class, 'toggleEvidenza'])
         ->name('segnalazioni.evidenza');
+
+    Route::get('segnalazioni/{segnalazione}/stampa', [SegnalazioneController::class, 'stampa'])
+        ->name('segnalazioni.stampa');
 });
 
 // ── Gestione (admin + gestore) ────────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin|gestore'])->prefix('gestione')->name('gestione.')->group(function () {
     Route::get('/', [GestioneController::class, 'index'])->name('dashboard');
+    Route::get('/stampa', [GestioneController::class, 'stampaLista'])->name('stampa');
 });
 
 // ── Imprese CRUD (admin + gestore) ────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin|gestore'])
     ->resource('imprese', ImpreseCRUDController::class)
     ->except(['show'])
-    ->names('imprese');
+    ->names('imprese')
+    ->parameters(['imprese' => 'impresa']);
 
 // ── Appalti CRUD (admin + gestore) ────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin|gestore'])
     ->resource('appalti', AppaltiController::class)
     ->except(['show'])
-    ->names('appalti');
+    ->names('appalti')
+    ->parameters(['appalti' => 'appalto']);
 
 // ── Statistiche (admin + gestore) ─────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin|gestore'])
@@ -65,6 +76,26 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     Route::get('/impostazioni', [ImpostazioniController::class, 'index'])->name('impostazioni.index');
     Route::patch('/impostazioni', [ImpostazioniController::class, 'update'])->name('impostazioni.update');
+
+    Route::resource('utenti', UtentiController::class)
+        ->except(['show'])
+        ->parameters(['utenti' => 'utente']);
+
+    Route::resource('organizzazioni', OrganizzazioniController::class)
+        ->except(['show'])
+        ->parameters(['organizzazioni' => 'organizzazione']);
+
+    Route::resource('sedi', SediController::class)
+        ->except(['show'])
+        ->parameters(['sedi' => 'sede']);
+
+    Route::resource('profili', ProfiliController::class)
+        ->except(['show'])
+        ->parameters(['profili' => 'profilo']);
+
+    Route::resource('provenienze', ProvenienzaController::class)
+        ->except(['show'])
+        ->parameters(['provenienze' => 'provenienza']);
 });
 
 // ── Segnalatore ───────────────────────────────────────────────────────────────
@@ -81,7 +112,6 @@ Route::middleware(['auth', 'role:impresa'])->prefix('imprese-portale')->name('im
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 require __DIR__.'/auth.php';

@@ -22,6 +22,8 @@ class User extends Authenticatable
         'gestore_segnalazioni',
         'supervisore_segnalazioni',
         'id_provenienza',
+        'id_impresa',
+        'telefono',
         'last_login',
     ];
 

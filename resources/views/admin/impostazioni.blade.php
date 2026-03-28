@@ -33,14 +33,28 @@
                                             <option value="1" {{ $imp->valore == '1' ? 'selected' : '' }}>Sì</option>
                                             <option value="0" {{ $imp->valore != '1' ? 'selected' : '' }}>No</option>
                                         </select>
+                                    @elseif($imp->tipo === 'image')
+                                        <div x-data="{ url: '{{ $imp->valore }}' }">
+                                            <input type="url"
+                                                   id="imp_{{ $imp->chiave }}"
+                                                   name="impostazioni[{{ $imp->chiave }}]"
+                                                   x-model="url"
+                                                   class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                   placeholder="https://…">
+                                            <template x-if="url">
+                                                <img :src="url" alt="Anteprima logo"
+                                                     class="mt-2 h-12 object-contain rounded border border-gray-200 bg-gray-50 p-1">
+                                            </template>
+                                        </div>
                                     @elseif($imp->tipo === 'color')
-                                        <div class="flex items-center gap-3">
+                                        <div class="flex items-center gap-3"
+                                             x-data="{ hex: '{{ $imp->valore ?? '#1D4ED8' }}' }">
                                             <input type="color"
                                                    id="imp_{{ $imp->chiave }}"
                                                    name="impostazioni[{{ $imp->chiave }}]"
-                                                   value="{{ $imp->valore ?? '#1D4ED8' }}"
+                                                   x-model="hex"
                                                    class="h-9 w-16 rounded border border-gray-300 cursor-pointer p-0.5">
-                                            <span class="text-xs text-gray-400 font-mono">{{ $imp->valore }}</span>
+                                            <span class="text-xs text-gray-400 font-mono" x-text="hex"></span>
                                         </div>
                                     @elseif($imp->tipo === 'integer')
                                         <input type="number"
