@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\ImpostazioniController;
+use App\Http\Controllers\Admin\OrganizzazioniController;
+use App\Http\Controllers\Admin\ProfiliController;
+use App\Http\Controllers\Admin\ProvenienzaController;
+use App\Http\Controllers\Admin\SediController;
 use App\Http\Controllers\Admin\UtentiController;
 use App\Http\Controllers\AppaltiController;
 use App\Http\Controllers\GestioneController;
@@ -76,6 +80,22 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('utenti', UtentiController::class)
         ->except(['show'])
         ->parameters(['utenti' => 'utente']);
+
+    Route::resource('organizzazioni', OrganizzazioniController::class)
+        ->except(['show'])
+        ->parameters(['organizzazioni' => 'organizzazione']);
+
+    Route::resource('sedi', SediController::class)
+        ->except(['show'])
+        ->parameters(['sedi' => 'sede']);
+
+    Route::resource('profili', ProfiliController::class)
+        ->except(['show'])
+        ->parameters(['profili' => 'profilo']);
+
+    Route::resource('provenienze', ProvenienzaController::class)
+        ->except(['show'])
+        ->parameters(['provenienze' => 'provenienza']);
 });
 
 // ── Segnalatore ───────────────────────────────────────────────────────────────

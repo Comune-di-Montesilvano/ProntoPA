@@ -1,0 +1,51 @@
+<x-app-layout>
+    <x-slot name="header">Provenienze segnalazioni</x-slot>
+    <x-slot name="actions">
+        <a href="{{ route('admin.provenienze.create') }}"
+           class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
+            + Nuova
+        </a>
+    </x-slot>
+
+    <div class="bg-white shadow-sm rounded-xl overflow-hidden">
+        @if($provenienze->isEmpty())
+            <div class="p-10 text-center text-gray-400 text-sm">Nessuna provenienza. Creane una con il pulsante in alto a destra.</div>
+        @else
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100 text-sm">
+                    <thead class="bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <tr>
+                            <th class="px-4 py-3 text-left w-12">#</th>
+                            <th class="px-4 py-3 text-left">Descrizione</th>
+                            <th class="px-4 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        @foreach($provenienze as $p)
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-4 py-3 text-gray-400 font-mono text-xs">{{ $p->id_provenienza }}</td>
+                                <td class="px-4 py-3 font-medium text-gray-800">{{ $p->descrizione }}</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap">
+                                    <a href="{{ route('admin.provenienze.edit', $p->id_provenienza) }}"
+                                       class="text-blue-600 hover:text-blue-800 text-xs font-medium mr-3">Modifica</a>
+                                    <form method="POST"
+                                          action="{{ route('admin.provenienze.destroy', $p->id_provenienza) }}"
+                                          class="inline"
+                                          onsubmit="return confirm('Eliminare la provenienza {{ addslashes($p->descrizione) }}?')">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="text-red-400 hover:text-red-600 text-xs">Elimina</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @if($provenienze->hasPages())
+                <div class="px-4 py-3 border-t border-gray-100">
+                    {{ $provenienze->links() }}
+                </div>
+            @endif
+        @endif
+    </div>
+</x-app-layout>

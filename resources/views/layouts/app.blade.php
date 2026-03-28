@@ -12,6 +12,36 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
+    @php
+        $brandPrimary   = \App\Models\Impostazione::get('ente_colore_primario',   '#2563EB');
+        $brandSecondary = \App\Models\Impostazione::get('ente_colore_secondario', '#16A34A');
+    @endphp
+    <style>
+        :root {
+            --brand-primary:   {{ $brandPrimary }};
+            --brand-secondary: {{ $brandSecondary }};
+        }
+        /* Pulsanti primari */
+        .bg-blue-600  { background-color: var(--brand-primary) !important; }
+        .bg-blue-700  { background-color: color-mix(in srgb, var(--brand-primary) 82%, #000) !important; }
+        .hover\:bg-blue-700:hover { background-color: color-mix(in srgb, var(--brand-primary) 82%, #000) !important; }
+        /* Testo primario */
+        .text-blue-600 { color: var(--brand-primary) !important; }
+        .text-blue-700 { color: color-mix(in srgb, var(--brand-primary) 82%, #000) !important; }
+        .hover\:text-blue-600:hover { color: var(--brand-primary) !important; }
+        .hover\:text-blue-800:hover { color: color-mix(in srgb, var(--brand-primary) 70%, #000) !important; }
+        /* Bordi e focus */
+        .border-blue-500, .focus\:border-blue-500:focus { border-color: var(--brand-primary) !important; }
+        .ring-blue-400  { --tw-ring-color: var(--brand-primary) !important; }
+        .focus\:ring-blue-500:focus { --tw-ring-color: var(--brand-primary) !important; }
+        /* Tab attivi / bordi inferiori */
+        .border-blue-500 { border-color: var(--brand-primary) !important; }
+        /* Badge KPI */
+        .text-blue-600  { color: var(--brand-primary) !important; }
+        .bg-blue-50     { background-color: color-mix(in srgb, var(--brand-primary) 10%, #fff) !important; }
+        /* Link sidebar attivo */
+        aside .bg-gray-700 { background-color: color-mix(in srgb, var(--brand-primary) 30%, #1f2937) !important; }
+    </style>
 </head>
 <body class="font-sans antialiased bg-gray-100">
 
@@ -40,7 +70,12 @@
            x-cloak>
 
         {{-- Logo / Ente --}}
-        <div class="flex items-center gap-2 px-5 py-5 border-b border-gray-700">
+        @php $logoUrl = \App\Models\Impostazione::get('ente_logo_url'); @endphp
+        <div class="flex items-center gap-3 px-4 py-4 border-b border-gray-700">
+            @if($logoUrl)
+                <img src="{{ $logoUrl }}" alt="{{ $enteNome }}"
+                     class="h-10 w-10 object-contain shrink-0 rounded">
+            @endif
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-bold text-white truncate">{{ $enteNome }}</div>
                 <div class="text-xs text-gray-400 mt-0.5">ProntoPA</div>
@@ -85,6 +120,12 @@
                 </x-sidebar-link>
                 <x-sidebar-link href="{{ route('admin.impostazioni.index') }}" :active="request()->routeIs('admin.impostazioni.*')" icon="adjustments">
                     Impostazioni ente
+                </x-sidebar-link>
+                <x-sidebar-link href="{{ route('admin.organizzazioni.index') }}" :active="request()->routeIs('admin.organizzazioni.*') || request()->routeIs('admin.sedi.*')" icon="office-building">
+                    Organizzazioni
+                </x-sidebar-link>
+                <x-sidebar-link href="{{ route('admin.profili.index') }}" :active="request()->routeIs('admin.profili.*') || request()->routeIs('admin.provenienze.*')" icon="user-group">
+                    Profili e provenienze
                 </x-sidebar-link>
             @endif
         </nav>
