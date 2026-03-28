@@ -34,11 +34,18 @@
                     <x-input-error :messages="$errors->get('email')" class="mt-1" />
                 </div>
                 <div>
-                    <x-input-label for="password" value="Password *" />
-                    <x-text-input id="password" name="password" type="password" class="mt-1 block w-full"
-                        required autocomplete="new-password" />
-                    <x-input-error :messages="$errors->get('password')" class="mt-1" />
+                    <x-input-label for="telefono" value="Telefono" />
+                    <x-text-input id="telefono" name="telefono" type="text" class="mt-1 block w-full"
+                        :value="old('telefono')" />
+                    <x-input-error :messages="$errors->get('telefono')" class="mt-1" />
                 </div>
+            </div>
+
+            <div>
+                <x-input-label for="password" value="Password *" />
+                <x-text-input id="password" name="password" type="password" class="mt-1 block w-full"
+                    required autocomplete="new-password" />
+                <x-input-error :messages="$errors->get('password')" class="mt-1" />
             </div>
 
             <div>

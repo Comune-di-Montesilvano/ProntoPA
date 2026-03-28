@@ -42,6 +42,7 @@ class UtentiController extends Controller
             'id_profilo'    => ['nullable', 'integer', 'exists:profili,id_profilo'],
             'id_provenienza'=> ['nullable', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
             'id_impresa'    => ['nullable', 'integer', 'exists:imprese,id_impresa'],
+            'telefono'      => ['nullable', 'string', 'max:50'],
             'supervisore'   => ['boolean'],
         ]);
 
@@ -53,6 +54,7 @@ class UtentiController extends Controller
             'id_profilo'               => $data['id_profilo'] ?? null,
             'id_provenienza'           => $data['id_provenienza'] ?? null,
             'id_impresa'               => $data['id_impresa'] ?? null,
+            'telefono'                 => $data['telefono'] ?? null,
             'amministratore'           => $data['ruolo'] === 'admin',
             'gestore_segnalazioni'     => $data['ruolo'] === 'gestore',
             'supervisore_segnalazioni' => ($data['ruolo'] === 'gestore') && ($data['supervisore'] ?? false),
@@ -84,6 +86,7 @@ class UtentiController extends Controller
             'id_profilo'    => ['nullable', 'integer', 'exists:profili,id_profilo'],
             'id_provenienza'=> ['nullable', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
             'id_impresa'    => ['nullable', 'integer', 'exists:imprese,id_impresa'],
+            'telefono'      => ['nullable', 'string', 'max:50'],
             'supervisore'   => ['boolean'],
         ]);
 
@@ -93,6 +96,7 @@ class UtentiController extends Controller
         $utente->id_profilo        = $data['id_profilo'] ?? null;
         $utente->id_provenienza    = $data['id_provenienza'] ?? null;
         $utente->id_impresa        = $data['id_impresa'] ?? null;
+        $utente->telefono          = $data['telefono'] ?? null;
         $utente->amministratore           = $data['ruolo'] === 'admin';
         $utente->gestore_segnalazioni     = $data['ruolo'] === 'gestore';
         $utente->supervisore_segnalazioni = ($data['ruolo'] === 'gestore') && ($data['supervisore'] ?? false);

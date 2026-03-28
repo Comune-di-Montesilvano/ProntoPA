@@ -84,6 +84,7 @@ class SegnalazioneController extends Controller
             'longitudine'            => $data['longitudine'] ?? 0,
             'segnalante'             => $user->name,
             'email'                  => $user->email,
+            'telefono'               => $user->telefono,
         ]));
 
         return redirect()->route('segnalazioni.index')
