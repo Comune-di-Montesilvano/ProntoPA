@@ -121,7 +121,7 @@
             {{-- Page title slot --}}
             <div class="flex-1 min-w-0 flex items-center gap-3">
                 @isset($header)
-                    <div class="text-sm font-semibold text-gray-800 truncate">{{ $header }}</div>
+                    <div class="text-base font-semibold text-gray-800 truncate">{{ $header }}</div>
                 @endisset
             </div>
 
@@ -150,7 +150,7 @@
         @endif
 
         {{-- Page content --}}
-        <main class="flex-1 p-4 sm:p-6">
+        <main class="flex-1 p-4 sm:p-6 text-base">
             {{ $slot }}
         </main>
     </div>
