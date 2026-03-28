@@ -20,6 +20,13 @@
         </div>
 
         <div>
+            <x-input-label for="telefono" value="Telefono" />
+            <x-text-input id="telefono" name="telefono" type="text" class="mt-1 block w-full"
+                :value="old('telefono', $user->telefono)" autocomplete="tel" />
+            <x-input-error class="mt-2" :messages="$errors->get('telefono')" />
+        </div>
+
+        <div>
             <x-input-label for="email" :value="__('Email')" />
             <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" />
             <x-input-error class="mt-2" :messages="$errors->get('email')" />
