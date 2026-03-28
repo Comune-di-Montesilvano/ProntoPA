@@ -1,6 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "prontoPA/prontoPA",
+    "name": "comune-di-montesilvano/pronto-pa",
     "type": "project",
     "description": "Sistema open-source di pronto intervento e manutenzione per la Pubblica Amministrazione.",
     "keywords": ["laravel", "pubblica-amministrazione", "manutenzione", "segnalazioni", "pronto-intervento"],

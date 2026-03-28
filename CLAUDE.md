@@ -39,8 +39,7 @@ dall'interfaccia admin (tabella `impostazioni`), non dal file `.env`.
 
 ### Avvio (sviluppo con bind mount)
 
-Il file `docker-compose.override.yml` viene caricato automaticamente in sviluppo e aggiunge
-bind mounts e tool extra (Adminer, Mailpit).
+`docker-compose.yml` è il file di sviluppo locale (bind mount, build locale, Adminer, Mailpit).
 
 ```bash
 git clone <repo>
@@ -51,9 +50,9 @@ cp .env.example .env
 # Su Windows con Git Bash — evita la traduzione dei path MSYS2
 MSYS_NO_PATHCONV=1 docker compose up -d
 
-docker compose exec php php artisan key:generate
-docker compose exec php php artisan migrate --seed
-docker compose exec php npm run build
+MSYS_NO_PATHCONV=1 docker compose exec php php artisan key:generate
+MSYS_NO_PATHCONV=1 docker compose exec php php artisan migrate --seed
+MSYS_NO_PATHCONV=1 docker compose exec php npm run build
 ```
 
 L'app sarà disponibile su **http://localhost**.
@@ -67,10 +66,10 @@ docker compose --profile dev up -d
 
 ### Avvio produzione (no bind mounts — Portainer / rootless Podman)
 
-In produzione si usa solo `docker-compose.yml` senza l'override:
+In produzione si usa `docker-compose.prod.yml` (GHCR images, named volumes):
 
 ```bash
-docker compose -f docker-compose.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 L'immagine deve essere pre-buildata e pubblicata su GHCR. Il codice è copiato dentro

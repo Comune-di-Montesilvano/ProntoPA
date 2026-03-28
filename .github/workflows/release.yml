@@ -1,15 +1,17 @@
 name: Build & Publish Docker Images
 
+# dev branch  → build sempre, tag immagine: "dev"
+# tag v*.*.* → build + tag semver + "latest"
+
 on:
   push:
+    branches:
+      - dev
     tags:
       - "v*.*.*"
 
 env:
-  REGISTRY: ghcr.io
-  # PHP-FPM app image
   IMAGE_APP: ghcr.io/comune-di-montesilvano/pronto-pa
-  # Nginx + static assets image
   IMAGE_WEB: ghcr.io/comune-di-montesilvano/pronto-pa-web
 
 jobs:
@@ -22,11 +24,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Extract version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+      - name: Compute APP_VERSION
+        id: vars
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=dev" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up QEMU (multi-arch)
         uses: docker/setup-qemu-action@v3
@@ -37,7 +44,7 @@ jobs:
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -49,9 +56,10 @@ jobs:
         with:
           images: ${{ env.IMAGE_APP }}
           tags: |
+            type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
 
       - name: Build & push PHP-FPM image
         uses: docker/build-push-action@v6
@@ -64,7 +72,7 @@ jobs:
           tags: ${{ steps.meta-app.outputs.tags }}
           labels: ${{ steps.meta-app.outputs.labels }}
           build-args: |
-            APP_VERSION=${{ steps.version.outputs.version }}
+            APP_VERSION=${{ steps.vars.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -76,9 +84,10 @@ jobs:
         with:
           images: ${{ env.IMAGE_WEB }}
           tags: |
+            type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
 
       - name: Build & push Nginx image
         uses: docker/build-push-action@v6
@@ -90,5 +99,7 @@ jobs:
           push: true
           tags: ${{ steps.meta-web.outputs.tags }}
           labels: ${{ steps.meta-web.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ steps.vars.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

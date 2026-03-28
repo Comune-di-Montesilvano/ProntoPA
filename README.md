@@ -61,10 +61,13 @@ cp .env.example .env
 # Su Windows con Git Bash — necessario per evitare la traduzione dei path MSYS2
 MSYS_NO_PATHCONV=1 docker compose up -d
 
-docker compose exec php php artisan key:generate
-docker compose exec php php artisan migrate --seed
-docker compose exec php npm run build
+MSYS_NO_PATHCONV=1 docker compose exec php php artisan key:generate
+MSYS_NO_PATHCONV=1 docker compose exec php php artisan migrate --seed
+MSYS_NO_PATHCONV=1 docker compose exec php npm run build
 ```
+
+> `docker-compose.yml` è il file di **sviluppo** (bind mount, build locale).
+> Per la produzione usa `docker-compose.prod.yml`.
 
 L'app è disponibile su **http://localhost**.
 
@@ -137,7 +140,7 @@ ProntoPA usa due immagini Docker pre-compilate, pubblicate su GHCR dopo ogni rel
 ### Stack Portainer
 
 1. In Portainer crea un nuovo **Stack**
-2. Incolla il contenuto di `docker-compose.yml` (senza override)
+2. Incolla il contenuto di `docker-compose.prod.yml`
 3. Imposta le variabili d'ambiente nello stack (APP_KEY, DB_PASSWORD, ecc.)
 4. Scegli la versione: imposta `APP_VERSION=v1.0.0` (o `latest`)
 5. Deploy
