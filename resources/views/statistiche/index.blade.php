@@ -1,10 +1,7 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">Statistiche</h2>
-    </x-slot>
+    <x-slot name="header">Statistiche</x-slot>
 
-    <div class="py-6">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+    <div class="space-y-6">
 
             {{-- KPI Cards --}}
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
@@ -54,7 +51,6 @@
                 </div>
             </div>
 
-        </div>
     </div>
 
     @push('scripts')

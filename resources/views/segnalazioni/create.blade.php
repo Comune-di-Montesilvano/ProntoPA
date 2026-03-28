@@ -1,13 +1,14 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Nuova segnalazione
-        </h2>
+    <x-slot name="header">Nuova segnalazione</x-slot>
+    <x-slot name="actions">
+        <a href="{{ url()->previous() }}"
+           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
+            Annulla
+        </a>
     </x-slot>
 
-    <div class="py-6">
-        <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+    <div class="space-y-4">
+        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <form method="POST" action="{{ route('segnalazioni.store') }}" class="p-6 space-y-5">
                     @csrf
 
@@ -111,9 +112,19 @@
                         </div>
                     </div>
 
-                    {{-- Geolocalizzazione (nascosta, valorizzabile via JS) --}}
+                    {{-- Geolocalizzazione --}}
                     <input type="hidden" name="latitudine" id="latitudine" value="{{ old('latitudine', '0') }}">
                     <input type="hidden" name="longitudine" id="longitudine" value="{{ old('longitudine', '0') }}">
+
+                    <div>
+                        <x-input-label value="Posizione (opzionale)" />
+                        <p class="text-xs text-gray-400 mb-2">Clicca sulla mappa per indicare la posizione del problema.</p>
+                        <div id="mappa-inserimento" class="h-52 w-full rounded-lg border border-gray-300 overflow-hidden"></div>
+                        <div id="coord-display" class="mt-1 text-xs text-gray-400 hidden">
+                            Coordinate: <span id="coord-text"></span>
+                            <button type="button" onclick="resetCoords()" class="ml-2 text-red-400 hover:text-red-600">Rimuovi</button>
+                        </div>
+                    </div>
 
                     {{-- Actions --}}
                     <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
@@ -130,4 +141,43 @@
             </div>
         </div>
     </div>
+
+    @push('head')
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    @endpush
+    @push('scripts')
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script>
+            const defaultLat = {{ \App\Models\Impostazione::get('osm_lat', 42.5098) }};
+            const defaultLng = {{ \App\Models\Impostazione::get('osm_lng', 14.1443) }};
+            const defaultZoom = {{ \App\Models\Impostazione::get('osm_zoom', 13) }};
+
+            const map = L.map('mappa-inserimento').setView([defaultLat, defaultLng], defaultZoom);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19,
+            }).addTo(map);
+
+            let marker = null;
+
+            map.on('click', function (e) {
+                const lat = e.latlng.lat.toFixed(6);
+                const lng = e.latlng.lng.toFixed(6);
+                document.getElementById('latitudine').value = lat;
+                document.getElementById('longitudine').value = lng;
+                document.getElementById('coord-text').textContent = lat + ', ' + lng;
+                document.getElementById('coord-display').classList.remove('hidden');
+                if (marker) { map.removeLayer(marker); }
+                marker = L.marker([lat, lng]).addTo(map);
+            });
+
+            function resetCoords() {
+                document.getElementById('latitudine').value = '0';
+                document.getElementById('longitudine').value = '0';
+                document.getElementById('coord-display').classList.add('hidden');
+                if (marker) { map.removeLayer(marker); marker = null; }
+            }
+        </script>
+    @endpush
 </x-app-layout>
+

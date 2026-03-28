@@ -1,11 +1,8 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">Amministrazione</h2>
-    </x-slot>
+    <x-slot name="header">Amministrazione</x-slot>
 
-    <div class="py-6">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <a href="{{ route('admin.impostazioni.index') }}"
                    class="bg-white shadow-sm rounded-lg p-6 hover:shadow-md transition group">
                     <div class="text-blue-600 text-2xl mb-2">&#9881;</div>
@@ -36,7 +33,6 @@
                     <div class="font-semibold text-gray-800 group-hover:text-blue-600">Statistiche</div>
                     <div class="text-sm text-gray-500 mt-1">Grafici e KPI segnalazioni</div>
                 </a>
-            </div>
         </div>
     </div>
 </x-app-layout>

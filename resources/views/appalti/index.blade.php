@@ -1,17 +1,14 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Appalti</h2>
-            <a href="{{ route('appalti.create') }}"
-               class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
-                + Nuovo appalto
-            </a>
-        </div>
+    <x-slot name="header">Appalti</x-slot>
+    <x-slot name="actions">
+        <a href="{{ route('appalti.create') }}"
+           class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
+            + Nuovo appalto
+        </a>
     </x-slot>
 
-    <div class="py-6">
-        <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+    <div class="space-y-4">
+        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 @if($appalti->isEmpty())
                     <div class="p-8 text-center text-gray-400 text-sm">Nessun appalto registrato.</div>
                 @else
@@ -64,6 +61,5 @@
                     @endif
                 @endif
             </div>
-        </div>
     </div>
 </x-app-layout>

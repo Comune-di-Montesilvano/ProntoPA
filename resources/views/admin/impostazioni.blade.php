@@ -1,11 +1,8 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">Impostazioni ente</h2>
-    </x-slot>
+    <x-slot name="header">Impostazioni ente</x-slot>
 
-    <div class="py-6">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-            <form method="POST" action="{{ route('admin.impostazioni.update') }}">
+    <div class="space-y-4">
+        <form method="POST" action="{{ route('admin.impostazioni.update') }}">
                 @csrf @method('PATCH')
 
                 @foreach($impostazioni as $gruppo => $voci)
@@ -73,7 +70,6 @@
                         Salva impostazioni
                     </button>
                 </div>
-            </form>
-        </div>
+        </form>
     </div>
 </x-app-layout>

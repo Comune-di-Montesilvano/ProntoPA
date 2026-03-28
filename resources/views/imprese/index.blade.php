@@ -1,17 +1,14 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Imprese</h2>
-            <a href="{{ route('imprese.create') }}"
-               class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
-                + Nuova impresa
-            </a>
-        </div>
+    <x-slot name="header">Imprese</x-slot>
+    <x-slot name="actions">
+        <a href="{{ route('imprese.create') }}"
+           class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
+            + Nuova impresa
+        </a>
     </x-slot>
 
-    <div class="py-6">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+    <div class="space-y-4">
+        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 @if($imprese->isEmpty())
                     <div class="p-8 text-center text-gray-400 text-sm">Nessuna impresa registrata.</div>
                 @else
@@ -50,6 +47,5 @@
                     @endif
                 @endif
             </div>
-        </div>
     </div>
 </x-app-layout>

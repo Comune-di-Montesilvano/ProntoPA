@@ -1,34 +1,26 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    Segnalazione #{{ $segnalazione->id_segnalazione }}
-                </h2>
-                @if($segnalazione->stato)
-                    <span class="{{ $segnalazione->stato->badgeClass() }} inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium">
-                        {{ $segnalazione->stato->descrizione }}
-                    </span>
-                @endif
-                @if($segnalazione->flag_evidenza)
-                    <span class="text-yellow-500 text-lg" title="In evidenza">&#9733;</span>
-                @endif
-            </div>
-            @can('update', $segnalazione)
-                <form method="POST" action="{{ route('segnalazioni.evidenza', $segnalazione->id_segnalazione) }}">
-                    @csrf
-                    <button type="submit"
-                            class="text-xs {{ $segnalazione->flag_evidenza ? 'text-yellow-600 hover:text-gray-500' : 'text-gray-400 hover:text-yellow-500' }} transition">
-                        {{ $segnalazione->flag_evidenza ? '★ Rimuovi da evidenza' : '☆ Metti in evidenza' }}
-                    </button>
-                </form>
-            @endcan
-        </div>
+    <x-slot name="header">Segnalazione #{{ $segnalazione->id_segnalazione }}</x-slot>
+    <x-slot name="actions">
+        @if($segnalazione->stato)
+            <span class="{{ $segnalazione->stato->badgeClass() }} inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium">
+                {{ $segnalazione->stato->descrizione }}
+            </span>
+        @endif
+        @if($segnalazione->flag_evidenza)
+            <span class="text-yellow-500 text-lg" title="In evidenza">&#9733;</span>
+        @endif
+        @can('update', $segnalazione)
+            <form method="POST" action="{{ route('segnalazioni.evidenza', $segnalazione->id_segnalazione) }}">
+                @csrf
+                <button type="submit"
+                        class="text-xs {{ $segnalazione->flag_evidenza ? 'text-yellow-600 hover:text-gray-500' : 'text-gray-400 hover:text-yellow-500' }} transition">
+                    {{ $segnalazione->flag_evidenza ? '★ Rimuovi da evidenza' : '☆ Metti in evidenza' }}
+                </button>
+            </form>
+        @endcan
     </x-slot>
 
-    <div class="py-6">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8"
-             x-data="{ tab: window.location.hash === '#note' ? 'note' : (window.location.hash === '#storico' ? 'storico' : (window.location.hash === '#gestione' ? 'gestione' : 'dati')) }">
+    <div x-data="{ tab: window.location.hash === '#note' ? 'note' : (window.location.hash === '#storico' ? 'storico' : (window.location.hash === '#gestione' ? 'gestione' : 'dati')) }">
 
             {{-- Tab navigation --}}
             <div class="border-b border-gray-200 mb-4">
@@ -126,6 +118,16 @@
                         </div>
                     </dl>
                 </div>
+
+                {{-- Mappa Leaflet (solo se coordinate presenti) --}}
+                @if($segnalazione->latitudine && $segnalazione->longitudine && $segnalazione->latitudine != 0)
+                    <div class="bg-white shadow-sm rounded-lg overflow-hidden">
+                        <div class="px-4 py-3 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Posizione segnalata
+                        </div>
+                        <div id="mappa-segnalazione" class="h-64 w-full"></div>
+                    </div>
+                @endif
             </div>
 
             {{-- TAB: Note --}}
@@ -309,6 +311,28 @@
                 </div>
             @endcan
 
-        </div>
     </div>
+
+    @if($segnalazione->latitudine && $segnalazione->longitudine && $segnalazione->latitudine != 0)
+        @push('head')
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        @endpush
+        @push('scripts')
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+            <script>
+                (function () {
+                    const lat = {{ (float) $segnalazione->latitudine }};
+                    const lng = {{ (float) $segnalazione->longitudine }};
+                    const map = L.map('mappa-segnalazione').setView([lat, lng], 16);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                        maxZoom: 19,
+                    }).addTo(map);
+                    L.marker([lat, lng]).addTo(map)
+                        .bindPopup('Segnalazione #{{ $segnalazione->id_segnalazione }}')
+                        .openPopup();
+                })();
+            </script>
+        @endpush
+    @endif
 </x-app-layout>
