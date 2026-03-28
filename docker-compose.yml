@@ -1,0 +1,81 @@
+# docker-compose.yml — PRODUZIONE
+#
+# Nessun bind mount. Il codice è copiato dentro le immagini Docker.
+# Per lo sviluppo locale, docker-compose.override.yml viene caricato
+# automaticamente da Docker Compose e aggiunge bind mount e tool extra.
+#
+# Deployment: Portainer stack / rootless Podman
+# Immagini: ghcr.io/comune-di-montesilvano/pronto-pa (php-fpm)
+#           ghcr.io/comune-di-montesilvano/pronto-pa-web (nginx)
+
+services:
+
+  nginx:
+    image: ghcr.io/comune-di-montesilvano/pronto-pa-web:${APP_VERSION:-latest}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - uploads:/var/www/html/public/storage:ro
+      - nginx_ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - php
+    networks:
+      - prontoPA
+    restart: unless-stopped
+
+  php:
+    image: ghcr.io/comune-di-montesilvano/pronto-pa:${APP_VERSION:-latest}
+    volumes:
+      - app_storage:/var/www/html/storage
+      - uploads:/var/www/html/storage/app/public
+    environment:
+      PHP_OPCACHE_ENABLE: 1
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - prontoPA
+    restart: unless-stopped
+
+  mariadb:
+    image: mariadb:10.11
+    ports:
+      - "3306:3306"
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+      MARIADB_DATABASE: ${DB_DATABASE:-segnalazioni}
+      MARIADB_USER: ${DB_USERNAME:-segnalazioni}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-segnalazioni_secret}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./docker/mariadb/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - prontoPA
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - prontoPA
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:
+  redis_data:
+  app_storage:
+  uploads:
+  nginx_ssl:
+
+networks:
+  prontoPA:
+    driver: bridge
