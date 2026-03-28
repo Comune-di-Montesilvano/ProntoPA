@@ -15,12 +15,9 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 @if($segnalazioni->isEmpty())
-                    <div class="p-10 text-center">
-                        <p class="text-gray-400 text-sm mb-3">Non hai ancora inviato nessuna segnalazione.</p>
-                        <a href="{{ route('segnalazioni.create') }}"
-                           class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
-                            Inserisci la prima segnalazione
-                        </a>
+                    <div class="p-8 text-center text-gray-400 text-sm">
+                        Nessuna segnalazione trovata.
+                        <a href="{{ route('segnalazioni.create') }}" class="text-blue-600 hover:underline ml-1">Inserisci la prima.</a>
                     </div>
                 @else
                     <div class="overflow-x-auto">

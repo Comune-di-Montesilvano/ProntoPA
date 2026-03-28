@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\GestioneController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleDashboardController;
+use App\Http\Controllers\SegnalazioneController;
+use App\Http\Controllers\SegnalatoreDashboardController;
 use Illuminate\Support\Facades\Route;
 
 // Home
@@ -14,9 +17,24 @@ Route::get('/dashboard', [RoleDashboardController::class, 'index'])
     ->middleware('auth')
     ->name('dashboard');
 
+// ── Segnalazioni (admin + gestore + segnalatore) ──────────────────────────────
+Route::middleware('auth')->group(function () {
+    Route::resource('segnalazioni', SegnalazioneController::class)
+        ->only(['index', 'create', 'store', 'show']);
+
+    Route::post('segnalazioni/{segnalazione}/azione', [SegnalazioneController::class, 'eseguiAzione'])
+        ->name('segnalazioni.azione');
+
+    Route::post('segnalazioni/{segnalazione}/nota', [SegnalazioneController::class, 'aggiungiNota'])
+        ->name('segnalazioni.nota');
+
+    Route::post('segnalazioni/{segnalazione}/evidenza', [SegnalazioneController::class, 'toggleEvidenza'])
+        ->name('segnalazioni.evidenza');
+});
+
 // ── Gestione (admin + gestore) ────────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin|gestore'])->prefix('gestione')->name('gestione.')->group(function () {
-    Route::get('/', fn () => view('gestione.dashboard'))->name('dashboard');
+    Route::get('/', [GestioneController::class, 'index'])->name('dashboard');
 });
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
@@ -26,7 +44,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
 // ── Segnalatore ───────────────────────────────────────────────────────────────
 Route::middleware(['auth', 'role:segnalatore'])->prefix('segnalatore')->name('segnalatore.')->group(function () {
-    Route::get('/', fn () => view('segnalatore.dashboard'))->name('dashboard');
+    Route::get('/', [SegnalatoreDashboardController::class, 'index'])->name('dashboard');
 });
 
 // ── Imprese ───────────────────────────────────────────────────────────────────
