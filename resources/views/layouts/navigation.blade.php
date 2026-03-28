@@ -1,5 +1,9 @@
 @php
     $enteNome = \App\Models\Impostazione::get('ente_nome', 'ProntoPA');
+    $u = auth()->user();
+    $isAdmin   = $u && ($u->isAdmin() || $u->hasRole('admin'));
+    $isGestore = $u && ($u->isGestore() || $u->hasRole('gestore'));
+    $isSegnalatore = $u && $u->hasRole('segnalatore');
 @endphp
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -13,14 +17,23 @@
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    @if(auth()->user()->isAdmin() || auth()->user()->hasRole('admin') || auth()->user()->isGestore() || auth()->user()->hasRole('gestore'))
+                <div class="hidden space-x-6 sm:-my-px sm:ms-10 sm:flex">
+                    @if($isAdmin || $isGestore)
                         <x-nav-link :href="route('gestione.dashboard')" :active="request()->routeIs('gestione.*')">
                             Gestione
                         </x-nav-link>
+                        <x-nav-link :href="route('imprese.index')" :active="request()->routeIs('imprese.index') || request()->routeIs('imprese.create') || request()->routeIs('imprese.edit')">
+                            Imprese
+                        </x-nav-link>
+                        <x-nav-link :href="route('appalti.index')" :active="request()->routeIs('appalti.*')">
+                            Appalti
+                        </x-nav-link>
+                        <x-nav-link :href="route('statistiche.index')" :active="request()->routeIs('statistiche.*')">
+                            Statistiche
+                        </x-nav-link>
                     @endif
 
-                    @if(auth()->user()->hasRole('segnalatore'))
+                    @if($isSegnalatore)
                         <x-nav-link :href="route('segnalatore.dashboard')" :active="request()->routeIs('segnalatore.*')">
                             Le mie segnalazioni
                         </x-nav-link>
@@ -29,7 +42,7 @@
                         </x-nav-link>
                     @endif
 
-                    @if(auth()->user()->isAdmin() || auth()->user()->hasRole('admin'))
+                    @if($isAdmin)
                         <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
                             Admin
                         </x-nav-link>
@@ -52,10 +65,15 @@
                     </x-slot>
 
                     <x-slot name="content">
+                        @if($isAdmin)
+                            <x-dropdown-link :href="route('admin.impostazioni.index')">
+                                Impostazioni ente
+                            </x-dropdown-link>
+                            <div class="border-t border-gray-100"></div>
+                        @endif
                         <x-dropdown-link :href="route('profile.edit')">
                             Profilo
                         </x-dropdown-link>
-
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <x-dropdown-link :href="route('logout')"
@@ -69,7 +87,7 @@
 
             <!-- Hamburger -->
             <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
+                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none transition duration-150 ease-in-out">
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -82,23 +100,18 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            @if(auth()->user()->isAdmin() || auth()->user()->hasRole('admin') || auth()->user()->isGestore() || auth()->user()->hasRole('gestore'))
-                <x-responsive-nav-link :href="route('gestione.dashboard')" :active="request()->routeIs('gestione.*')">
-                    Gestione
-                </x-responsive-nav-link>
+            @if($isAdmin || $isGestore)
+                <x-responsive-nav-link :href="route('gestione.dashboard')" :active="request()->routeIs('gestione.*')">Gestione</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('imprese.index')" :active="request()->routeIs('imprese.index')">Imprese</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('appalti.index')" :active="request()->routeIs('appalti.*')">Appalti</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('statistiche.index')" :active="request()->routeIs('statistiche.*')">Statistiche</x-responsive-nav-link>
             @endif
-            @if(auth()->user()->hasRole('segnalatore'))
-                <x-responsive-nav-link :href="route('segnalatore.dashboard')" :active="request()->routeIs('segnalatore.*')">
-                    Le mie segnalazioni
-                </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('segnalazioni.create')" :active="request()->routeIs('segnalazioni.create')">
-                    Nuova segnalazione
-                </x-responsive-nav-link>
+            @if($isSegnalatore)
+                <x-responsive-nav-link :href="route('segnalatore.dashboard')" :active="request()->routeIs('segnalatore.*')">Le mie segnalazioni</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('segnalazioni.create')" :active="request()->routeIs('segnalazioni.create')">Nuova segnalazione</x-responsive-nav-link>
             @endif
-            @if(auth()->user()->isAdmin() || auth()->user()->hasRole('admin'))
-                <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
-                    Admin
-                </x-responsive-nav-link>
+            @if($isAdmin)
+                <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">Admin</x-responsive-nav-link>
             @endif
         </div>
 
@@ -107,18 +120,14 @@
                 <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
                 <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
             </div>
-
             <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">
-                    Profilo
-                </x-responsive-nav-link>
-
+                @if($isAdmin)
+                    <x-responsive-nav-link :href="route('admin.impostazioni.index')">Impostazioni ente</x-responsive-nav-link>
+                @endif
+                <x-responsive-nav-link :href="route('profile.edit')">Profilo</x-responsive-nav-link>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <x-responsive-nav-link :href="route('logout')"
-                            onclick="event.preventDefault(); this.closest('form').submit();">
-                        Esci
-                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();">Esci</x-responsive-nav-link>
                 </form>
             </div>
         </div>

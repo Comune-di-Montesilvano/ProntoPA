@@ -1,10 +1,14 @@
 <?php
 
+use App\Http\Controllers\Admin\ImpostazioniController;
+use App\Http\Controllers\AppaltiController;
 use App\Http\Controllers\GestioneController;
+use App\Http\Controllers\ImpreseCRUDController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleDashboardController;
 use App\Http\Controllers\SegnalazioneController;
 use App\Http\Controllers\SegnalatoreDashboardController;
+use App\Http\Controllers\StatisticheController;
 use Illuminate\Support\Facades\Route;
 
 // Home
@@ -17,7 +21,7 @@ Route::get('/dashboard', [RoleDashboardController::class, 'index'])
     ->middleware('auth')
     ->name('dashboard');
 
-// ── Segnalazioni (admin + gestore + segnalatore) ──────────────────────────────
+// ── Segnalazioni (tutti gli autenticati) ──────────────────────────────────────
 Route::middleware('auth')->group(function () {
     Route::resource('segnalazioni', SegnalazioneController::class)
         ->only(['index', 'create', 'store', 'show']);
@@ -37,9 +41,29 @@ Route::middleware(['auth', 'role:admin|gestore'])->prefix('gestione')->name('ges
     Route::get('/', [GestioneController::class, 'index'])->name('dashboard');
 });
 
+// ── Imprese CRUD (admin + gestore) ────────────────────────────────────────────
+Route::middleware(['auth', 'role:admin|gestore'])
+    ->resource('imprese', ImpreseCRUDController::class)
+    ->except(['show'])
+    ->names('imprese');
+
+// ── Appalti CRUD (admin + gestore) ────────────────────────────────────────────
+Route::middleware(['auth', 'role:admin|gestore'])
+    ->resource('appalti', AppaltiController::class)
+    ->except(['show'])
+    ->names('appalti');
+
+// ── Statistiche (admin + gestore) ─────────────────────────────────────────────
+Route::middleware(['auth', 'role:admin|gestore'])
+    ->get('/statistiche', [StatisticheController::class, 'index'])
+    ->name('statistiche.index');
+
 // ── Admin ─────────────────────────────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', fn () => view('admin.dashboard'))->name('dashboard');
+
+    Route::get('/impostazioni', [ImpostazioniController::class, 'index'])->name('impostazioni.index');
+    Route::patch('/impostazioni', [ImpostazioniController::class, 'update'])->name('impostazioni.update');
 });
 
 // ── Segnalatore ───────────────────────────────────────────────────────────────
@@ -47,9 +71,9 @@ Route::middleware(['auth', 'role:segnalatore'])->prefix('segnalatore')->name('se
     Route::get('/', [SegnalatoreDashboardController::class, 'index'])->name('dashboard');
 });
 
-// ── Imprese ───────────────────────────────────────────────────────────────────
-Route::middleware(['auth', 'role:impresa'])->prefix('imprese')->name('imprese.')->group(function () {
-    Route::get('/', fn () => view('imprese.dashboard'))->name('dashboard');
+// ── Imprese (portale impresa) ─────────────────────────────────────────────────
+Route::middleware(['auth', 'role:impresa'])->prefix('imprese-portale')->name('imprese.')->group(function () {
+    Route::get('/dashboard', fn () => view('imprese.dashboard'))->name('dashboard');
 });
 
 // ── Profilo (tutti gli utenti autenticati) ────────────────────────────────────

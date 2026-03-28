@@ -13,6 +13,7 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @stack('head')
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">
@@ -53,5 +54,6 @@
                 ProntoPA &mdash; {{ config('app.version', 'dev') }}
             </footer>
         </div>
+        @stack('scripts')
     </body>
 </html>
