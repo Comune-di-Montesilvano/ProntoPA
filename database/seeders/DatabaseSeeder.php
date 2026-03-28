@@ -12,8 +12,8 @@ class DatabaseSeeder extends Seeder
             TabelleRiferimentoSeeder::class,
             IstitutiPlessiSeeder::class,
             ImpostazioniSeeder::class,
-            // RolesAndPermissionsSeeder::class,  // da abilitare dopo: php artisan breeze:install
-            // AdminUserSeeder::class,
+            RolesAndPermissionsSeeder::class,
+            AdminUserSeeder::class,
         ]);
     }
 }
