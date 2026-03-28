@@ -67,22 +67,23 @@ class SegnalazioneController extends Controller
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
             'id_plesso'                 => ['nullable', 'integer', 'exists:plessi,id_plesso'],
             'id_provenienza'            => ['required', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
-            'segnalante'                => ['nullable', 'string', 'max:100'],
-            'email'                     => ['nullable', 'email', 'max:100'],
-            'telefono'                  => ['nullable', 'string', 'max:50'],
             'latitudine'                => ['nullable', 'numeric'],
             'longitudine'               => ['nullable', 'numeric'],
         ]);
+
+        $user = auth()->user();
 
         // Stato iniziale
         $statoIniziale = StatoSegnalazione::where('iniziale', true)->first();
 
         Segnalazione::create(array_merge($data, [
-            'id_utente_segnalazione' => auth()->id(),
+            'id_utente_segnalazione' => $user->id,
             'id_stato_segnalazione'  => $statoIniziale?->id_stato ?? 1,
             'id_plesso'              => $data['id_plesso'] ?? 0,
             'latitudine'             => $data['latitudine'] ?? 0,
             'longitudine'            => $data['longitudine'] ?? 0,
+            'segnalante'             => $user->name,
+            'email'                  => $user->email,
         ]));
 
         return redirect()->route('segnalazioni.index')

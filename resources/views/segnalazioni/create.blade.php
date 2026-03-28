@@ -98,32 +98,6 @@
                         <x-input-error :messages="$errors->get('testo_segnalazione')" class="mt-1" />
                     </div>
 
-                    {{-- Segnalante (opzionale) --}}
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <x-input-label for="segnalante" value="Segnalante" />
-                            <x-text-input id="segnalante" name="segnalante" type="text"
-                                class="mt-1 block w-full text-sm"
-                                :value="old('segnalante')"
-                                placeholder="Nome e cognome" />
-                            <x-input-error :messages="$errors->get('segnalante')" class="mt-1" />
-                        </div>
-                        <div>
-                            <x-input-label for="email" value="Email" />
-                            <x-text-input id="email" name="email" type="email"
-                                class="mt-1 block w-full text-sm"
-                                :value="old('email')" />
-                            <x-input-error :messages="$errors->get('email')" class="mt-1" />
-                        </div>
-                        <div>
-                            <x-input-label for="telefono" value="Telefono" />
-                            <x-text-input id="telefono" name="telefono" type="text"
-                                class="mt-1 block w-full text-sm"
-                                :value="old('telefono')" />
-                            <x-input-error :messages="$errors->get('telefono')" class="mt-1" />
-                        </div>
-                    </div>
-
                     {{-- Geolocalizzazione --}}
                     <input type="hidden" name="latitudine" id="latitudine" value="{{ old('latitudine', '0') }}">
                     <input type="hidden" name="longitudine" id="longitudine" value="{{ old('longitudine', '0') }}">
