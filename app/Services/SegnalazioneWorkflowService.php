@@ -12,6 +12,10 @@ use Illuminate\Validation\ValidationException;
 
 class SegnalazioneWorkflowService
 {
+    public function __construct(
+        private readonly WebhookService $webhook,
+    ) {}
+
     /**
      * Restituisce le azioni disponibili per una segnalazione in base al ruolo utente.
      * - competenza_azione 0 = Ente (admin/gestore)
@@ -99,10 +103,15 @@ class SegnalazioneWorkflowService
             ]);
         }
 
+        $fresca = $segnalazione->fresh();
+
         // Notifiche email
         if ($azione->flag_notifica) {
-            $this->inviaNotifiche($segnalazione->fresh(), $azione, $user);
+            $this->inviaNotifiche($fresca, $azione, $user);
         }
+
+        // Webhook outbound verso sito Comune
+        $this->webhook->notificaCambioStato($fresca);
     }
 
     /**
