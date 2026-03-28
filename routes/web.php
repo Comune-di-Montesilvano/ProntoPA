@@ -46,13 +46,15 @@ Route::middleware(['auth', 'role:admin|gestore'])->prefix('gestione')->name('ges
 Route::middleware(['auth', 'role:admin|gestore'])
     ->resource('imprese', ImpreseCRUDController::class)
     ->except(['show'])
-    ->names('imprese');
+    ->names('imprese')
+    ->parameters(['imprese' => 'impresa']);
 
 // ── Appalti CRUD (admin + gestore) ────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin|gestore'])
     ->resource('appalti', AppaltiController::class)
     ->except(['show'])
-    ->names('appalti');
+    ->names('appalti')
+    ->parameters(['appalti' => 'appalto']);
 
 // ── Statistiche (admin + gestore) ─────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin|gestore'])
