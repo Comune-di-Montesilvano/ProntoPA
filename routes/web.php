@@ -36,11 +36,15 @@ Route::middleware('auth')->group(function () {
 
     Route::post('segnalazioni/{segnalazione}/evidenza', [SegnalazioneController::class, 'toggleEvidenza'])
         ->name('segnalazioni.evidenza');
+
+    Route::get('segnalazioni/{segnalazione}/stampa', [SegnalazioneController::class, 'stampa'])
+        ->name('segnalazioni.stampa');
 });
 
 // ── Gestione (admin + gestore) ────────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin|gestore'])->prefix('gestione')->name('gestione.')->group(function () {
     Route::get('/', [GestioneController::class, 'index'])->name('dashboard');
+    Route::get('/stampa', [GestioneController::class, 'stampaLista'])->name('stampa');
 });
 
 // ── Imprese CRUD (admin + gestore) ────────────────────────────────────────────

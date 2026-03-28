@@ -161,6 +161,22 @@ class SegnalazioneController extends Controller
             ->withFragment('note');
     }
 
+    // ── Stampa scheda ────────────────────────────────────────────────────────
+
+    public function stampa(Segnalazione $segnalazione): View
+    {
+        $this->authorize('view', $segnalazione);
+
+        $segnalazione->load([
+            'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
+            'operatore', 'utente', 'appalto.impresa',
+            'note',
+            'storicoStati.stato', 'storicoStati.utente',
+        ]);
+
+        return view('segnalazioni.print', compact('segnalazione'));
+    }
+
     // ── Toggle evidenza ───────────────────────────────────────────────────────
 
     public function toggleEvidenza(Segnalazione $segnalazione): RedirectResponse

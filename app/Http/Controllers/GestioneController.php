@@ -75,4 +75,41 @@ class GestioneController extends Controller
             'tipologie', 'provenienze'
         ));
     }
+
+    public function stampaLista(Request $request): \Illuminate\View\View
+    {
+        $user = auth()->user();
+        $tab  = $request->get('tab', 'aperte');
+        $q    = trim($request->get('q', ''));
+        $idTipologia   = $request->get('id_tipologia');
+        $idProvenienza = $request->get('id_provenienza');
+
+        $base = Segnalazione::visibileA($user)
+            ->with(['stato', 'tipologia', 'operatore', 'provenienza', 'plesso.istituto', 'utente']);
+
+        if ($q !== '') {
+            $base->where(function ($query) use ($q) {
+                $query->where('testo_segnalazione', 'like', "%{$q}%")
+                      ->orWhere('segnalante', 'like', "%{$q}%")
+                      ->orWhere('id_segnalazione', $q);
+            });
+        }
+        if ($idTipologia)   { $base->where('id_tipologia_segnalazione', $idTipologia); }
+        if ($idProvenienza) { $base->where('id_provenienza', $idProvenienza); }
+
+        $segnalazioni = match($tab) {
+            'evidenza'    => (clone $base)->inEvidenza()->orderByDesc('data_segnalazione')->get(),
+            'in_carico'   => (clone $base)->aperte()->whereHas('stato', fn ($q) => $q->where('in_carico', true))->orderByDesc('data_segnalazione')->get(),
+            'in_gestione' => (clone $base)->aperte()->whereHas('stato', fn ($q) => $q->where('id_gestione', true))->orderByDesc('data_segnalazione')->get(),
+            'chiuse'      => (clone $base)->whereNotNull('data_chiusura')->orderByDesc('data_chiusura')->get(),
+            default       => (clone $base)->aperte()->orderByDesc('data_segnalazione')->get(),
+        };
+
+        $tabLabels = [
+            'aperte' => 'Aperte', 'in_carico' => 'In carico',
+            'in_gestione' => 'In gestione', 'evidenza' => 'In evidenza', 'chiuse' => 'Chiuse',
+        ];
+
+        return view('gestione.print', compact('segnalazioni', 'tab', 'tabLabels', 'q'));
+    }
 }

@@ -1,6 +1,11 @@
 <x-app-layout>
     <x-slot name="header">Gestione Segnalazioni</x-slot>
     <x-slot name="actions">
+        <a href="{{ route('gestione.stampa', array_filter(['tab' => $tab, 'q' => $q, 'id_tipologia' => $idTipologia, 'id_provenienza' => $idProvenienza])) }}"
+           target="_blank"
+           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
+            Stampa lista
+        </a>
         <a href="{{ route('segnalazioni.create') }}"
            class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
             + Nuova

@@ -9,6 +9,10 @@
         @if($segnalazione->flag_evidenza)
             <span class="text-yellow-500 text-lg" title="In evidenza">&#9733;</span>
         @endif
+        <a href="{{ route('segnalazioni.stampa', $segnalazione->id_segnalazione) }}" target="_blank"
+           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
+            Stampa
+        </a>
         @can('update', $segnalazione)
             <form method="POST" action="{{ route('segnalazioni.evidenza', $segnalazione->id_segnalazione) }}">
                 @csrf
