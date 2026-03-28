@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Cache;
 
 class Impostazione extends Model
 {
+    protected $table      = 'impostazioni';
     protected $primaryKey = 'chiave';
     protected $keyType    = 'string';
     public    $incrementing = false;
