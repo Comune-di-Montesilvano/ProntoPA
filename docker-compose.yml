@@ -1,36 +1,38 @@
-# docker-compose.yml — SVILUPPO LOCALE
+# docker-compose.yml — PRODUZIONE
 #
-# Usare questo file per lo sviluppo con bind mount e hot-reload.
-# Include Adminer e Mailpit per comodità.
+# Nessun bind mount. Il codice è copiato dentro le immagini Docker.
+# Usare per Portainer stack / rootless Podman.
+#
+# Immagini: ghcr.io/comune-di-montesilvano/pronto-pa (php-fpm)
+#           ghcr.io/comune-di-montesilvano/pronto-pa-web (nginx)
 #
 # Avvio: docker compose up -d
-# Per Adminer e Mailpit: docker compose --profile dev up -d
+# Dev (con override): docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+#   oppure semplicemente: docker compose up -d  (override caricato automaticamente)
 
 services:
 
   nginx:
-    image: nginx:1.27-alpine
+    image: ghcr.io/comune-di-montesilvano/pronto-pa-web:${APP_VERSION:-latest}
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./:/var/www/html
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - uploads:/var/www/html/public/storage:ro
+      - nginx_ssl:/etc/nginx/ssl:ro
     depends_on:
       - php
     networks:
       - prontoPA
+    restart: unless-stopped
 
   php:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-    image: pronto-pa-dev:local
+    image: ghcr.io/comune-di-montesilvano/pronto-pa:${APP_VERSION:-latest}
     volumes:
-      - ./:/var/www/html
+      - app_storage:/var/www/html/storage
+      - uploads:/var/www/html/storage/app/public
     environment:
-      PHP_OPCACHE_ENABLE: 0
+      PHP_OPCACHE_ENABLE: 1
     depends_on:
       mariadb:
         condition: service_healthy
@@ -38,6 +40,7 @@ services:
         condition: service_started
     networks:
       - prontoPA
+    restart: unless-stopped
 
   mariadb:
     image: mariadb:10.11
@@ -50,7 +53,6 @@ services:
       MARIADB_PASSWORD: ${DB_PASSWORD:-segnalazioni_secret}
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./docker/mariadb/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
@@ -58,6 +60,7 @@ services:
       retries: 5
     networks:
       - prontoPA
+    restart: unless-stopped
 
   redis:
     image: redis:7.2-alpine
@@ -65,34 +68,14 @@ services:
       - redis_data:/data
     networks:
       - prontoPA
-
-  adminer:
-    image: adminer:4
-    ports:
-      - "8081:8080"
-    environment:
-      ADMINER_DEFAULT_SERVER: mariadb
-      ADMINER_DESIGN: pepa-linha
-    depends_on:
-      - mariadb
-    networks:
-      - prontoPA
-    profiles:
-      - dev
-
-  mailpit:
-    image: axllent/mailpit:latest
-    ports:
-      - "8025:8025"
-      - "1025:1025"
-    networks:
-      - prontoPA
-    profiles:
-      - dev
+    restart: unless-stopped
 
 volumes:
   mariadb_data:
   redis_data:
+  app_storage:
+  uploads:
+  nginx_ssl:
 
 networks:
   prontoPA:
