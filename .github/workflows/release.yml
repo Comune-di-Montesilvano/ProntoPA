@@ -48,58 +48,45 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── PHP-FPM app image ───────────────────────────────────────────────────
+      # ── Metadata per entrambe le immagini ───────────────────────────────────
 
       - name: Docker metadata (app)
         id: meta-app
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_APP }}
+          bake-target: app
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
-
-      - name: Build & push PHP-FPM image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile
-          target: app
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta-app.outputs.tags }}
-          labels: ${{ steps.meta-app.outputs.labels }}
-          build-args: |
-            APP_VERSION=${{ steps.vars.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # ── Nginx + static assets image ─────────────────────────────────────────
 
       - name: Docker metadata (web)
         id: meta-web
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_WEB }}
+          bake-target: web
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
 
-      - name: Build & push Nginx image
-        uses: docker/build-push-action@v6
+      # ── Build & push entrambe le immagini in parallelo (bake) ───────────────
+      # Builder stage girano una sola volta, app e web buildate in parallelo.
+
+      - name: Build & push (bake)
+        uses: docker/bake-action@v5
         with:
-          context: .
-          file: Dockerfile
-          target: web
-          platforms: linux/amd64,linux/arm64
+          files: |
+            ./docker-bake.hcl
+            ${{ steps.meta-app.outputs.bake-file }}
+            ${{ steps.meta-web.outputs.bake-file }}
           push: true
-          tags: ${{ steps.meta-web.outputs.tags }}
-          labels: ${{ steps.meta-web.outputs.labels }}
-          build-args: |
-            APP_VERSION=${{ steps.vars.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          set: |
+            *.cache-from=type=gha,scope=pronto-pa
+            *.cache-to=type=gha,scope=pronto-pa,mode=max
+            app.args.APP_VERSION=${{ steps.vars.outputs.version }}
+            web.args.APP_VERSION=${{ steps.vars.outputs.version }}
