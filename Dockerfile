@@ -84,19 +84,22 @@ RUN apk add --no-cache \
 COPY --link --from=php-extensions /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --link --from=php-extensions /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
-COPY docker/php/php.ini     /usr/local/etc/php/conf.d/zz-app.ini
-COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/zz-opcache.ini
+COPY docker/php/php.ini        /usr/local/etc/php/conf.d/zz-app.ini
+COPY docker/php/opcache.ini    /usr/local/etc/php/conf.d/zz-opcache.ini
+COPY docker/php/entrypoint.sh  /usr/local/bin/entrypoint.sh
 
 RUN addgroup -g 1000 -S www && adduser -u 1000 -S www -G www
 
 WORKDIR /var/www/html
 COPY --link --from=builder /var/www/html .
 
-RUN chown -R www:www storage bootstrap/cache
+RUN chown -R www:www storage bootstrap/cache \
+    && chmod +x /usr/local/bin/entrypoint.sh
 
 USER www
 
 EXPOSE 9000
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["php-fpm"]
 
 ############################################
