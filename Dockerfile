@@ -46,13 +46,14 @@ COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 
 # Composer deps: layer invalidato solo se composer.lock cambia
-COPY composer.json composer.lock artisan ./
+COPY composer.json composer.lock ./
 RUN --mount=type=cache,id=composer-${TARGETARCH},target=/root/.composer/cache \
     composer install \
         --no-dev \
         --optimize-autoloader \
         --no-interaction \
-        --no-progress
+        --no-progress \
+        --no-scripts
 
 # NPM deps: layer invalidato solo se package-lock.json cambia
 COPY package.json package-lock.json ./
@@ -62,7 +63,9 @@ RUN --mount=type=cache,id=npm-${TARGETARCH},target=/root/.npm \
 # Source code: COPY . . + npm build ripartono su ogni cambio sorgente,
 # ma composer e npm ci sopra restano cached
 COPY . .
-RUN npm run build && rm -rf node_modules
+RUN composer run-script post-autoload-dump \
+    && npm run build \
+    && rm -rf node_modules
 
 ############################################
 # Stage 2: PHP-FPM production image
