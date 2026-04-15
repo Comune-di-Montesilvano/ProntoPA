@@ -46,7 +46,7 @@ COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 
 # Composer deps: layer invalidato solo se composer.lock cambia
-COPY composer.json composer.lock ./
+COPY composer.json composer.lock artisan ./
 RUN --mount=type=cache,id=composer-${TARGETARCH},target=/root/.composer/cache \
     composer install \
         --no-dev \
