@@ -75,7 +75,8 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
 
       # ── Build & push entrambe le immagini in parallelo (bake) ───────────────
-      # Builder stage girano una sola volta, app e web buildate in parallelo.
+      # Builder stage gira una sola volta; app e web buildate in parallelo.
+      # Cache scope separati per target (definiti in docker-bake.hcl).
 
       - name: Build & push (bake)
         uses: docker/bake-action@v5
@@ -86,7 +87,5 @@ jobs:
             ${{ steps.meta-web.outputs.bake-file }}
           push: true
           set: |
-            *.cache-from=type=gha,scope=pronto-pa
-            *.cache-to=type=gha,scope=pronto-pa,mode=max
             app.args.APP_VERSION=${{ steps.vars.outputs.version }}
             web.args.APP_VERSION=${{ steps.vars.outputs.version }}

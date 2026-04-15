@@ -1,10 +1,10 @@
 # ProntoPA
 
-Open-source manutenzione PA. Scuole/comuni/URP segnalano guasti, gestori assegnano ad imprese/operatori, traccia workflow chiusura. Brandizzabile via tabella `impostazioni` (non `.env`).
+Open-source manutenzione PA. Scuole/comuni/URP segnalano guasti, gestori assegnano imprese/operatori, traccia workflow chiusura. Brand via tabella `impostazioni` (non `.env`).
 
 ## Convenzioni Claude Code
 
-- Commit sempre con `/commit` (skill caveman-commit)
+- Commit con `/commit` (skill caveman-commit)
 
 ## Stack
 
@@ -20,26 +20,22 @@ MSYS_NO_PATHCONV=1 docker compose exec php php artisan migrate --seed
 MSYS_NO_PATHCONV=1 docker compose exec php npm run build
 ```
 
-- App: http://localhost | Adminer: :8081 | Mailpit: :8025 (profilo `dev`)
-- Dev profili: `docker compose --profile dev up -d`
-- `docker-compose.yml` = **prod** (GHCR images, named volumes, no bind mount)
-- `docker-compose.override.yml` = **dev** (caricato auto, bind mount + Adminer + Mailpit)
+App: http://localhost | Adminer: :8081 | Mailpit: :8025 (profilo `dev`)  
+Dev: `docker compose --profile dev up -d`  
+`docker-compose.yml`=prod · `docker-compose.override.yml`=dev (auto, bind mount+Adminer+Mailpit)
 
-### Comandi utili
 ```bash
-docker compose up -d / down
-docker compose logs -f php
+docker compose up -d / down / logs -f php
 docker compose exec php sh
 docker compose exec php php artisan <cmd>
 docker compose exec php composer <cmd>
 docker compose exec php npm run build
 ```
 
-## .env (solo sistemistico)
+## .env
 
 ```env
-APP_URL=http://localhost
-APP_KEY=              # php artisan key:generate
+APP_URL=http://localhost  APP_KEY=
 DB_HOST=mariadb  DB_PORT=3306  DB_DATABASE=segnalazioni
 DB_USERNAME=segnalazioni  DB_PASSWORD=  DB_ROOT_PASSWORD=
 REDIS_HOST=redis
@@ -48,7 +44,7 @@ PEC_HOST=mbox.cert.legalmail.it  PEC_USERNAME=  PEC_PASSWORD=
 WEBHOOK_CITTADINI_URL=  WEBHOOK_CITTADINI_SECRET=
 ```
 
-Impostazioni app (brand, mappa, email) → **Admin → Impostazioni**.
+Brand/mappa/email → **Admin → Impostazioni**.
 
 ## Brandizzazione (`impostazioni`)
 
@@ -62,7 +58,7 @@ Impostazioni app (brand, mappa, email) → **Admin → Impostazioni**.
 $val = Impostazione::get('ente_nome', 'ProntoPA');
 ```
 
-`APP_VERSION` iniettato al build Docker → `config('app.version')`. Dev = `dev`.
+`APP_VERSION` iniettato build Docker → `config('app.version')`. Dev=`dev`.
 
 ## Architettura
 
@@ -70,7 +66,7 @@ $val = Impostazione::get('ente_nome', 'ProntoPA');
 app/Http/Controllers/
   Auth/  GestioneController  SegnalazioneController  SegnalatoreDashboardController
   ImpresaController  ImpreseCRUDController  AppaltiController  StatisticheController
-  Admin/{AdminController, ImpostazioniController}
+  Admin/{AdminController,ImpostazioniController}
   Api/SegnalazioneApiController
 app/Models/
   Segnalazione  User  Impresa  Appalto  NotaSegnalazione  StatoSegnalazione
@@ -85,7 +81,7 @@ app/Http/Middleware/RoleRedirect.php
 | Ruolo | Accesso |
 |---|---|
 | `admin` | Totale: utenti, impostazioni, sistema |
-| `gestore` | Segnalazioni. `supervisore=true` → tutto; altrimenti solo assegnate |
+| `gestore` | Segnalazioni. `supervisore=true`→tutto; altrimenti solo assegnate |
 | `segnalatore` | Proprie segnalazioni. Ha `provenienza` (scuola/URP/portale/interno) |
 | `impresa` | Solo lavori propria impresa |
 
@@ -95,12 +91,12 @@ app/Http/Middleware/RoleRedirect.php
 
 Azioni: assegna impresa/operatore · chiudi · invia/accetta preventivo · pianifica · proponi chiusura · archivia · richiedi accertamento/valutazione · riapri
 
-Logica transizioni: `app/Services/SegnalazioneWorkflowService.php`
+Transizioni: `app/Services/SegnalazioneWorkflowService.php`
 
 ## Database
 
-Migrations `database/migrations/` da `legacy/export.sql`:
-- `000000` users · `000001` reference tables · `000002` imprese · `000003` segnalazioni · `000004` webhook_logs · `000005` impostazioni
+Migrations `database/migrations/` da `legacy/export.sql`:  
+`000000` users · `000001` ref tables · `000002` imprese · `000003` segnalazioni · `000004` webhook_logs · `000005` impostazioni
 
 Seeders: `TabelleRiferimentoSeeder` · `IstitutiPlessiSeeder` · `ImpostazioniSeeder` · `RolesAndPermissionsSeeder`
 
@@ -112,11 +108,12 @@ Import prod: `docker compose exec -T mariadb mysql -u segnalazioni -p segnalazio
 POST /api/segnalazioni              # crea da sito Comune (Sanctum)
 GET  /api/segnalazioni/{id}/stato   # legge stato
 ```
-Webhook outbound: HTTP POST HMAC-firmato al cambio stato → config Admin → Impostazioni → Webhook.
+
+Webhook outbound: HTTP POST HMAC-firmato al cambio stato → Admin → Impostazioni → Webhook.
 
 ## CI/CD
 
-Tag `v*.*.*` → `.github/workflows/release.yml` → build multi-arch (amd64+arm64) → push GHCR `:tag` + `:latest` con `APP_VERSION=<tag>`.
+Tag `v*.*.*` → `.github/workflows/release.yml` → build multi-arch (amd64+arm64) → push GHCR `:tag`+`:latest`.
 
 ```bash
 git tag v1.2.0 && git push origin v1.2.0
@@ -132,8 +129,8 @@ git tag v1.2.0 && git push origin v1.2.0
 ## Deploy Prod (Portainer/Podman rootless)
 
 1. `git push tag` → Actions builda GHCR
-2. Portainer stack punta a `docker-compose.yml` (prod di default), env vars (APP_KEY, DB_PASSWORD…)
+2. Portainer stack → `docker-compose.yml`, env vars (APP_KEY, DB_PASSWORD…)
 3. `docker compose exec php php artisan migrate --seed`
 4. Admin → Impostazioni → configura ente
 
-Rootless: no bind mount (codice in immagine), named volumes `mariadb_data` `redis_data` `app_storage` → `/var/www/html/storage`
+Rootless: no bind mount, named volumes `mariadb_data` `redis_data` `app_storage` → `/var/www/html/storage`
