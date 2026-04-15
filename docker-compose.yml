@@ -70,6 +70,11 @@ services:
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS}
       SESSION_LIFETIME: ${SESSION_LIFETIME:-480}
       SESSION_COOKIE: ${SESSION_COOKIE:-prontoPA_session}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-password}
+      ADMIN_NAME: ${ADMIN_NAME:-Amministratore}
       PHP_OPCACHE_ENABLE: 1
     depends_on:
       mariadb:
