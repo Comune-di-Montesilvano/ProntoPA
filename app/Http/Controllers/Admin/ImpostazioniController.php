@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Impostazione;
+use App\Models\StatoSegnalazione;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,7 +16,9 @@ class ImpostazioniController extends Controller
         $impostazioni = Impostazione::orderBy('gruppo')->orderBy('chiave')->get()
             ->groupBy('gruppo');
 
-        return view('admin.impostazioni', compact('impostazioni'));
+        $statiSegnalazioni = StatoSegnalazione::orderBy('id_stato')->get();
+
+        return view('admin.impostazioni', compact('impostazioni', 'statiSegnalazioni'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -26,6 +29,11 @@ class ImpostazioniController extends Controller
         ]);
 
         foreach ($data['impostazioni'] as $chiave => $valore) {
+            // Cast specifici per certi campi
+            if ($chiave === 'publication_auto_state_id' && $valore !== '' && $valore !== null) {
+                $valore = (int) $valore;
+            }
+
             Impostazione::set($chiave, $valore);
         }
 

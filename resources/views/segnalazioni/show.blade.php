@@ -16,6 +16,16 @@
                     {{ $segnalazione->flag_evidenza ? '★ In evidenza' : '☆ Metti in evidenza' }}
                 </button>
             </form>
+            <form method="POST" action="{{ route('segnalazioni.toggle-riservata', $segnalazione->id_segnalazione) }}">
+                @csrf @method('PATCH')
+                <button type="submit"
+                        class="inline-flex items-center px-4 py-2 rounded-md font-semibold text-sm text-white transition
+                               {{ $segnalazione->flag_riservata
+                                   ? 'bg-red-600 hover:bg-red-700'
+                                   : 'bg-gray-500 hover:bg-gray-600' }}">
+                    {{ $segnalazione->flag_riservata ? '🔒 Riservata' : '🔓 Pubblica' }}
+                </button>
+            </form>
         @endcan
     </x-slot>
 

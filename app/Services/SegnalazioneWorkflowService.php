@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Events\SegnalazionePublishedAutomatically;
 use App\Models\Azione;
+use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Models\StoricoStatoSegnalazione;
 use App\Models\User;
@@ -10,6 +12,7 @@ use App\Notifications\ImpresaAssegnataNotification;
 use App\Notifications\OperatoreAssegnatoNotification;
 use App\Notifications\SegnalazioneChiusaNotification;
 use App\Notifications\SegnalazioneStatoCambiato;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -114,6 +117,10 @@ class SegnalazioneWorkflowService
             $this->inviaNotifiche($fresca, $azione, $user);
         }
 
+        // Pubblicazione automatica se configurata
+        $previousStateId = $segnalazione->getOriginal('id_stato_segnalazione');
+        $this->automaticallyPublish($fresca, $previousStateId, $statoTarget->id_stato);
+
         // Webhook outbound verso sito Comune
         $this->webhook->notificaCambioStato($fresca);
     }
@@ -207,4 +214,44 @@ class SegnalazioneWorkflowService
             || ($azione->flag_appalto && (bool) $segnalazione->id_appalto)
             || (bool) $segnalazione->stato?->chiusura;
     }
+
+    /**
+     * Pubblica automaticamente una segnalazione se configurato.
+     * Una segnalazione viene pubblicata quando raggiunge uno stato configurato in impostazioni.
+     */
+    private function automaticallyPublish(
+        Segnalazione $segnalazione,
+        int|null     $previousStateId,
+        int          $newStateId,
+    ): void {
+        // Controlla se la pubblicazione automatica è abilitata
+        if (! Impostazione::get('publication_enabled', false)) {
+            return;
+        }
+
+        // Leggi lo stato trigger configurato
+        $triggerStateId = Impostazione::get('publication_auto_state_id');
+
+        if ($triggerStateId === null) {
+            return;
+        }
+
+        // Se siamo già al di sopra del trigger e il nuovo stato è >= trigger, pubblica
+        if ($newStateId >= (int) $triggerStateId && ! $segnalazione->flag_pubblicata) {
+            $segnalazione->update([
+                'flag_pubblicata' => true,
+                'flag_riservata'  => false,
+            ]);
+
+            Cache::forget('public.home.statistics');
+
+            // Emetti evento per audit trail
+            SegnalazionePublishedAutomatically::dispatch(
+                $segnalazione->fresh(),
+                $previousStateId ?? 0,
+                $newStateId,
+            );
+        }
+    }
 }
+
