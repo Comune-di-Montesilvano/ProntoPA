@@ -17,9 +17,17 @@ class UtentiController extends Controller
 {
     public function index(): View
     {
-        $utenti = User::with('profilo')->orderBy('name')->paginate(25);
+        $mostraDisattivati = request()->boolean('mostra_disattivati');
 
-        return view('admin.utenti.index', compact('utenti'));
+        $utenti = User::with('profilo')
+            ->when(! $mostraDisattivati, fn ($query) => $query->where(function ($subQuery) {
+                $subQuery->where('attivo', true)->orWhereNull('attivo');
+            }))
+            ->orderBy('name')
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('admin.utenti.index', compact('utenti', 'mostraDisattivati'));
     }
 
     public function create(): View
@@ -44,6 +52,7 @@ class UtentiController extends Controller
             'id_impresa'    => ['nullable', 'integer', 'exists:imprese,id_impresa'],
             'telefono'      => ['nullable', 'string', 'max:50'],
             'supervisore'   => ['boolean'],
+            'attivo'        => ['nullable', 'boolean'],
         ]);
 
         $user = User::create([
@@ -58,6 +67,7 @@ class UtentiController extends Controller
             'amministratore'           => $data['ruolo'] === 'admin',
             'gestore_segnalazioni'     => $data['ruolo'] === 'gestore',
             'supervisore_segnalazioni' => ($data['ruolo'] === 'gestore') && ($data['supervisore'] ?? false),
+            'attivo'                   => (bool) ($data['attivo'] ?? true),
         ]);
 
         $user->syncRoles([$data['ruolo']]);
@@ -88,7 +98,14 @@ class UtentiController extends Controller
             'id_impresa'    => ['nullable', 'integer', 'exists:imprese,id_impresa'],
             'telefono'      => ['nullable', 'string', 'max:50'],
             'supervisore'   => ['boolean'],
+            'attivo'        => ['nullable', 'boolean'],
         ]);
+
+        if ($utente->is(auth()->user()) && ! ($data['attivo'] ?? false)) {
+            return back()
+                ->withErrors(['attivo' => 'Non puoi disattivare il tuo account.'])
+                ->withInput();
+        }
 
         $utente->name              = $data['name'];
         $utente->username          = $data['username'];
@@ -100,6 +117,7 @@ class UtentiController extends Controller
         $utente->amministratore           = $data['ruolo'] === 'admin';
         $utente->gestore_segnalazioni     = $data['ruolo'] === 'gestore';
         $utente->supervisore_segnalazioni = ($data['ruolo'] === 'gestore') && ($data['supervisore'] ?? false);
+        $utente->attivo                    = (bool) ($data['attivo'] ?? false);
 
         if (filled($data['password'])) {
             $utente->password = Hash::make($data['password']);
@@ -111,6 +129,22 @@ class UtentiController extends Controller
 
         return redirect()->route('admin.utenti.index')
             ->with('success', "Utente {$utente->username} aggiornato.");
+    }
+
+    public function toggleAttivo(User $utente): RedirectResponse
+    {
+        if ($utente->is(auth()->user())) {
+            return back()->with('error', 'Non puoi modificare lo stato del tuo account.');
+        }
+
+        $utente->update(['attivo' => ! $utente->attivo]);
+
+        return back()->with(
+            'success',
+            $utente->attivo
+                ? "Utente {$utente->username} riattivato."
+                : "Utente {$utente->username} disattivato."
+        );
     }
 
     public function destroy(User $utente): RedirectResponse

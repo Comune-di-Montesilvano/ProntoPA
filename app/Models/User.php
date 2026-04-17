@@ -24,6 +24,11 @@ class User extends Authenticatable
         'id_provenienza',
         'id_impresa',
         'telefono',
+        'attivo',
+        'telegram_chat_id',
+        'telegram_link_token',
+        'telegram_link_expires_at',
+        'telegram_verified_at',
         'last_login',
     ];
 
@@ -38,11 +43,19 @@ class User extends Authenticatable
         return [
             'email_verified_at'       => 'datetime',
             'last_login'              => 'datetime',
+            'telegram_link_expires_at'=> 'datetime',
+            'telegram_verified_at'    => 'datetime',
             'password'                => 'hashed',
             'amministratore'          => 'boolean',
             'gestore_segnalazioni'    => 'boolean',
             'supervisore_segnalazioni'=> 'boolean',
+            'attivo'                  => 'boolean',
         ];
+    }
+
+    public function routeNotificationForTelegram(): ?string
+    {
+        return $this->telegram_chat_id;
     }
 
     // --- Helpers ruolo ---

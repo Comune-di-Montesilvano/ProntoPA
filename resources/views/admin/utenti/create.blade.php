@@ -74,6 +74,16 @@
                 </label>
             </div>
 
+            <div>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="attivo" value="1"
+                           class="rounded border-gray-300 text-blue-600 shadow-sm"
+                           {{ old('attivo', '1') ? 'checked' : '' }}>
+                    <span class="text-sm text-gray-700">Account attivo</span>
+                </label>
+                <x-input-error :messages="$errors->get('attivo')" class="mt-1" />
+            </div>
+
             {{-- Profilo — per segnalatori scuola --}}
             <div>
                 <x-input-label for="id_profilo" value="Profilo" />

@@ -1,36 +1,81 @@
-# docker-compose.yml — SVILUPPO LOCALE
+# docker-compose.yml — PRODUZIONE
 #
-# Usare questo file per lo sviluppo con bind mount e hot-reload.
-# Include Adminer e Mailpit per comodità.
+# Nessun bind mount. Il codice è copiato dentro le immagini Docker.
+# Usare per Portainer stack / rootless Podman.
+#
+# Immagini: ghcr.io/comune-di-montesilvano/pronto-pa (php-fpm)
+#           ghcr.io/comune-di-montesilvano/pronto-pa-web (nginx)
 #
 # Avvio: docker compose up -d
-# Per Adminer e Mailpit: docker compose --profile dev up -d
+# Dev (con override): docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+#   oppure semplicemente: docker compose up -d  (override caricato automaticamente)
 
 services:
 
   nginx:
-    image: nginx:1.27-alpine
+    image: ghcr.io/comune-di-montesilvano/pronto-pa-web:${APP_VERSION:-latest}
     ports:
-      - "80:80"
-      - "443:443"
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
     volumes:
-      - ./:/var/www/html
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - uploads:/var/www/html/public/storage:ro
+      - nginx_ssl:/etc/nginx/ssl:ro
     depends_on:
       - php
     networks:
       - prontoPA
+    restart: unless-stopped
 
   php:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-    image: pronto-pa-dev:local
+    image: ghcr.io/comune-di-montesilvano/pronto-pa:${APP_VERSION:-latest}
     volumes:
-      - ./:/var/www/html
+      - app_storage:/var/www/html/storage
+      - uploads:/var/www/html/storage/app/public
     environment:
-      PHP_OPCACHE_ENABLE: 0
+      APP_ENV: ${APP_ENV:-production}
+      APP_KEY: ${APP_KEY}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL:-http://localhost}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Rome}
+      APP_LOCALE: ${APP_LOCALE:-it}
+      APP_VERSION: ${APP_VERSION:-latest}
+      LOG_CHANNEL: ${LOG_CHANNEL:-stack}
+      LOG_LEVEL: ${LOG_LEVEL:-error}
+      DB_CONNECTION: mysql
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-segnalazioni}
+      DB_USERNAME: ${DB_USERNAME:-segnalazioni}
+      DB_PASSWORD: ${DB_PASSWORD}
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-ProntoPA}
+      PEC_HOST: ${PEC_HOST}
+      PEC_PORT: ${PEC_PORT:-465}
+      PEC_USERNAME: ${PEC_USERNAME}
+      PEC_PASSWORD: ${PEC_PASSWORD}
+      PEC_ENCRYPTION: ${PEC_ENCRYPTION:-ssl}
+      WEBHOOK_CITTADINI_URL: ${WEBHOOK_CITTADINI_URL}
+      WEBHOOK_CITTADINI_SECRET: ${WEBHOOK_CITTADINI_SECRET}
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost,127.0.0.1}
+      SESSION_LIFETIME: ${SESSION_LIFETIME:-480}
+      SESSION_COOKIE: ${SESSION_COOKIE:-prontoPA_session}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-password}
+      ADMIN_NAME: ${ADMIN_NAME:-Amministratore}
+      PHP_OPCACHE_ENABLE: 1
     depends_on:
       mariadb:
         condition: service_healthy
@@ -38,11 +83,10 @@ services:
         condition: service_started
     networks:
       - prontoPA
+    restart: unless-stopped
 
   mariadb:
     image: mariadb:10.11
-    ports:
-      - "3306:3306"
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
       MARIADB_DATABASE: ${DB_DATABASE:-segnalazioni}
@@ -50,7 +94,6 @@ services:
       MARIADB_PASSWORD: ${DB_PASSWORD:-segnalazioni_secret}
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./docker/mariadb/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
@@ -58,6 +101,7 @@ services:
       retries: 5
     networks:
       - prontoPA
+    restart: unless-stopped
 
   redis:
     image: redis:7.2-alpine
@@ -65,34 +109,14 @@ services:
       - redis_data:/data
     networks:
       - prontoPA
-
-  adminer:
-    image: adminer:4
-    ports:
-      - "8081:8080"
-    environment:
-      ADMINER_DEFAULT_SERVER: mariadb
-      ADMINER_DESIGN: pepa-linha
-    depends_on:
-      - mariadb
-    networks:
-      - prontoPA
-    profiles:
-      - dev
-
-  mailpit:
-    image: axllent/mailpit:latest
-    ports:
-      - "8025:8025"
-      - "1025:1025"
-    networks:
-      - prontoPA
-    profiles:
-      - dev
+    restart: unless-stopped
 
 volumes:
   mariadb_data:
   redis_data:
+  app_storage:
+  uploads:
+  nginx_ssl:
 
 networks:
   prontoPA:

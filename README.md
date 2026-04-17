@@ -66,8 +66,8 @@ MSYS_NO_PATHCONV=1 docker compose exec php php artisan migrate --seed
 MSYS_NO_PATHCONV=1 docker compose exec php npm run build
 ```
 
-> `docker-compose.yml` è il file di **sviluppo** (bind mount, build locale).
-> Per la produzione usa `docker-compose.prod.yml`.
+> `docker-compose.yml` è il file di **produzione** (immagini GHCR, named volumes, no bind mount).
+> `docker-compose.override.yml` viene caricato automaticamente in sviluppo (bind mount, build locale, Adminer, Mailpit).
 
 L'app è disponibile su **http://localhost**.
 
@@ -126,6 +126,34 @@ Dopo il primo login con l'account admin:
 3. Configura il gruppo **Mappa**: coordinate e zoom del territorio
 4. Configura il gruppo **Email**: mittente notifiche
 
+### Telegram
+
+La v0.3 include un bot Telegram opzionale per notifiche push e comandi rapidi operativi.
+
+Configurazione minima:
+
+1. Vai su **Admin → Impostazioni** e compila il gruppo **Bot Telegram**:
+	- `telegram_bot_token`
+	- `telegram_bot_username`
+	- `telegram_webhook_secret` opzionale, ma raccomandato
+2. Espone l'istanza su HTTPS pubblico.
+3. Registra il webhook:
+
+```bash
+docker compose exec php php artisan telegram:set-webhook --url="https://tuo-dominio.example"
+```
+
+Collegamento utente:
+
+1. L'utente autenticato apre **Profilo**.
+2. Genera un token Telegram.
+3. Avvia il bot con `/start <token>`.
+
+Comandi disponibili:
+
+- `/lista` mostra le segnalazioni aperte visibili all'utente.
+- `/apri <id>` mostra il dettaglio e, se consentito, i bottoni inline per le azioni rapide.
+
 ---
 
 ## Deployment Produzione (Portainer / rootless Podman)
@@ -140,7 +168,7 @@ ProntoPA usa due immagini Docker pre-compilate, pubblicate su GHCR dopo ogni rel
 ### Stack Portainer
 
 1. In Portainer crea un nuovo **Stack**
-2. Incolla il contenuto di `docker-compose.prod.yml`
+2. Punta al repository Git e usa `docker-compose.yml` (il file di default è già prod)
 3. Imposta le variabili d'ambiente nello stack (APP_KEY, DB_PASSWORD, ecc.)
 4. Scegli la versione: imposta `APP_VERSION=v1.0.0` (o `latest`)
 5. Deploy

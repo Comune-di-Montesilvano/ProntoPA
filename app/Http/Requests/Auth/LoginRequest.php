@@ -46,6 +46,7 @@ class LoginRequest extends FormRequest
             ['username' => $this->string('username'), 'password' => $this->string('password')],
             $this->boolean('remember')
         )) {
+            $this->ensureUserIsActive(Auth::user());
             RateLimiter::clear($this->throttleKey());
             return;
         }
@@ -56,6 +57,8 @@ class LoginRequest extends FormRequest
         if ($user?->password_legacy &&
             hash_equals($user->password_legacy, hash('sha256', $this->string('password')))
         ) {
+            $this->ensureUserIsActive($user);
+
             $user->forceFill([
                 'password'        => Hash::make($this->string('password')),
                 'password_legacy' => null,
@@ -70,6 +73,21 @@ class LoginRequest extends FormRequest
 
         throw ValidationException::withMessages([
             'username' => trans('auth.failed'),
+        ]);
+    }
+
+    private function ensureUserIsActive(?User $user): void
+    {
+        if ($user?->attivo ?? true) {
+            return;
+        }
+
+        if (Auth::check()) {
+            Auth::logout();
+        }
+
+        throw ValidationException::withMessages([
+            'username' => 'Questo account è stato disattivato.',
         ]);
     }
 

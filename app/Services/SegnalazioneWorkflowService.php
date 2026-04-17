@@ -6,7 +6,11 @@ use App\Models\Azione;
 use App\Models\Segnalazione;
 use App\Models\StoricoStatoSegnalazione;
 use App\Models\User;
+use App\Notifications\ImpresaAssegnataNotification;
+use App\Notifications\OperatoreAssegnatoNotification;
+use App\Notifications\SegnalazioneChiusaNotification;
 use App\Notifications\SegnalazioneStatoCambiato;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -106,7 +110,7 @@ class SegnalazioneWorkflowService
         $fresca = $segnalazione->fresh();
 
         // Notifiche email
-        if ($azione->flag_notifica) {
+        if ($this->deveInviareNotifiche($azione, $fresca)) {
             $this->inviaNotifiche($fresca, $azione, $user);
         }
 
@@ -126,6 +130,57 @@ class SegnalazioneWorkflowService
 
     private function inviaNotifiche(Segnalazione $segnalazione, Azione $azione, User $attore): void
     {
+        if ($azione->flag_operatore && $segnalazione->id_operatore_assegnato) {
+            $operatore = User::find($segnalazione->id_operatore_assegnato);
+
+            if ($operatore && $operatore->id !== $attore->id && $operatore->attivo !== false) {
+                $operatore->notify(new OperatoreAssegnatoNotification($segnalazione, $azione, $attore));
+            }
+
+            return;
+        }
+
+        if ($azione->flag_appalto && $segnalazione->id_appalto) {
+            $appalto = $segnalazione->appalto()->with('impresa')->first();
+
+            if ($appalto?->id_impresa) {
+                $destinatari = User::role('impresa')
+                    ->where('id_impresa', $appalto->id_impresa)
+                    ->get()
+                    ->filter(fn (User $user) => $user->attivo !== false);
+
+                if ($destinatari->isNotEmpty()) {
+                    Notification::send($destinatari, new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
+                    return;
+                }
+
+                if ($appalto->impresa?->email) {
+                    Notification::route('mail', $appalto->impresa->email)
+                        ->notify(new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
+                }
+            }
+
+            return;
+        }
+
+        if ($segnalazione->stato?->chiusura) {
+            $segnalatore = $segnalazione->id_utente_segnalazione
+                ? User::find($segnalazione->id_utente_segnalazione)
+                : null;
+
+            if ($segnalatore && $segnalatore->id !== $attore->id && $segnalatore->attivo !== false) {
+                $segnalatore->notify(new SegnalazioneChiusaNotification($segnalazione, $azione, $attore));
+                return;
+            }
+
+            if ($segnalazione->email) {
+                Notification::route('mail', $segnalazione->email)
+                    ->notify(new SegnalazioneChiusaNotification($segnalazione, $azione, $attore));
+            }
+
+            return;
+        }
+
         $notification = new SegnalazioneStatoCambiato($segnalazione, $azione, $attore);
 
         // All'operatore assegnato (se diverso dall'attore)
@@ -143,5 +198,13 @@ class SegnalazioneWorkflowService
             $segnalatore = User::find($segnalazione->id_utente_segnalazione);
             $segnalatore?->notify($notification);
         }
+    }
+
+    private function deveInviareNotifiche(Azione $azione, Segnalazione $segnalazione): bool
+    {
+        return $azione->flag_notifica
+            || ($azione->flag_operatore && (bool) $segnalazione->id_operatore_assegnato)
+            || ($azione->flag_appalto && (bool) $segnalazione->id_appalto)
+            || (bool) $segnalazione->stato?->chiusura;
     }
 }

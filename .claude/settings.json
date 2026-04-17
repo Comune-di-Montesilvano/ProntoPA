@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(MSYS_NO_PATHCONV=1 docker compose exec php php artisan route:list --name=admin)",
+      "Bash(MSYS_NO_PATHCONV=1 docker compose exec php php artisan config:clear)",
+      "Bash(MSYS_NO_PATHCONV=1 docker compose exec php php artisan view:clear)",
+      "Bash(MSYS_NO_PATHCONV=1 docker compose exec -T mariadb mysql -u root -proot_secret segnalazioni -e \"SELECT chiave, valore, tipo, gruppo FROM impostazioni ORDER BY gruppo, chiave;\")"
+    ]
+  }
+}

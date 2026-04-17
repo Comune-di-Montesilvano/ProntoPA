@@ -9,17 +9,17 @@ use App\Http\Controllers\Admin\UtentiController;
 use App\Http\Controllers\AppaltiController;
 use App\Http\Controllers\GestioneController;
 use App\Http\Controllers\ImpreseCRUDController;
+use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleDashboardController;
 use App\Http\Controllers\SegnalazioneController;
 use App\Http\Controllers\SegnalatoreDashboardController;
 use App\Http\Controllers\StatisticheController;
+use App\Http\Controllers\TelegramAccountController;
 use Illuminate\Support\Facades\Route;
 
 // Home
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [PublicHomeController::class, 'index'])->name('home');
 
 // Dashboard — dispatcher per ruolo
 Route::get('/dashboard', [RoleDashboardController::class, 'index'])
@@ -77,6 +77,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/impostazioni', [ImpostazioniController::class, 'index'])->name('impostazioni.index');
     Route::patch('/impostazioni', [ImpostazioniController::class, 'update'])->name('impostazioni.update');
 
+    Route::patch('utenti/{utente}/attivo', [UtentiController::class, 'toggleAttivo'])
+        ->name('utenti.toggle-attivo');
+
     Route::resource('utenti', UtentiController::class)
         ->except(['show'])
         ->parameters(['utenti' => 'utente']);
@@ -112,6 +115,8 @@ Route::middleware(['auth', 'role:impresa'])->prefix('imprese-portale')->name('im
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/telegram/link', [TelegramAccountController::class, 'store'])->name('profile.telegram.store');
+    Route::delete('/profile/telegram/link', [TelegramAccountController::class, 'destroy'])->name('profile.telegram.destroy');
 });
 
 require __DIR__.'/auth.php';
