@@ -86,6 +86,22 @@ class ImpostazioniSeeder extends Seeder
                 'descrizione' => 'Livello di zoom default (1-19)',
             ],
 
+            // Pubblicazione automatica
+            [
+                'chiave'      => 'publication_enabled',
+                'valore'      => '0',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'pubblicazione',
+                'descrizione' => 'Abilita pubblicazione automatica segnalazioni quando raggiungono uno stato configurato',
+            ],
+            [
+                'chiave'      => 'publication_auto_state_id',
+                'valore'      => null,
+                'tipo'        => 'integer',
+                'gruppo'      => 'pubblicazione',
+                'descrizione' => 'ID stato a partire da cui le segnalazioni diventano pubbliche (es. 2=In carico). NULL=disabilitato',
+            ],
+
             // Webhook (integrazione sito Comune)
             [
                 'chiave'      => 'webhook_cittadini_url',

@@ -43,6 +43,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('segnalazioni/{segnalazione}/stampa', [SegnalazioneController::class, 'stampa'])
         ->name('segnalazioni.stampa');
+
+    Route::patch('segnalazioni/{segnalazione}/toggle-riservata', [SegnalazioneController::class, 'toggleRiservata'])
+        ->name('segnalazioni.toggle-riservata');
 });
 
 // ── Gestione (admin + gestore) ────────────────────────────────────────────────

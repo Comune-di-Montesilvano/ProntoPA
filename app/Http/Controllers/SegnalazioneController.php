@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\SegnalazioneWorkflowService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class SegnalazioneController extends Controller
@@ -187,4 +188,20 @@ class SegnalazioneController extends Controller
 
         return back()->with('success', $segnalazione->flag_evidenza ? 'Rimossa da evidenza.' : 'Aggiunta in evidenza.');
     }
+
+    // ── Toggle riservata ──────────────────────────────────────────────────────
+
+    public function toggleRiservata(Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('update', $segnalazione);
+
+        $segnalazione->update([
+            'flag_riservata' => ! $segnalazione->flag_riservata,
+        ]);
+
+        Cache::forget('public.home.statistics');
+
+        return back()->with('success', $segnalazione->flag_riservata ? 'Segnalazione esclusa dalle statistiche pubbliche.' : 'Segnalazione ora visibile nelle statistiche pubbliche.');
+    }
+
 }

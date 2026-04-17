@@ -122,6 +122,7 @@
                             <th class="px-3 py-3 text-left">Provenienza</th>
                             <th class="px-3 py-3 text-left">Operatore</th>
                             <th class="px-3 py-3 text-left">Stato</th>
+                            <th class="px-3 py-3 text-left">Visibilita</th>
                             <th class="px-3 py-3"></th>
                         </tr>
                     </thead>
@@ -158,6 +159,23 @@
                                             {{ $s->stato->descrizione }}
                                         </span>
                                     @endif
+                                </td>
+                                <td class="px-3 py-3">
+                                    @can('update', $s)
+                                        <form method="POST"
+                                              action="{{ route('segnalazioni.toggle-riservata', $s->id_segnalazione) }}">
+                                            @csrf @method('PATCH')
+                                            <button type="submit"
+                                                    title="{{ $s->flag_riservata ? 'Rendi pubblica' : 'Rendi riservata' }}"
+                                                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition {{ $s->flag_riservata ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200' }}">
+                                                {{ $s->flag_riservata ? 'Riservata' : 'Pubblica' }}
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium {{ $s->flag_riservata ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700' }}">
+                                            {{ $s->flag_riservata ? 'Riservata' : 'Pubblica' }}
+                                        </span>
+                                    @endcan
                                 </td>
                                 <td class="px-3 py-3 text-right">
                                     <a href="{{ route('segnalazioni.show', $s->id_segnalazione) }}"

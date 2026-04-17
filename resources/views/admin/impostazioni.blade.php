@@ -15,6 +15,7 @@
                                     'mappa'   => 'Mappa (OpenStreetMap)',
                                     'telegram'=> 'Bot Telegram',
                                     'webhook' => 'Webhook cittadini',
+                                    'pubblicazione' => 'Pubblicazione automatica',
                                     default   => ucfirst($gruppo),
                                 } }}
                             </h3>
@@ -33,6 +34,18 @@
                                                 class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
                                             <option value="1" {{ $imp->valore == '1' ? 'selected' : '' }}>Sì</option>
                                             <option value="0" {{ $imp->valore != '1' ? 'selected' : '' }}>No</option>
+                                        </select>
+                                    @elseif($imp->chiave === 'publication_auto_state_id')
+                                        <select id="imp_{{ $imp->chiave }}"
+                                                name="impostazioni[{{ $imp->chiave }}]"
+                                                class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                            <option value="">-- Disabilitato --</option>
+                                            @foreach($statiSegnalazioni as $stato)
+                                                <option value="{{ $stato->id_stato }}"
+                                                        {{ $imp->valore == $stato->id_stato ? 'selected' : '' }}>
+                                                    {{ $stato->id_stato }}: {{ $stato->descrizione }}
+                                                </option>
+                                            @endforeach
                                         </select>
                                     @elseif($imp->tipo === 'image')
                                         <div x-data="{ url: '{{ $imp->valore }}' }">

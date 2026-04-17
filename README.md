@@ -154,6 +154,29 @@ Comandi disponibili:
 - `/lista` mostra le segnalazioni aperte visibili all'utente.
 - `/apri <id>` mostra il dettaglio e, se consentito, i bottoni inline per le azioni rapide.
 
+### Pubblicazione automatica (trasparenza + GDPR)
+
+La piattaforma supporta una policy di pubblicazione automatica delle segnalazioni verso la home pubblica aggregata.
+
+Configurazione:
+
+1. Vai su **Admin -> Impostazioni**
+2. Nel gruppo **Pubblicazione automatica** imposta:
+	- `publication_enabled` (`Si/No`)
+	- `publication_auto_state_id` (stato trigger, es. `2 = In carico`)
+
+Regole applicate:
+
+- Le statistiche pubbliche includono solo segnalazioni con `flag_pubblicata = true` e `flag_riservata = false`.
+- I dati mostrati in home pubblica restano aggregati/anonimi (nessun dato personale).
+- Da dashboard gestione, admin/gestori possono escludere singole segnalazioni marcandole come riservate.
+
+Comando batch (utile per riallineamenti):
+
+```bash
+docker compose exec php php artisan app:auto-publish-segnalazioni
+```
+
 ---
 
 ## Deployment Produzione (Portainer / rootless Podman)
