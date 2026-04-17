@@ -126,6 +126,34 @@ Dopo il primo login con l'account admin:
 3. Configura il gruppo **Mappa**: coordinate e zoom del territorio
 4. Configura il gruppo **Email**: mittente notifiche
 
+### Telegram
+
+La v0.3 include un bot Telegram opzionale per notifiche push e comandi rapidi operativi.
+
+Configurazione minima:
+
+1. Vai su **Admin → Impostazioni** e compila il gruppo **Bot Telegram**:
+	- `telegram_bot_token`
+	- `telegram_bot_username`
+	- `telegram_webhook_secret` opzionale, ma raccomandato
+2. Espone l'istanza su HTTPS pubblico.
+3. Registra il webhook:
+
+```bash
+docker compose exec php php artisan telegram:set-webhook --url="https://tuo-dominio.example"
+```
+
+Collegamento utente:
+
+1. L'utente autenticato apre **Profilo**.
+2. Genera un token Telegram.
+3. Avvia il bot con `/start <token>`.
+
+Comandi disponibili:
+
+- `/lista` mostra le segnalazioni aperte visibili all'utente.
+- `/apri <id>` mostra il dettaglio e, se consentito, i bottoni inline per le azioni rapide.
+
 ---
 
 ## Deployment Produzione (Portainer / rootless Podman)

@@ -1,30 +1,35 @@
 # ProntoPA — Roadmap sviluppi
 
-## v0.3 — UX e comunicazioni
+## v0.3 — UX e comunicazioni ✅ COMPLETATO
 
-### Landing page pubblica
+### Landing page pubblica ✅
 - Pagina `/` con presentazione del sistema, link al login e statistiche anonimizzate (totali per stato, tipologia, ente)
 - Sostituisce l'attuale pagina demo di Laravel
 
-### Disattivazione utenti
+### Disattivazione utenti ✅
 - Campo `attivo` (boolean) su `users`
 - Blocco login per utenti disattivati (middleware o `AuthenticatedSessionController`)
 - UI admin: toggle attivo/disattivato al posto del pulsante Elimina
 - Filtro "Mostra disattivati" nella lista utenti
 
-### Notifiche email
+### Notifiche email ✅
 - Notifica all'operatore quando gli viene assegnata una segnalazione
 - Notifica all'impresa quando riceve un appalto
 - Notifica al segnalante alla chiusura
 - Configurazione mittente tramite impostazioni ente (già presente: `mail_from_address`, `mail_from_name`)
 - Implementare via Laravel Notifications con Mailable
 
-### Bot Telegram
+### Bot Telegram ✅
 - Notifica push all'operatore su assegnazione segnalazione
 - Notifica push all'impresa su assegnazione appalto
 - Comandi: `/lista` (segnalazioni assegnate), `/apri <id>` (dettaglio), bottoni inline per cambio stato
 - Configurazione token bot e chat ID per utente (campo `telegram_chat_id` su `users`)
 - Webhook Telegram → endpoint Laravel
+
+### Infrastructure & Operations ✅
+- SANCTUM_STATEFUL_DOMAINS configuration fix
+- Legacy data reimport script (legacy/reimport-legacy.ps1) for testing with realistic data
+- Deploy-ready tooling (untracked, reusable)
 
 ---
 
@@ -35,7 +40,7 @@
 - Upload multiplo al momento della creazione e dalla scheda segnalazione
 - Accesso diretto alla fotocamera su mobile (`<input capture="environment">`)
 - Anteprima miniature, download, eliminazione (solo per chi ha creato o gestori)
-- Storage: Laravel disk (`local` in dev, S3-compatibile in prod)
+- Storage: Laravel disk (`local` in dev, volume o S3-compatibile in prod)
 - Limite dimensione e tipi consentiti configurabili in impostazioni
 
 ---

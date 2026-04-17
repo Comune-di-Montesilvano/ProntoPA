@@ -13,6 +13,7 @@
                                     'brand'   => 'Brandizzazione ente',
                                     'email'   => 'Email / Notifiche',
                                     'mappa'   => 'Mappa (OpenStreetMap)',
+                                    'telegram'=> 'Bot Telegram',
                                     'webhook' => 'Webhook cittadini',
                                     default   => ucfirst($gruppo),
                                 } }}

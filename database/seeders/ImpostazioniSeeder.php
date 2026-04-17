@@ -101,6 +101,27 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'webhook',
                 'descrizione' => 'Secret HMAC per firmare i payload webhook in uscita',
             ],
+            [
+                'chiave'      => 'telegram_bot_token',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'telegram',
+                'descrizione' => 'Token API del bot Telegram generato da BotFather',
+            ],
+            [
+                'chiave'      => 'telegram_bot_username',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'telegram',
+                'descrizione' => 'Username del bot Telegram senza URL completo (es. pronto_pa_bot)',
+            ],
+            [
+                'chiave'      => 'telegram_webhook_secret',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'telegram',
+                'descrizione' => 'Secret inviato da Telegram nell\'header del webhook',
+            ],
         ];
 
         foreach ($impostazioni as $impostazione) {

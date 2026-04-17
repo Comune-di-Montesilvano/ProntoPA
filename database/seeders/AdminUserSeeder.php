@@ -21,6 +21,7 @@ class AdminUserSeeder extends Seeder
                 'name'                    => $name,
                 'email'                   => $email,
                 'password'                => Hash::make($password),
+                'attivo'                  => true,
                 'amministratore'          => true,
                 'gestore_segnalazioni'    => false,
                 'supervisore_segnalazioni'=> false,

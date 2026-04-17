@@ -154,4 +154,11 @@ class Segnalazione extends Model
     {
         return $query->where('flag_evidenza', true)->whereNull('data_chiusura');
     }
+
+    public function scopePubbliche($query)
+    {
+        return $query
+            ->where('flag_pubblicata', true)
+            ->where('flag_riservata', false);
+    }
 }

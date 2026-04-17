@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\SegnalazioneApiController;
+use App\Http\Controllers\Api\TelegramWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -23,3 +24,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/segnalazioni/{id}/stato', [SegnalazioneApiController::class, 'stato'])
         ->name('api.segnalazioni.stato');
 });
+
+Route::post('/telegram/webhook', TelegramWebhookController::class)
+    ->name('api.telegram.webhook');
