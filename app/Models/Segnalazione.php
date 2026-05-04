@@ -49,15 +49,17 @@ class Segnalazione extends Model
     protected function casts(): array
     {
         return [
-            'data_segnalazione'  => 'datetime',
-            'data_chiusura'      => 'datetime',
-            'latitudine'         => 'float',
-            'longitudine'        => 'float',
-            'flag_riservata'     => 'boolean',
-            'flag_pubblicata'    => 'boolean',
-            'flag_evidenza'      => 'boolean',
-            'importo_preventivo' => 'decimal:2',
-            'importo_liquidato'  => 'decimal:2',
+            'data_segnalazione'      => 'datetime',
+            'data_chiusura'          => 'datetime',
+            'latitudine'             => 'float',
+            'longitudine'            => 'float',
+            'flag_riservata'         => 'boolean',
+            'flag_pubblicata'        => 'boolean',
+            'flag_evidenza'          => 'boolean',
+            'importo_preventivo'     => 'decimal:2',
+            'importo_liquidato'      => 'decimal:2',
+            'id_utente_segnalazione' => 'integer',
+            'id_operatore_assegnato' => 'integer',
         ];
     }
 
@@ -110,6 +112,12 @@ class Segnalazione extends Model
                     ->orderByDesc('data_registrazione');
     }
 
+    public function allegati(): HasMany
+    {
+        return $this->hasMany(AllegatoSegnalazione::class, 'id_segnalazione', 'id_segnalazione')
+            ->orderByDesc('created_at');
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     public function isChiusa(): bool
@@ -129,7 +137,10 @@ class Segnalazione extends Model
             if ($user->isSupervisore()) {
                 return $query;
             }
-            return $query->where('id_operatore_assegnato', $user->id);
+            return $query->where(function ($q) use ($user) {
+                $q->where('id_operatore_assegnato', $user->id)
+                  ->orWhere('id_utente_segnalazione', $user->id);
+            });
         }
 
         if ($user->hasRole('impresa') && $user->id_impresa) {

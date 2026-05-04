@@ -8,7 +8,7 @@ Open-source manutenzione PA. Scuole/comuni/URP segnalano guasti, gestori assegna
 
 ## Stack
 
-Laravel 13 · PHP 8.4-FPM · Nginx · MariaDB 10.11 · Redis · Blade+Tailwind4+Alpine.js · Chart.js · Leaflet+OSM · Breeze+Spatie Permission v6 · Sanctum · Docker+compose · GHCR · GitHub Actions
+Laravel 13 · PHP 8.4-FPM · Nginx · MariaDB 11.4 · Redis · Blade+Tailwind4+Alpine.js · Chart.js · Leaflet+OSM · Breeze+Spatie Permission v6 · Sanctum · Docker+compose · GHCR · GitHub Actions
 
 ## Setup Dev
 
@@ -100,7 +100,7 @@ Migrations `database/migrations/` da `legacy/export.sql`:
 
 Seeders: `TabelleRiferimentoSeeder` · `IstitutiPlessiSeeder` · `ImpostazioniSeeder` · `RolesAndPermissionsSeeder`
 
-Import prod: `docker compose exec -T mariadb mysql -u segnalazioni -p segnalazioni < legacy/export.sql`
+Import prod: `docker compose exec -T mariadb mariadb -u segnalazioni -p segnalazioni < legacy/export.sql`
 
 ## API
 

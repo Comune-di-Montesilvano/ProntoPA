@@ -16,6 +16,7 @@
                                     'telegram'=> 'Bot Telegram',
                                     'webhook' => 'Webhook cittadini',
                                     'pubblicazione' => 'Pubblicazione automatica',
+                                    'allegati' => 'Allegati segnalazioni',
                                     default   => ucfirst($gruppo),
                                 } }}
                             </h3>

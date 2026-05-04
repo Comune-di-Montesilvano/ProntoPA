@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AllegatoSegnalazione;
 use App\Models\Azione;
+use App\Models\Impostazione;
 use App\Models\NotaSegnalazione;
 use App\Models\Plesso;
 use App\Models\Provenienza;
@@ -13,7 +15,10 @@ use App\Models\User;
 use App\Services\SegnalazioneWorkflowService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class SegnalazioneController extends Controller
@@ -63,6 +68,12 @@ class SegnalazioneController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $maxSizeMb      = (int) Impostazione::get('allegati_max_size_mb', 10);
+        $maxPerRequest  = (int) Impostazione::get('allegati_max_per_request', 5);
+        $mimeConsentiti = array_filter(
+            array_map('trim', explode(',', Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png')))
+        );
+
         $data = $request->validate([
             'id_tipologia_segnalazione' => ['required', 'integer', 'exists:tipologie_segnalazioni,id_tipologia_segnalazione'],
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
@@ -70,6 +81,12 @@ class SegnalazioneController extends Controller
             'id_provenienza'            => ['required', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
             'latitudine'                => ['nullable', 'numeric'],
             'longitudine'               => ['nullable', 'numeric'],
+            'allegati'                  => ['nullable', 'array', 'max:' . $maxPerRequest],
+            'allegati.*'                => [
+                'file',
+                'max:' . ($maxSizeMb * 1024),
+                'mimetypes:' . implode(',', $mimeConsentiti),
+            ],
         ]);
 
         $user = auth()->user();
@@ -77,16 +94,40 @@ class SegnalazioneController extends Controller
         // Stato iniziale
         $statoIniziale = StatoSegnalazione::where('iniziale', true)->first();
 
-        Segnalazione::create(array_merge($data, [
-            'id_utente_segnalazione' => $user->id,
-            'id_stato_segnalazione'  => $statoIniziale?->id_stato ?? 1,
-            'id_plesso'              => $data['id_plesso'] ?? 0,
-            'latitudine'             => $data['latitudine'] ?? 0,
-            'longitudine'            => $data['longitudine'] ?? 0,
-            'segnalante'             => $user->name,
-            'email'                  => $user->email,
-            'telefono'               => $user->telefono,
-        ]));
+        $segnalazione = Segnalazione::create(array_merge(
+            Arr::except($data, ['allegati']),
+            [
+                'id_utente_segnalazione' => $user->id,
+                'id_stato_segnalazione'  => $statoIniziale?->id_stato ?? 1,
+                'id_plesso'              => $data['id_plesso'] ?? 0,
+                'latitudine'             => $data['latitudine'] ?? 0,
+                'longitudine'            => $data['longitudine'] ?? 0,
+                'segnalante'             => $user->name,
+                'email'                  => $user->email,
+                'telefono'               => $user->telefono,
+            ]
+        ));
+
+        // Allegati opzionali
+        if ($request->hasFile('allegati')) {
+            foreach ($request->file('allegati') as $file) {
+                $ext      = $file->getClientOriginalExtension();
+                $filename = Str::uuid() . ($ext ? '.' . $ext : '');
+                $path     = $file->storeAs(
+                    'allegati/' . $segnalazione->id_segnalazione,
+                    $filename,
+                    'local'
+                );
+                AllegatoSegnalazione::create([
+                    'id_segnalazione'     => $segnalazione->id_segnalazione,
+                    'percorso'            => $path,
+                    'tipo'                => $file->getMimeType(),
+                    'nome_originale'      => $file->getClientOriginalName(),
+                    'dimensione'          => $file->getSize(),
+                    'id_utente_creazione' => $user->id,
+                ]);
+            }
+        }
 
         return redirect()->route('segnalazioni.index')
             ->with('success', 'Segnalazione inviata con successo.');
@@ -103,6 +144,7 @@ class SegnalazioneController extends Controller
             'operatore', 'utente', 'appalto',
             'note.autore',
             'storicoStati.stato', 'storicoStati.utente',
+            'allegati.utenteCreazione',
         ]);
 
         $azioniDisponibili = $this->workflow->getAzioniDisponibili($segnalazione, auth()->user());

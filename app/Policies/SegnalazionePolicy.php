@@ -28,7 +28,8 @@ class SegnalazionePolicy
             if ($user->isSupervisore()) {
                 return true;
             }
-            return $segnalazione->id_operatore_assegnato === $user->id;
+            return $segnalazione->id_operatore_assegnato === $user->id
+                || $segnalazione->id_utente_segnalazione === $user->id;
         }
 
         if ($user->hasRole('segnalatore')) {
@@ -68,5 +69,30 @@ class SegnalazionePolicy
     public function delete(User $user, Segnalazione $segnalazione): bool
     {
         return $user->isAdmin() || $user->hasRole('admin');
+    }
+
+    /**
+     * Può eliminare un allegato:
+     * - admin sempre
+     * - gestore supervisore sempre
+     * - gestore assegnato a quella segnalazione
+     * - segnalatore che ha creato la segnalazione
+     */
+    public function deleteAllegato(User $user, Segnalazione $segnalazione): bool
+    {
+        if ($user->isAdmin() || $user->hasRole('admin')) {
+            return true;
+        }
+
+        if ($user->isGestore() || $user->hasRole('gestore')) {
+            return $user->isSupervisore()
+                || $segnalazione->id_operatore_assegnato === $user->id;
+        }
+
+        if ($user->hasRole('segnalatore')) {
+            return $segnalazione->id_utente_segnalazione === $user->id;
+        }
+
+        return false;
     }
 }

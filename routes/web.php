@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ProfiliController;
 use App\Http\Controllers\Admin\ProvenienzaController;
 use App\Http\Controllers\Admin\SediController;
 use App\Http\Controllers\Admin\UtentiController;
+use App\Http\Controllers\AllegatiSegnalazioniController;
 use App\Http\Controllers\AppaltiController;
 use App\Http\Controllers\GestioneController;
 use App\Http\Controllers\ImpreseCRUDController;
@@ -31,6 +32,15 @@ Route::middleware('auth')->group(function () {
     Route::resource('segnalazioni', SegnalazioneController::class)
         ->only(['index', 'create', 'store', 'show'])
         ->parameters(['segnalazioni' => 'segnalazione']);
+
+    Route::post('segnalazioni/{segnalazione}/allegati', [AllegatiSegnalazioniController::class, 'store'])
+        ->name('segnalazioni.allegati.store');
+
+    Route::get('segnalazioni/{segnalazione}/allegati/{allegato}/download', [AllegatiSegnalazioniController::class, 'download'])
+        ->name('segnalazioni.allegati.download');
+
+    Route::delete('segnalazioni/{segnalazione}/allegati/{allegato}', [AllegatiSegnalazioniController::class, 'destroy'])
+        ->name('segnalazioni.allegati.destroy');
 
     Route::post('segnalazioni/{segnalazione}/azione', [SegnalazioneController::class, 'eseguiAzione'])
         ->name('segnalazioni.azione');

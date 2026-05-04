@@ -10,6 +10,7 @@
     <div class="space-y-4">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <form method="POST" action="{{ route('segnalazioni.store') }}" class="p-6 space-y-6"
+                  enctype="multipart/form-data"
                   x-data="{ tipologiaId: {{ old('id_tipologia_segnalazione', 'null') }} }">
                 @csrf
 
@@ -112,6 +113,35 @@
                         Coordinate: <span id="coord-text"></span>
                         <button type="button" onclick="resetCoords()" class="ml-2 text-red-400 hover:text-red-600">Rimuovi</button>
                     </div>
+                </div>
+
+                {{-- Allegati --}}
+                @php
+                    $allegatiMaxSizeMb      = (int) \App\Models\Impostazione::get('allegati_max_size_mb', 10);
+                    $allegatiMaxPerRequest  = (int) \App\Models\Impostazione::get('allegati_max_per_request', 5);
+                    $allegatiMime           = \App\Models\Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png');
+                @endphp
+                <div>
+                    <x-input-label for="allegati_create" value="Allegati (foto / video — opzionale)" />
+                    <p class="text-xs text-gray-400 mb-2">
+                        Max {{ $allegatiMaxPerRequest }} file, {{ $allegatiMaxSizeMb }}&nbsp;MB ciascuno.
+                        Formati accettati: foto e video.
+                    </p>
+                    <input id="allegati_create" type="file" name="allegati[]" multiple
+                           accept="{{ $allegatiMime }}"
+                           capture="environment"
+                           class="block w-full text-sm text-gray-500
+                                  file:mr-4 file:py-2 file:px-4
+                                  file:rounded-md file:border-0
+                                  file:text-sm file:font-semibold
+                                  file:bg-blue-50 file:text-blue-700
+                                  hover:file:bg-blue-100" />
+                    @error('allegati')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('allegati.*')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 {{-- Actions --}}

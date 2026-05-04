@@ -59,6 +59,7 @@
             <nav class="-mb-px flex space-x-6">
                 @foreach([
                     'dati'     => 'Segnalazione',
+                    'allegati' => 'Allegati',
                     'note'     => 'Note / Comunicazioni',
                     'storico'  => 'Storico segnalazione',
                     'gestione' => 'Gestione Segnalazione',
@@ -81,6 +82,15 @@
                             {{ $label }}
                             @if($segnalazione->storicoStati->count() > 0)
                                 <span class="ml-1 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">{{ $segnalazione->storicoStati->count() }}</span>
+                            @endif
+                        </button>
+                    @elseif($key === 'allegati')
+                        <button @click="tab = 'allegati'"
+                                :class="tab === 'allegati' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                                class="whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-base">
+                            {{ $label }}
+                            @if($segnalazione->allegati->count() > 0)
+                                <span class="ml-1 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">{{ $segnalazione->allegati->count() }}</span>
                             @endif
                         </button>
                     @else
@@ -197,6 +207,95 @@
                     <div id="mappa-segnalazione" class="h-64 w-full"></div>
                 </div>
             @endif
+        </div>
+
+        {{-- TAB: Allegati --}}
+        <div x-show="tab === 'allegati'" id="allegati" class="space-y-4">
+            @php
+                $allegatiMaxSizeMb     = (int) \App\Models\Impostazione::get('allegati_max_size_mb', 10);
+                $allegatiMaxPerRequest = (int) \App\Models\Impostazione::get('allegati_max_per_request', 5);
+                $allegatiMime          = \App\Models\Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png');
+            @endphp
+
+            {{-- Lista allegati esistenti --}}
+            @forelse($segnalazione->allegati as $allegato)
+                <div class="bg-white shadow-sm rounded-lg p-4 flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        @if(str_starts_with($allegato->tipo, 'image/'))
+                            <i class="fas fa-image text-blue-400 text-xl"></i>
+                        @elseif(str_starts_with($allegato->tipo, 'video/'))
+                            <i class="fas fa-film text-purple-400 text-xl"></i>
+                        @else
+                            <i class="fas fa-paperclip text-gray-400 text-xl"></i>
+                        @endif
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-gray-700 truncate">{{ $allegato->nome_originale }}</p>
+                            <p class="text-xs text-gray-400">
+                                {{ number_format($allegato->dimensione / 1024, 1) }}&nbsp;KB
+                                &middot; {{ $allegato->created_at->format('d/m/Y H:i') }}
+                                @if($allegato->utenteCreazione)
+                                    &middot; {{ $allegato->utenteCreazione->name }}
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a href="{{ route('segnalazioni.allegati.download', [$segnalazione->id_segnalazione, $allegato->id_allegato]) }}"
+                           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-50 transition">
+                            <i class="fas fa-download mr-1"></i> Download
+                        </a>
+                        @can('deleteAllegato', $segnalazione)
+                            <form method="POST"
+                                  action="{{ route('segnalazioni.allegati.destroy', [$segnalazione->id_segnalazione, $allegato->id_allegato]) }}"
+                                  onsubmit="return confirm('Eliminare questo allegato?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                        class="inline-flex items-center px-3 py-1.5 bg-red-50 border border-red-200 rounded-md text-xs font-semibold text-red-700 hover:bg-red-100 transition">
+                                    <i class="fas fa-trash mr-1"></i> Elimina
+                                </button>
+                            </form>
+                        @endcan
+                    </div>
+                </div>
+            @empty
+                <div class="bg-white shadow-sm rounded-lg p-6 text-center text-gray-400">Nessun allegato.</div>
+            @endforelse
+
+            {{-- Form upload nuovi allegati --}}
+            <div class="bg-white shadow-sm rounded-lg p-5">
+                <h3 class="font-semibold text-gray-700 mb-3">Aggiungi allegati</h3>
+                <form method="POST"
+                      action="{{ route('segnalazioni.allegati.store', $segnalazione->id_segnalazione) }}"
+                      enctype="multipart/form-data"
+                      class="space-y-3">
+                    @csrf
+                    <p class="text-xs text-gray-400">
+                        Max {{ $allegatiMaxPerRequest }} file per volta, {{ $allegatiMaxSizeMb }}&nbsp;MB ciascuno.
+                    </p>
+                    <input type="file" name="allegati[]" multiple required
+                           accept="{{ $allegatiMime }}"
+                           capture="environment"
+                           class="block w-full text-sm text-gray-500
+                                  file:mr-4 file:py-2 file:px-4
+                                  file:rounded-md file:border-0
+                                  file:text-sm file:font-semibold
+                                  file:bg-blue-50 file:text-blue-700
+                                  hover:file:bg-blue-100" />
+                    @error('allegati')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('allegati.*')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <div class="text-right">
+                        <button type="submit"
+                                class="inline-flex items-center px-4 py-2 bg-blue-600 rounded-md font-semibold text-sm text-white hover:bg-blue-700 transition">
+                            Carica allegati
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         {{-- TAB: Note --}}

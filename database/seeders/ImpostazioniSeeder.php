@@ -138,6 +138,29 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'telegram',
                 'descrizione' => 'Secret inviato da Telegram nell\'header del webhook',
             ],
+
+            // Allegati segnalazioni
+            [
+                'chiave'      => 'allegati_max_size_mb',
+                'valore'      => '10',
+                'tipo'        => 'integer',
+                'gruppo'      => 'allegati',
+                'descrizione' => 'Dimensione massima singolo allegato in MB',
+            ],
+            [
+                'chiave'      => 'allegati_max_per_request',
+                'valore'      => '5',
+                'tipo'        => 'integer',
+                'gruppo'      => 'allegati',
+                'descrizione' => 'Numero massimo di file caricabili per singola richiesta',
+            ],
+            [
+                'chiave'      => 'allegati_mime_consentiti',
+                'valore'      => 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime',
+                'tipo'        => 'text',
+                'gruppo'      => 'allegati',
+                'descrizione' => 'Elenco MIME consentiti separati da virgola',
+            ],
         ];
 
         foreach ($impostazioni as $impostazione) {
