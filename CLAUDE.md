@@ -8,7 +8,7 @@ Open-source manutenzione PA. Scuole/comuni/URP segnalano guasti, gestori assegna
 
 ## Stack
 
-Laravel 11 · PHP 8.3-FPM · Nginx · MariaDB 10.11 · Redis · Blade+Tailwind3+Alpine.js · Chart.js · Leaflet+OSM · Breeze+Spatie Permission v6 · Sanctum · Docker+compose · GHCR · GitHub Actions
+Laravel 13 · PHP 8.4-FPM · Nginx · MariaDB 10.11 · Redis · Blade+Tailwind4+Alpine.js · Chart.js · Leaflet+OSM · Breeze+Spatie Permission v6 · Sanctum · Docker+compose · GHCR · GitHub Actions
 
 ## Setup Dev
 

@@ -62,17 +62,17 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->amministratore;
+        return (bool) $this->amministratore;
     }
 
     public function isGestore(): bool
     {
-        return $this->gestore_segnalazioni;
+        return (bool) $this->gestore_segnalazioni;
     }
 
     public function isSupervisore(): bool
     {
-        return $this->supervisore_segnalazioni;
+        return (bool) $this->supervisore_segnalazioni;
     }
 
     // --- Relazioni ---

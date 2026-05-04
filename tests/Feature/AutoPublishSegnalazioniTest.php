@@ -7,7 +7,7 @@ use App\Models\Segnalazione;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\TabelleRiferimentoSeeder;
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -19,7 +19,7 @@ class AutoPublishSegnalazioniTest extends TestCase
     {
         parent::setUp();
 
-        $this->withoutMiddleware(ValidateCsrfToken::class);
+        $this->withoutMiddleware(PreventRequestForgery::class);
         $this->seed(TabelleRiferimentoSeeder::class);
         $this->seed(RolesAndPermissionsSeeder::class);
     }

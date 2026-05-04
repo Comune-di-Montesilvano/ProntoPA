@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,7 +15,7 @@ class ProfileTelegramLinkTest extends TestCase
     {
         parent::setUp();
 
-        $this->withoutMiddleware(ValidateCsrfToken::class);
+        $this->withoutMiddleware(PreventRequestForgery::class);
     }
 
     public function test_user_can_generate_a_telegram_link_token_from_profile(): void

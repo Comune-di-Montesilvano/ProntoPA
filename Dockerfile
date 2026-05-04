@@ -5,7 +5,7 @@
 # Compila PHP extensions isolato dal codice app.
 # Rebuild solo se cambia PHP version o lista extension.
 ############################################
-FROM php:8.3-fpm-alpine AS php-extensions
+FROM php:8.4-fpm-alpine AS php-extensions
 
 # Layer 1: runtime libs — quasi mai cambia, cache molto stabile
 RUN --mount=type=cache,id=apk-${TARGETARCH},target=/var/cache/apk \
@@ -71,7 +71,7 @@ RUN composer run-script post-autoload-dump \
 # Stage 2: PHP-FPM production image
 # Target: app — base pulita, no Node, no composer, no build tools
 ############################################
-FROM php:8.3-fpm-alpine AS app
+FROM php:8.4-fpm-alpine AS app
 
 ARG APP_VERSION=dev
 ENV APP_VERSION=${APP_VERSION}

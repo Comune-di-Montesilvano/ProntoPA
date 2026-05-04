@@ -3,12 +3,20 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutMiddleware(PreventRequestForgery::class);
+    }
 
     public function test_profile_page_is_displayed(): void
     {
@@ -61,7 +69,7 @@ class ProfileTest extends TestCase
         $this->assertNotNull($user->refresh()->email_verified_at);
     }
 
-    public function test_user_can_delete_their_account(): void
+    public function test_profile_delete_route_is_not_available(): void
     {
         $user = User::factory()->create();
 
@@ -71,15 +79,11 @@ class ProfileTest extends TestCase
                 'password' => 'password',
             ]);
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/');
-
-        $this->assertGuest();
-        $this->assertNull($user->fresh());
+        $response->assertMethodNotAllowed();
+        $this->assertNotNull($user->fresh());
     }
 
-    public function test_correct_password_must_be_provided_to_delete_account(): void
+    public function test_profile_delete_route_rejects_requests_even_with_invalid_password(): void
     {
         $user = User::factory()->create();
 
@@ -90,9 +94,7 @@ class ProfileTest extends TestCase
                 'password' => 'wrong-password',
             ]);
 
-        $response
-            ->assertSessionHasErrorsIn('userDeletion', 'password')
-            ->assertRedirect('/profile');
+        $response->assertMethodNotAllowed();
 
         $this->assertNotNull($user->fresh());
     }

@@ -14,7 +14,7 @@ class PublicHomeTest extends TestCase
         $response = $this->get('/');
 
         $response->assertOk();
-        $response->assertSee('Monitoraggio pubblico aggregato');
-        $response->assertSee('Accedi al sistema');
+        $response->assertSee('Monitoraggio segnalazioni');
+        $response->assertSee('Accedi');
     }
 }
