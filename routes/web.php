@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ImpostazioniController;
+use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\OrganizzazioniController;
 use App\Http\Controllers\Admin\ProfiliController;
 use App\Http\Controllers\Admin\ProvenienzaController;
@@ -96,7 +97,7 @@ Route::middleware(['auth', 'role:admin|gestore'])
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', fn () => view('admin.dashboard'))->name('dashboard');
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/impostazioni', [ImpostazioniController::class, 'index'])->name('impostazioni.index');
     Route::patch('/impostazioni', [ImpostazioniController::class, 'update'])->name('impostazioni.update');
