@@ -10,7 +10,9 @@ use App\Http\Controllers\Admin\UtentiController;
 use App\Http\Controllers\AllegatiSegnalazioniController;
 use App\Http\Controllers\AppaltiController;
 use App\Http\Controllers\GestioneController;
+use App\Http\Controllers\ImpreseDashboardController;
 use App\Http\Controllers\ImpreseCRUDController;
+use App\Http\Controllers\OperaioDashboardController;
 use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleDashboardController;
@@ -121,7 +123,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
 // ── Operaio ───────────────────────────────────────────────────────────────────
 Route::middleware(['auth', 'role:operaio'])->prefix('operaio')->name('operaio.')->group(function () {
-    Route::get('/dashboard', [GestioneController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [OperaioDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/statistiche', [OperaioDashboardController::class, 'statistiche'])->name('statistiche');
+    Route::get('/mappa', [OperaioDashboardController::class, 'mappa'])->name('mappa');
 });
 
 // ── Segnalatore ───────────────────────────────────────────────────────────────
@@ -131,7 +135,7 @@ Route::middleware(['auth', 'role:segnalatore'])->prefix('segnalatore')->name('se
 
 // ── Imprese (portale impresa) ─────────────────────────────────────────────────
 Route::middleware(['auth', 'role:impresa'])->prefix('imprese-portale')->name('imprese.')->group(function () {
-    Route::get('/dashboard', fn () => view('imprese.dashboard'))->name('dashboard');
+    Route::get('/dashboard', [ImpreseDashboardController::class, 'index'])->name('dashboard');
 });
 
 // ── Profilo (tutti gli utenti autenticati) ────────────────────────────────────
