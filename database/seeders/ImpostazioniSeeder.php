@@ -198,6 +198,43 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'allegati',
                 'descrizione' => 'Disk di storage per gli allegati (local oppure s3)',
             ],
+
+            // Verifica annuale account
+            [
+                'chiave'      => 'account_verification_enabled',
+                'valore'      => '1',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'verifica_account',
+                'descrizione' => 'Abilita il controllo annuale account e invio richieste di conferma email istituzionale',
+            ],
+            [
+                'chiave'      => 'account_verification_annual_days',
+                'valore'      => '365',
+                'tipo'        => 'integer',
+                'gruppo'      => 'verifica_account',
+                'descrizione' => 'Giorni massimi tra una conferma annuale e la successiva',
+            ],
+            [
+                'chiave'      => 'account_verification_token_days',
+                'valore'      => '30',
+                'tipo'        => 'integer',
+                'gruppo'      => 'verifica_account',
+                'descrizione' => 'Validita in giorni del link di conferma annuale',
+            ],
+            [
+                'chiave'      => 'account_verification_reminder_days',
+                'valore'      => '15',
+                'tipo'        => 'integer',
+                'gruppo'      => 'verifica_account',
+                'descrizione' => 'Invia reminder quando la scadenza e entro N giorni',
+            ],
+            [
+                'chiave'      => 'account_verification_auto_suspend',
+                'valore'      => '1',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'verifica_account',
+                'descrizione' => 'Sospende automaticamente gli account che non confermano entro la scadenza',
+            ],
         ];
 
         foreach ($impostazioni as $impostazione) {

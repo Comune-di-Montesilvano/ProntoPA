@@ -18,6 +18,7 @@
                                     'webhook'           => 'Webhook cittadini',
                                     'pubblicazione'     => 'Pubblicazione automatica',
                                     'allegati'          => 'Allegati segnalazioni',
+                                    'verifica_account'  => 'Verifica annuale account',
                                     default             => ucfirst($gruppo),
                                 } }}
                             </h3>

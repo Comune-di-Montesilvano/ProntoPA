@@ -37,7 +37,7 @@
     </div>
 
     <h1>Report mensile interventi</h1>
-    <p class="subtitle">{{ $dal->formatLocalized('%B %Y') ?? sprintf('%02d/%d', $mese, $anno) }} &nbsp;·&nbsp; Generato il {{ now()->format('d/m/Y H:i') }}</p>
+    <p class="subtitle">{{ ucfirst($dal->isoFormat('MMMM YYYY')) }} &nbsp;·&nbsp; Generato il {{ now()->format('d/m/Y H:i') }}</p>
 
     <div class="kpi-grid">
         <div class="kpi-box"><div class="kpi-value">{{ $kpi['totale'] }}</div><div class="kpi-label">Totale</div></div>

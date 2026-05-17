@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\SediController;
 use App\Http\Controllers\Admin\SlaController;
 use App\Http\Controllers\Admin\UtentiController;
 use App\Http\Controllers\AllegatiSegnalazioniController;
+use App\Http\Controllers\Auth\AnnualAccountVerificationController;
 use App\Http\Controllers\AppaltiController;
 use App\Http\Controllers\GestioneController;
 use App\Http\Controllers\ImpreseDashboardController;
@@ -25,6 +26,10 @@ use Illuminate\Support\Facades\Route;
 
 // Home
 Route::get('/', [PublicHomeController::class, 'index'])->name('home');
+
+Route::get('/account/verify-annual/{user}/{token}', [AnnualAccountVerificationController::class, 'verify'])
+    ->middleware('signed')
+    ->name('account.verification.annual');
 
 // Dashboard — dispatcher per ruolo
 Route::get('/dashboard', [RoleDashboardController::class, 'index'])
