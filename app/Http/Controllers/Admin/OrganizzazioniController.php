@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Istituto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class OrganizzazioniController extends Controller
@@ -13,7 +14,7 @@ class OrganizzazioniController extends Controller
     public function index(): View
     {
         $organizzazioni = Istituto::withCount('plessi')
-            ->orderBy('tipo')
+            ->orderBy('tipo_ente')
             ->orderBy('descrizione')
             ->paginate(30);
 
@@ -36,11 +37,19 @@ class OrganizzazioniController extends Controller
         $data = $request->validate([
             'descrizione'           => ['required', 'string', 'max:50'],
             'tipo'                  => ['required', 'string', 'max:50'],
+            'tipo_ente'             => ['required', Rule::in(['comune', 'scuola', 'asl', 'provincia', 'regione', 'altro'])],
             'codice_meccanografico' => ['nullable', 'string', 'max:50'],
+            'partita_iva'           => ['nullable', 'digits:11'],
+            'codice_fiscale'        => ['nullable', 'string', 'max:16'],
             'dirigente'             => ['nullable', 'string', 'max:50'],
             'email'                 => ['nullable', 'email', 'max:50'],
+            'domini_email_istituzionali' => ['nullable', 'string', 'max:255'],
             'recapiti'              => ['nullable', 'string', 'max:50'],
+            'attivo'                => ['nullable', 'boolean'],
         ]);
+
+        $data['attivo'] = (bool) ($data['attivo'] ?? false);
+        $data['fonte_dati'] = 'manuale';
 
         Istituto::create($data);
 
@@ -64,11 +73,18 @@ class OrganizzazioniController extends Controller
         $data = $request->validate([
             'descrizione'           => ['required', 'string', 'max:50'],
             'tipo'                  => ['required', 'string', 'max:50'],
+            'tipo_ente'             => ['required', Rule::in(['comune', 'scuola', 'asl', 'provincia', 'regione', 'altro'])],
             'codice_meccanografico' => ['nullable', 'string', 'max:50'],
+            'partita_iva'           => ['nullable', 'digits:11'],
+            'codice_fiscale'        => ['nullable', 'string', 'max:16'],
             'dirigente'             => ['nullable', 'string', 'max:50'],
             'email'                 => ['nullable', 'email', 'max:50'],
+            'domini_email_istituzionali' => ['nullable', 'string', 'max:255'],
             'recapiti'              => ['nullable', 'string', 'max:50'],
+            'attivo'                => ['nullable', 'boolean'],
         ]);
+
+        $data['attivo'] = (bool) ($data['attivo'] ?? false);
 
         $organizzazione->update($data);
 

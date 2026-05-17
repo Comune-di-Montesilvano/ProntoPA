@@ -64,6 +64,23 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_pending_users_can_not_authenticate(): void
+    {
+        $user = User::factory()->create([
+            'attivo' => true,
+            'approval_status' => 'pending',
+        ]);
+
+        $response = $this->from('/login')->post('/login', [
+            'username' => $user->username,
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors('username');
+        $this->assertGuest();
+    }
+
     public function test_inactive_users_are_logged_out_on_next_request(): void
     {
         $user = User::factory()->create(['attivo' => false]);

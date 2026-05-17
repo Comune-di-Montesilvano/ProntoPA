@@ -99,6 +99,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::patch('utenti/{utente}/attivo', [UtentiController::class, 'toggleAttivo'])
         ->name('utenti.toggle-attivo');
 
+    Route::patch('utenti/{utente}/approve', [UtentiController::class, 'approve'])
+        ->name('utenti.approve');
+
+    Route::patch('utenti/{utente}/reject', [UtentiController::class, 'reject'])
+        ->name('utenti.reject');
+
     Route::resource('utenti', UtentiController::class)
         ->except(['show'])
         ->parameters(['utenti' => 'utente']);

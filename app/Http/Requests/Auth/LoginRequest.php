@@ -78,6 +78,20 @@ class LoginRequest extends FormRequest
 
     private function ensureUserIsActive(?User $user): void
     {
+        $approvalStatus = $user->approval_status ?? 'approved';
+
+        if ($approvalStatus !== 'approved') {
+            if (Auth::check()) {
+                Auth::logout();
+            }
+
+            throw ValidationException::withMessages([
+                'username' => $approvalStatus === 'rejected'
+                    ? 'La richiesta di registrazione non è stata approvata. Contatta il supporto.'
+                    : 'La tua registrazione è in attesa di approvazione da parte dell\'operatore.',
+            ]);
+        }
+
         if ($user?->attivo ?? true) {
             return;
         }

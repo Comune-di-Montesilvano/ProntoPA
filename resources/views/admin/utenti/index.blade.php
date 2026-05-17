@@ -3,6 +3,18 @@
     <x-slot name="actions">
         <div class="flex items-center gap-3">
             <form method="GET" action="{{ route('admin.utenti.index') }}" class="inline-flex items-center gap-2 text-xs text-gray-600">
+                <label for="solo_pending" class="inline-flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                    <input id="solo_pending" type="checkbox" name="solo_pending" value="1"
+                           class="rounded border-gray-300 text-blue-600 shadow-sm"
+                           {{ $mostraSoloPending ? 'checked' : '' }}
+                           onchange="this.form.submit()">
+                    Solo pending
+                </label>
+                @if($mostraDisattivati)
+                    <input type="hidden" name="mostra_disattivati" value="1">
+                @endif
+            </form>
+            <form method="GET" action="{{ route('admin.utenti.index') }}" class="inline-flex items-center gap-2 text-xs text-gray-600">
                 <label for="mostra_disattivati" class="inline-flex items-center gap-2 cursor-pointer whitespace-nowrap">
                     <input id="mostra_disattivati" type="checkbox" name="mostra_disattivati" value="1"
                            class="rounded border-gray-300 text-blue-600 shadow-sm"
@@ -10,6 +22,9 @@
                            onchange="this.form.submit()">
                     Mostra disattivati
                 </label>
+                @if($mostraSoloPending)
+                    <input type="hidden" name="solo_pending" value="1">
+                @endif
             </form>
             <a href="{{ route('admin.utenti.create') }}"
                class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
@@ -28,8 +43,10 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ruolo</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profilo</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ente</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ultimo accesso</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stato</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Approvazione</th>
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
@@ -54,6 +71,7 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-gray-500">{{ $u->profilo?->descrizione ?? '—' }}</td>
+                            <td class="px-4 py-3 text-gray-500">{{ $u->istituto?->descrizione ?? '—' }}</td>
                             <td class="px-4 py-3 text-gray-400 whitespace-nowrap">
                                 {{ $u->last_login?->format('d/m/Y H:i') ?? 'Mai' }}
                             </td>
@@ -64,23 +82,45 @@
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">Disattivato</span>
                                 @endif
                             </td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                @if(($u->approval_status ?? 'approved') === 'pending')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Pending</span>
+                                @elseif(($u->approval_status ?? 'approved') === 'rejected')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Rifiutato</span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Approvato</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <a href="{{ route('admin.utenti.edit', $u->id) }}"
                                    class="text-blue-600 hover:text-blue-800 font-medium text-xs mr-3">Modifica</a>
                                 @if($u->id !== auth()->id())
-                                    <form method="POST" action="{{ route('admin.utenti.toggle-attivo', $u->id) }}" class="inline"
-                                          onsubmit="return confirm('{{ $u->attivo !== false ? 'Disattivare' : 'Riattivare' }} l\'utente {{ addslashes($u->username) }}?')">
-                                        @csrf @method('PATCH')
-                                        <button type="submit" class="{{ $u->attivo !== false ? 'text-amber-600 hover:text-amber-800' : 'text-green-600 hover:text-green-800' }} font-medium text-xs">
-                                            {{ $u->attivo !== false ? 'Disattiva' : 'Riattiva' }}
-                                        </button>
-                                    </form>
+                                    @if(($u->approval_status ?? 'approved') === 'pending')
+                                        <form method="POST" action="{{ route('admin.utenti.approve', $u->id) }}" class="inline"
+                                              onsubmit="return confirm('Approvare l\'utente {{ addslashes($u->username) }}?')">
+                                            @csrf @method('PATCH')
+                                            <button type="submit" class="text-green-600 hover:text-green-800 font-medium text-xs mr-3">Approva</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('admin.utenti.reject', $u->id) }}" class="inline"
+                                              onsubmit="return confirm('Rifiutare l\'utente {{ addslashes($u->username) }}?')">
+                                            @csrf @method('PATCH')
+                                            <button type="submit" class="text-red-600 hover:text-red-800 font-medium text-xs">Rifiuta</button>
+                                        </form>
+                                    @else
+                                        <form method="POST" action="{{ route('admin.utenti.toggle-attivo', $u->id) }}" class="inline"
+                                              onsubmit="return confirm('{{ $u->attivo !== false ? 'Disattivare' : 'Riattivare' }} l\'utente {{ addslashes($u->username) }}?')">
+                                            @csrf @method('PATCH')
+                                            <button type="submit" class="{{ $u->attivo !== false ? 'text-amber-600 hover:text-amber-800' : 'text-green-600 hover:text-green-800' }} font-medium text-xs">
+                                                {{ $u->attivo !== false ? 'Disattiva' : 'Riattiva' }}
+                                            </button>
+                                        </form>
+                                    @endif
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-4 py-8 text-center text-gray-400 text-sm">Nessun utente trovato.</td>
+                            <td colspan="10" class="px-4 py-8 text-center text-gray-400 text-sm">Nessun utente trovato.</td>
                         </tr>
                     @endforelse
                 </tbody>

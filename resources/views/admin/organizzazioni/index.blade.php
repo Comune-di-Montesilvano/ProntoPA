@@ -17,8 +17,11 @@
                         <tr>
                             <th class="px-4 py-3 text-left">Descrizione</th>
                             <th class="px-4 py-3 text-left">Tipo</th>
+                            <th class="px-4 py-3 text-left">Tipologia</th>
+                            <th class="px-4 py-3 text-left">P.IVA</th>
                             <th class="px-4 py-3 text-left">Dirigente / Ref.</th>
                             <th class="px-4 py-3 text-left">Email</th>
+                            <th class="px-4 py-3 text-left">Stato</th>
                             <th class="px-4 py-3 text-center w-16">Sedi</th>
                             <th class="px-4 py-3"></th>
                         </tr>
@@ -32,8 +35,17 @@
                                         {{ $org->tipo ?? '—' }}
                                     </span>
                                 </td>
+                                <td class="px-4 py-3 text-gray-500">{{ $org->tipo_ente ?? '—' }}</td>
+                                <td class="px-4 py-3 text-gray-500 font-mono">{{ $org->partita_iva ?? '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $org->dirigente ?? '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $org->email ?? '—' }}</td>
+                                <td class="px-4 py-3">
+                                    @if($org->attivo ?? true)
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Attivo</span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">Disattivo</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 text-center">
                                     <a href="{{ route('admin.sedi.index', ['id_istituto' => $org->id_istituto]) }}"
                                        class="text-blue-600 hover:underline font-medium">

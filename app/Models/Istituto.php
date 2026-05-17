@@ -11,7 +11,20 @@ class Istituto extends Model
     protected $primaryKey = 'id_istituto';
     public    $timestamps = false;
 
-    protected $fillable = ['descrizione', 'tipo', 'codice_meccanografico', 'dirigente', 'email', 'recapiti'];
+    protected $fillable = [
+        'descrizione',
+        'tipo',
+        'tipo_ente',
+        'codice_meccanografico',
+        'partita_iva',
+        'codice_fiscale',
+        'dirigente',
+        'email',
+        'domini_email_istituzionali',
+        'fonte_dati',
+        'attivo',
+        'recapiti',
+    ];
 
     public function plessi(): HasMany
     {
