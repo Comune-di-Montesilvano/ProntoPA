@@ -13,7 +13,7 @@
     </x-slot>
 
     {{-- KPI cards --}}
-    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
         @foreach([
             ['tab' => 'aperte',      'label' => 'Aperte',      'color' => 'text-blue-600',   'bg' => 'bg-blue-50'],
             ['tab' => 'in_carico',   'label' => 'In carico',   'color' => 'text-indigo-600', 'bg' => 'bg-indigo-50'],
@@ -29,6 +29,24 @@
             </a>
         @endforeach
     </div>
+
+    {{-- KPI SLA --}}
+    @if($conteggi['sla_rischio'] > 0 || $conteggi['sla_violato'] > 0)
+    <div class="grid grid-cols-2 gap-3 mb-5">
+        @if($conteggi['sla_violato'] > 0)
+        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+            <div class="text-2xl font-bold text-red-600">{{ $conteggi['sla_violato'] }}</div>
+            <div class="text-xs text-red-500 mt-0.5 uppercase tracking-wide font-semibold">SLA Violati</div>
+        </div>
+        @endif
+        @if($conteggi['sla_rischio'] > 0)
+        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+            <div class="text-2xl font-bold text-yellow-600">{{ $conteggi['sla_rischio'] }}</div>
+            <div class="text-xs text-yellow-600 mt-0.5 uppercase tracking-wide font-semibold">SLA a Rischio</div>
+        </div>
+        @endif
+    </div>
+    @endif
 
     {{-- Ricerca e filtri --}}
     <form method="GET" action="{{ route('gestione.dashboard') }}"

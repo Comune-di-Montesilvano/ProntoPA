@@ -86,6 +86,8 @@ class GestioneController extends Controller
                                 ->whereHas('stato', fn ($q) => $q->where('id_gestione', true))->count(),
             'aperte'      => (clone $baseCount)->aperte()->count(),
             'chiuse'      => (clone $baseCount)->whereNotNull('data_chiusura')->count(),
+            'sla_rischio' => (clone $baseCount)->aperte()->slaArischio()->count(),
+            'sla_violato' => (clone $baseCount)->aperte()->slaViolato()->count(),
         ];
 
         $tipologie        = TipologiaSegnalazione::orderBy('descrizione')->get();

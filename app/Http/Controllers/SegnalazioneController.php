@@ -11,6 +11,7 @@ use App\Models\Provenienza;
 use App\Models\Segnalazione;
 use App\Models\Specializzazione;
 use App\Models\StatoSegnalazione;
+use App\Services\SlaService;
 use App\Models\TipologiaSegnalazione;
 use App\Models\User;
 use App\Services\SegnalazioneWorkflowService;
@@ -25,7 +26,8 @@ use Illuminate\View\View;
 class SegnalazioneController extends Controller
 {
     public function __construct(
-        private readonly SegnalazioneWorkflowService $workflow
+        private readonly SegnalazioneWorkflowService $workflow,
+        private readonly SlaService $sla,
     ) {}
 
     // ── Lista (segnalatore: solo proprie) ─────────────────────────────────────
@@ -117,6 +119,12 @@ class SegnalazioneController extends Controller
                 'ubicazione_tipo'        => $data['ubicazione_tipo'] ?? null,
             ]
         ));
+
+        // Calcola scadenza SLA se configurata
+        $scadenzaSla = $this->sla->calcolaScadenza($segnalazione);
+        if ($scadenzaSla) {
+            $segnalazione->update(['data_scadenza_sla' => $scadenzaSla]);
+        }
 
         // Allegati opzionali
         if ($request->hasFile('allegati')) {

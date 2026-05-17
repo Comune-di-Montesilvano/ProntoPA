@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\OrganizzazioniController;
 use App\Http\Controllers\Admin\ProfiliController;
 use App\Http\Controllers\Admin\ProvenienzaController;
 use App\Http\Controllers\Admin\SediController;
+use App\Http\Controllers\Admin\SlaController;
 use App\Http\Controllers\Admin\UtentiController;
 use App\Http\Controllers\AllegatiSegnalazioniController;
 use App\Http\Controllers\AppaltiController;
@@ -112,6 +113,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('provenienze', ProvenienzaController::class)
         ->except(['show'])
         ->parameters(['provenienze' => 'provenienza']);
+
+    Route::resource('sla', SlaController::class)
+        ->except(['show'])
+        ->parameters(['sla' => 'sla']);
 });
 
 // ── Operaio ───────────────────────────────────────────────────────────────────
