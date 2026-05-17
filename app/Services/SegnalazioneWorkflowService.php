@@ -212,6 +212,22 @@ class SegnalazioneWorkflowService
             $segnalatore = User::find($segnalazione->id_utente_segnalazione);
             $segnalatore?->notify($notification);
         }
+
+        // All'impresa se appalto assegnato
+        if ($segnalazione->id_appalto) {
+            $appalto = $segnalazione->appalto()->with('impresa')->first();
+            if ($appalto?->id_impresa) {
+                $destinatari = User::role('impresa')
+                    ->where('id_impresa', $appalto->id_impresa)
+                    ->where('id', '!=', $attore->id)
+                    ->get()
+                    ->filter(fn (User $u) => $u->attivo !== false);
+
+                if ($destinatari->isNotEmpty()) {
+                    Notification::send($destinatari, $notification);
+                }
+            }
+        }
     }
 
     private function deveInviareNotifiche(Azione $azione, Segnalazione $segnalazione): bool

@@ -15,6 +15,7 @@ use App\Http\Controllers\ImpreseCRUDController;
 use App\Http\Controllers\OperaioDashboardController;
 use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleDashboardController;
 use App\Http\Controllers\SegnalazioneController;
 use App\Http\Controllers\SegnalatoreDashboardController;
@@ -65,6 +66,8 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'role:admin|gestore'])->prefix('gestione')->name('gestione.')->group(function () {
     Route::get('/', [GestioneController::class, 'index'])->name('dashboard');
     Route::get('/stampa', [GestioneController::class, 'stampaLista'])->name('stampa');
+    Route::get('/export-csv', [GestioneController::class, 'exportCsv'])->name('export-csv');
+    Route::get('/reports/mensile', [ReportController::class, 'mensileGestore'])->name('reports.mensile');
 });
 
 // ── Imprese CRUD (admin + gestore) ────────────────────────────────────────────
@@ -136,6 +139,7 @@ Route::middleware(['auth', 'role:segnalatore'])->prefix('segnalatore')->name('se
 // ── Imprese (portale impresa) ─────────────────────────────────────────────────
 Route::middleware(['auth', 'role:impresa'])->prefix('imprese-portale')->name('imprese.')->group(function () {
     Route::get('/dashboard', [ImpreseDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/reports/riepilogo', [ReportController::class, 'riepilogoImpresa'])->name('reports.riepilogo');
 });
 
 // ── Profilo (tutti gli utenti autenticati) ────────────────────────────────────

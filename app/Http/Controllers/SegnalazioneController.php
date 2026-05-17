@@ -11,10 +11,12 @@ use App\Models\Provenienza;
 use App\Models\Segnalazione;
 use App\Models\Specializzazione;
 use App\Models\StatoSegnalazione;
+use App\Notifications\NuovaNotaSegnalazione;
 use App\Services\SlaService;
 use App\Models\TipologiaSegnalazione;
 use App\Models\User;
 use App\Services\SegnalazioneWorkflowService;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -210,12 +212,14 @@ class SegnalazioneController extends Controller
             'visibile_impresa' => ['boolean'],
         ]);
 
-        $segnalazione->note()->create([
+        $nota = $segnalazione->note()->create([
             'testo'            => $data['testo'],
             'id_utente'        => auth()->id(),
             'visibile_web'     => $data['visibile_web'] ?? false,
             'visibile_impresa' => $data['visibile_impresa'] ?? false,
         ]);
+
+        $this->notificaNota($segnalazione, $nota);
 
         return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
             ->with('success', 'Nota aggiunta.')
@@ -262,6 +266,36 @@ class SegnalazioneController extends Controller
         Cache::forget('public.home.statistics');
 
         return back()->with('success', $segnalazione->flag_riservata ? 'Segnalazione esclusa dalle statistiche pubbliche.' : 'Segnalazione ora visibile nelle statistiche pubbliche.');
+    }
+
+    private function notificaNota(Segnalazione $segnalazione, NotaSegnalazione $nota): void
+    {
+        if (! $nota->visibile_impresa && ! $nota->visibile_web) {
+            return;
+        }
+
+        $notification = new NuovaNotaSegnalazione($segnalazione, $nota);
+        $attoreId = auth()->id();
+
+        if ($nota->visibile_impresa && $segnalazione->id_appalto) {
+            $appalto = $segnalazione->appalto()->with('impresa')->first();
+            if ($appalto?->id_impresa) {
+                $destinatari = User::role('impresa')
+                    ->where('id_impresa', $appalto->id_impresa)
+                    ->where('id', '!=', $attoreId)
+                    ->get()
+                    ->filter(fn (User $u) => $u->attivo !== false);
+
+                if ($destinatari->isNotEmpty()) {
+                    Notification::send($destinatari, $notification);
+                }
+            }
+        }
+
+        if ($nota->visibile_web && $segnalazione->id_utente_segnalazione && $segnalazione->id_utente_segnalazione !== $attoreId) {
+            $segnalatore = User::find($segnalazione->id_utente_segnalazione);
+            $segnalatore?->notify($notification);
+        }
     }
 
 }

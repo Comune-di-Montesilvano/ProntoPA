@@ -81,6 +81,21 @@ class TelegramWebhookController extends Controller
             return;
         }
 
+        if (preg_match('/^\/chiudi\s+(\d+)$/', $text, $matches) === 1) {
+            $this->handleChiudiCommand($user, (int) $matches[1]);
+            return;
+        }
+
+        if (preg_match('/^\/note\s+(\d+)(?:\s+([\s\S]+))?$/', $text, $matches) === 1) {
+            $this->handleNoteCommand($user, (int) $matches[1], trim($matches[2] ?? ''));
+            return;
+        }
+
+        if ($text === '/priorita') {
+            $this->handlePrioritaCommand($user);
+            return;
+        }
+
         $this->telegram->sendMessage($chatId, $this->buildHelpMessage($user));
     }
 
@@ -222,9 +237,107 @@ class TelegramWebhookController extends Controller
         $this->handleOpenCommand($user, $segnalazione->id_segnalazione);
     }
 
+    private function handleChiudiCommand(User $user, int $idSegnalazione): void
+    {
+        $segnalazione = Segnalazione::visibileA($user)->with('stato')->find($idSegnalazione);
+
+        if (! $segnalazione) {
+            $this->telegram->sendMessage($user->telegram_chat_id, 'Segnalazione #' . $idSegnalazione . ' non trovata.');
+            return;
+        }
+
+        if ($segnalazione->isChiusa()) {
+            $this->telegram->sendMessage($user->telegram_chat_id, 'Segnalazione #' . $idSegnalazione . ' è già chiusa.');
+            return;
+        }
+
+        $disponibili = $this->workflow->getAzioniDisponibili($segnalazione, $user)
+            ->filter(fn ($a) => ! $a->flag_operatore && ! $a->flag_appalto);
+
+        $azione = $disponibili->first(fn ($a) => $a->statoTarget?->chiusura)
+            ?? $disponibili->first(fn ($a) => preg_match('/chiudi|proponi/i', (string) $a->descrizione));
+
+        if (! $azione) {
+            $this->telegram->sendMessage($user->telegram_chat_id, 'Nessuna azione di chiusura disponibile per #' . $idSegnalazione . '.');
+            return;
+        }
+
+        $this->workflow->eseguiAzione($segnalazione, $azione->id_azione, $user);
+        $this->telegram->sendMessage($user->telegram_chat_id, '✅ Azione "' . $azione->descrizione . '" eseguita su #' . $idSegnalazione . '.');
+    }
+
+    private function handleNoteCommand(User $user, int $idSegnalazione, string $testo): void
+    {
+        $segnalazione = Segnalazione::visibileA($user)->with('stato')->find($idSegnalazione);
+
+        if (! $segnalazione) {
+            $this->telegram->sendMessage($user->telegram_chat_id, 'Segnalazione #' . $idSegnalazione . ' non trovata.');
+            return;
+        }
+
+        if ($testo !== '') {
+            $segnalazione->note()->create([
+                'testo'            => $testo,
+                'id_utente'        => $user->id,
+                'visibile_web'     => false,
+                'visibile_impresa' => false,
+            ]);
+            $this->telegram->sendMessage($user->telegram_chat_id, '📝 Nota aggiunta a #' . $idSegnalazione . '.');
+            return;
+        }
+
+        $query = $segnalazione->note()->latest();
+        if ($user->hasRole('impresa')) {
+            $query->where('visibile_impresa', true);
+        }
+        $ultime = $query->limit(3)->get();
+
+        if ($ultime->isEmpty()) {
+            $this->telegram->sendMessage($user->telegram_chat_id, 'Nessuna nota per #' . $idSegnalazione . '.');
+            return;
+        }
+
+        $lines = ['Ultime note su #' . $idSegnalazione . ':'];
+        foreach ($ultime as $nota) {
+            $lines[] = '— ' . Str::limit($nota->testo, 100);
+        }
+
+        $this->telegram->sendMessage($user->telegram_chat_id, implode("\n", $lines));
+    }
+
+    private function handlePrioritaCommand(User $user): void
+    {
+        $segnalazioni = Segnalazione::visibileA($user)
+            ->with(['stato', 'tipologia'])
+            ->aperte()
+            ->orderByDesc('segnalazione_urgente')
+            ->orderByDesc('livello_priorita')
+            ->limit(10)
+            ->get();
+
+        if ($segnalazioni->isEmpty()) {
+            $this->telegram->sendMessage($user->telegram_chat_id, 'Nessuna segnalazione aperta.');
+            return;
+        }
+
+        $lines = ['Segnalazioni per priorità:'];
+        foreach ($segnalazioni as $s) {
+            $urgenza = $s->segnalazione_urgente ? ' 🚨' : '';
+            $lines[] = sprintf(
+                '[%s%s] #%d — %s',
+                $s->label_priorita,
+                $urgenza,
+                $s->id_segnalazione,
+                Str::limit($s->tipologia?->descrizione ?? $s->testo_segnalazione, 40)
+            );
+        }
+
+        $this->telegram->sendMessage($user->telegram_chat_id, implode("\n", $lines));
+    }
+
     private function buildHelpMessage(User $user): string
     {
-        return "Comandi disponibili:\n/lista\n/apri <id>";
+        return "Comandi disponibili:\n/lista\n/apri <id>\n/chiudi <id>\n/note <id> [testo]\n/priorita";
     }
 
     private function buildUnlinkedMessage(): string

@@ -19,6 +19,24 @@
                 @endforeach
             </div>
 
+            {{-- KPI SLA + Tempo medio --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-white shadow-sm rounded-lg p-5 flex items-center gap-4">
+                    <div class="text-4xl font-bold text-green-600">{{ $slaCompliance !== null ? $slaCompliance.'%' : '—' }}</div>
+                    <div>
+                        <div class="text-sm font-semibold text-gray-700">SLA compliance</div>
+                        <div class="text-xs text-gray-400 mt-0.5">Interventi chiusi senza violazione SLA</div>
+                    </div>
+                </div>
+                <div class="bg-white shadow-sm rounded-lg p-5 flex items-center gap-4">
+                    <div class="text-4xl font-bold text-purple-600">{{ $tempoMedioGg }}<span class="text-lg font-normal text-gray-400 ml-1">gg</span></div>
+                    <div>
+                        <div class="text-sm font-semibold text-gray-700">Tempo medio risoluzione</div>
+                        <div class="text-xs text-gray-400 mt-0.5">Media su tutti gli interventi chiusi</div>
+                    </div>
+                </div>
+            </div>
+
             {{-- Grafico per mese --}}
             <div class="bg-white shadow-sm rounded-lg p-6">
                 <h3 class="font-medium text-gray-700 mb-4 text-sm uppercase tracking-wide">Segnalazioni per mese (ultimi 12 mesi)</h3>
@@ -45,6 +63,27 @@
                     <h3 class="font-medium text-gray-700 mb-4 text-sm uppercase tracking-wide">Per stato</h3>
                     @if(count($statoLabel) > 0)
                         <canvas id="chartStato"></canvas>
+                    @else
+                        <p class="text-center text-gray-400 text-sm py-8">Nessun dato.</p>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Carico operatori + Trend settimanale --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="bg-white shadow-sm rounded-lg p-6">
+                    <h3 class="font-medium text-gray-700 mb-4 text-sm uppercase tracking-wide">Carico operatori (aperte)</h3>
+                    @if(count($caricoLabel) > 0)
+                        <canvas id="chartCarico" height="200"></canvas>
+                    @else
+                        <p class="text-center text-gray-400 text-sm py-8">Nessun operatore con segnalazioni aperte.</p>
+                    @endif
+                </div>
+
+                <div class="bg-white shadow-sm rounded-lg p-6">
+                    <h3 class="font-medium text-gray-700 mb-4 text-sm uppercase tracking-wide">Trend settimanale (8 settimane)</h3>
+                    @if(count($trendLabel) > 0)
+                        <canvas id="chartTrend" height="200"></canvas>
                     @else
                         <p class="text-center text-gray-400 text-sm py-8">Nessun dato.</p>
                     @endif
@@ -96,6 +135,45 @@
                 datasets: [{ data: @json($statoTotali), backgroundColor: PALETTE }],
             },
             options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } },
+        });
+        @endif
+
+        @if(count($caricoLabel) > 0)
+        new Chart(document.getElementById('chartCarico'), {
+            type: 'bar',
+            data: {
+                labels: @json($caricoLabel),
+                datasets: [{
+                    label: 'Aperte',
+                    data: @json($caricoTotali),
+                    backgroundColor: '#8B5CF6',
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
+            },
+        });
+        @endif
+
+        @if(count($trendLabel) > 0)
+        new Chart(document.getElementById('chartTrend'), {
+            type: 'line',
+            data: {
+                labels: @json($trendLabel),
+                datasets: [{
+                    label: 'Segnalazioni',
+                    data: @json($trendTotali),
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59,130,246,0.1)',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 4,
+                }],
+            },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } },
         });
         @endif
     </script>

@@ -14,6 +14,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AllegatiSegnalazioniController extends Controller
 {
+    private function disk(): string
+    {
+        return Impostazione::get('allegati_storage_disk', 'local');
+    }
+
     // ── Upload allegati (create o show) ───────────────────────────────────────
 
     public function store(Request $request, Segnalazione $segnalazione): RedirectResponse
@@ -48,7 +53,7 @@ class AllegatiSegnalazioniController extends Controller
             $path     = $file->storeAs(
                 'allegati/' . $segnalazione->id_segnalazione,
                 $filename,
-                'local'
+                $this->disk()
             );
 
             AllegatoSegnalazione::create([
@@ -70,9 +75,9 @@ class AllegatiSegnalazioniController extends Controller
     {
         $this->authorize('view', $segnalazione);
         abort_if($allegato->id_segnalazione !== $segnalazione->id_segnalazione, 404);
-        abort_unless(Storage::disk('local')->exists($allegato->percorso), 404);
+        abort_unless(Storage::disk($this->disk())->exists($allegato->percorso), 404);
 
-        return Storage::disk('local')->download($allegato->percorso, $allegato->nome_originale);
+        return Storage::disk($this->disk())->download($allegato->percorso, $allegato->nome_originale);
     }
 
     // ── Elimina allegato ──────────────────────────────────────────────────────
@@ -82,7 +87,7 @@ class AllegatiSegnalazioniController extends Controller
         $this->authorize('deleteAllegato', $segnalazione);
         abort_if($allegato->id_segnalazione !== $segnalazione->id_segnalazione, 404);
 
-        Storage::disk('local')->delete($allegato->percorso);
+        Storage::disk($this->disk())->delete($allegato->percorso);
         $allegato->delete();
 
         return back()->with('success', 'Allegato eliminato.');

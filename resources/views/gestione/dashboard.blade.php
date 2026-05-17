@@ -6,6 +6,15 @@
            class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
             Stampa lista
         </a>
+        <a href="{{ route('gestione.export-csv', array_filter(['tab' => $tab, 'q' => $q, 'id_tipologia' => $idTipologia, 'id_provenienza' => $idProvenienza, 'id_operatore' => $idOperatore, 'data_da' => $dataDa, 'data_a' => $dataA, 'livello_priorita' => $livelloPriorita, 'id_specializzazione' => $idSpecializzazione])) }}"
+           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
+            Esporta CSV
+        </a>
+        <a href="{{ route('gestione.reports.mensile', ['mese' => now()->month, 'anno' => now()->year]) }}"
+           target="_blank"
+           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
+            Report mese
+        </a>
         <a href="{{ route('segnalazioni.create') }}"
            class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
             + Nuova

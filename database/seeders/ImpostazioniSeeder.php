@@ -139,6 +139,36 @@ class ImpostazioniSeeder extends Seeder
                 'descrizione' => 'Secret inviato da Telegram nell\'header del webhook',
             ],
 
+            // Notifiche Telegram — toggle per tipo evento
+            [
+                'chiave'      => 'telegram_notifica_operatore_assegnazione',
+                'valore'      => '1',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'notifiche_telegram',
+                'descrizione' => 'Notifica Telegram quando viene assegnato un operatore',
+            ],
+            [
+                'chiave'      => 'telegram_notifica_stato_critico',
+                'valore'      => '1',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'notifiche_telegram',
+                'descrizione' => 'Notifica Telegram per segnalazioni in stato critico/urgente',
+            ],
+            [
+                'chiave'      => 'telegram_notifica_sla_warning',
+                'valore'      => '1',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'notifiche_telegram',
+                'descrizione' => 'Notifica Telegram per avvisi SLA in scadenza',
+            ],
+            [
+                'chiave'      => 'telegram_notifica_nuova_nota',
+                'valore'      => '0',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'notifiche_telegram',
+                'descrizione' => 'Notifica Telegram quando viene aggiunta una nota visibile',
+            ],
+
             // Allegati segnalazioni
             [
                 'chiave'      => 'allegati_max_size_mb',
@@ -160,6 +190,13 @@ class ImpostazioniSeeder extends Seeder
                 'tipo'        => 'text',
                 'gruppo'      => 'allegati',
                 'descrizione' => 'Elenco MIME consentiti separati da virgola',
+            ],
+            [
+                'chiave'      => 'allegati_storage_disk',
+                'valore'      => 'local',
+                'tipo'        => 'text',
+                'gruppo'      => 'allegati',
+                'descrizione' => 'Disk di storage per gli allegati (local oppure s3)',
             ],
         ];
 

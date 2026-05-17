@@ -33,7 +33,7 @@
 
 ---
 
-## v0.4 — Allegati e mobile
+## v0.4 — Allegati e mobile ✅ COMPLETATO
 
 ### Upload foto/video nelle segnalazioni
 - Tabella `allegati_segnalazioni` (id, id_segnalazione, percorso, tipo, nome_originale, dimensione)
@@ -45,7 +45,7 @@
 
 ---
 
-## v0.5 — Integrazioni esterne
+## v0.5 — Integrazioni esterne ✅ COMPLETATO
 
 ### API REST per segnalazioni esterne
 - `POST /api/segnalazioni` — crea segnalazione da sito Comune (già scaffolded in `SegnalazioneApiController`)
