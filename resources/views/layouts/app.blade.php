@@ -121,8 +121,14 @@
                 <x-sidebar-link href="{{ route('admin.impostazioni.index') }}" :active="request()->routeIs('admin.impostazioni.*')" icon="adjustments">
                     Impostazioni ente
                 </x-sidebar-link>
-                <x-sidebar-link href="{{ route('admin.organizzazioni.index') }}" :active="request()->routeIs('admin.organizzazioni.*') || request()->routeIs('admin.sedi.*')" icon="office-building">
+                <x-sidebar-link href="{{ route('admin.organizzazioni.index') }}" :active="request()->routeIs('admin.organizzazioni.*')" icon="office-building">
                     Organizzazioni
+                </x-sidebar-link>
+                <x-sidebar-link href="{{ route('admin.sedi.index') }}" :active="request()->routeIs('admin.sedi.*')" icon="map-pin">
+                    Sedi
+                </x-sidebar-link>
+                <x-sidebar-link href="{{ route('admin.sla.index') }}" :active="request()->routeIs('admin.sla.*')" icon="clock">
+                    SLA
                 </x-sidebar-link>
                 <x-sidebar-link href="{{ route('admin.profili.index') }}" :active="request()->routeIs('admin.profili.*') || request()->routeIs('admin.provenienze.*')" icon="user-group">
                     Profili e provenienze

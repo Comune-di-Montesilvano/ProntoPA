@@ -10,13 +10,16 @@
                         <div class="px-5 py-3 bg-gray-50 border-b border-gray-200">
                             <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                 {{ match($gruppo) {
-                                    'brand'   => 'Brandizzazione ente',
-                                    'email'   => 'Email / Notifiche',
-                                    'mappa'   => 'Mappa (OpenStreetMap)',
-                                    'telegram'=> 'Bot Telegram',
-                                    'webhook' => 'Webhook cittadini',
-                                    'pubblicazione' => 'Pubblicazione automatica',
-                                    default   => ucfirst($gruppo),
+                                    'brand'             => 'Brandizzazione ente',
+                                    'email'             => 'Email / Notifiche',
+                                    'mappa'             => 'Mappa (OpenStreetMap)',
+                                    'telegram'          => 'Bot Telegram',
+                                    'notifiche_telegram'=> 'Notifiche Telegram',
+                                    'webhook'           => 'Webhook cittadini',
+                                    'pubblicazione'     => 'Pubblicazione automatica',
+                                    'allegati'          => 'Allegati segnalazioni',
+                                    'verifica_account'  => 'Verifica annuale account',
+                                    default             => ucfirst($gruppo),
                                 } }}
                             </h3>
                         </div>
@@ -34,6 +37,13 @@
                                                 class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
                                             <option value="1" {{ $imp->valore == '1' ? 'selected' : '' }}>Sì</option>
                                             <option value="0" {{ $imp->valore != '1' ? 'selected' : '' }}>No</option>
+                                        </select>
+                                    @elseif($imp->chiave === 'allegati_storage_disk')
+                                        <select id="imp_{{ $imp->chiave }}"
+                                                name="impostazioni[{{ $imp->chiave }}]"
+                                                class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                            <option value="local" {{ $imp->valore === 'local' ? 'selected' : '' }}>local (filesystem server)</option>
+                                            <option value="s3"    {{ $imp->valore === 's3'    ? 'selected' : '' }}>s3 (S3 / S3-compatible)</option>
                                         </select>
                                     @elseif($imp->chiave === 'publication_auto_state_id')
                                         <select id="imp_{{ $imp->chiave }}"

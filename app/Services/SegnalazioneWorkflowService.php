@@ -3,11 +3,13 @@
 namespace App\Services;
 
 use App\Events\SegnalazionePublishedAutomatically;
+use App\Jobs\InviaWebhookOutbound;
 use App\Models\Azione;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Models\StoricoStatoSegnalazione;
 use App\Models\User;
+use App\Services\SlaService;
 use App\Notifications\ImpresaAssegnataNotification;
 use App\Notifications\OperatoreAssegnatoNotification;
 use App\Notifications\SegnalazioneChiusaNotification;
@@ -20,9 +22,8 @@ use Illuminate\Validation\ValidationException;
 class SegnalazioneWorkflowService
 {
     public function __construct(
-        private readonly WebhookService $webhook,
+        private readonly SlaService $sla,
     ) {}
-
     /**
      * Restituisce le azioni disponibili per una segnalazione in base al ruolo utente.
      * - competenza_azione 0 = Ente (admin/gestore)
@@ -87,6 +88,12 @@ class SegnalazioneWorkflowService
 
         if ($statoTarget->chiusura) {
             $update['data_chiusura'] = now();
+            $update['sla_violato']   = false;
+        } else {
+            $scadenza = $this->sla->calcolaScadenza($segnalazione);
+            if ($scadenza) {
+                $update['data_scadenza_sla'] = $scadenza;
+            }
         }
 
         $segnalazione->update($update);
@@ -121,8 +128,8 @@ class SegnalazioneWorkflowService
         $previousStateId = $segnalazione->getOriginal('id_stato_segnalazione');
         $this->automaticallyPublish($fresca, $previousStateId, $statoTarget->id_stato);
 
-        // Webhook outbound verso sito Comune
-        $this->webhook->notificaCambioStato($fresca);
+        // Webhook outbound verso sito Comune (via Queue con retry)
+        InviaWebhookOutbound::dispatch($fresca);
     }
 
     /**
@@ -204,6 +211,22 @@ class SegnalazioneWorkflowService
         ) {
             $segnalatore = User::find($segnalazione->id_utente_segnalazione);
             $segnalatore?->notify($notification);
+        }
+
+        // All'impresa se appalto assegnato
+        if ($segnalazione->id_appalto) {
+            $appalto = $segnalazione->appalto()->with('impresa')->first();
+            if ($appalto?->id_impresa) {
+                $destinatari = User::role('impresa')
+                    ->where('id_impresa', $appalto->id_impresa)
+                    ->where('id', '!=', $attore->id)
+                    ->get()
+                    ->filter(fn (User $u) => $u->attivo !== false);
+
+                if ($destinatari->isNotEmpty()) {
+                    Notification::send($destinatari, $notification);
+                }
+            }
         }
     }
 

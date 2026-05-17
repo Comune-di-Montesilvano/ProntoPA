@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Segnalazione;
 use App\Models\StatoSegnalazione;
 use App\Models\TipologiaSegnalazione;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -69,11 +70,55 @@ class StatisticheController extends Controller
                 ->count(),
         ];
 
+        // Tempo medio risoluzione (gg)
+        $tempoMedioGg = round(
+            Segnalazione::visibileA($user)
+                ->whereNotNull('data_chiusura')
+                ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, data_segnalazione, data_chiusura) / 24) as v')
+                ->value('v') ?? 0
+        );
+
+        // SLA compliance %
+        $totaleChiuse = Segnalazione::visibileA($user)->whereNotNull('data_chiusura')->count();
+        $chiuseSenzaViolazione = Segnalazione::visibileA($user)->whereNotNull('data_chiusura')->where('sla_violato', false)->count();
+        $slaCompliance = $totaleChiuse > 0 ? round($chiuseSenzaViolazione / $totaleChiuse * 100, 1) : null;
+
+        // Carico operatori (top 10 per aperte)
+        $caricoOperatori = Segnalazione::visibileA($user)
+            ->aperte()
+            ->whereNotNull('id_operatore_assegnato')
+            ->select('id_operatore_assegnato', DB::raw('COUNT(*) as totale'))
+            ->groupBy('id_operatore_assegnato')
+            ->orderByDesc('totale')
+            ->limit(10)
+            ->with('operatore')
+            ->get();
+
+        $caricoLabel  = $caricoOperatori->map(fn ($r) => $r->operatore?->name ?? 'N/D')->toArray();
+        $caricoTotali = $caricoOperatori->pluck('totale')->toArray();
+
+        // Trend settimanale (8 settimane)
+        $trendSettimanale = Segnalazione::visibileA($user)
+            ->select(
+                DB::raw('YEARWEEK(data_segnalazione, 1) as settimana'),
+                DB::raw('COUNT(*) as totale')
+            )
+            ->where('data_segnalazione', '>=', now()->subWeeks(8))
+            ->groupBy('settimana')
+            ->orderBy('settimana')
+            ->get();
+
+        $trendLabel  = $trendSettimanale->map(fn ($r) => 'S' . substr((string) $r->settimana, 4))->toArray();
+        $trendTotali = $trendSettimanale->pluck('totale')->toArray();
+
         return view('statistiche.index', compact(
             'kpi',
             'mesiLabel', 'mesiTotali',
             'tipologiaLabel', 'tipologiaTotali',
             'statoLabel', 'statoTotali',
+            'tempoMedioGg', 'slaCompliance',
+            'caricoLabel', 'caricoTotali',
+            'trendLabel', 'trendTotali',
         ));
     }
 }

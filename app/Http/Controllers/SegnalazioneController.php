@@ -2,24 +2,34 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AllegatoSegnalazione;
 use App\Models\Azione;
+use App\Models\Impostazione;
 use App\Models\NotaSegnalazione;
 use App\Models\Plesso;
 use App\Models\Provenienza;
 use App\Models\Segnalazione;
+use App\Models\Specializzazione;
 use App\Models\StatoSegnalazione;
+use App\Notifications\NuovaNotaSegnalazione;
+use App\Services\SlaService;
 use App\Models\TipologiaSegnalazione;
 use App\Models\User;
 use App\Services\SegnalazioneWorkflowService;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class SegnalazioneController extends Controller
 {
     public function __construct(
-        private readonly SegnalazioneWorkflowService $workflow
+        private readonly SegnalazioneWorkflowService $workflow,
+        private readonly SlaService $sla,
     ) {}
 
     // ── Lista (segnalatore: solo proprie) ─────────────────────────────────────
@@ -55,14 +65,21 @@ class SegnalazioneController extends Controller
         }
 
         $provenienza_default = $user->id_provenienza;
+        $specializzazioni    = Specializzazione::orderBy('descrizione')->get();
 
-        return view('segnalazioni.create', compact('tipologie', 'provenienze', 'plessi', 'provenienza_default'));
+        return view('segnalazioni.create', compact('tipologie', 'provenienze', 'plessi', 'provenienza_default', 'specializzazioni'));
     }
 
     // ── Salva nuova segnalazione ───────────────────────────────────────────────
 
     public function store(Request $request): RedirectResponse
     {
+        $maxSizeMb      = (int) Impostazione::get('allegati_max_size_mb', 10);
+        $maxPerRequest  = (int) Impostazione::get('allegati_max_per_request', 5);
+        $mimeConsentiti = array_filter(
+            array_map('trim', explode(',', Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png')))
+        );
+
         $data = $request->validate([
             'id_tipologia_segnalazione' => ['required', 'integer', 'exists:tipologie_segnalazioni,id_tipologia_segnalazione'],
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
@@ -70,6 +87,16 @@ class SegnalazioneController extends Controller
             'id_provenienza'            => ['required', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
             'latitudine'                => ['nullable', 'numeric'],
             'longitudine'               => ['nullable', 'numeric'],
+            'segnalazione_urgente'      => ['nullable', 'boolean'],
+            'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
+            'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
+            'ubicazione_tipo'           => ['nullable', 'integer', 'between:0,4'],
+            'allegati'                  => ['nullable', 'array', 'max:' . $maxPerRequest],
+            'allegati.*'                => [
+                'file',
+                'max:' . ($maxSizeMb * 1024),
+                'mimetypes:' . implode(',', $mimeConsentiti),
+            ],
         ]);
 
         $user = auth()->user();
@@ -77,16 +104,50 @@ class SegnalazioneController extends Controller
         // Stato iniziale
         $statoIniziale = StatoSegnalazione::where('iniziale', true)->first();
 
-        Segnalazione::create(array_merge($data, [
-            'id_utente_segnalazione' => $user->id,
-            'id_stato_segnalazione'  => $statoIniziale?->id_stato ?? 1,
-            'id_plesso'              => $data['id_plesso'] ?? 0,
-            'latitudine'             => $data['latitudine'] ?? 0,
-            'longitudine'            => $data['longitudine'] ?? 0,
-            'segnalante'             => $user->name,
-            'email'                  => $user->email,
-            'telefono'               => $user->telefono,
-        ]));
+        $segnalazione = Segnalazione::create(array_merge(
+            Arr::except($data, ['allegati']),
+            [
+                'id_utente_segnalazione' => $user->id,
+                'id_stato_segnalazione'  => $statoIniziale?->id_stato ?? 1,
+                'id_plesso'              => $data['id_plesso'] ?? 0,
+                'latitudine'             => $data['latitudine'] ?? 0,
+                'longitudine'            => $data['longitudine'] ?? 0,
+                'segnalante'             => $user->name,
+                'email'                  => $user->email,
+                'telefono'               => $user->telefono,
+                'livello_priorita'       => $data['livello_priorita'] ?? 2,
+                'segnalazione_urgente'   => (bool) ($data['segnalazione_urgente'] ?? false),
+                'id_specializzazione'    => $data['id_specializzazione'] ?? null,
+                'ubicazione_tipo'        => $data['ubicazione_tipo'] ?? null,
+            ]
+        ));
+
+        // Calcola scadenza SLA se configurata
+        $scadenzaSla = $this->sla->calcolaScadenza($segnalazione);
+        if ($scadenzaSla) {
+            $segnalazione->update(['data_scadenza_sla' => $scadenzaSla]);
+        }
+
+        // Allegati opzionali
+        if ($request->hasFile('allegati')) {
+            foreach ($request->file('allegati') as $file) {
+                $ext      = $file->getClientOriginalExtension();
+                $filename = Str::uuid() . ($ext ? '.' . $ext : '');
+                $path     = $file->storeAs(
+                    'allegati/' . $segnalazione->id_segnalazione,
+                    $filename,
+                    'local'
+                );
+                AllegatoSegnalazione::create([
+                    'id_segnalazione'     => $segnalazione->id_segnalazione,
+                    'percorso'            => $path,
+                    'tipo'                => $file->getMimeType(),
+                    'nome_originale'      => $file->getClientOriginalName(),
+                    'dimensione'          => $file->getSize(),
+                    'id_utente_creazione' => $user->id,
+                ]);
+            }
+        }
 
         return redirect()->route('segnalazioni.index')
             ->with('success', 'Segnalazione inviata con successo.');
@@ -100,9 +161,10 @@ class SegnalazioneController extends Controller
 
         $segnalazione->load([
             'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
-            'operatore', 'utente', 'appalto',
+            'operatore', 'utente', 'appalto', 'specializzazione',
             'note.autore',
             'storicoStati.stato', 'storicoStati.utente',
+            'allegati.utenteCreazione',
         ]);
 
         $azioniDisponibili = $this->workflow->getAzioniDisponibili($segnalazione, auth()->user());
@@ -150,12 +212,14 @@ class SegnalazioneController extends Controller
             'visibile_impresa' => ['boolean'],
         ]);
 
-        $segnalazione->note()->create([
+        $nota = $segnalazione->note()->create([
             'testo'            => $data['testo'],
             'id_utente'        => auth()->id(),
             'visibile_web'     => $data['visibile_web'] ?? false,
             'visibile_impresa' => $data['visibile_impresa'] ?? false,
         ]);
+
+        $this->notificaNota($segnalazione, $nota);
 
         return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
             ->with('success', 'Nota aggiunta.')
@@ -202,6 +266,36 @@ class SegnalazioneController extends Controller
         Cache::forget('public.home.statistics');
 
         return back()->with('success', $segnalazione->flag_riservata ? 'Segnalazione esclusa dalle statistiche pubbliche.' : 'Segnalazione ora visibile nelle statistiche pubbliche.');
+    }
+
+    private function notificaNota(Segnalazione $segnalazione, NotaSegnalazione $nota): void
+    {
+        if (! $nota->visibile_impresa && ! $nota->visibile_web) {
+            return;
+        }
+
+        $notification = new NuovaNotaSegnalazione($segnalazione, $nota);
+        $attoreId = auth()->id();
+
+        if ($nota->visibile_impresa && $segnalazione->id_appalto) {
+            $appalto = $segnalazione->appalto()->with('impresa')->first();
+            if ($appalto?->id_impresa) {
+                $destinatari = User::role('impresa')
+                    ->where('id_impresa', $appalto->id_impresa)
+                    ->where('id', '!=', $attoreId)
+                    ->get()
+                    ->filter(fn (User $u) => $u->attivo !== false);
+
+                if ($destinatari->isNotEmpty()) {
+                    Notification::send($destinatari, $notification);
+                }
+            }
+        }
+
+        if ($nota->visibile_web && $segnalazione->id_utente_segnalazione && $segnalazione->id_utente_segnalazione !== $attoreId) {
+            $segnalatore = User::find($segnalazione->id_utente_segnalazione);
+            $segnalatore?->notify($notification);
+        }
     }
 
 }

@@ -18,6 +18,10 @@ class RoleDashboardController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
+        if ($user->hasRole('operaio')) {
+            return redirect()->route('operaio.dashboard');
+        }
+
         if ($user->hasRole('gestore') || $user->isGestore()) {
             return redirect()->route('gestione.dashboard');
         }

@@ -29,6 +29,10 @@ class SegnalazioneApiController extends Controller
             'telefono'                  => ['nullable', 'string', 'max:50'],
             'latitudine'                => ['nullable', 'numeric'],
             'longitudine'               => ['nullable', 'numeric'],
+            'segnalazione_urgente'      => ['nullable', 'boolean'],
+            'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
+            'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
+            'ubicazione_tipo'           => ['nullable', 'integer', 'between:0,4'],
         ]);
 
         $statoIniziale = StatoSegnalazione::where('iniziale', true)->first();

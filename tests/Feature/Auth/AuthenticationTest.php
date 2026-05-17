@@ -3,7 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,7 +15,7 @@ class AuthenticationTest extends TestCase
     {
         parent::setUp();
 
-        $this->withoutMiddleware(ValidateCsrfToken::class);
+        $this->withoutMiddleware(PreventRequestForgery::class);
     }
 
     public function test_login_screen_can_be_rendered(): void
@@ -53,6 +53,23 @@ class AuthenticationTest extends TestCase
     public function test_inactive_users_can_not_authenticate(): void
     {
         $user = User::factory()->create(['attivo' => false]);
+
+        $response = $this->from('/login')->post('/login', [
+            'username' => $user->username,
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors('username');
+        $this->assertGuest();
+    }
+
+    public function test_pending_users_can_not_authenticate(): void
+    {
+        $user = User::factory()->create([
+            'attivo' => true,
+            'approval_status' => 'pending',
+        ]);
 
         $response = $this->from('/login')->post('/login', [
             'username' => $user->username,

@@ -43,21 +43,36 @@ class Segnalazione extends Model
         'importo_preventivo',
         'importo_liquidato',
         'data_chiusura',
+        'data_scadenza_sla',
+        'sla_violato',
+        'sla_warning_inviato',
         'external_id',
+        'segnalazione_urgente',
+        'livello_priorita',
+        'id_specializzazione',
+        'ubicazione_tipo',
     ];
 
     protected function casts(): array
     {
         return [
-            'data_segnalazione'  => 'datetime',
-            'data_chiusura'      => 'datetime',
-            'latitudine'         => 'float',
-            'longitudine'        => 'float',
-            'flag_riservata'     => 'boolean',
-            'flag_pubblicata'    => 'boolean',
-            'flag_evidenza'      => 'boolean',
-            'importo_preventivo' => 'decimal:2',
-            'importo_liquidato'  => 'decimal:2',
+            'data_segnalazione'      => 'datetime',
+            'data_chiusura'          => 'datetime',
+            'latitudine'             => 'float',
+            'longitudine'            => 'float',
+            'flag_riservata'         => 'boolean',
+            'flag_pubblicata'        => 'boolean',
+            'flag_evidenza'          => 'boolean',
+            'importo_preventivo'     => 'decimal:2',
+            'importo_liquidato'      => 'decimal:2',
+            'id_utente_segnalazione' => 'integer',
+            'id_operatore_assegnato' => 'integer',
+            'segnalazione_urgente'   => 'boolean',
+            'livello_priorita'       => 'integer',
+            'ubicazione_tipo'        => 'integer',
+            'data_scadenza_sla'      => 'datetime',
+            'sla_violato'            => 'boolean',
+            'sla_warning_inviato'    => 'boolean',
         ];
     }
 
@@ -98,6 +113,11 @@ class Segnalazione extends Model
         return $this->belongsTo(Appalto::class, 'id_appalto', 'id_appalto');
     }
 
+    public function specializzazione(): BelongsTo
+    {
+        return $this->belongsTo(Specializzazione::class, 'id_specializzazione', 'id_specializzazione');
+    }
+
     public function note(): HasMany
     {
         return $this->hasMany(NotaSegnalazione::class, 'id_segnalazione', 'id_segnalazione')
@@ -110,11 +130,48 @@ class Segnalazione extends Model
                     ->orderByDesc('data_registrazione');
     }
 
+    public function allegati(): HasMany
+    {
+        return $this->hasMany(AllegatoSegnalazione::class, 'id_segnalazione', 'id_segnalazione')
+            ->orderByDesc('created_at');
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     public function isChiusa(): bool
     {
         return $this->data_chiusura !== null;
+    }
+
+    public function getLabelPrioritaAttribute(): string
+    {
+        return match((int) $this->livello_priorita) {
+            1 => 'Bassa',
+            3 => 'Alta',
+            4 => 'Critica',
+            default => 'Media',
+        };
+    }
+
+    public function getLabelUbicazioneAttribute(): string
+    {
+        return match((int) $this->ubicazione_tipo) {
+            1 => 'Interno edificio',
+            2 => 'Esterno',
+            3 => 'Impianto',
+            4 => 'Area verde',
+            default => 'N/D',
+        };
+    }
+
+    public function getBadgePrioritaClassAttribute(): string
+    {
+        return match((int) $this->livello_priorita) {
+            1 => 'bg-gray-100 text-gray-600',
+            3 => 'bg-orange-100 text-orange-700',
+            4 => 'bg-red-100 text-red-700',
+            default => 'bg-blue-100 text-blue-700',
+        };
     }
 
     // ── Scope visibilità per ruolo ────────────────────────────────────────────
@@ -125,11 +182,18 @@ class Segnalazione extends Model
             return $query;
         }
 
+        if ($user->hasRole('operaio')) {
+            return $query->where('id_operatore_assegnato', $user->id);
+        }
+
         if ($user->hasRole('gestore') || $user->isGestore()) {
             if ($user->isSupervisore()) {
                 return $query;
             }
-            return $query->where('id_operatore_assegnato', $user->id);
+            return $query->where(function ($q) use ($user) {
+                $q->where('id_operatore_assegnato', $user->id)
+                  ->orWhere('id_utente_segnalazione', $user->id);
+            });
         }
 
         if ($user->hasRole('impresa') && $user->id_impresa) {
@@ -163,5 +227,27 @@ class Segnalazione extends Model
         return $query
             ->where('flag_pubblicata', true)
             ->where('flag_riservata', false);
+    }
+
+    public function scopeCritica($query)
+    {
+        return $query->where('livello_priorita', 4);
+    }
+
+    public function scopeUrgente($query)
+    {
+        return $query->where('segnalazione_urgente', true);
+    }
+
+    public function scopeSlaArischio($query)
+    {
+        return $query->whereNotNull('data_scadenza_sla')
+                     ->where('sla_violato', false)
+                     ->whereRaw('data_scadenza_sla > NOW()');
+    }
+
+    public function scopeSlaViolato($query)
+    {
+        return $query->where('sla_violato', true);
     }
 }

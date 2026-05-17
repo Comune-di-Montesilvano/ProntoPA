@@ -10,6 +10,7 @@
     <div class="space-y-4">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <form method="POST" action="{{ route('segnalazioni.store') }}" class="p-6 space-y-6"
+                  enctype="multipart/form-data"
                   x-data="{ tipologiaId: {{ old('id_tipologia_segnalazione', 'null') }} }">
                 @csrf
 
@@ -89,6 +90,66 @@
                     <x-input-error :messages="$errors->get('id_plesso')" class="mt-1" />
                 </div>
 
+                {{-- Priorità / Urgenza --}}
+                <div x-data="{ priorita: {{ old('livello_priorita', 2) }} }">
+                    <x-input-label value="Priorità" />
+                    <input type="hidden" name="livello_priorita" :value="priorita">
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        @foreach([1 => 'Bassa', 2 => 'Media', 3 => 'Alta', 4 => 'Critica'] as $val => $label)
+                            <button type="button"
+                                    @click="priorita = {{ $val }}"
+                                    :class="priorita == {{ $val }}
+                                        ? '{{ match($val) { 1 => 'bg-gray-200 text-gray-700 border-gray-400', 2 => 'bg-blue-100 text-blue-700 border-blue-400', 3 => 'bg-orange-100 text-orange-700 border-orange-400', 4 => 'bg-red-100 text-red-700 border-red-500' } }}'
+                                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'"
+                                    class="px-4 py-2 border-2 rounded-lg text-sm font-semibold transition select-none">
+                                {{ $label }}
+                                @if($val === 4) <span class="ml-1 text-red-500">!</span>@endif
+                            </button>
+                        @endforeach
+                    </div>
+                    <label class="mt-3 inline-flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" name="segnalazione_urgente" value="1"
+                               {{ old('segnalazione_urgente') ? 'checked' : '' }}
+                               class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+                        <span class="text-sm font-semibold text-red-600">Segnalazione urgente (richiede intervento immediato)</span>
+                    </label>
+                    <x-input-error :messages="$errors->get('livello_priorita')" class="mt-1" />
+                </div>
+
+                {{-- Specializzazione --}}
+                @if($specializzazioni->isNotEmpty())
+                <div>
+                    <x-input-label for="id_specializzazione" value="Tipo di intervento richiesto" />
+                    <select id="id_specializzazione" name="id_specializzazione"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">— Generico / Non specificato —</option>
+                        @foreach($specializzazioni as $sp)
+                            <option value="{{ $sp->id_specializzazione }}"
+                                {{ old('id_specializzazione') == $sp->id_specializzazione ? 'selected' : '' }}>
+                                {{ $sp->descrizione }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <x-input-error :messages="$errors->get('id_specializzazione')" class="mt-1" />
+                </div>
+                @endif
+
+                {{-- Ubicazione --}}
+                <div>
+                    <x-input-label value="Dove si trova il problema" />
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        @foreach([0 => 'Non specificato', 1 => 'Interno edificio', 2 => 'Esterno', 3 => 'Impianto', 4 => 'Area verde'] as $val => $label)
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" name="ubicazione_tipo" value="{{ $val }}"
+                                       {{ old('ubicazione_tipo', 0) == $val ? 'checked' : '' }}
+                                       class="text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm text-gray-700">{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <x-input-error :messages="$errors->get('ubicazione_tipo')" class="mt-1" />
+                </div>
+
                 {{-- Testo --}}
                 <div>
                     <x-input-label for="testo_segnalazione" value="Descrizione del problema *" />
@@ -112,6 +173,35 @@
                         Coordinate: <span id="coord-text"></span>
                         <button type="button" onclick="resetCoords()" class="ml-2 text-red-400 hover:text-red-600">Rimuovi</button>
                     </div>
+                </div>
+
+                {{-- Allegati --}}
+                @php
+                    $allegatiMaxSizeMb      = (int) \App\Models\Impostazione::get('allegati_max_size_mb', 10);
+                    $allegatiMaxPerRequest  = (int) \App\Models\Impostazione::get('allegati_max_per_request', 5);
+                    $allegatiMime           = \App\Models\Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png');
+                @endphp
+                <div>
+                    <x-input-label for="allegati_create" value="Allegati (foto / video — opzionale)" />
+                    <p class="text-xs text-gray-400 mb-2">
+                        Max {{ $allegatiMaxPerRequest }} file, {{ $allegatiMaxSizeMb }}&nbsp;MB ciascuno.
+                        Formati accettati: foto e video.
+                    </p>
+                    <input id="allegati_create" type="file" name="allegati[]" multiple
+                           accept="{{ $allegatiMime }}"
+                           capture="environment"
+                           class="block w-full text-sm text-gray-500
+                                  file:mr-4 file:py-2 file:px-4
+                                  file:rounded-md file:border-0
+                                  file:text-sm file:font-semibold
+                                  file:bg-blue-50 file:text-blue-700
+                                  hover:file:bg-blue-100" />
+                    @error('allegati')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('allegati.*')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 {{-- Actions --}}

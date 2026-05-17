@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Provenienza;
 use App\Models\Segnalazione;
+use App\Models\Specializzazione;
 use App\Models\TipologiaSegnalazione;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
 class GestioneController extends Controller
@@ -18,8 +22,13 @@ class GestioneController extends Controller
         $user = auth()->user();
         $tab  = $request->get('tab', 'aperte');
         $q    = trim($request->get('q', ''));
-        $idTipologia   = $request->get('id_tipologia');
-        $idProvenienza = $request->get('id_provenienza');
+        $idTipologia      = $request->get('id_tipologia');
+        $idProvenienza    = $request->get('id_provenienza');
+        $idOperatore      = $request->get('id_operatore');
+        $dataDa           = $request->get('data_da');
+        $dataA            = $request->get('data_a');
+        $livelloPriorita  = $request->get('livello_priorita');
+        $idSpecializzazione = $request->get('id_specializzazione');
 
         $base = Segnalazione::visibileA($user)
             ->with(['stato', 'tipologia', 'operatore', 'provenienza']);
@@ -37,6 +46,21 @@ class GestioneController extends Controller
         }
         if ($idProvenienza) {
             $base->where('id_provenienza', $idProvenienza);
+        }
+        if ($idOperatore) {
+            $base->where('id_operatore_assegnato', $idOperatore);
+        }
+        if ($dataDa) {
+            $base->whereDate('data_segnalazione', '>=', $dataDa);
+        }
+        if ($dataA) {
+            $base->whereDate('data_segnalazione', '<=', $dataA);
+        }
+        if ($livelloPriorita) {
+            $base->where('livello_priorita', $livelloPriorita);
+        }
+        if ($idSpecializzazione) {
+            $base->where('id_specializzazione', $idSpecializzazione);
         }
 
         $segnalazioni = match($tab) {
@@ -64,16 +88,94 @@ class GestioneController extends Controller
                                 ->whereHas('stato', fn ($q) => $q->where('id_gestione', true))->count(),
             'aperte'      => (clone $baseCount)->aperte()->count(),
             'chiuse'      => (clone $baseCount)->whereNotNull('data_chiusura')->count(),
+            'sla_rischio' => (clone $baseCount)->aperte()->slaArischio()->count(),
+            'sla_violato' => (clone $baseCount)->aperte()->slaViolato()->count(),
         ];
 
-        $tipologie   = TipologiaSegnalazione::orderBy('descrizione')->get();
-        $provenienze = Provenienza::orderBy('descrizione')->get();
+        $tipologie        = TipologiaSegnalazione::orderBy('descrizione')->get();
+        $provenienze      = Provenienza::orderBy('descrizione')->get();
+        $specializzazioni = Specializzazione::orderBy('descrizione')->get();
+        $operatori        = User::where(function ($q) {
+                                $q->where('gestore_segnalazioni', true)
+                                  ->orWhere('amministratore', true);
+                            })->orderBy('name')->get();
 
         return view('gestione.dashboard', compact(
             'segnalazioni', 'tab', 'conteggi',
             'q', 'idTipologia', 'idProvenienza',
-            'tipologie', 'provenienze'
+            'idOperatore', 'dataDa', 'dataA', 'livelloPriorita', 'idSpecializzazione',
+            'tipologie', 'provenienze', 'specializzazioni', 'operatori'
         ));
+    }
+
+    public function exportCsv(Request $request): StreamedResponse
+    {
+        $user = auth()->user();
+        $tab             = $request->get('tab', 'aperte');
+        $q               = trim($request->get('q', ''));
+        $idTipologia     = $request->get('id_tipologia');
+        $idProvenienza   = $request->get('id_provenienza');
+        $idOperatore     = $request->get('id_operatore');
+        $dataDa          = $request->get('data_da');
+        $dataA           = $request->get('data_a');
+        $livelloPriorita = $request->get('livello_priorita');
+        $idSpec          = $request->get('id_specializzazione');
+
+        $base = Segnalazione::visibileA($user)
+            ->with(['stato', 'tipologia', 'plesso', 'operatore', 'appalto.impresa', 'specializzazione']);
+
+        if ($q !== '') {
+            $base->where(function ($query) use ($q) {
+                $query->where('testo_segnalazione', 'like', "%{$q}%")
+                      ->orWhere('segnalante', 'like', "%{$q}%")
+                      ->orWhere('id_segnalazione', $q);
+            });
+        }
+        if ($idTipologia)     { $base->where('id_tipologia_segnalazione', $idTipologia); }
+        if ($idProvenienza)   { $base->where('id_provenienza', $idProvenienza); }
+        if ($idOperatore)     { $base->where('id_operatore_assegnato', $idOperatore); }
+        if ($dataDa)          { $base->whereDate('data_segnalazione', '>=', $dataDa); }
+        if ($dataA)           { $base->whereDate('data_segnalazione', '<=', $dataA); }
+        if ($livelloPriorita) { $base->where('livello_priorita', $livelloPriorita); }
+        if ($idSpec)          { $base->where('id_specializzazione', $idSpec); }
+
+        $segnalazioni = match($tab) {
+            'evidenza'    => (clone $base)->inEvidenza()->orderByDesc('data_segnalazione')->get(),
+            'in_carico'   => (clone $base)->aperte()->whereHas('stato', fn ($q) => $q->where('in_carico', true))->orderByDesc('data_segnalazione')->get(),
+            'in_gestione' => (clone $base)->aperte()->whereHas('stato', fn ($q) => $q->where('id_gestione', true))->orderByDesc('data_segnalazione')->get(),
+            'chiuse'      => (clone $base)->whereNotNull('data_chiusura')->orderByDesc('data_chiusura')->get(),
+            default       => (clone $base)->aperte()->orderByDesc('data_segnalazione')->get(),
+        };
+
+        $filename = 'segnalazioni-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($segnalazioni) {
+            $handle = fopen('php://output', 'w');
+            fputs($handle, "\xEF\xBB\xBF"); // BOM UTF-8 per Excel
+            fputcsv($handle, [
+                'ID', 'Data', 'Tipologia', 'Plesso', 'Stato', 'Operatore',
+                'Priorità', 'Specializzazione', 'Urgente',
+                'Importo preventivo', 'Importo liquidato', 'Data chiusura', 'Testo',
+            ], ';');
+            foreach ($segnalazioni as $s) {
+                fputcsv($handle, [
+                    $s->id_segnalazione,
+                    $s->data_segnalazione?->format('d/m/Y'),
+                    $s->tipologia?->descrizione,
+                    $s->plesso?->nome,
+                    $s->stato?->descrizione,
+                    $s->operatore?->name,
+                    $s->label_priorita,
+                    $s->specializzazione?->descrizione,
+                    $s->segnalazione_urgente ? 'Sì' : 'No',
+                    $s->importo_preventivo ? number_format((float) $s->importo_preventivo, 2, ',', '') : '',
+                    $s->importo_liquidato  ? number_format((float) $s->importo_liquidato,  2, ',', '') : '',
+                    $s->data_chiusura?->format('d/m/Y'),
+                    mb_substr((string) $s->testo_segnalazione, 0, 200),
+                ], ';');
+            }
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function stampaLista(Request $request): \Illuminate\View\View

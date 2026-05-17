@@ -86,7 +86,7 @@ services:
     restart: unless-stopped
 
   mariadb:
-    image: mariadb:10.11
+    image: mariadb:11.4
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
       MARIADB_DATABASE: ${DB_DATABASE:-segnalazioni}

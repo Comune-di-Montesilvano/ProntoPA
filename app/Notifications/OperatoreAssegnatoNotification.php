@@ -7,6 +7,7 @@ use App\Models\Segnalazione;
 use App\Models\User;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
 use App\Channels\TelegramChannel;
+use App\Models\Impostazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -27,7 +28,7 @@ class OperatoreAssegnatoNotification extends Notification implements ShouldQueue
     {
         $channels = ['mail'];
 
-        if ($notifiable->routeNotificationForTelegram()) {
+        if ($notifiable->routeNotificationForTelegram() && Impostazione::get('telegram_notifica_operatore_assegnazione', true)) {
             $channels[] = TelegramChannel::class;
         }
 

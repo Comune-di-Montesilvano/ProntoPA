@@ -18,6 +18,7 @@ class User extends Authenticatable
         'password',
         'password_legacy',
         'id_profilo',
+        'id_istituto',
         'amministratore',
         'gestore_segnalazioni',
         'supervisore_segnalazioni',
@@ -25,6 +26,15 @@ class User extends Authenticatable
         'id_impresa',
         'telefono',
         'attivo',
+        'approval_status',
+        'approved_at',
+        'approved_by',
+        'email_confermata_annualmente_at',
+        'prossima_verifica_annuale_at',
+        'annual_verification_token_hash',
+        'annual_verification_sent_at',
+        'annual_verification_due_at',
+        'annual_verification_reminder_at',
         'telegram_chat_id',
         'telegram_link_token',
         'telegram_link_expires_at',
@@ -43,6 +53,12 @@ class User extends Authenticatable
         return [
             'email_verified_at'       => 'datetime',
             'last_login'              => 'datetime',
+            'approved_at'             => 'datetime',
+            'email_confermata_annualmente_at' => 'datetime',
+            'prossima_verifica_annuale_at' => 'datetime',
+            'annual_verification_sent_at' => 'datetime',
+            'annual_verification_due_at' => 'datetime',
+            'annual_verification_reminder_at' => 'datetime',
             'telegram_link_expires_at'=> 'datetime',
             'telegram_verified_at'    => 'datetime',
             'password'                => 'hashed',
@@ -62,17 +78,17 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->amministratore;
+        return (bool) $this->amministratore;
     }
 
     public function isGestore(): bool
     {
-        return $this->gestore_segnalazioni;
+        return (bool) $this->gestore_segnalazioni;
     }
 
     public function isSupervisore(): bool
     {
-        return $this->supervisore_segnalazioni;
+        return (bool) $this->supervisore_segnalazioni;
     }
 
     // --- Relazioni ---
@@ -85,5 +101,10 @@ class User extends Authenticatable
     public function provenienza()
     {
         return $this->belongsTo(Provenienza::class, 'id_provenienza', 'id_provenienza');
+    }
+
+    public function istituto()
+    {
+        return $this->belongsTo(Istituto::class, 'id_istituto', 'id_istituto');
     }
 }

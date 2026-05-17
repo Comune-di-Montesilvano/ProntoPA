@@ -1,16 +1,23 @@
 <?php
 
 use App\Http\Controllers\Admin\ImpostazioniController;
+use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\OrganizzazioniController;
 use App\Http\Controllers\Admin\ProfiliController;
 use App\Http\Controllers\Admin\ProvenienzaController;
 use App\Http\Controllers\Admin\SediController;
+use App\Http\Controllers\Admin\SlaController;
 use App\Http\Controllers\Admin\UtentiController;
+use App\Http\Controllers\AllegatiSegnalazioniController;
+use App\Http\Controllers\Auth\AnnualAccountVerificationController;
 use App\Http\Controllers\AppaltiController;
 use App\Http\Controllers\GestioneController;
+use App\Http\Controllers\ImpreseDashboardController;
 use App\Http\Controllers\ImpreseCRUDController;
+use App\Http\Controllers\OperaioDashboardController;
 use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleDashboardController;
 use App\Http\Controllers\SegnalazioneController;
 use App\Http\Controllers\SegnalatoreDashboardController;
@@ -20,6 +27,10 @@ use Illuminate\Support\Facades\Route;
 
 // Home
 Route::get('/', [PublicHomeController::class, 'index'])->name('home');
+
+Route::get('/account/verify-annual/{user}/{token}', [AnnualAccountVerificationController::class, 'verify'])
+    ->middleware('signed')
+    ->name('account.verification.annual');
 
 // Dashboard — dispatcher per ruolo
 Route::get('/dashboard', [RoleDashboardController::class, 'index'])
@@ -31,6 +42,15 @@ Route::middleware('auth')->group(function () {
     Route::resource('segnalazioni', SegnalazioneController::class)
         ->only(['index', 'create', 'store', 'show'])
         ->parameters(['segnalazioni' => 'segnalazione']);
+
+    Route::post('segnalazioni/{segnalazione}/allegati', [AllegatiSegnalazioniController::class, 'store'])
+        ->name('segnalazioni.allegati.store');
+
+    Route::get('segnalazioni/{segnalazione}/allegati/{allegato}/download', [AllegatiSegnalazioniController::class, 'download'])
+        ->name('segnalazioni.allegati.download');
+
+    Route::delete('segnalazioni/{segnalazione}/allegati/{allegato}', [AllegatiSegnalazioniController::class, 'destroy'])
+        ->name('segnalazioni.allegati.destroy');
 
     Route::post('segnalazioni/{segnalazione}/azione', [SegnalazioneController::class, 'eseguiAzione'])
         ->name('segnalazioni.azione');
@@ -52,6 +72,8 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'role:admin|gestore'])->prefix('gestione')->name('gestione.')->group(function () {
     Route::get('/', [GestioneController::class, 'index'])->name('dashboard');
     Route::get('/stampa', [GestioneController::class, 'stampaLista'])->name('stampa');
+    Route::get('/export-csv', [GestioneController::class, 'exportCsv'])->name('export-csv');
+    Route::get('/reports/mensile', [ReportController::class, 'mensileGestore'])->name('reports.mensile');
 });
 
 // ── Imprese CRUD (admin + gestore) ────────────────────────────────────────────
@@ -75,13 +97,19 @@ Route::middleware(['auth', 'role:admin|gestore'])
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', fn () => view('admin.dashboard'))->name('dashboard');
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/impostazioni', [ImpostazioniController::class, 'index'])->name('impostazioni.index');
     Route::patch('/impostazioni', [ImpostazioniController::class, 'update'])->name('impostazioni.update');
 
     Route::patch('utenti/{utente}/attivo', [UtentiController::class, 'toggleAttivo'])
         ->name('utenti.toggle-attivo');
+
+    Route::patch('utenti/{utente}/approve', [UtentiController::class, 'approve'])
+        ->name('utenti.approve');
+
+    Route::patch('utenti/{utente}/reject', [UtentiController::class, 'reject'])
+        ->name('utenti.reject');
 
     Route::resource('utenti', UtentiController::class)
         ->except(['show'])
@@ -102,6 +130,17 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('provenienze', ProvenienzaController::class)
         ->except(['show'])
         ->parameters(['provenienze' => 'provenienza']);
+
+    Route::resource('sla', SlaController::class)
+        ->except(['show'])
+        ->parameters(['sla' => 'sla']);
+});
+
+// ── Operaio ───────────────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:operaio'])->prefix('operaio')->name('operaio.')->group(function () {
+    Route::get('/dashboard', [OperaioDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/statistiche', [OperaioDashboardController::class, 'statistiche'])->name('statistiche');
+    Route::get('/mappa', [OperaioDashboardController::class, 'mappa'])->name('mappa');
 });
 
 // ── Segnalatore ───────────────────────────────────────────────────────────────
@@ -111,7 +150,8 @@ Route::middleware(['auth', 'role:segnalatore'])->prefix('segnalatore')->name('se
 
 // ── Imprese (portale impresa) ─────────────────────────────────────────────────
 Route::middleware(['auth', 'role:impresa'])->prefix('imprese-portale')->name('imprese.')->group(function () {
-    Route::get('/dashboard', fn () => view('imprese.dashboard'))->name('dashboard');
+    Route::get('/dashboard', [ImpreseDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/reports/riepilogo', [ReportController::class, 'riepilogoImpresa'])->name('reports.riepilogo');
 });
 
 // ── Profilo (tutti gli utenti autenticati) ────────────────────────────────────
