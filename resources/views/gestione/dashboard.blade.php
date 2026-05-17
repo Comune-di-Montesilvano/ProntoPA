@@ -70,12 +70,64 @@
             </select>
         </div>
 
+        <div class="min-w-[140px]">
+            <label class="block text-xs text-gray-500 mb-1">Operatore</label>
+            <select name="id_operatore"
+                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
+                <option value="">— Tutti —</option>
+                @foreach($operatori as $op)
+                    <option value="{{ $op->id }}" {{ $idOperatore == $op->id ? 'selected' : '' }}>
+                        {{ $op->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="min-w-[120px]">
+            <label class="block text-xs text-gray-500 mb-1">Priorità</label>
+            <select name="livello_priorita"
+                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
+                <option value="">— Tutte —</option>
+                <option value="1" {{ $livelloPriorita == 1 ? 'selected' : '' }}>Bassa</option>
+                <option value="2" {{ $livelloPriorita == 2 ? 'selected' : '' }}>Media</option>
+                <option value="3" {{ $livelloPriorita == 3 ? 'selected' : '' }}>Alta</option>
+                <option value="4" {{ $livelloPriorita == 4 ? 'selected' : '' }}>Critica</option>
+            </select>
+        </div>
+
+        @if($specializzazioni->isNotEmpty())
+        <div class="min-w-[140px]">
+            <label class="block text-xs text-gray-500 mb-1">Specializzazione</label>
+            <select name="id_specializzazione"
+                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
+                <option value="">— Tutte —</option>
+                @foreach($specializzazioni as $sp)
+                    <option value="{{ $sp->id_specializzazione }}" {{ $idSpecializzazione == $sp->id_specializzazione ? 'selected' : '' }}>
+                        {{ $sp->descrizione }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        @endif
+
+        <div class="min-w-[120px]">
+            <label class="block text-xs text-gray-500 mb-1">Dal</label>
+            <input type="date" name="data_da" value="{{ $dataDa }}"
+                   class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div class="min-w-[120px]">
+            <label class="block text-xs text-gray-500 mb-1">Al</label>
+            <input type="date" name="data_a" value="{{ $dataA }}"
+                   class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
         <div class="flex gap-2">
             <button type="submit"
                     class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700 transition">
                 Cerca
             </button>
-            @if($q || $idTipologia || $idProvenienza)
+            @if($q || $idTipologia || $idProvenienza || $idOperatore || $dataDa || $dataA || $livelloPriorita || $idSpecializzazione)
                 <a href="{{ route('gestione.dashboard', ['tab' => $tab]) }}"
                    class="px-4 py-2 bg-gray-100 text-gray-600 text-xs font-semibold rounded-md hover:bg-gray-200 transition">
                     Reset
@@ -116,6 +168,7 @@
                         <tr>
                             <th class="px-3 py-3 text-left w-8"></th>
                             <th class="px-3 py-3 text-left w-10">#</th>
+                            <th class="px-3 py-3 text-left w-16">Priorità</th>
                             <th class="px-3 py-3 text-left">Tipologia</th>
                             <th class="px-3 py-3 text-left">Descrizione</th>
                             <th class="px-3 py-3 text-left">Data</th>
@@ -148,6 +201,14 @@
                                     @endcan
                                 </td>
                                 <td class="px-3 py-3 text-gray-400 font-mono text-xs">{{ $s->id_segnalazione }}</td>
+                                <td class="px-3 py-3">
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium {{ $s->badge_priorita_class }}">
+                                        {{ $s->label_priorita }}
+                                    </span>
+                                    @if($s->segnalazione_urgente)
+                                        <span class="ml-1 text-red-500 font-bold text-xs" title="Urgente">!</span>
+                                    @endif
+                                </td>
                                 <td class="px-3 py-3 text-gray-600 max-w-[120px] truncate">{{ $s->tipologia?->descrizione ?? '—' }}</td>
                                 <td class="px-3 py-3 text-gray-800 max-w-xs truncate font-medium">{{ Str::limit($s->testo_segnalazione, 70) }}</td>
                                 <td class="px-3 py-3 text-gray-400 whitespace-nowrap text-xs">{{ $s->data_segnalazione?->format('d/m/Y') }}</td>

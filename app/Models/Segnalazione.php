@@ -44,6 +44,10 @@ class Segnalazione extends Model
         'importo_liquidato',
         'data_chiusura',
         'external_id',
+        'segnalazione_urgente',
+        'livello_priorita',
+        'id_specializzazione',
+        'ubicazione_tipo',
     ];
 
     protected function casts(): array
@@ -60,6 +64,9 @@ class Segnalazione extends Model
             'importo_liquidato'      => 'decimal:2',
             'id_utente_segnalazione' => 'integer',
             'id_operatore_assegnato' => 'integer',
+            'segnalazione_urgente'   => 'boolean',
+            'livello_priorita'       => 'integer',
+            'ubicazione_tipo'        => 'integer',
         ];
     }
 
@@ -100,6 +107,11 @@ class Segnalazione extends Model
         return $this->belongsTo(Appalto::class, 'id_appalto', 'id_appalto');
     }
 
+    public function specializzazione(): BelongsTo
+    {
+        return $this->belongsTo(Specializzazione::class, 'id_specializzazione', 'id_specializzazione');
+    }
+
     public function note(): HasMany
     {
         return $this->hasMany(NotaSegnalazione::class, 'id_segnalazione', 'id_segnalazione')
@@ -125,12 +137,47 @@ class Segnalazione extends Model
         return $this->data_chiusura !== null;
     }
 
+    public function getLabelPrioritaAttribute(): string
+    {
+        return match((int) $this->livello_priorita) {
+            1 => 'Bassa',
+            3 => 'Alta',
+            4 => 'Critica',
+            default => 'Media',
+        };
+    }
+
+    public function getLabelUbicazioneAttribute(): string
+    {
+        return match((int) $this->ubicazione_tipo) {
+            1 => 'Interno edificio',
+            2 => 'Esterno',
+            3 => 'Impianto',
+            4 => 'Area verde',
+            default => 'N/D',
+        };
+    }
+
+    public function getBadgePrioritaClassAttribute(): string
+    {
+        return match((int) $this->livello_priorita) {
+            1 => 'bg-gray-100 text-gray-600',
+            3 => 'bg-orange-100 text-orange-700',
+            4 => 'bg-red-100 text-red-700',
+            default => 'bg-blue-100 text-blue-700',
+        };
+    }
+
     // ── Scope visibilità per ruolo ────────────────────────────────────────────
 
     public function scopeVisibileA($query, User $user)
     {
         if ($user->hasRole('admin') || $user->isAdmin()) {
             return $query;
+        }
+
+        if ($user->hasRole('operaio')) {
+            return $query->where('id_operatore_assegnato', $user->id);
         }
 
         if ($user->hasRole('gestore') || $user->isGestore()) {
@@ -174,5 +221,15 @@ class Segnalazione extends Model
         return $query
             ->where('flag_pubblicata', true)
             ->where('flag_riservata', false);
+    }
+
+    public function scopeCritica($query)
+    {
+        return $query->where('livello_priorita', 4);
+    }
+
+    public function scopeUrgente($query)
+    {
+        return $query->where('segnalazione_urgente', true);
     }
 }

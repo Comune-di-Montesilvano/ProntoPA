@@ -114,6 +114,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         ->parameters(['provenienze' => 'provenienza']);
 });
 
+// ── Operaio ───────────────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:operaio'])->prefix('operaio')->name('operaio.')->group(function () {
+    Route::get('/dashboard', [GestioneController::class, 'index'])->name('dashboard');
+});
+
 // ── Segnalatore ───────────────────────────────────────────────────────────────
 Route::middleware(['auth', 'role:segnalatore'])->prefix('segnalatore')->name('segnalatore.')->group(function () {
     Route::get('/', [SegnalatoreDashboardController::class, 'index'])->name('dashboard');

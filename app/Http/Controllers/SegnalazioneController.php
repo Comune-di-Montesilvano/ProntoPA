@@ -9,6 +9,7 @@ use App\Models\NotaSegnalazione;
 use App\Models\Plesso;
 use App\Models\Provenienza;
 use App\Models\Segnalazione;
+use App\Models\Specializzazione;
 use App\Models\StatoSegnalazione;
 use App\Models\TipologiaSegnalazione;
 use App\Models\User;
@@ -60,8 +61,9 @@ class SegnalazioneController extends Controller
         }
 
         $provenienza_default = $user->id_provenienza;
+        $specializzazioni    = Specializzazione::orderBy('descrizione')->get();
 
-        return view('segnalazioni.create', compact('tipologie', 'provenienze', 'plessi', 'provenienza_default'));
+        return view('segnalazioni.create', compact('tipologie', 'provenienze', 'plessi', 'provenienza_default', 'specializzazioni'));
     }
 
     // ── Salva nuova segnalazione ───────────────────────────────────────────────
@@ -81,6 +83,10 @@ class SegnalazioneController extends Controller
             'id_provenienza'            => ['required', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
             'latitudine'                => ['nullable', 'numeric'],
             'longitudine'               => ['nullable', 'numeric'],
+            'segnalazione_urgente'      => ['nullable', 'boolean'],
+            'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
+            'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
+            'ubicazione_tipo'           => ['nullable', 'integer', 'between:0,4'],
             'allegati'                  => ['nullable', 'array', 'max:' . $maxPerRequest],
             'allegati.*'                => [
                 'file',
@@ -105,6 +111,10 @@ class SegnalazioneController extends Controller
                 'segnalante'             => $user->name,
                 'email'                  => $user->email,
                 'telefono'               => $user->telefono,
+                'livello_priorita'       => $data['livello_priorita'] ?? 2,
+                'segnalazione_urgente'   => (bool) ($data['segnalazione_urgente'] ?? false),
+                'id_specializzazione'    => $data['id_specializzazione'] ?? null,
+                'ubicazione_tipo'        => $data['ubicazione_tipo'] ?? null,
             ]
         ));
 
@@ -141,7 +151,7 @@ class SegnalazioneController extends Controller
 
         $segnalazione->load([
             'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
-            'operatore', 'utente', 'appalto',
+            'operatore', 'utente', 'appalto', 'specializzazione',
             'note.autore',
             'storicoStati.stato', 'storicoStati.utente',
             'allegati.utenteCreazione',

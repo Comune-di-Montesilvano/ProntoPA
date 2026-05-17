@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Provenienza;
 use App\Models\Segnalazione;
+use App\Models\Specializzazione;
 use App\Models\TipologiaSegnalazione;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -18,8 +20,13 @@ class GestioneController extends Controller
         $user = auth()->user();
         $tab  = $request->get('tab', 'aperte');
         $q    = trim($request->get('q', ''));
-        $idTipologia   = $request->get('id_tipologia');
-        $idProvenienza = $request->get('id_provenienza');
+        $idTipologia      = $request->get('id_tipologia');
+        $idProvenienza    = $request->get('id_provenienza');
+        $idOperatore      = $request->get('id_operatore');
+        $dataDa           = $request->get('data_da');
+        $dataA            = $request->get('data_a');
+        $livelloPriorita  = $request->get('livello_priorita');
+        $idSpecializzazione = $request->get('id_specializzazione');
 
         $base = Segnalazione::visibileA($user)
             ->with(['stato', 'tipologia', 'operatore', 'provenienza']);
@@ -37,6 +44,21 @@ class GestioneController extends Controller
         }
         if ($idProvenienza) {
             $base->where('id_provenienza', $idProvenienza);
+        }
+        if ($idOperatore) {
+            $base->where('id_operatore_assegnato', $idOperatore);
+        }
+        if ($dataDa) {
+            $base->whereDate('data_segnalazione', '>=', $dataDa);
+        }
+        if ($dataA) {
+            $base->whereDate('data_segnalazione', '<=', $dataA);
+        }
+        if ($livelloPriorita) {
+            $base->where('livello_priorita', $livelloPriorita);
+        }
+        if ($idSpecializzazione) {
+            $base->where('id_specializzazione', $idSpecializzazione);
         }
 
         $segnalazioni = match($tab) {
@@ -66,13 +88,19 @@ class GestioneController extends Controller
             'chiuse'      => (clone $baseCount)->whereNotNull('data_chiusura')->count(),
         ];
 
-        $tipologie   = TipologiaSegnalazione::orderBy('descrizione')->get();
-        $provenienze = Provenienza::orderBy('descrizione')->get();
+        $tipologie        = TipologiaSegnalazione::orderBy('descrizione')->get();
+        $provenienze      = Provenienza::orderBy('descrizione')->get();
+        $specializzazioni = Specializzazione::orderBy('descrizione')->get();
+        $operatori        = User::where(function ($q) {
+                                $q->where('gestore_segnalazioni', true)
+                                  ->orWhere('amministratore', true);
+                            })->orderBy('name')->get();
 
         return view('gestione.dashboard', compact(
             'segnalazioni', 'tab', 'conteggi',
             'q', 'idTipologia', 'idProvenienza',
-            'tipologie', 'provenienze'
+            'idOperatore', 'dataDa', 'dataA', 'livelloPriorita', 'idSpecializzazione',
+            'tipologie', 'provenienze', 'specializzazioni', 'operatori'
         ));
     }
 

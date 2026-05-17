@@ -49,6 +49,26 @@
                     <strong class="ml-1">{{ $segnalazione->appalto->impresa->ragione_sociale }}</strong>
                 </div>
             @endif
+            <div>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $segnalazione->badge_priorita_class }}">
+                    {{ $segnalazione->label_priorita }}
+                </span>
+                @if($segnalazione->segnalazione_urgente)
+                    <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">Urgente</span>
+                @endif
+            </div>
+            @if($segnalazione->specializzazione)
+                <div>
+                    <span class="text-gray-500">Specializzazione:</span>
+                    <strong class="ml-1">{{ $segnalazione->specializzazione->descrizione }}</strong>
+                </div>
+            @endif
+            @if($segnalazione->ubicazione_tipo)
+                <div>
+                    <span class="text-gray-500">Ubicazione:</span>
+                    <strong class="ml-1">{{ $segnalazione->label_ubicazione }}</strong>
+                </div>
+            @endif
             @if($segnalazione->flag_evidenza)
                 <div class="ml-auto text-yellow-500 font-bold">★ In evidenza</div>
             @endif

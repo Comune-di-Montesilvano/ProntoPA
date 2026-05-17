@@ -14,7 +14,7 @@ class RolesAndPermissionsSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         // Crea i ruoli se non esistono
-        $roles = ['admin', 'gestore', 'segnalatore', 'impresa'];
+        $roles = ['admin', 'gestore', 'operaio', 'segnalatore', 'impresa'];
         foreach ($roles as $nome) {
             Role::firstOrCreate(['name' => $nome, 'guard_name' => 'web']);
         }
