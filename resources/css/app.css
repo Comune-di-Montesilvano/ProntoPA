@@ -1,3 +1,172 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/forms";
 @config "../../tailwind.config.js";
+
+/* ─────────────────────────────────────────────────────
+   ProntoPA Design Tokens
+   --ente-primary bridges to --brand-primary set at runtime
+   in each layout's inline <style> block via Impostazione.
+   ───────────────────────────────────────────────────── */
+:root {
+  --ente-primary:     var(--brand-primary, #0B3A8C);
+  --ente-primary-600: color-mix(in srgb, var(--brand-primary, #0B3A8C) 78%, #1B5BD8);
+  --ente-primary-700: color-mix(in srgb, var(--brand-primary, #0B3A8C) 88%, #000);
+  --ente-primary-100: color-mix(in srgb, var(--brand-primary, #0B3A8C) 12%, #fff);
+  --ente-primary-50:  color-mix(in srgb, var(--brand-primary, #0B3A8C) 6%,  #fff);
+
+  --amber:       #E07A1F;
+  --amber-600:   #C3640D;
+  --amber-100:   #FFEEDA;
+  --emerald:     #1F7A5A;
+  --emerald-100: #E0F2EA;
+  --rose:        #B23A3A;
+  --rose-100:    #FBE6E6;
+  --violet:      #6B4FB0;
+  --violet-100:  #ECE6F8;
+
+  --ink:       #14171F;
+  --slate-700: #2D3340;
+  --slate-600: #4A5366;
+  --slate-500: #6B7589;
+  --slate-400: #9099AB;
+  --slate-300: #C5CCD8;
+  --slate-200: #E1E5ED;
+  --slate-100: #EEF1F5;
+  --slate-50:  #F6F7F9;
+  --paper:     #FCFCFB;
+
+  --font-ui:    "Titillium Web", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-claim: "Lora", Georgia, serif;
+  --font-mono:  "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --shadow-1:     0 1px 0 rgba(20,23,31,.04), 0 1px 2px rgba(20,23,31,.06);
+  --shadow-2:     0 2px 6px rgba(20,23,31,.05), 0 8px 24px rgba(20,23,31,.06);
+  --shadow-3:     0 4px 16px rgba(20,23,31,.06), 0 24px 60px rgba(11,58,140,.10);
+  --shadow-focus: 0 0 0 3px rgba(27,91,216,.22);
+}
+
+/* ─────────────────────────────────────────────────────
+   Base
+   ───────────────────────────────────────────────────── */
+.pa-root {
+  font-family: var(--font-ui);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.4;
+}
+.pa-root * { box-sizing: border-box; }
+.pa-mono  { font-family: var(--font-mono); }
+.pa-claim { font-family: var(--font-claim); }
+
+/* ─────────────────────────────────────────────────────
+   Buttons
+   ───────────────────────────────────────────────────── */
+.pa-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px; height: 42px; padding: 0 18px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui); font-weight: 600; font-size: 15px;
+  border: 1px solid transparent; cursor: pointer;
+  transition: all .12s ease; white-space: nowrap; text-decoration: none;
+}
+.pa-btn-primary  { background: var(--ente-primary); color: #fff; border-color: var(--ente-primary); }
+.pa-btn-primary:hover { background: var(--ente-primary-700); border-color: var(--ente-primary-700); }
+.pa-btn-secondary { background: #fff; color: var(--ente-primary); border-color: var(--ente-primary); }
+.pa-btn-secondary:hover { background: var(--ente-primary-50); }
+.pa-btn-ghost    { background: transparent; color: var(--slate-700); border-color: transparent; }
+.pa-btn-ghost:hover { background: var(--slate-100); }
+.pa-btn-lg { height: 52px; padding: 0 24px; font-size: 17px; border-radius: var(--radius-md); }
+.pa-btn-sm { height: 32px; padding: 0 12px; font-size: 13px; }
+
+/* ─────────────────────────────────────────────────────
+   Inputs
+   ───────────────────────────────────────────────────── */
+.pa-field { display: flex; flex-direction: column; gap: 6px; }
+.pa-field-label { font-size: 13px; font-weight: 600; color: var(--slate-700); letter-spacing: .005em; }
+.pa-field-help  { font-size: 12px; color: var(--slate-500); }
+.pa-input, .pa-textarea, .pa-select {
+  font-family: var(--font-ui); font-size: 15px; color: var(--ink);
+  background: #fff; border: 1px solid var(--slate-300);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  outline: none; transition: border-color .12s, box-shadow .12s; width: 100%;
+}
+.pa-input:focus, .pa-textarea:focus, .pa-select:focus {
+  border-color: var(--ente-primary-600);
+  box-shadow: var(--shadow-focus);
+}
+
+/* ─────────────────────────────────────────────────────
+   Cards
+   ───────────────────────────────────────────────────── */
+.pa-card {
+  background: #fff;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+}
+
+/* ─────────────────────────────────────────────────────
+   Status pills (workflow stati 1–12)
+   ───────────────────────────────────────────────────── */
+.pa-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 22px; padding: 0 10px; border-radius: 11px;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  white-space: nowrap; border: 1px solid transparent;
+}
+.pa-pill-slate   { background: var(--slate-100);        color: var(--slate-600); }
+.pa-pill-primary { background: var(--ente-primary-100); color: var(--ente-primary); }
+.pa-pill-violet  { background: var(--violet-100);       color: var(--violet); }
+.pa-pill-amber   { background: var(--amber-100);        color: var(--amber-600); }
+.pa-pill-emerald { background: var(--emerald-100);      color: var(--emerald); }
+.pa-pill-rose    { background: var(--rose-100);         color: var(--rose); }
+
+/* ─────────────────────────────────────────────────────
+   Sidebar
+   ───────────────────────────────────────────────────── */
+.pa-sb-section { display: flex; flex-direction: column; gap: 2px; }
+.pa-sb-heading {
+  font-size: 11px; font-weight: 700; color: var(--slate-500);
+  letter-spacing: .08em; text-transform: uppercase; padding: 0 10px 8px;
+}
+.pa-sb-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; color: var(--slate-700);
+  text-decoration: none; transition: background .1s, color .1s;
+}
+.pa-sb-link svg { flex-shrink: 0; }
+.pa-sb-link:hover  { background: var(--slate-50); color: var(--ink); }
+.pa-sb-link.active { background: var(--ente-primary-100); color: var(--ente-primary); font-weight: 600; }
+.pa-sb-count {
+  margin-left: auto; font-size: 12px; font-weight: 600;
+  color: var(--slate-500); background: var(--slate-100);
+  padding: 1px 7px; border-radius: 8px;
+}
+.pa-sb-link.active .pa-sb-count { background: #fff; color: var(--ente-primary); }
+
+/* ─────────────────────────────────────────────────────
+   Topbar
+   ───────────────────────────────────────────────────── */
+.pa-topbar {
+  height: 56px; background: #fff;
+  border-bottom: 1px solid var(--slate-200);
+  padding: 0 24px; display: flex; align-items: center; gap: 16px;
+}
+
+/* ─────────────────────────────────────────────────────
+   Legacy brand-color aliases (keeps existing Tailwind
+   classes working after the sidebar palette swap)
+   ───────────────────────────────────────────────────── */
+.btn-brand         { background-color: var(--ente-primary); color: #fff; }
+.btn-brand:hover   { background-color: var(--ente-primary-700); }
+.text-brand        { color: var(--ente-primary); }
+.border-brand      { border-color: var(--ente-primary); }
+.bg-brand-light    { background-color: var(--ente-primary-50); }
+.kpi-icon          { background-color: var(--ente-primary-100); color: var(--ente-primary); }
