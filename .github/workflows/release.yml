@@ -90,7 +90,7 @@ jobs:
             ${{ steps.meta-web.outputs.bake-file }}
           push: true
           set: |
-            app.platforms=${{ steps.vars.outputs.platforms }}
-            web.platforms=${{ steps.vars.outputs.platforms }}
             app.args.APP_VERSION=${{ steps.vars.outputs.version }}
             web.args.APP_VERSION=${{ steps.vars.outputs.version }}
+        env:
+          PLATFORMS: ${{ steps.vars.outputs.platforms }}
