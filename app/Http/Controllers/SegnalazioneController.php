@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SegnalazioneStato;
 use App\Models\AllegatoSegnalazione;
 use App\Models\Azione;
 use App\Models\Impostazione;
@@ -10,7 +11,6 @@ use App\Models\Plesso;
 use App\Models\Provenienza;
 use App\Models\Segnalazione;
 use App\Models\Specializzazione;
-use App\Models\StatoSegnalazione;
 use App\Notifications\NuovaNotaSegnalazione;
 use App\Services\SlaService;
 use App\Models\TipologiaSegnalazione;
@@ -101,14 +101,11 @@ class SegnalazioneController extends Controller
 
         $user = auth()->user();
 
-        // Stato iniziale
-        $statoIniziale = StatoSegnalazione::where('iniziale', true)->first();
-
         $segnalazione = Segnalazione::create(array_merge(
             Arr::except($data, ['allegati']),
             [
                 'id_utente_segnalazione' => $user->id,
-                'id_stato_segnalazione'  => $statoIniziale?->id_stato ?? 1,
+                'id_stato_segnalazione'  => SegnalazioneStato::NUOVA->value,
                 'id_plesso'              => $data['id_plesso'] ?? 0,
                 'latitudine'             => $data['latitudine'] ?? 0,
                 'longitudine'            => $data['longitudine'] ?? 0,
@@ -162,6 +159,7 @@ class SegnalazioneController extends Controller
         $segnalazione->load([
             'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
             'operatore', 'utente', 'appalto', 'specializzazione',
+            'segnalazioneMadre', 'duplicati', 'segnalazioneCorrelata', 'correlate',
             'note.autore',
             'storicoStati.stato', 'storicoStati.utente',
             'allegati.utenteCreazione',
@@ -183,10 +181,12 @@ class SegnalazioneController extends Controller
         $this->authorize('update', $segnalazione);
 
         $data = $request->validate([
-            'id_azione'    => ['required', 'integer', 'exists:db_azioni,id_azione'],
-            'id_operatore' => ['nullable', 'integer', 'exists:users,id'],
-            'id_appalto'   => ['nullable', 'integer', 'exists:appalti,id_appalto'],
-            'nota'         => ['nullable', 'string', 'max:2000'],
+            'id_azione'                 => ['required', 'integer', 'exists:db_azioni,id_azione'],
+            'id_operatore'              => ['nullable', 'integer', 'exists:users,id'],
+            'id_appalto'               => ['nullable', 'integer', 'exists:appalti,id_appalto'],
+            'nota'                     => ['nullable', 'string', 'max:2000'],
+            'id_segnalazione_madre'     => ['nullable', 'integer', 'exists:segnalazioni,id_segnalazione'],
+            'id_segnalazione_correlata' => ['nullable', 'integer', 'exists:segnalazioni,id_segnalazione'],
         ]);
 
         $this->workflow->eseguiAzione(

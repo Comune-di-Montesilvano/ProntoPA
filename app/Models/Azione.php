@@ -12,7 +12,7 @@ class Azione extends Model
     public    $timestamps = false;
 
     protected $fillable = [
-        'descrizione', 'id_stato_segnalazione', 'competenza_azione',
+        'codice', 'descrizione', 'id_stato_segnalazione', 'competenza_azione',
         'colore', 'flag_appalto', 'flag_operatore', 'flag_notifica', 'ordine', 'parametri_filtro',
     ];
 

@@ -1,6 +1,6 @@
 # Legacy — codice originale e dati di produzione (non in repo)
 /legacy
-
+.claude/
 /.phpunit.cache
 /node_modules
 /public/build

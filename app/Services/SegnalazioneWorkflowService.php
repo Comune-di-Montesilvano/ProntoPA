@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\SegnalazioneStato;
 use App\Events\SegnalazionePublishedAutomatically;
 use App\Jobs\InviaWebhookOutbound;
 use App\Models\Azione;
@@ -9,7 +10,6 @@ use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Models\StoricoStatoSegnalazione;
 use App\Models\User;
-use App\Services\SlaService;
 use App\Notifications\ImpresaAssegnataNotification;
 use App\Notifications\OperatoreAssegnatoNotification;
 use App\Notifications\SegnalazioneChiusaNotification;
@@ -24,28 +24,27 @@ class SegnalazioneWorkflowService
     public function __construct(
         private readonly SlaService $sla,
     ) {}
+
     /**
-     * Restituisce le azioni disponibili per una segnalazione in base al ruolo utente.
-     * - competenza_azione 0 = Ente (admin/gestore)
-     * - competenza_azione 1 = Impresa
-     * - competenza_azione 2 = Entrambi
+     * Restituisce le azioni disponibili per una segnalazione in base allo stato attuale e al ruolo.
+     *
+     * Competenza: 0=Ente (admin/gestore), 1=Impresa, 2=Entrambi
      */
     public function getAzioniDisponibili(Segnalazione $segnalazione, User $user): Collection
     {
-        if ($segnalazione->isChiusa()) {
-            return collect();
-        }
+        $statoCorrente = $segnalazione->statoEnum();
 
         $query = Azione::orderBy('ordine');
 
         if ($user->hasRole('impresa')) {
             $query->whereIn('competenza_azione', [1, 2]);
         } else {
-            // admin / gestore
             $query->whereIn('competenza_azione', [0, 2]);
         }
 
-        return $query->get();
+        return $query->get()->filter(function (Azione $azione) use ($segnalazione, $user, $statoCorrente) {
+            return $this->azioneApplicabile($azione, $segnalazione, $user, $statoCorrente);
+        })->values();
     }
 
     /**
@@ -54,10 +53,12 @@ class SegnalazioneWorkflowService
      * @param array $params {
      *   id_operatore?: int,
      *   id_appalto?: int,
-     *   nota?: string
+     *   nota?: string,
+     *   id_segnalazione_madre?: int,   (richiesto per segna_duplicata)
+     *   id_segnalazione_correlata?: int (per collega)
      * }
      *
-     * @throws ValidationException se l'azione non è applicabile
+     * @throws ValidationException
      */
     public function eseguiAzione(
         Segnalazione $segnalazione,
@@ -65,31 +66,155 @@ class SegnalazioneWorkflowService
         User         $user,
         array        $params = []
     ): void {
-        $azione = Azione::findOrFail($idAzione);
+        $azione        = Azione::findOrFail($idAzione);
+        $statoCorrente = $segnalazione->statoEnum();
 
-        if ($segnalazione->isChiusa()) {
+        if (! $this->azioneApplicabile($azione, $segnalazione, $user, $statoCorrente)) {
             throw ValidationException::withMessages([
-                'azione' => 'Impossibile eseguire azioni su una segnalazione chiusa.',
+                'azione' => 'Azione non applicabile allo stato attuale della segnalazione.',
             ]);
         }
 
-        $statoTarget = $azione->statoTarget;
+        // Azioni speciali senza cambio stato
+        match ($azione->codice) {
+            'riprendi' => $this->eseguiRiprendi($segnalazione, $azione, $user, $params),
+            'collega'  => $this->eseguiCollega($segnalazione, $azione, $user, $params),
+            default    => $this->eseguiTransizione($segnalazione, $azione, $user, $params),
+        };
+    }
 
-        // Aggiornamenti sulla segnalazione
-        $update = ['id_stato_segnalazione' => $statoTarget->id_stato];
+    public function setEvidenza(Segnalazione $segnalazione, bool $evidenza): void
+    {
+        $segnalazione->update(['flag_evidenza' => $evidenza]);
+    }
 
-        if ($azione->flag_operatore && isset($params['id_operatore']) && $params['id_operatore']) {
+    // ── Azioni speciali ───────────────────────────────────────────────────────
+
+    private function eseguiRiprendi(Segnalazione $segnalazione, Azione $azione, User $user, array $params): void
+    {
+        // Trova ultimo stato non-SOSPESA nel log
+        $ultimoStatoPrecedente = StoricoStatoSegnalazione::where('id_segnalazione', $segnalazione->id_segnalazione)
+            ->where('id_stato_segnalazione', '!=', SegnalazioneStato::SOSPESA->value)
+            ->orderByDesc('data_registrazione')
+            ->value('id_stato_segnalazione');
+
+        $statoRipresa = $ultimoStatoPrecedente ?? SegnalazioneStato::IN_CARICO->value;
+
+        $segnalazione->update(['id_stato_segnalazione' => $statoRipresa]);
+
+        StoricoStatoSegnalazione::create([
+            'id_segnalazione'       => $segnalazione->id_segnalazione,
+            'id_stato_segnalazione' => $statoRipresa,
+            'id_utente'             => $user->id,
+            'id_utente_collegato'   => 0,
+            'id_appalto'            => 0,
+        ]);
+
+        if (! empty($params['nota'])) {
+            $segnalazione->note()->create([
+                'testo'            => $params['nota'],
+                'id_utente'        => $user->id,
+                'visibile_web'     => false,
+                'visibile_impresa' => false,
+            ]);
+        }
+
+        InviaWebhookOutbound::dispatch($segnalazione->fresh());
+    }
+
+    private function eseguiCollega(Segnalazione $segnalazione, Azione $azione, User $user, array $params): void
+    {
+        $idCorrelata = (int) ($params['id_segnalazione_correlata'] ?? 0);
+
+        if (! $idCorrelata) {
+            throw ValidationException::withMessages([
+                'id_segnalazione_correlata' => 'Seleziona la segnalazione a cui collegare.',
+            ]);
+        }
+
+        if ($idCorrelata === $segnalazione->id_segnalazione) {
+            throw ValidationException::withMessages([
+                'id_segnalazione_correlata' => 'Non puoi collegare una segnalazione a se stessa.',
+            ]);
+        }
+
+        $correlata = Segnalazione::find($idCorrelata);
+        if (! $correlata) {
+            throw ValidationException::withMessages([
+                'id_segnalazione_correlata' => 'Segnalazione correlata non trovata.',
+            ]);
+        }
+
+        $segnalazione->update(['id_segnalazione_correlata' => $idCorrelata]);
+
+        if (! empty($params['nota'])) {
+            $segnalazione->note()->create([
+                'testo'            => $params['nota'],
+                'id_utente'        => $user->id,
+                'visibile_web'     => false,
+                'visibile_impresa' => false,
+            ]);
+        }
+    }
+
+    // ── Transizione standard ──────────────────────────────────────────────────
+
+    private function eseguiTransizione(Segnalazione $segnalazione, Azione $azione, User $user, array $params): void
+    {
+        $nuovoStato = SegnalazioneStato::from($azione->id_stato_segnalazione);
+        $previousStateId = $segnalazione->id_stato_segnalazione instanceof SegnalazioneStato
+            ? $segnalazione->id_stato_segnalazione->value
+            : (int) $segnalazione->id_stato_segnalazione;
+
+        $update = ['id_stato_segnalazione' => $nuovoStato->value];
+
+        if ($azione->flag_operatore && ! empty($params['id_operatore'])) {
             $update['id_operatore_assegnato'] = $params['id_operatore'];
         }
 
-        if ($azione->flag_appalto && isset($params['id_appalto']) && $params['id_appalto']) {
+        if ($azione->flag_appalto && ! empty($params['id_appalto'])) {
             $update['id_appalto'] = $params['id_appalto'];
         }
 
-        if ($statoTarget->chiusura) {
+        // Gestione DUPLICATA: imposta la segnalazione madre
+        if ($azione->codice === 'segna_duplicata') {
+            $idMadre = (int) ($params['id_segnalazione_madre'] ?? 0);
+            if (! $idMadre) {
+                throw ValidationException::withMessages([
+                    'id_segnalazione_madre' => 'Seleziona la segnalazione madre.',
+                ]);
+            }
+            if ($idMadre === $segnalazione->id_segnalazione) {
+                throw ValidationException::withMessages([
+                    'id_segnalazione_madre' => 'Non puoi marcare una segnalazione come duplicata di se stessa.',
+                ]);
+            }
+            $madre = Segnalazione::find($idMadre);
+            if (! $madre || $madre->statoEnum() === SegnalazioneStato::DUPLICATA) {
+                throw ValidationException::withMessages([
+                    'id_segnalazione_madre' => 'La segnalazione madre non è valida.',
+                ]);
+            }
+            $update['id_segnalazione_madre'] = $idMadre;
+        }
+
+        // Motivazione obbligatoria per ANNULLATA
+        if ($azione->codice === 'annulla' && empty($params['nota'])) {
+            throw ValidationException::withMessages([
+                'nota' => 'La motivazione è obbligatoria per annullare una segnalazione.',
+            ]);
+        }
+
+        // Gestione RIAPRI
+        if ($azione->codice === 'riapri') {
+            $update['data_chiusura'] = null;
+            $update['sla_violato']   = false;
+        }
+
+        if ($nuovoStato->isTerminale() && $azione->codice !== 'riapri') {
             $update['data_chiusura'] = now();
             $update['sla_violato']   = false;
-        } else {
+        } elseif ($azione->codice !== 'riapri') {
             $scadenza = $this->sla->calcolaScadenza($segnalazione);
             if ($scadenza) {
                 $update['data_scadenza_sla'] = $scadenza;
@@ -98,16 +223,14 @@ class SegnalazioneWorkflowService
 
         $segnalazione->update($update);
 
-        // Audit trail
         StoricoStatoSegnalazione::create([
-            'id_segnalazione'      => $segnalazione->id_segnalazione,
-            'id_stato_segnalazione'=> $statoTarget->id_stato,
-            'id_utente'            => $user->id,
-            'id_utente_collegato'  => $params['id_operatore'] ?? 0,
-            'id_appalto'           => $params['id_appalto'] ?? 0,
+            'id_segnalazione'       => $segnalazione->id_segnalazione,
+            'id_stato_segnalazione' => $nuovoStato->value,
+            'id_utente'             => $user->id,
+            'id_utente_collegato'   => $params['id_operatore'] ?? 0,
+            'id_appalto'            => $params['id_appalto'] ?? 0,
         ]);
 
-        // Nota automatica se fornita
         if (! empty($params['nota'])) {
             $segnalazione->note()->create([
                 'testo'            => $params['nota'],
@@ -119,28 +242,44 @@ class SegnalazioneWorkflowService
 
         $fresca = $segnalazione->fresh();
 
-        // Notifiche email
         if ($this->deveInviareNotifiche($azione, $fresca)) {
             $this->inviaNotifiche($fresca, $azione, $user);
         }
 
-        // Pubblicazione automatica se configurata
-        $previousStateId = $segnalazione->getOriginal('id_stato_segnalazione');
-        $this->automaticallyPublish($fresca, $previousStateId, $statoTarget->id_stato);
+        $this->automaticallyPublish($fresca, $previousStateId, $nuovoStato->value);
 
-        // Webhook outbound verso sito Comune (via Queue con retry)
         InviaWebhookOutbound::dispatch($fresca);
     }
 
-    /**
-     * Imposta / rimuove il flag evidenza.
-     */
-    public function setEvidenza(Segnalazione $segnalazione, bool $evidenza): void
+    // ── Filtro applicabilità ─────────────────────────────────────────────────
+
+    private function azioneApplicabile(Azione $azione, Segnalazione $segnalazione, User $user, SegnalazioneStato $statoCorrente): bool
     {
-        $segnalazione->update(['flag_evidenza' => $evidenza]);
+        $filtro = $azione->parametri_filtro;
+        $statiConsentiti = is_array($filtro) ? ($filtro['stati'] ?? []) : [];
+
+        if (! in_array($statoCorrente->value, $statiConsentiti, true)) {
+            return false;
+        }
+
+        // RIAPRI: solo admin o gestore supervisore, solo entro il limite di giorni
+        if ($azione->codice === 'riapri') {
+            if (! ($user->hasRole('admin') || ($user->hasRole('gestore') && $user->isSupervisore()))) {
+                return false;
+            }
+
+            $limitGiorni = (int) Impostazione::get('reopen_days_limit', 30);
+            if ($limitGiorni === 0 || ! $segnalazione->data_chiusura) {
+                return false;
+            }
+
+            return $segnalazione->data_chiusura->diffInDays(now()) <= $limitGiorni;
+        }
+
+        return true;
     }
 
-    // ── Privati ───────────────────────────────────────────────────────────────
+    // ── Notifiche ────────────────────────────────────────────────────────────
 
     private function inviaNotifiche(Segnalazione $segnalazione, Azione $azione, User $attore): void
     {
@@ -177,7 +316,9 @@ class SegnalazioneWorkflowService
             return;
         }
 
-        if ($segnalazione->stato?->chiusura) {
+        $statoEnum = $segnalazione->statoEnum();
+
+        if ($statoEnum->isTerminale()) {
             $segnalatore = $segnalazione->id_utente_segnalazione
                 ? User::find($segnalazione->id_utente_segnalazione)
                 : null;
@@ -197,23 +338,18 @@ class SegnalazioneWorkflowService
 
         $notification = new SegnalazioneStatoCambiato($segnalazione, $azione, $attore);
 
-        // All'operatore assegnato (se diverso dall'attore)
         if ($segnalazione->id_operatore_assegnato &&
             $segnalazione->id_operatore_assegnato !== $attore->id
         ) {
-            $operatore = User::find($segnalazione->id_operatore_assegnato);
-            $operatore?->notify($notification);
+            User::find($segnalazione->id_operatore_assegnato)?->notify($notification);
         }
 
-        // Al segnalatore originale (se visibile_web implicito dal flag)
         if ($segnalazione->id_utente_segnalazione &&
             $segnalazione->id_utente_segnalazione !== $attore->id
         ) {
-            $segnalatore = User::find($segnalazione->id_utente_segnalazione);
-            $segnalatore?->notify($notification);
+            User::find($segnalazione->id_utente_segnalazione)?->notify($notification);
         }
 
-        // All'impresa se appalto assegnato
         if ($segnalazione->id_appalto) {
             $appalto = $segnalazione->appalto()->with('impresa')->first();
             if ($appalto?->id_impresa) {
@@ -235,31 +371,21 @@ class SegnalazioneWorkflowService
         return $azione->flag_notifica
             || ($azione->flag_operatore && (bool) $segnalazione->id_operatore_assegnato)
             || ($azione->flag_appalto && (bool) $segnalazione->id_appalto)
-            || (bool) $segnalazione->stato?->chiusura;
+            || $segnalazione->statoEnum()->isTerminale();
     }
 
-    /**
-     * Pubblica automaticamente una segnalazione se configurato.
-     * Una segnalazione viene pubblicata quando raggiunge uno stato configurato in impostazioni.
-     */
-    private function automaticallyPublish(
-        Segnalazione $segnalazione,
-        int|null     $previousStateId,
-        int          $newStateId,
-    ): void {
-        // Controlla se la pubblicazione automatica è abilitata
+    private function automaticallyPublish(Segnalazione $segnalazione, int $previousStateId, int $newStateId): void
+    {
         if (! Impostazione::get('publication_enabled', false)) {
             return;
         }
 
-        // Leggi lo stato trigger configurato
         $triggerStateId = Impostazione::get('publication_auto_state_id');
 
         if ($triggerStateId === null) {
             return;
         }
 
-        // Se siamo già al di sopra del trigger e il nuovo stato è >= trigger, pubblica
         if ($newStateId >= (int) $triggerStateId && ! $segnalazione->flag_pubblicata) {
             $segnalazione->update([
                 'flag_pubblicata' => true,
@@ -268,13 +394,11 @@ class SegnalazioneWorkflowService
 
             Cache::forget('public.home.statistics');
 
-            // Emetti evento per audit trail
             SegnalazionePublishedAutomatically::dispatch(
                 $segnalazione->fresh(),
-                $previousStateId ?? 0,
+                $previousStateId,
                 $newStateId,
             );
         }
     }
 }
-

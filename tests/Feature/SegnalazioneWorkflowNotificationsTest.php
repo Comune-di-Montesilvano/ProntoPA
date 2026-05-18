@@ -47,6 +47,7 @@ class SegnalazioneWorkflowNotificationsTest extends TestCase
 
         $segnalazione = $this->makeSegnalazione($segnalatore->id);
 
+        // azione 2 = assegna_operatore (stati sorgente: [2,6])
         app(SegnalazioneWorkflowService::class)->eseguiAzione($segnalazione, 2, $attore, [
             'id_operatore' => $operatore->id,
         ]);
@@ -84,7 +85,8 @@ class SegnalazioneWorkflowNotificationsTest extends TestCase
 
         $segnalazione = $this->makeSegnalazione($segnalatore->id);
 
-        app(SegnalazioneWorkflowService::class)->eseguiAzione($segnalazione, 1, $attore, [
+        // azione 3 = assegna_impresa (stati sorgente: [2,6])
+        app(SegnalazioneWorkflowService::class)->eseguiAzione($segnalazione, 3, $attore, [
             'id_appalto' => $appalto->id_appalto,
         ]);
 
@@ -103,7 +105,8 @@ class SegnalazioneWorkflowNotificationsTest extends TestCase
 
         $segnalazione = $this->makeSegnalazione($segnalatore->id);
 
-        app(SegnalazioneWorkflowService::class)->eseguiAzione($segnalazione, 3, $attore);
+        // azione 9 = chiudi (stati sorgente: [2,3,4,5])
+        app(SegnalazioneWorkflowService::class)->eseguiAzione($segnalazione, 9, $attore);
 
         Notification::assertSentTo($segnalatore, SegnalazioneChiusaNotification::class);
     }

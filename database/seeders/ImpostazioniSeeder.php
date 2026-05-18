@@ -199,6 +199,15 @@ class ImpostazioniSeeder extends Seeder
                 'descrizione' => 'Disk di storage per gli allegati (local oppure s3)',
             ],
 
+            // Workflow
+            [
+                'chiave'      => 'reopen_days_limit',
+                'valore'      => '30',
+                'tipo'        => 'integer',
+                'gruppo'      => 'workflow',
+                'descrizione' => 'Giorni entro cui è consentita la riapertura di una segnalazione chiusa (0 = mai)',
+            ],
+
             // Verifica annuale account
             [
                 'chiave'      => 'account_verification_enabled',
