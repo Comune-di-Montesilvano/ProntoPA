@@ -242,11 +242,9 @@
                                 <td class="px-3 py-3 text-gray-500 text-xs">{{ $s->provenienza?->descrizione ?? '—' }}</td>
                                 <td class="px-3 py-3 text-gray-500 text-xs">{{ $s->operatore?->name ?? '—' }}</td>
                                 <td class="px-3 py-3">
-                                    @if($s->stato)
-                                        <span class="{{ $s->stato->badgeClass() }} inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
-                                            {{ $s->stato->descrizione }}
-                                        </span>
-                                    @endif
+                                    <span class="{{ $s->statoEnum()->badgeClass() }} inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
+                                        {{ $s->statoEnum()->label() }}
+                                    </span>
                                 </td>
                                 <td class="px-3 py-3">
                                     @can('update', $s)
