@@ -308,7 +308,7 @@ class ImportLegacy extends Command
                 'latitudine'                => $s->latitudine,
                 'longitudine'               => $s->longitudine,
                 'testo_segnalazione'        => $s->testo_segnalazione,
-                'id_stato_segnalazione'     => $s->id_stato_segnalazione,
+                'id_stato_segnalazione'     => $this->mapStato((int) $s->id_stato_segnalazione),
                 'id_provenienza'            => $s->id_provenienza,
                 'segnalante'                => $s->segnalante,
                 'email'                     => $s->email,
@@ -383,7 +383,7 @@ class ImportLegacy extends Command
             DB::table('stati_segnalazioni')->insert([
                 'id_segnalazione'       => $st->id_segnalazione,
                 'data_registrazione'    => $st->data_registrazione,
-                'id_stato_segnalazione' => $st->id_stato_segnalazione,
+                'id_stato_segnalazione' => $this->mapStato((int) $st->id_stato_segnalazione),
                 'id_utente'             => $idUtente ?? 0,
                 'id_utente_collegato'   => $idCollegato ?? 0,
                 'id_appalto'            => $idAppalto ?? 0,
@@ -396,6 +396,27 @@ class ImportLegacy extends Command
         $bar->finish();
         $this->newLine();
         $this->line("  {$this->importedStati} stati importati.");
+    }
+
+    // ─── Stato map ───────────────────────────────────────────────────────────────
+
+    private function mapStato(int $legacyId): int
+    {
+        return match($legacyId) {
+            1  => 1,  // Attesa esame   → NUOVA
+            2  => 2,  // In carico      → IN_CARICO
+            3  => 3,  // In gestione    → ASSEGNATA_OPERATORE
+            4  => 5,  // Val.economica  → PREVENTIVO_IN_ATTESA
+            5  => 4,  // Ass.impresa    → ASSEGNATA_IMPRESA
+            6  => 3,  // Acc.tecnico    → ASSEGNATA_OPERATORE
+            7  => 7,  // Prop.chiusura  → COMPLETATA
+            8  => 7,  // Completata     → COMPLETATA
+            9  => 9,  // Annullata      → ANNULLATA
+            10 => 10, // Archiviata     → ARCHIVIATA
+            11 => 5,  // Stimata        → PREVENTIVO_IN_ATTESA
+            12 => 4,  // In appalto     → ASSEGNATA_IMPRESA
+            default => 1,
+        };
     }
 
     // ─── User ID map ─────────────────────────────────────────────────────────────
