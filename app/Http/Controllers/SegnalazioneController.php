@@ -183,6 +183,7 @@ class SegnalazioneController extends Controller
         $segnalazione->load([
             'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
             'operatore', 'utente', 'appalto', 'specializzazione',
+            'squadraAssegnata',
             'note.autore',
             'storicoStati.stato', 'storicoStati.utente',
             'allegati.utenteCreazione',
@@ -208,6 +209,7 @@ class SegnalazioneController extends Controller
             'id_azione'    => ['required', 'integer', 'exists:db_azioni,id_azione'],
             'id_operatore' => ['nullable', 'integer', 'exists:users,id'],
             'id_appalto'   => ['nullable', 'integer', 'exists:appalti,id_appalto'],
+            'id_squadra'   => ['nullable', 'integer', 'exists:squadre,id_squadra'],
             'nota'         => ['nullable', 'string', 'max:2000'],
         ]);
 

@@ -69,6 +69,11 @@
                     <strong class="ml-1">{{ $segnalazione->label_ubicazione }}</strong>
                 </div>
             @endif
+            @if($segnalazione->squadraAssegnata)
+                <span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                    👷 {{ $segnalazione->squadraAssegnata->nome }}
+                </span>
+            @endif
             @if($segnalazione->adesioni->count() > 0)
                 <span class="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
                     +{{ $segnalazione->adesioni->count() }} adesioni
@@ -452,6 +457,24 @@
                                         <option value="{{ $op->id }}">{{ $op->name }}</option>
                                     @endforeach
                                 </select>
+
+                                @if (\App\Models\Impostazione::get('squadre_enabled', false))
+                                    @php $squadre = \App\Models\Squadra::where('attiva', true)->orderBy('nome')->get(); @endphp
+                                    @if ($squadre->isNotEmpty())
+                                        <div class="mt-2">
+                                            <label for="id_squadra" class="block text-sm font-medium text-gray-700">
+                                                Oppure assegna a una squadra
+                                            </label>
+                                            <select name="id_squadra" id="id_squadra"
+                                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                                <option value="">— Nessuna squadra —</option>
+                                                @foreach ($squadre as $squadra)
+                                                    <option value="{{ $squadra->id_squadra }}">{{ $squadra->nome }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    @endif
+                                @endif
                             </div>
 
                             <div x-show="flagAppalto" x-cloak>
