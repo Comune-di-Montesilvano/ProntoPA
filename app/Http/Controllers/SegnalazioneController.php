@@ -340,6 +340,9 @@ class SegnalazioneController extends Controller
 
         $destinazione = Segnalazione::findOrFail($data['id_destinazione']);
 
+        // Il gestore deve poter operare anche sulla destinazione, non solo sul duplicato
+        $this->authorize('update', $destinazione);
+
         if ($destinazione->id_segnalazione === $segnalazione->id_segnalazione) {
             return back()->withErrors(['id_destinazione' => 'Impossibile unire una segnalazione a sé stessa.']);
         }

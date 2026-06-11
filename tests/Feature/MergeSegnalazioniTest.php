@@ -40,6 +40,28 @@ class MergeSegnalazioniTest extends TestCase
         return $user;
     }
 
+    public function test_merge_negato_su_destinazione_non_gestibile(): void
+    {
+        // Gestore non supervisore: può aggiornare solo le segnalazioni assegnate a lui.
+        $gestore = User::factory()->create([
+            'amministratore'           => false,
+            'gestore_segnalazioni'     => true,
+            'supervisore_segnalazioni' => false,
+        ]);
+        $gestore->assignRole('gestore');
+
+        $duplicato    = Segnalazione::factory()->create(['id_operatore_assegnato' => $gestore->id]);
+        $destinazione = Segnalazione::factory()->create(); // non assegnata a lui
+
+        $response = $this->actingAs($gestore)->post(
+            route('segnalazioni.unisci', $duplicato),
+            ['id_destinazione' => $destinazione->id_segnalazione]
+        );
+
+        $response->assertForbidden();
+        $this->assertFalse($duplicato->fresh()->isChiusa());
+    }
+
     public function test_merge_chiude_duplicato_e_crea_adesione(): void
     {
         $madre     = Segnalazione::factory()->create();
