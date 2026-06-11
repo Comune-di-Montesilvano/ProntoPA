@@ -130,13 +130,15 @@ class SegnalazioneController extends Controller
 
         // Allegati opzionali
         if ($request->hasFile('allegati')) {
+            $disk = Impostazione::get('allegati_storage_disk', 'local');
+
             foreach ($request->file('allegati') as $file) {
                 $ext      = $file->getClientOriginalExtension();
                 $filename = Str::uuid() . ($ext ? '.' . $ext : '');
                 $path     = $file->storeAs(
                     'allegati/' . $segnalazione->id_segnalazione,
                     $filename,
-                    'local'
+                    $disk
                 );
                 AllegatoSegnalazione::create([
                     'id_segnalazione'     => $segnalazione->id_segnalazione,
