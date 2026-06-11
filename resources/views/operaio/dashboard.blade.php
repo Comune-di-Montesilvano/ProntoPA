@@ -49,6 +49,12 @@
     @endif
 
     {{-- Lista card verticali --}}
+    @php
+        $membriSquadre = ($tab === 'squadra')
+            ? auth()->user()->squadreGuidate()->where('attiva', true)->with('membri')->get()
+                ->flatMap->membri->unique('id')
+            : collect();
+    @endphp
     <div class="space-y-3">
         @forelse($segnalazioni as $s)
             <div class="bg-white shadow-sm rounded-xl p-4 active:bg-gray-50 transition">
@@ -97,14 +103,12 @@
 
                 {{-- Smista (solo tab squadra, lavori non ancora assegnati a singolo) --}}
                 @if($tab === 'squadra' && (!$s->id_operatore_assegnato || $s->id_operatore_assegnato == 0))
-                    @php $squadreCapo = auth()->user()->squadreGuidate()->with('membri')->get(); @endphp
-                    @php $membriUnici = $squadreCapo->flatMap->membri->unique('id'); @endphp
-                    @if($membriUnici->isNotEmpty())
+                    @if($membriSquadre->isNotEmpty())
                         <form method="POST" action="{{ route('operaio.smista', $s->id_segnalazione) }}" class="mt-2 flex gap-2">
                             @csrf
                             <select name="id_membro" class="rounded-md border-gray-300 text-sm" required>
                                 <option value="">Assegna a…</option>
-                                @foreach($membriUnici as $membro)
+                                @foreach($membriSquadre as $membro)
                                     <option value="{{ $membro->id }}">{{ $membro->name }}</option>
                                 @endforeach
                             </select>

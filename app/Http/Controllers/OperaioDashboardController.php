@@ -51,7 +51,7 @@ class OperaioDashboardController extends Controller
         $user = auth()->user();
 
         $squadra = $segnalazione->id_squadra_assegnata
-            ? \App\Models\Squadra::find($segnalazione->id_squadra_assegnata)
+            ? \App\Models\Squadra::where('attiva', true)->find($segnalazione->id_squadra_assegnata)
             : null;
 
         abort_unless($squadra && $squadra->id_caposquadra === $user->id, 403);
@@ -60,11 +60,11 @@ class OperaioDashboardController extends Controller
             'id_membro' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        abort_unless(
-            $squadra->membri()->where('users.id', $data['id_membro'])->exists(),
-            422,
-            'L\'utente non è membro della squadra.'
-        );
+        if (! $squadra->membri()->where('users.id', $data['id_membro'])->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'id_membro' => 'L\'utente non è membro della squadra.',
+            ]);
+        }
 
         $segnalazione->update(['id_operatore_assegnato' => $data['id_membro']]);
 

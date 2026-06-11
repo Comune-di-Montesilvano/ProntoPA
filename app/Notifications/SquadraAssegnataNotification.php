@@ -34,8 +34,13 @@ class SquadraAssegnataNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $segnalazione = Segnalazione::findOrFail($this->idSegnalazione);
-        $squadra      = Squadra::findOrFail($this->idSquadra);
+        $segnalazione = Segnalazione::find($this->idSegnalazione);
+        $squadra      = Squadra::find($this->idSquadra);
+
+        if (! $segnalazione || ! $squadra) {
+            return $this->baseMailMessage('Segnalazione non più disponibile')
+                ->line('La segnalazione collegata a questa notifica non è più disponibile.');
+        }
 
         return $this->baseMailMessage('Nuovo lavoro per la squadra ' . $squadra->nome)
             ->line('Alla squadra "' . $squadra->nome . '" è stata assegnata la segnalazione #' . $segnalazione->id_segnalazione . '.')
@@ -47,8 +52,12 @@ class SquadraAssegnataNotification extends Notification implements ShouldQueue
 
     public function toTelegram(object $notifiable): array
     {
-        $segnalazione = Segnalazione::findOrFail($this->idSegnalazione);
-        $squadra      = Squadra::findOrFail($this->idSquadra);
+        $segnalazione = Segnalazione::find($this->idSegnalazione);
+        $squadra      = Squadra::find($this->idSquadra);
+
+        if (! $segnalazione || ! $squadra) {
+            return ['text' => 'Segnalazione non più disponibile.'];
+        }
 
         return [
             'text' => implode("\n", [

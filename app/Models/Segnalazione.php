@@ -196,8 +196,8 @@ class Segnalazione extends Model
         }
 
         if ($user->hasRole('operaio')) {
-            $squadreIds        = $user->squadre()->pluck('squadre.id_squadra');
-            $squadreGuidateIds = $user->squadreGuidate()->pluck('id_squadra');
+            $squadreIds        = $user->squadre()->where('attiva', true)->pluck('squadre.id_squadra');
+            $squadreGuidateIds = $user->squadreGuidate()->where('attiva', true)->pluck('id_squadra');
 
             return $query->where(function ($q) use ($user, $squadreIds, $squadreGuidateIds) {
                 $q->where('id_operatore_assegnato', $user->id);
