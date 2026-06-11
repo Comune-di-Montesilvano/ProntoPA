@@ -79,7 +79,7 @@ class DigestGestoriTest extends TestCase
         Notification::assertSentTo(
             $supervisore,
             DigestGestoreNotification::class,
-            fn (DigestGestoreNotification $n) => count($n->nonAssegnate) === 1
+            fn (DigestGestoreNotification $n) => count($n->nonAssegnateIds) === 1
         );
     }
 
@@ -96,5 +96,22 @@ class DigestGestoriTest extends TestCase
         $this->artisan('digest:invia')->assertExitCode(0);
 
         Notification::assertNothingSentTo($gestore);
+    }
+
+    public function test_weekend_saltato_quando_configurato(): void
+    {
+        Impostazione::set('digest_skip_weekend', true);
+        $this->travelTo(now()->next(\Carbon\CarbonInterface::SATURDAY)->setTime(8, 0));
+
+        $gestore = $this->gestore();
+        Segnalazione::factory()->create([
+            'id_operatore_assegnato' => $gestore->id,
+            'sla_violato'            => true,
+        ]);
+
+        $this->artisan('digest:invia')->assertExitCode(0);
+
+        Notification::assertNothingSentTo($gestore);
+        $this->travelBack();
     }
 }

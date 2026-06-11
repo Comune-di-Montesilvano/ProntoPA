@@ -29,6 +29,13 @@ class InviaDigestGestori extends Command
             ->where('attivo', true)
             ->get();
 
+        $nonAssegnateGlobali = Segnalazione::aperte()
+            ->where(fn ($q) => $q->where('id_operatore_assegnato', 0)->orWhereNull('id_operatore_assegnato'))
+            ->orderByDesc('livello_priorita')
+            ->orderBy('data_segnalazione')
+            ->limit(50)
+            ->get();
+
         $inviati = 0;
 
         foreach ($gestori as $gestore) {
@@ -46,19 +53,17 @@ class InviaDigestGestori extends Command
                 ->orderBy('data_scadenza_sla')
                 ->get();
 
-            $nonAssegnate = $gestore->supervisore_segnalazioni
-                ? Segnalazione::aperte()
-                    ->where(fn ($q) => $q->where('id_operatore_assegnato', 0)->orWhereNull('id_operatore_assegnato'))
-                    ->orderByDesc('livello_priorita')
-                    ->orderBy('data_segnalazione')
-                    ->get()
-                : collect();
+            $nonAssegnate = $gestore->supervisore_segnalazioni ? $nonAssegnateGlobali : collect();
 
             if ($inRitardo->isEmpty() && $inScadenza->isEmpty() && $nonAssegnate->isEmpty()) {
                 continue;
             }
 
-            $gestore->notify(new DigestGestoreNotification($inRitardo, $inScadenza, $nonAssegnate));
+            $gestore->notify(new DigestGestoreNotification(
+                $inRitardo->pluck('id_segnalazione')->all(),
+                $inScadenza->pluck('id_segnalazione')->all(),
+                $nonAssegnate->pluck('id_segnalazione')->all(),
+            ));
             $inviati++;
         }
 

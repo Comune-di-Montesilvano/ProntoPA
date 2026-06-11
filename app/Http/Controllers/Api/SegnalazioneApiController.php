@@ -33,6 +33,7 @@ class SegnalazioneApiController extends Controller
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
             'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
             'ubicazione_tipo'           => ['nullable', 'integer', 'between:0,4'],
+            'force'                     => ['nullable', 'boolean'],
         ]);
 
         if (! $request->boolean('force')) {
