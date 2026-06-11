@@ -26,7 +26,12 @@ class AllegatiSegnalazioniTest extends TestCase
         $this->seed(TabelleRiferimentoSeeder::class);
         $this->seed(RolesAndPermissionsSeeder::class);
 
+        // Fake storage by default
         Storage::fake('local');
+        Storage::fake('public');
+
+        // Clear the Impostazione cache
+        \Illuminate\Support\Facades\Cache::flush();
     }
 
     private function segnalatore(): User
@@ -51,7 +56,6 @@ class AllegatiSegnalazioniTest extends TestCase
 
     public function test_creazione_segnalazione_rispetta_disk_configurato(): void
     {
-        Storage::fake('public');
         Impostazione::set('allegati_storage_disk', 'public');
 
         $user = $this->segnalatore();
