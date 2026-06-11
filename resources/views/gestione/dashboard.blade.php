@@ -204,6 +204,7 @@
                             <th class="px-3 py-3 text-left">Stato</th>
                             <th class="px-3 py-3 text-left">Visibilita</th>
                             <th class="px-3 py-3"></th>
+                            <th class="px-3 py-3"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50">
@@ -264,6 +265,29 @@
                                             {{ $s->flag_riservata ? 'Riservata' : 'Pubblica' }}
                                         </span>
                                     @endcan
+                                </td>
+                                <td class="relative px-2 py-2 text-right">
+                                    @php $rapide = $azioniRapidePerSegnalazione[$s->id_segnalazione] ?? collect(); @endphp
+                                    @if ($rapide->isNotEmpty())
+                                        <div x-data="{ open: false }" class="inline-block text-left">
+                                            <button type="button" @click="open = !open" @click.outside="open = false"
+                                                    class="rounded p-1 text-gray-500 hover:bg-gray-100" title="Azioni rapide">⋮</button>
+                                            <div x-show="open" x-cloak
+                                                 class="absolute right-0 z-10 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
+                                                @foreach ($rapide as $azione)
+                                                    <form method="POST" action="{{ route('segnalazioni.azione', $s->id_segnalazione) }}"
+                                                          onsubmit="return confirm('Eseguire: {{ $azione->descrizione }}?');">
+                                                        @csrf
+                                                        <input type="hidden" name="id_azione" value="{{ $azione->id_azione }}">
+                                                        <button type="submit"
+                                                                class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+                                                            {{ $azione->descrizione }}
+                                                        </button>
+                                                    </form>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="px-3 py-3 text-right">
                                     <a href="{{ route('segnalazioni.show', $s->id_segnalazione) }}"

@@ -100,11 +100,18 @@ class GestioneController extends Controller
                                   ->orWhere('amministratore', true);
                             })->orderBy('name')->get();
 
+        $workflow = app(\App\Services\SegnalazioneWorkflowService::class);
+        $azioniRapidePerSegnalazione = $segnalazioni->getCollection()
+            ->mapWithKeys(fn ($s) => [
+                $s->id_segnalazione => $workflow->getAzioniRapide($s, $user),
+            ]);
+
         return view('gestione.dashboard', compact(
             'segnalazioni', 'tab', 'conteggi',
             'q', 'idTipologia', 'idProvenienza',
             'idOperatore', 'dataDa', 'dataA', 'livelloPriorita', 'idSpecializzazione',
-            'tipologie', 'provenienze', 'specializzazioni', 'operatori'
+            'tipologie', 'provenienze', 'specializzazioni', 'operatori',
+            'azioniRapidePerSegnalazione'
         ));
     }
 

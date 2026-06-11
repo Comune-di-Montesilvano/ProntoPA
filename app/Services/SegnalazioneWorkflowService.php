@@ -49,6 +49,16 @@ class SegnalazioneWorkflowService
     }
 
     /**
+     * Azioni eseguibili senza parametri aggiuntivi (per i menu rapidi in lista).
+     */
+    public function getAzioniRapide(Segnalazione $segnalazione, User $user): Collection
+    {
+        return $this->getAzioniDisponibili($segnalazione, $user)
+            ->reject(fn (Azione $a) => $a->flag_operatore || $a->flag_appalto)
+            ->values();
+    }
+
+    /**
      * Esegue un'azione su una segnalazione.
      *
      * @param array $params {
