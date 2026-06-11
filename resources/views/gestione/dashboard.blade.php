@@ -266,26 +266,30 @@
                                         </span>
                                     @endcan
                                 </td>
-                                <td class="relative px-2 py-2 text-right">
+                                <td class="px-2 py-2 text-right">
                                     @php $rapide = $azioniRapidePerSegnalazione[$s->id_segnalazione] ?? collect(); @endphp
                                     @if ($rapide->isNotEmpty())
-                                        <div x-data="{ open: false }" class="inline-block text-left">
-                                            <button type="button" @click="open = !open" @click.outside="open = false"
+                                        <div x-data="{ open: false, posX: 0, posY: 0 }" class="inline-block text-left">
+                                            <button type="button"
+                                                    @click="const r = $el.getBoundingClientRect(); posX = r.right; posY = r.bottom; open = !open"
                                                     class="rounded p-1 text-gray-500 hover:bg-gray-100" title="Azioni rapide">⋮</button>
-                                            <div x-show="open" x-cloak
-                                                 class="absolute right-0 z-10 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
-                                                @foreach ($rapide as $azione)
-                                                    <form method="POST" action="{{ route('segnalazioni.azione', $s->id_segnalazione) }}"
-                                                          onsubmit="return confirm('Eseguire: {{ $azione->descrizione }}?');">
-                                                        @csrf
-                                                        <input type="hidden" name="id_azione" value="{{ $azione->id_azione }}">
-                                                        <button type="submit"
-                                                                class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
-                                                            {{ $azione->descrizione }}
-                                                        </button>
-                                                    </form>
-                                                @endforeach
-                                            </div>
+                                            <template x-teleport="body">
+                                                <div x-show="open" x-cloak @click.outside="open = false"
+                                                     class="fixed z-50 w-48 rounded-md border border-gray-200 bg-white shadow-lg"
+                                                     :style="`top: ${posY + 4}px; left: ${posX - 192}px`">
+                                                    @foreach ($rapide as $azione)
+                                                        <form method="POST" action="{{ route('segnalazioni.azione', $s->id_segnalazione) }}"
+                                                              onsubmit="return confirm({{ \Illuminate\Support\Js::from('Eseguire: ' . $azione->descrizione . '?') }});">
+                                                            @csrf
+                                                            <input type="hidden" name="id_azione" value="{{ $azione->id_azione }}">
+                                                            <button type="submit"
+                                                                    class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+                                                                {{ $azione->descrizione }}
+                                                            </button>
+                                                        </form>
+                                                    @endforeach
+                                                </div>
+                                            </template>
                                         </div>
                                     @endif
                                 </td>
