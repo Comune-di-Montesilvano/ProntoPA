@@ -313,7 +313,7 @@ class SegnalazioneController extends Controller
             'foto_url'  => $s->allegati->first()
                 ? route('segnalazioni.allegati.download', [$s, $s->allegati->first()])
                 : null,
-            'adesioni'  => 0,
+            'adesioni'  => $s->adesioni()->count(),
         ])->values());
     }
 

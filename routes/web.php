@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\ProvenienzaController;
 use App\Http\Controllers\Admin\SediController;
 use App\Http\Controllers\Admin\SlaController;
 use App\Http\Controllers\Admin\UtentiController;
+use App\Http\Controllers\AdesioniSegnalazioniController;
 use App\Http\Controllers\AllegatiSegnalazioniController;
 use App\Http\Controllers\Auth\AnnualAccountVerificationController;
 use App\Http\Controllers\AppaltiController;
@@ -54,6 +55,9 @@ Route::middleware('auth')->group(function () {
 
     Route::delete('segnalazioni/{segnalazione}/allegati/{allegato}', [AllegatiSegnalazioniController::class, 'destroy'])
         ->name('segnalazioni.allegati.destroy');
+
+    Route::post('segnalazioni/{segnalazione}/adesioni', [AdesioniSegnalazioniController::class, 'store'])
+        ->name('segnalazioni.adesioni.store');
 
     Route::post('segnalazioni/{segnalazione}/azione', [SegnalazioneController::class, 'eseguiAzione'])
         ->name('segnalazioni.azione');

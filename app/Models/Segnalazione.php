@@ -136,6 +136,12 @@ class Segnalazione extends Model
             ->orderByDesc('created_at');
     }
 
+    public function adesioni(): HasMany
+    {
+        return $this->hasMany(AdesioneSegnalazione::class, 'id_segnalazione', 'id_segnalazione')
+            ->orderByDesc('created_at');
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     public function isChiusa(): bool
