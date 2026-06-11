@@ -39,6 +39,9 @@ Route::get('/dashboard', [RoleDashboardController::class, 'index'])
 
 // ── Segnalazioni (tutti gli autenticati) ──────────────────────────────────────
 Route::middleware('auth')->group(function () {
+    Route::get('segnalazioni/simili', [SegnalazioneController::class, 'simili'])
+        ->name('segnalazioni.simili');
+
     Route::resource('segnalazioni', SegnalazioneController::class)
         ->only(['index', 'create', 'store', 'show'])
         ->parameters(['segnalazioni' => 'segnalazione']);

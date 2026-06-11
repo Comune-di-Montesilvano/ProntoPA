@@ -12,10 +12,12 @@ use App\Models\Segnalazione;
 use App\Models\Specializzazione;
 use App\Models\StatoSegnalazione;
 use App\Notifications\NuovaNotaSegnalazione;
+use App\Services\DedupService;
 use App\Services\SlaService;
 use App\Models\TipologiaSegnalazione;
 use App\Models\User;
 use App\Services\SegnalazioneWorkflowService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,6 +32,7 @@ class SegnalazioneController extends Controller
     public function __construct(
         private readonly SegnalazioneWorkflowService $workflow,
         private readonly SlaService $sla,
+        private readonly DedupService $dedup,
     ) {}
 
     // ── Lista (segnalatore: solo proprie) ─────────────────────────────────────
@@ -282,6 +285,36 @@ class SegnalazioneController extends Controller
         Cache::forget('public.home.statistics');
 
         return back()->with('success', $segnalazione->flag_riservata ? 'Segnalazione esclusa dalle statistiche pubbliche.' : 'Segnalazione ora visibile nelle statistiche pubbliche.');
+    }
+
+    // ── Segnalazioni simili (anti-duplicato) ──────────────────────────────────
+
+    public function simili(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'id_tipologia_segnalazione' => ['required', 'integer'],
+            'id_plesso'                 => ['nullable', 'integer'],
+            'latitudine'                => ['nullable', 'numeric'],
+            'longitudine'               => ['nullable', 'numeric'],
+        ]);
+
+        $simili = $this->dedup->trovaSimili(
+            (int) $data['id_tipologia_segnalazione'],
+            isset($data['id_plesso']) ? (int) $data['id_plesso'] : null,
+            isset($data['latitudine']) ? (float) $data['latitudine'] : null,
+            isset($data['longitudine']) ? (float) $data['longitudine'] : null,
+        );
+
+        return response()->json($simili->map(fn (Segnalazione $s) => [
+            'id'        => $s->id_segnalazione,
+            'testo'     => Str::limit($s->testo_segnalazione, 120),
+            'stato'     => $s->stato?->descrizione,
+            'data'      => $s->data_segnalazione?->format('d/m/Y'),
+            'foto_url'  => $s->allegati->first()
+                ? route('segnalazioni.allegati.download', [$s, $s->allegati->first()])
+                : null,
+            'adesioni'  => 0,
+        ])->values());
     }
 
     private function notificaNota(Segnalazione $segnalazione, NotaSegnalazione $nota): void
