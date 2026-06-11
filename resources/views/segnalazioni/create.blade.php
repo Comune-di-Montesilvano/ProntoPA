@@ -14,6 +14,39 @@
                   x-data="{ tipologiaId: {{ old('id_tipologia_segnalazione', 'null') }} }">
                 @csrf
 
+                {{-- Per conto di (telefonata / sportello) --}}
+                @can('segnalazioni.per-conto')
+                    <fieldset class="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4">
+                        <legend class="px-2 text-sm font-semibold text-amber-800">
+                            Per conto di (telefonata / sportello)
+                        </legend>
+                        <div class="grid gap-4 sm:grid-cols-3">
+                            <div>
+                                <x-input-label for="segnalante_per_conto" value="Nome chiamante" />
+                                <input type="text" name="segnalante_per_conto" id="segnalante_per_conto"
+                                       value="{{ old('segnalante_per_conto') }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <x-input-error :messages="$errors->get('segnalante_per_conto')" class="mt-1" />
+                            </div>
+                            <div>
+                                <x-input-label for="telefono_per_conto" value="Telefono" />
+                                <input type="text" name="telefono_per_conto" id="telefono_per_conto"
+                                       value="{{ old('telefono_per_conto') }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <x-input-error :messages="$errors->get('telefono_per_conto')" class="mt-1" />
+                            </div>
+                            <div>
+                                <x-input-label for="email_per_conto" value="Email (per la notifica di chiusura)" />
+                                <input type="email" name="email_per_conto" id="email_per_conto"
+                                       value="{{ old('email_per_conto') }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <x-input-error :messages="$errors->get('email_per_conto')" class="mt-1" />
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs text-amber-700">Campi facoltativi: compilali se segnali per conto di qualcun altro.</p>
+                    </fieldset>
+                @endcan
+
                 {{-- Tipologia — griglia icone --}}
                 <div>
                     <x-input-label value="Tipologia *" />
@@ -116,40 +149,6 @@
                     <x-input-error :messages="$errors->get('livello_priorita')" class="mt-1" />
                 </div>
 
-                {{-- Specializzazione --}}
-                @if($specializzazioni->isNotEmpty())
-                <div>
-                    <x-input-label for="id_specializzazione" value="Tipo di intervento richiesto" />
-                    <select id="id_specializzazione" name="id_specializzazione"
-                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">— Generico / Non specificato —</option>
-                        @foreach($specializzazioni as $sp)
-                            <option value="{{ $sp->id_specializzazione }}"
-                                {{ old('id_specializzazione') == $sp->id_specializzazione ? 'selected' : '' }}>
-                                {{ $sp->descrizione }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <x-input-error :messages="$errors->get('id_specializzazione')" class="mt-1" />
-                </div>
-                @endif
-
-                {{-- Ubicazione --}}
-                <div>
-                    <x-input-label value="Dove si trova il problema" />
-                    <div class="mt-2 flex flex-wrap gap-2">
-                        @foreach([0 => 'Non specificato', 1 => 'Interno edificio', 2 => 'Esterno', 3 => 'Impianto', 4 => 'Area verde'] as $val => $label)
-                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
-                                <input type="radio" name="ubicazione_tipo" value="{{ $val }}"
-                                       {{ old('ubicazione_tipo', 0) == $val ? 'checked' : '' }}
-                                       class="text-blue-600 focus:ring-blue-500">
-                                <span class="text-sm text-gray-700">{{ $label }}</span>
-                            </label>
-                        @endforeach
-                    </div>
-                    <x-input-error :messages="$errors->get('ubicazione_tipo')" class="mt-1" />
-                </div>
-
                 {{-- Testo --}}
                 <div>
                     <x-input-label for="testo_segnalazione" value="Descrizione del problema *" />
@@ -161,7 +160,81 @@
                     <x-input-error :messages="$errors->get('testo_segnalazione')" class="mt-1" />
                 </div>
 
-                {{-- Geolocalizzazione --}}
+                {{-- Più dettagli (progressive disclosure) --}}
+                <div x-data="{ dettagli: {{ $errors->any() ? 'true' : 'false' }} }" class="mt-6">
+                    <button type="button" @click="dettagli = !dettagli"
+                            class="flex items-center gap-2 text-sm font-medium text-blue-700">
+                        <span x-text="dettagli ? '▾' : '▸'"></span> Più dettagli
+                    </button>
+                    <div x-show="dettagli" class="mt-4 space-y-6">
+
+                        {{-- Specializzazione --}}
+                        @if($specializzazioni->isNotEmpty())
+                        <div>
+                            <x-input-label for="id_specializzazione" value="Tipo di intervento richiesto" />
+                            <select id="id_specializzazione" name="id_specializzazione"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">— Generico / Non specificato —</option>
+                                @foreach($specializzazioni as $sp)
+                                    <option value="{{ $sp->id_specializzazione }}"
+                                        {{ old('id_specializzazione') == $sp->id_specializzazione ? 'selected' : '' }}>
+                                        {{ $sp->descrizione }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('id_specializzazione')" class="mt-1" />
+                        </div>
+                        @endif
+
+                        {{-- Ubicazione --}}
+                        <div>
+                            <x-input-label value="Dove si trova il problema" />
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                @foreach([0 => 'Non specificato', 1 => 'Interno edificio', 2 => 'Esterno', 3 => 'Impianto', 4 => 'Area verde'] as $val => $label)
+                                    <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="ubicazione_tipo" value="{{ $val }}"
+                                               {{ old('ubicazione_tipo', 0) == $val ? 'checked' : '' }}
+                                               class="text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm text-gray-700">{{ $label }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <x-input-error :messages="$errors->get('ubicazione_tipo')" class="mt-1" />
+                        </div>
+
+                        {{-- Allegati --}}
+                        @php
+                            $allegatiMaxSizeMb      = (int) \App\Models\Impostazione::get('allegati_max_size_mb', 10);
+                            $allegatiMaxPerRequest  = (int) \App\Models\Impostazione::get('allegati_max_per_request', 5);
+                            $allegatiMime           = \App\Models\Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png');
+                        @endphp
+                        <div>
+                            <x-input-label for="allegati_create" value="Allegati (foto / video — opzionale)" />
+                            <p class="text-xs text-gray-400 mb-2">
+                                Max {{ $allegatiMaxPerRequest }} file, {{ $allegatiMaxSizeMb }}&nbsp;MB ciascuno.
+                                Formati accettati: foto e video.
+                            </p>
+                            <input id="allegati_create" type="file" name="allegati[]" multiple
+                                   accept="{{ $allegatiMime }}"
+                                   capture="environment"
+                                   class="block w-full text-sm text-gray-500
+                                          file:mr-4 file:py-2 file:px-4
+                                          file:rounded-md file:border-0
+                                          file:text-sm file:font-semibold
+                                          file:bg-blue-50 file:text-blue-700
+                                          hover:file:bg-blue-100" />
+                            @error('allegati')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                            @error('allegati.*')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                    </div>{{-- /x-show dettagli --}}
+                </div>{{-- /x-data dettagli --}}
+
+                {{-- Geolocalizzazione (outside collapse — Leaflet must init on visible DOM) --}}
                 <input type="hidden" name="latitudine" id="latitudine" value="{{ old('latitudine', '0') }}">
                 <input type="hidden" name="longitudine" id="longitudine" value="{{ old('longitudine', '0') }}">
 
@@ -175,35 +248,6 @@
                     </div>
                 </div>
 
-                {{-- Allegati --}}
-                @php
-                    $allegatiMaxSizeMb      = (int) \App\Models\Impostazione::get('allegati_max_size_mb', 10);
-                    $allegatiMaxPerRequest  = (int) \App\Models\Impostazione::get('allegati_max_per_request', 5);
-                    $allegatiMime           = \App\Models\Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png');
-                @endphp
-                <div>
-                    <x-input-label for="allegati_create" value="Allegati (foto / video — opzionale)" />
-                    <p class="text-xs text-gray-400 mb-2">
-                        Max {{ $allegatiMaxPerRequest }} file, {{ $allegatiMaxSizeMb }}&nbsp;MB ciascuno.
-                        Formati accettati: foto e video.
-                    </p>
-                    <input id="allegati_create" type="file" name="allegati[]" multiple
-                           accept="{{ $allegatiMime }}"
-                           capture="environment"
-                           class="block w-full text-sm text-gray-500
-                                  file:mr-4 file:py-2 file:px-4
-                                  file:rounded-md file:border-0
-                                  file:text-sm file:font-semibold
-                                  file:bg-blue-50 file:text-blue-700
-                                  hover:file:bg-blue-100" />
-                    @error('allegati')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                    @error('allegati.*')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
                 {{-- Actions --}}
                 <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
                     <a href="{{ url()->previous() }}" class="text-sm text-gray-500 hover:text-gray-700">Annulla</a>
@@ -211,6 +255,12 @@
                             class="inline-flex items-center px-5 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-sm text-white uppercase tracking-widest hover:bg-blue-700 transition">
                         Invia segnalazione
                     </button>
+                    @can('segnalazioni.per-conto')
+                        <button type="submit" name="salva_e_nuova" value="1"
+                                class="ml-3 inline-flex items-center rounded-md border border-blue-600 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">
+                            Salva e inserisci nuova
+                        </button>
+                    @endcan
                 </div>
             </form>
         </div>
