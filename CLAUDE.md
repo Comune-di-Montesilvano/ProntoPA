@@ -87,7 +87,7 @@ app/Http/Middleware/RoleRedirect.php
 
 ## Workflow Stati
 
-1=Attesa esame 2=In carico 3=In gestione 4=Val.economica 5=Ass.impresa 6=Acc.tecnico 7=Prop.chiusura 8=Completata 9=Annullata 10=Archiviata 11=Stimata 12=In appalto
+1=In attesa esame 2=In carico 3=Completata† 4=Annullata† 5=Archiviata† 6=Val.fattibilità 7=Assegnata impresa 8=Assegnata squadra 9=In approvazione preventivo 10=Attesa collaudo 11=Preventivo accettato 12=Sospesa 13=Attesa pareri 14=Sopralluogo († = chiusura) — fonte: `TabelleRiferimentoSeeder`
 
 Azioni: assegna impresa/operatore · chiudi · invia/accetta preventivo · pianifica · proponi chiusura · archivia · richiedi accertamento/valutazione · riapri
 
