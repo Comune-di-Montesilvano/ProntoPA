@@ -476,6 +476,31 @@
                         </form>
                     </div>
                 @endif
+
+                @unless ($segnalazione->isChiusa())
+                    <div class="bg-white shadow-sm rounded-lg p-5">
+                        <h3 class="font-semibold text-gray-700 mb-3">Unisci come duplicato</h3>
+                        <form method="POST" action="{{ route('segnalazioni.unisci', $segnalazione) }}"
+                              class="flex items-end gap-2"
+                              onsubmit="return confirm('Unire questa segnalazione come duplicato? Verrà chiusa.');">
+                            @csrf
+                            <div>
+                                <label for="id_destinazione" class="block text-xs font-medium text-gray-600">
+                                    Unisci a segnalazione n.
+                                </label>
+                                <input type="number" name="id_destinazione" id="id_destinazione" min="1"
+                                       class="mt-1 w-32 rounded-md border-gray-300 text-sm shadow-sm" required>
+                            </div>
+                            <button type="submit"
+                                    class="rounded-md bg-gray-600 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700">
+                                Unisci duplicato
+                            </button>
+                        </form>
+                        @error('id_destinazione')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                @endunless
             </div>
         @endcan
 

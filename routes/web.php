@@ -59,6 +59,9 @@ Route::middleware('auth')->group(function () {
     Route::post('segnalazioni/{segnalazione}/adesioni', [AdesioniSegnalazioniController::class, 'store'])
         ->name('segnalazioni.adesioni.store');
 
+    Route::post('segnalazioni/{segnalazione}/unisci', [SegnalazioneController::class, 'unisci'])
+        ->name('segnalazioni.unisci');
+
     Route::post('segnalazioni/{segnalazione}/azione', [SegnalazioneController::class, 'eseguiAzione'])
         ->name('segnalazioni.azione');
 

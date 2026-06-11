@@ -11,6 +11,7 @@ use App\Models\Provenienza;
 use App\Models\Segnalazione;
 use App\Models\Specializzazione;
 use App\Models\StatoSegnalazione;
+use App\Models\StoricoStatoSegnalazione;
 use App\Notifications\NuovaNotaSegnalazione;
 use App\Services\DedupService;
 use App\Services\SlaService;
@@ -18,6 +19,7 @@ use App\Models\TipologiaSegnalazione;
 use App\Models\User;
 use App\Services\SegnalazioneWorkflowService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -322,6 +324,83 @@ class SegnalazioneController extends Controller
                 'adesioni'  => $s->adesioni->count(),
             ];
         })->values());
+    }
+
+    // ── Unisci duplicato a un'altra segnalazione ──────────────────────────────
+
+    public function unisci(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('update', $segnalazione);
+
+        $data = $request->validate([
+            'id_destinazione' => ['required', 'integer', 'exists:segnalazioni,id_segnalazione'],
+        ]);
+
+        $destinazione = Segnalazione::findOrFail($data['id_destinazione']);
+
+        if ($destinazione->id_segnalazione === $segnalazione->id_segnalazione) {
+            return back()->withErrors(['id_destinazione' => 'Impossibile unire una segnalazione a sé stessa.']);
+        }
+        if ($destinazione->isChiusa()) {
+            return back()->withErrors(['id_destinazione' => 'La segnalazione di destinazione è chiusa.']);
+        }
+        if ($segnalazione->isChiusa()) {
+            return back()->withErrors(['id_destinazione' => 'La segnalazione corrente è già chiusa.']);
+        }
+
+        $user = $request->user();
+
+        DB::transaction(function () use ($segnalazione, $destinazione, $user) {
+            // 1. Allegati del duplicato → destinazione
+            $segnalazione->allegati()->update([
+                'id_segnalazione' => $destinazione->id_segnalazione,
+            ]);
+
+            // 2. Adesioni del duplicato → destinazione
+            $segnalazione->adesioni()->update([
+                'id_segnalazione' => $destinazione->id_segnalazione,
+            ]);
+
+            // 3. Il segnalante del duplicato diventa adesione della destinazione
+            $destinazione->adesioni()->create([
+                'id_utente'  => $segnalazione->id_utente_segnalazione ?: $user->id,
+                'segnalante' => $segnalazione->segnalante,
+                'telefono'   => $segnalazione->telefono,
+                'email'      => $segnalazione->email,
+            ]);
+
+            // 4. Chiudi il duplicato come Annullata (id_stato 4 nel seeder)
+            $segnalazione->update([
+                'id_stato_segnalazione' => 4,
+                'data_chiusura'         => now(),
+            ]);
+
+            StoricoStatoSegnalazione::create([
+                'id_segnalazione'       => $segnalazione->id_segnalazione,
+                'id_stato_segnalazione' => 4,
+                'id_utente'             => $user->id,
+                'id_utente_collegato'   => 0,
+                'id_appalto'            => 0,
+            ]);
+
+            // 5. Note di tracciamento su entrambe
+            $segnalazione->note()->create([
+                'testo'            => "Unita alla segnalazione #{$destinazione->id_segnalazione} come duplicato.",
+                'id_utente'        => $user->id,
+                'visibile_web'     => false,
+                'visibile_impresa' => false,
+            ]);
+            $destinazione->note()->create([
+                'testo'            => "Assorbita la segnalazione duplicata #{$segnalazione->id_segnalazione}.",
+                'id_utente'        => $user->id,
+                'visibile_web'     => false,
+                'visibile_impresa' => false,
+            ]);
+        });
+
+        return redirect()
+            ->route('segnalazioni.show', $destinazione->id_segnalazione)
+            ->with('success', "Segnalazione #{$segnalazione->id_segnalazione} unita alla #{$destinazione->id_segnalazione}.");
     }
 
     private function notificaNota(Segnalazione $segnalazione, NotaSegnalazione $nota): void
