@@ -135,9 +135,10 @@ class AllegatiSegnalazioniTest extends TestCase
 
     public function test_upload_negato_su_segnalazione_altrui(): void
     {
-        $estraneo = $this->segnalatore();
+        $estraneo     = $this->segnalatore();
+        $proprietario = $this->segnalatore();
         $segnalazione = Segnalazione::factory()->create([
-            'id_utente_segnalazione' => $this->segnalatore()->id,
+            'id_utente_segnalazione' => $proprietario->id,
         ]);
 
         $response = $this->actingAs($estraneo)->post(
