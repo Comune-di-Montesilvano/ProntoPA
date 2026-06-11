@@ -97,24 +97,33 @@ class SegnalazioneController extends Controller
                 'max:' . ($maxSizeMb * 1024),
                 'mimetypes:' . implode(',', $mimeConsentiti),
             ],
+            'segnalante_per_conto'      => ['nullable', 'string', 'max:255'],
+            'telefono_per_conto'        => ['nullable', 'string', 'max:50'],
+            'email_per_conto'           => ['nullable', 'email', 'max:255'],
+            'salva_e_nuova'             => ['nullable', 'boolean'],
         ]);
 
         $user = auth()->user();
+
+        $perConto = $user->can('segnalazioni.per-conto');
 
         // Stato iniziale
         $statoIniziale = StatoSegnalazione::where('iniziale', true)->first();
 
         $segnalazione = Segnalazione::create(array_merge(
-            Arr::except($data, ['allegati']),
+            Arr::except($data, ['allegati', 'segnalante_per_conto', 'telefono_per_conto', 'email_per_conto', 'salva_e_nuova']),
             [
                 'id_utente_segnalazione' => $user->id,
                 'id_stato_segnalazione'  => $statoIniziale?->id_stato ?? 1,
                 'id_plesso'              => $data['id_plesso'] ?? 0,
                 'latitudine'             => $data['latitudine'] ?? 0,
                 'longitudine'            => $data['longitudine'] ?? 0,
-                'segnalante'             => $user->name,
-                'email'                  => $user->email,
-                'telefono'               => $user->telefono,
+                'segnalante'             => $perConto && filled($data['segnalante_per_conto'] ?? null)
+                                                ? $data['segnalante_per_conto'] : $user->name,
+                'email'                  => $perConto && filled($data['email_per_conto'] ?? null)
+                                                ? $data['email_per_conto'] : $user->email,
+                'telefono'               => $perConto && filled($data['telefono_per_conto'] ?? null)
+                                                ? $data['telefono_per_conto'] : $user->telefono,
                 'livello_priorita'       => $data['livello_priorita'] ?? 2,
                 'segnalazione_urgente'   => (bool) ($data['segnalazione_urgente'] ?? false),
                 'id_specializzazione'    => $data['id_specializzazione'] ?? null,
@@ -149,6 +158,11 @@ class SegnalazioneController extends Controller
                     'id_utente_creazione' => $user->id,
                 ]);
             }
+        }
+
+        if ($request->boolean('salva_e_nuova')) {
+            return redirect()->route('segnalazioni.create')
+                ->with('success', 'Segnalazione #' . $segnalazione->id_segnalazione . ' inviata. Inseriscine un\'altra.');
         }
 
         return redirect()->route('segnalazioni.index')
