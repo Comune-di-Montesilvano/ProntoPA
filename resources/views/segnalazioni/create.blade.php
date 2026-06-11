@@ -323,7 +323,10 @@
             }
         }
 
+        let _aderisciSubmitting = false;
         function aderisciSimile(id) {
+            if (_aderisciSubmitting) return;
+            _aderisciSubmitting = true;
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '{{ url('segnalazioni') }}/' + id + '/adesioni';

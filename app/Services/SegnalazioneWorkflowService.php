@@ -253,7 +253,11 @@ class SegnalazioneWorkflowService
             }
 
             $utente = $adesione->utente;
-            if ($utente && $utente->id !== $attore->id && $utente->attivo !== false) {
+            if ($utente
+                && $utente->id !== $attore->id
+                && $utente->id !== $segnalazione->id_utente_segnalazione
+                && $utente->attivo !== false
+            ) {
                 $utente->notify(new SegnalazioneChiusaNotification($segnalazione, $azione, $attore));
             }
         }
