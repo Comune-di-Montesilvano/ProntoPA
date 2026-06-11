@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ProfiliController;
 use App\Http\Controllers\Admin\ProvenienzaController;
 use App\Http\Controllers\Admin\SediController;
 use App\Http\Controllers\Admin\SlaController;
+use App\Http\Controllers\Admin\SquadreController;
 use App\Http\Controllers\Admin\UtentiController;
 use App\Http\Controllers\AdesioniSegnalazioniController;
 use App\Http\Controllers\AllegatiSegnalazioniController;
@@ -144,6 +145,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('sla', SlaController::class)
         ->except(['show'])
         ->parameters(['sla' => 'sla']);
+
+    Route::resource('squadre', SquadreController::class)
+        ->except(['show'])
+        ->parameters(['squadre' => 'squadra']);
 });
 
 // ── Operaio ───────────────────────────────────────────────────────────────────
@@ -151,6 +156,7 @@ Route::middleware(['auth', 'role:operaio'])->prefix('operaio')->name('operaio.')
     Route::get('/dashboard', [OperaioDashboardController::class, 'index'])->name('dashboard');
     Route::get('/statistiche', [OperaioDashboardController::class, 'statistiche'])->name('statistiche');
     Route::get('/mappa', [OperaioDashboardController::class, 'mappa'])->name('mappa');
+    Route::post('/segnalazioni/{segnalazione}/smista', [OperaioDashboardController::class, 'smista'])->name('smista');
 });
 
 // ── Segnalatore ───────────────────────────────────────────────────────────────
