@@ -134,4 +134,35 @@ class AdesioniTest extends TestCase
         $response->assertSessionHasErrors('adesione');
         $this->assertSame(1, $seg->adesioni()->count());
     }
+
+    public function test_aderenti_notificati_alla_chiusura(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $admin = User::factory()->create([
+            'amministratore' => true,
+            'gestore_segnalazioni' => true,
+            'supervisore_segnalazioni' => true,
+        ]);
+        $admin->assignRole('admin');
+
+        $seg = Segnalazione::factory()->create();
+        $aderente = $this->utente();
+
+        $this->actingAs($aderente)->post(route('segnalazioni.adesioni.store', $seg));
+
+        $azioneChiusura = \App\Models\Azione::whereHas(
+            'statoTarget', fn ($q) => $q->where('chiusura', true)
+        )->first();
+        $this->assertNotNull($azioneChiusura, 'Nessuna azione di chiusura nei dati seed');
+
+        $this->actingAs($admin)->post(route('segnalazioni.azione', $seg), [
+            'id_azione' => $azioneChiusura->id_azione,
+        ]);
+
+        \Illuminate\Support\Facades\Notification::assertSentTo(
+            $aderente,
+            \App\Notifications\SegnalazioneChiusaNotification::class
+        );
+    }
 }

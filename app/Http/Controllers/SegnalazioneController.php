@@ -184,6 +184,7 @@ class SegnalazioneController extends Controller
             'note.autore',
             'storicoStati.stato', 'storicoStati.utente',
             'allegati.utenteCreazione',
+            'adesioni.utente',
         ]);
 
         $azioniDisponibili = $this->workflow->getAzioniDisponibili($segnalazione, auth()->user());

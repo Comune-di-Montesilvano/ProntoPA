@@ -69,6 +69,11 @@
                     <strong class="ml-1">{{ $segnalazione->label_ubicazione }}</strong>
                 </div>
             @endif
+            @if($segnalazione->adesioni->count() > 0)
+                <span class="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
+                    +{{ $segnalazione->adesioni->count() }} adesioni
+                </span>
+            @endif
             @if($segnalazione->flag_evidenza)
                 <div class="ml-auto text-yellow-500 font-bold">★ In evidenza</div>
             @endif

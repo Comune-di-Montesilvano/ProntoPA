@@ -178,6 +178,8 @@ class SegnalazioneWorkflowService
         }
 
         if ($segnalazione->stato?->chiusura) {
+            $this->notificaAderenti($segnalazione, $azione, $attore);
+
             $segnalatore = $segnalazione->id_utente_segnalazione
                 ? User::find($segnalazione->id_utente_segnalazione)
                 : null;
@@ -236,6 +238,25 @@ class SegnalazioneWorkflowService
             || ($azione->flag_operatore && (bool) $segnalazione->id_operatore_assegnato)
             || ($azione->flag_appalto && (bool) $segnalazione->id_appalto)
             || (bool) $segnalazione->stato?->chiusura;
+    }
+
+    private function notificaAderenti(Segnalazione $segnalazione, Azione $azione, User $attore): void
+    {
+        foreach ($segnalazione->adesioni()->with('utente')->get() as $adesione) {
+            if ($adesione->segnalante !== null) {
+                // Adesione per conto terzi: notifica all'email del chiamante, se presente
+                if ($adesione->email) {
+                    Notification::route('mail', $adesione->email)
+                        ->notify(new SegnalazioneChiusaNotification($segnalazione, $azione, $attore));
+                }
+                continue;
+            }
+
+            $utente = $adesione->utente;
+            if ($utente && $utente->id !== $attore->id && $utente->attivo !== false) {
+                $utente->notify(new SegnalazioneChiusaNotification($segnalazione, $azione, $attore));
+            }
+        }
     }
 
     /**

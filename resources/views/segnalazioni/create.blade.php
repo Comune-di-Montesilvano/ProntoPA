@@ -11,7 +11,9 @@
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <form method="POST" action="{{ route('segnalazioni.store') }}" class="p-6 space-y-6"
                   enctype="multipart/form-data"
-                  x-data="{ tipologiaId: {{ old('id_tipologia_segnalazione', 'null') }} }">
+                  x-data="{ tipologiaId: {{ old('id_tipologia_segnalazione', 'null') }}, simili: [], ignora: false }"
+                  x-init="$watch('tipologiaId', () => { ignora = false; controllaSimili($data) })"
+                  x-on:change.capture="if ($event.target.name === 'id_plesso') { ignora = false; controllaSimili($data) }">
                 @csrf
 
                 {{-- Per conto di (telefonata / sportello) --}}
@@ -248,6 +250,36 @@
                     </div>
                 </div>
 
+                {{-- Banner segnalazioni simili --}}
+                <template x-if="simili.length > 0 && !ignora">
+                    <div class="mb-4 rounded-lg border border-yellow-400 bg-yellow-50 p-4">
+                        <p class="font-semibold text-yellow-800">
+                            ⚠ <span x-text="simili.length"></span> segnalazioni simili già aperte
+                        </p>
+                        <ul class="mt-2 space-y-2">
+                            <template x-for="s in simili" :key="s.id">
+                                <li class="flex items-center justify-between gap-3 text-sm">
+                                    <span>
+                                        <strong x-text="'#' + s.id"></strong>
+                                        <template x-if="s.testo"><span x-text="' ' + s.testo"></span></template>
+                                        <em class="text-gray-500" x-text="' (' + s.stato + ', ' + s.data + ')'"></em>
+                                        <template x-if="s.adesioni > 0"><span class="text-purple-700" x-text="' +' + s.adesioni + ' adesioni'"></span></template>
+                                    </span>
+                                    <button type="button"
+                                            @click="aderisciSimile(s.id)"
+                                            class="shrink-0 rounded bg-yellow-600 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-700">
+                                        È la stessa cosa → aggiungiti
+                                    </button>
+                                </li>
+                            </template>
+                        </ul>
+                        <button type="button" @click="ignora = true"
+                                class="mt-3 text-xs text-yellow-700 underline">
+                            È un problema diverso, continua con l'invio
+                        </button>
+                    </div>
+                </template>
+
                 {{-- Actions --}}
                 <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
                     <a href="{{ url()->previous() }}" class="text-sm text-gray-500 hover:text-gray-700">Annulla</a>
@@ -271,6 +303,47 @@
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     @endpush
     @push('scripts')
+        <script>
+        async function controllaSimili(data) {
+            const tip = data.tipologiaId;
+            if (!tip) { data.simili = []; return; }
+            const params = new URLSearchParams({ id_tipologia_segnalazione: tip });
+            const ple = document.querySelector('[name=id_plesso]')?.value;
+            const lat = document.getElementById('latitudine')?.value;
+            const lng = document.getElementById('longitudine')?.value;
+            if (ple) params.set('id_plesso', ple);
+            if (lat && lng && lat !== '0') { params.set('latitudine', lat); params.set('longitudine', lng); }
+            try {
+                const res = await fetch('{{ route('segnalazioni.simili') }}?' + params, {
+                    headers: { 'Accept': 'application/json' },
+                });
+                data.simili = res.ok ? await res.json() : [];
+            } catch (e) {
+                data.simili = [];
+            }
+        }
+
+        function aderisciSimile(id) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ url('segnalazioni') }}/' + id + '/adesioni';
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden'; csrf.name = '_token'; csrf.value = '{{ csrf_token() }}';
+            form.appendChild(csrf);
+            ['segnalante_per_conto', 'telefono_per_conto', 'email_per_conto'].forEach((name, i) => {
+                const src = document.querySelector('[name=' + name + ']');
+                if (src?.value) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = ['segnalante', 'telefono', 'email'][i];
+                    input.value = src.value;
+                    form.appendChild(input);
+                }
+            });
+            document.body.appendChild(form);
+            form.submit();
+        }
+        </script>
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script>
             const defaultLat  = {{ \App\Models\Impostazione::get('osm_lat', 42.5098) }};
