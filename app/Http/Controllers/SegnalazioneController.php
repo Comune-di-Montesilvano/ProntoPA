@@ -305,16 +305,22 @@ class SegnalazioneController extends Controller
             isset($data['longitudine']) ? (float) $data['longitudine'] : null,
         );
 
-        return response()->json($simili->map(fn (Segnalazione $s) => [
-            'id'        => $s->id_segnalazione,
-            'testo'     => Str::limit($s->testo_segnalazione, 120),
-            'stato'     => $s->stato?->descrizione,
-            'data'      => $s->data_segnalazione?->format('d/m/Y'),
-            'foto_url'  => $s->allegati->first()
-                ? route('segnalazioni.allegati.download', [$s, $s->allegati->first()])
-                : null,
-            'adesioni'  => $s->adesioni()->count(),
-        ])->values());
+        $user = $request->user();
+
+        return response()->json($simili->map(function (Segnalazione $s) use ($user) {
+            $puoVedere = $user->can('view', $s);
+
+            return [
+                'id'        => $s->id_segnalazione,
+                'testo'     => $puoVedere ? Str::limit($s->testo_segnalazione, 120) : null,
+                'stato'     => $s->stato?->descrizione,
+                'data'      => $s->data_segnalazione?->format('d/m/Y'),
+                'foto_url'  => ($puoVedere && $s->allegati->first())
+                    ? route('segnalazioni.allegati.download', [$s, $s->allegati->first()])
+                    : null,
+                'adesioni'  => $s->adesioni->count(),
+            ];
+        })->values());
     }
 
     private function notificaNota(Segnalazione $segnalazione, NotaSegnalazione $nota): void

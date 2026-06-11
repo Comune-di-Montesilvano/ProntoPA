@@ -120,4 +120,24 @@ class DedupTest extends TestCase
         $response->assertOk();
         $response->assertJsonCount(0);
     }
+
+    public function test_simili_non_espone_testo_di_segnalazioni_non_visibili(): void
+    {
+        $altrui = Segnalazione::factory()->create([
+            'id_tipologia_segnalazione' => 1,
+            'id_plesso'                 => 5,
+            'testo_segnalazione'        => 'Dettagli riservati con dati personali',
+        ]);
+
+        $response = $this->actingAs($this->utente())->getJson(
+            route('segnalazioni.simili', [
+                'id_tipologia_segnalazione' => 1,
+                'id_plesso'                 => 5,
+            ])
+        );
+
+        $response->assertOk();
+        $response->assertJsonCount(1);
+        $response->assertJsonFragment(['id' => $altrui->id_segnalazione, 'testo' => null, 'foto_url' => null]);
+    }
 }

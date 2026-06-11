@@ -117,4 +117,21 @@ class AdesioniTest extends TestCase
 
         $response->assertSessionHasErrors('adesione');
     }
+
+    public function test_adesione_per_conto_stesso_chiamante_rifiutata(): void
+    {
+        $seg = Segnalazione::factory()->create();
+        $urp = $this->utente();
+        $urp->givePermissionTo('segnalazioni.per-conto');
+
+        $this->actingAs($urp)->post(route('segnalazioni.adesioni.store', $seg), [
+            'segnalante' => 'Mario Rossi',
+        ]);
+        $response = $this->actingAs($urp)->post(route('segnalazioni.adesioni.store', $seg), [
+            'segnalante' => 'Mario Rossi',
+        ]);
+
+        $response->assertSessionHasErrors('adesione');
+        $this->assertSame(1, $seg->adesioni()->count());
+    }
 }

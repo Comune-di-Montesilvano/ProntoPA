@@ -36,7 +36,8 @@ class AdesioniSegnalazioniController extends Controller
         $perConto = $user->can('segnalazioni.per-conto') && filled($data['segnalante'] ?? null);
 
         // Un utente "in proprio" aderisce una sola volta; l'URP può
-        // registrare più chiamanti distinti sulla stessa segnalazione.
+        // registrare più chiamanti distinti sulla stessa segnalazione,
+        // ma non lo stesso chiamante due volte.
         if (! $perConto) {
             $giaAderente = $segnalazione->adesioni()
                 ->where('id_utente', $user->id)
@@ -46,6 +47,18 @@ class AdesioniSegnalazioniController extends Controller
             if ($giaAderente) {
                 throw ValidationException::withMessages([
                     'adesione' => 'Hai già aderito a questa segnalazione.',
+                ]);
+            }
+        }
+
+        if ($perConto) {
+            $stessoChiamante = $segnalazione->adesioni()
+                ->where('segnalante', $data['segnalante'])
+                ->exists();
+
+            if ($stessoChiamante) {
+                throw ValidationException::withMessages([
+                    'adesione' => 'Questo chiamante ha già un\'adesione su questa segnalazione.',
                 ]);
             }
         }
@@ -82,7 +95,7 @@ class AdesioniSegnalazioniController extends Controller
         $segnalazione->update(['livello_priorita' => $attuale + 1]);
 
         $segnalazione->note()->create([
-            'testo'            => "Priorità aumentata a livello " . ($attuale + 1) . " per adesioni multiple ({$totale}).",
+            'testo'            => 'Priorità aumentata a livello ' . ($attuale + 1) . ' dopo ' . $totale . ' ' . ($totale === 1 ? 'adesione' : 'adesioni') . '.',
             'id_utente'        => 0,
             'visibile_web'     => false,
             'visibile_impresa' => false,

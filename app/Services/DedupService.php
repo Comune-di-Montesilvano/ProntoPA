@@ -54,7 +54,7 @@ class DedupService
             }
         });
 
-        return $query->with(['stato', 'tipologia', 'allegati'])
+        return $query->with(['stato', 'tipologia', 'allegati', 'adesioni'])
             ->orderByDesc('data_segnalazione')
             ->limit($limite)
             ->get();
