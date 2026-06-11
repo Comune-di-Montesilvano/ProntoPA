@@ -160,7 +160,7 @@ class SegnalazioneController extends Controller
             }
         }
 
-        if ($request->boolean('salva_e_nuova')) {
+        if ($perConto && $request->boolean('salva_e_nuova')) {
             return redirect()->route('segnalazioni.create')
                 ->with('success', 'Segnalazione #' . $segnalazione->id_segnalazione . ' inviata. Inseriscine un\'altra.');
         }

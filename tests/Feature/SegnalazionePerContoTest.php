@@ -62,6 +62,7 @@ class SegnalazionePerContoTest extends TestCase
         $seg = Segnalazione::latest('id_segnalazione')->first();
         $this->assertSame($segnalatore->name, $seg->segnalante);
         $this->assertSame($segnalatore->email, $seg->email);
+        $this->assertNotSame('000', $seg->telefono);
     }
 
     public function test_salva_e_nuova_redirige_al_form(): void
