@@ -196,7 +196,10 @@ class SegnalazioneController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('segnalazioni.show', compact('segnalazione', 'azioniDisponibili', 'operatori'));
+        $fotoPrima = $segnalazione->allegati->where('fase', 'prima');
+        $fotoDopo = $segnalazione->allegati->where('fase', 'dopo');
+
+        return view('segnalazioni.show', compact('segnalazione', 'azioniDisponibili', 'operatori', 'fotoPrima', 'fotoDopo'));
     }
 
     // ── Esegui azione workflow ────────────────────────────────────────────────
@@ -205,20 +208,75 @@ class SegnalazioneController extends Controller
     {
         $this->authorize('update', $segnalazione);
 
-        $data = $request->validate([
+        $azioneId = (int) $request->input('id_azione');
+        $azione = Azione::findOrFail($azioneId);
+
+        $rules = [
             'id_azione'    => ['required', 'integer', 'exists:db_azioni,id_azione'],
             'id_operatore' => ['nullable', 'integer', 'exists:users,id'],
             'id_appalto'   => ['nullable', 'integer', 'exists:appalti,id_appalto'],
             'id_squadra'   => ['nullable', 'integer', 'exists:squadre,id_squadra'],
             'nota'         => ['nullable', 'string', 'max:2000'],
+        ];
+
+        if ($azione->flag_preventivo) {
+            $rules['importo_preventivo'] = ['required', 'numeric', 'min:0'];
+        }
+
+        if ($azioneId === 6) {
+            $rules['ore_lavoro'] = ['required', 'numeric', 'min:0'];
+            $rules['materiali']  = ['required', 'string', 'max:1000'];
+            $rules['nota']       = ['required', 'string', 'max:2000'];
+            
+            $maxSizeMb      = (int) Impostazione::get('allegati_max_size_mb', 10);
+            $maxPerRequest  = (int) Impostazione::get('allegati_max_per_request', 5);
+            $mimeConsentiti = array_filter(
+                array_map('trim', explode(',', Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png')))
+            );
+
+            $rules['allegati']   = ['required', 'array', 'min:1', 'max:' . $maxPerRequest];
+            $rules['allegati.*'] = [
+                'file',
+                'max:' . ($maxSizeMb * 1024),
+                'mimetypes:' . implode(',', $mimeConsentiti),
+            ];
+        }
+
+        $data = $request->validate($rules, [
+            'allegati.required' => 'Devi caricare almeno una foto dell\'intervento per proporre la chiusura.',
+            'allegati.min' => 'Devi caricare almeno una foto dell\'intervento per proporre la chiusura.',
         ]);
 
         $this->workflow->eseguiAzione(
             $segnalazione,
-            (int) $data['id_azione'],
+            $azioneId,
             auth()->user(),
             $data
         );
+
+        if ($request->hasFile('allegati') && $azioneId === 6) {
+            $disk = Impostazione::get('allegati_storage_disk', 'local');
+            $user = auth()->user();
+
+            foreach ($request->file('allegati') as $file) {
+                $ext      = $file->getClientOriginalExtension();
+                $filename = Str::uuid() . ($ext ? '.' . $ext : '');
+                $path     = $file->storeAs(
+                    'allegati/' . $segnalazione->id_segnalazione,
+                    $filename,
+                    $disk
+                );
+                AllegatoSegnalazione::create([
+                    'id_segnalazione'     => $segnalazione->id_segnalazione,
+                    'percorso'            => $path,
+                    'tipo'                => $file->getMimeType(),
+                    'nome_originale'      => $file->getClientOriginalName(),
+                    'dimensione'          => $file->getSize(),
+                    'id_utente_creazione' => $user->id,
+                    'fase'                => 'dopo',
+                ]);
+            }
+        }
 
         return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
             ->with('success', 'Azione eseguita.');

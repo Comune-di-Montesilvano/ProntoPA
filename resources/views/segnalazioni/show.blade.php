@@ -228,6 +228,80 @@
                 @endif
             </div>
 
+            {{-- Preventivo --}}
+            @if($segnalazione->importo_preventivo > 0)
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 flex justify-between items-center text-sm">
+                    <div>
+                        <span class="font-semibold text-blue-800">Preventivo di spesa:</span>
+                        <span class="ml-1 text-blue-900 font-bold">€ {{ number_format($segnalazione->importo_preventivo, 2, ',', '.') }}</span>
+                    </div>
+                    @php
+                        $statoAccettato = $segnalazione->storicoStati->where('id_stato_segnalazione', 11)->first();
+                    @endphp
+                    @if ($statoAccettato)
+                        <div class="text-xs text-blue-600 italic">
+                            Accettato il {{ $statoAccettato->created_at->format('d/m/Y') }} da {{ $statoAccettato->utente?->name ?? 'Gestore' }}
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            {{-- Rapportino prima/dopo --}}
+            @if($fotoDopo->isNotEmpty())
+                <div class="bg-white border border-gray-200 rounded-lg p-5 mb-4 space-y-4">
+                    <h3 class="font-bold text-gray-800 border-b border-gray-100 pb-2">Rapportino Fotografico (Prima / Dopo)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {{-- Foto prima --}}
+                        <div class="space-y-2">
+                            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Stato Iniziale (Prima)</span>
+                            @if($fotoPrima->isEmpty())
+                                <div class="bg-gray-50 border border-dashed border-gray-200 rounded-lg h-48 flex items-center justify-center text-gray-400 text-sm">
+                                    Nessuna foto iniziale caricata.
+                                </div>
+                            @else
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    @foreach($fotoPrima as $allegato)
+                                        @if(str_starts_with($allegato->tipo, 'image/'))
+                                            <div class="relative group rounded-lg overflow-hidden border border-gray-100 shadow-sm aspect-video bg-gray-50">
+                                                <img src="{{ route('segnalazioni.allegati.download', [$segnalazione->id_segnalazione, $allegato->id_allegato]) }}" 
+                                                     alt="Prima" class="object-cover w-full h-full">
+                                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                                    <a href="{{ route('segnalazioni.allegati.download', [$segnalazione->id_segnalazione, $allegato->id_allegato]) }}" 
+                                                       class="p-2 bg-white rounded-full text-gray-700 hover:text-black">
+                                                        <i class="fas fa-download"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- Foto dopo --}}
+                        <div class="space-y-2">
+                            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Intervento Eseguito (Dopo)</span>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                @foreach($fotoDopo as $allegato)
+                                    @if(str_starts_with($allegato->tipo, 'image/'))
+                                        <div class="relative group rounded-lg overflow-hidden border border-gray-100 shadow-sm aspect-video bg-gray-50">
+                                            <img src="{{ route('segnalazioni.allegati.download', [$segnalazione->id_segnalazione, $allegato->id_allegato]) }}" 
+                                                 alt="Dopo" class="object-cover w-full h-full">
+                                            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                                <a href="{{ route('segnalazioni.allegati.download', [$segnalazione->id_segnalazione, $allegato->id_allegato]) }}" 
+                                                   class="p-2 bg-white rounded-full text-gray-700 hover:text-black">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             {{-- Mappa Leaflet --}}
             @if($segnalazione->latitudine && $segnalazione->longitudine && $segnalazione->latitudine != 0)
                 <div class="bg-white shadow-sm rounded-lg overflow-hidden">
@@ -429,9 +503,10 @@
                     <div class="bg-white shadow-sm rounded-lg p-5">
                         <h3 class="font-semibold text-gray-700 mb-4">Esegui azione</h3>
                         <form method="POST" action="{{ route('segnalazioni.azione', $segnalazione->id_segnalazione) }}"
-                              x-data="{ azioneId: null, flagOperatore: false, flagAppalto: false,
-                                azioni: {{ $azioniDisponibili->keyBy('id_azione')->map(fn($a) => ['flag_operatore' => (bool)$a->flag_operatore, 'flag_appalto' => (bool)$a->flag_appalto])->toJson() }} }"
-                              @change="let a = azioni[azioneId]; flagOperatore = a ? a.flag_operatore : false; flagAppalto = a ? a.flag_appalto : false;"
+                              enctype="multipart/form-data"
+                              x-data="{ azioneId: null, flagOperatore: false, flagAppalto: false, flagPreventivo: false,
+                                azioni: {{ $azioniDisponibili->keyBy('id_azione')->map(fn($a) => ['flag_operatore' => (bool)$a->flag_operatore, 'flag_appalto' => (bool)$a->flag_appalto, 'flag_preventivo' => (bool)$a->flag_preventivo])->toJson() }} }"
+                              @change="let a = azioni[azioneId]; flagOperatore = a ? a.flag_operatore : false; flagAppalto = a ? a.flag_appalto : false; flagPreventivo = a ? a.flag_preventivo : false;"
                               class="space-y-4">
                             @csrf
 
@@ -483,11 +558,46 @@
                                     class="mt-1 block w-full" placeholder="Numero appalto" />
                             </div>
 
+                            <div x-show="flagPreventivo" x-cloak class="border-t border-gray-100 pt-4">
+                                <x-input-label for="importo_preventivo" value="Importo preventivo (€) *" />
+                                <input type="number" id="importo_preventivo" name="importo_preventivo" step="0.01" min="0"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-base"
+                                       placeholder="0.00"
+                                       :required="flagPreventivo">
+                            </div>
+
+                            <div x-show="azioneId == 6" x-cloak class="space-y-4 border-t border-gray-100 pt-4">
+                                <h4 class="font-semibold text-sm text-gray-600">Dettagli Rapportino (Richiesti)</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <x-input-label for="ore_lavoro" value="Ore impiegate *" />
+                                        <input type="number" id="ore_lavoro" name="ore_lavoro" step="0.1" min="0"
+                                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                               :required="azioneId == 6">
+                                    </div>
+                                    <div>
+                                        <x-input-label for="materiali" value="Materiali utilizzati *" />
+                                        <input type="text" id="materiali" name="materiali"
+                                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                               placeholder="es. Rubinetto, mastice, tubi"
+                                               :required="azioneId == 6">
+                                    </div>
+                                </div>
+                                <div>
+                                    <x-input-label for="rapportino_allegati" value="Foto dell'intervento (Almeno una) *" />
+                                    <input type="file" id="rapportino_allegati" name="allegati[]" multiple accept="image/*"
+                                           class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                           :required="azioneId == 6">
+                                    <p class="text-xs text-gray-400 mt-1">Carica una o più foto che mostrino il lavoro completato.</p>
+                                </div>
+                            </div>
+
                             <div>
-                                <x-input-label for="nota" value="Nota (opzionale)" />
+                                <x-input-label for="nota" x-text='azioneId == 6 ? "Descrizione dell\u0027intervento *" : "Nota (opzionale)"' />
                                 <textarea id="nota" name="nota" rows="2" maxlength="2000"
                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-base"
-                                          placeholder="Nota interna..."></textarea>
+                                          :placeholder="azioneId == 6 ? 'Descrizione dettagliata dell\'intervento...' : 'Nota interna...'"
+                                          :required="azioneId == 6"></textarea>
                             </div>
 
                             <div class="text-right">

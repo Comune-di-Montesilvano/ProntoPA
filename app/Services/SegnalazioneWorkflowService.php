@@ -109,6 +109,10 @@ class SegnalazioneWorkflowService
             $update['id_appalto'] = $params['id_appalto'];
         }
 
+        if ($azione->flag_preventivo && isset($params['importo_preventivo'])) {
+            $update['importo_preventivo'] = $params['importo_preventivo'];
+        }
+
         if ($statoTarget->chiusura) {
             $update['data_chiusura'] = now();
             $update['sla_violato']   = false;
@@ -131,12 +135,24 @@ class SegnalazioneWorkflowService
         ]);
 
         // Nota automatica se fornita
-        if (! empty($params['nota'])) {
+        $notaTesto = $params['nota'] ?? '';
+        if (isset($params['ore_lavoro']) || isset($params['materiali'])) {
+            $rapportinoTesto = "Rapportino di fine lavoro:\n";
+            if (filled($params['ore_lavoro'] ?? null)) {
+                $rapportinoTesto .= "- Ore impiegate: " . $params['ore_lavoro'] . "\n";
+            }
+            if (filled($params['materiali'] ?? null)) {
+                $rapportinoTesto .= "- Materiali usati: " . $params['materiali'] . "\n";
+            }
+            $notaTesto = $rapportinoTesto . "\nDescrizione:\n" . $notaTesto;
+        }
+
+        if (! empty($notaTesto)) {
             $segnalazione->note()->create([
-                'testo'            => $params['nota'],
+                'testo'            => $notaTesto,
                 'id_utente'        => $user->id,
                 'visibile_web'     => false,
-                'visibile_impresa' => $azione->flag_notifica,
+                'visibile_impresa' => $azione->flag_notifica || isset($params['ore_lavoro']),
             ]);
         }
 
