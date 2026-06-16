@@ -293,6 +293,36 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'squadre',
                 'descrizione' => 'Abilita la gestione squadre di operai',
             ],
+
+            // v0.8 — Assistente locale
+            [
+                'chiave'      => 'ai_enabled',
+                'valore'      => '0',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'ai',
+                'descrizione' => 'Abilita suggerimenti LLM locali (richiede Ollama)',
+            ],
+            [
+                'chiave'      => 'ai_modello',
+                'valore'      => 'qwen2.5:3b',
+                'tipo'        => 'text',
+                'gruppo'      => 'ai',
+                'descrizione' => 'Modello Ollama per generazione testo (titoli, triage)',
+            ],
+            [
+                'chiave'      => 'ai_embedding_modello',
+                'valore'      => 'nomic-embed-text',
+                'tipo'        => 'text',
+                'gruppo'      => 'ai',
+                'descrizione' => 'Modello Ollama per embeddings semantici (dedup)',
+            ],
+            [
+                'chiave'      => 'ai_ollama_url',
+                'valore'      => 'http://ollama:11434',
+                'tipo'        => 'text',
+                'gruppo'      => 'ai',
+                'descrizione' => 'URL interno del servizio Ollama',
+            ],
         ];
 
         foreach ($impostazioni as $impostazione) {
