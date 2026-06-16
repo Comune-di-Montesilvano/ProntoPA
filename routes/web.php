@@ -178,4 +178,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile/telegram/link', [TelegramAccountController::class, 'destroy'])->name('profile.telegram.destroy');
 });
 
+// ── Magic links per ditte (non autenticate, protette da firma) ─────────────────
+Route::middleware('signed')->group(function () {
+    Route::get('/magic/segnalazione/{segnalazione}', [\App\Http\Controllers\MagicLinkController::class, 'show'])
+        ->name('magic-link.show');
+    Route::post('/magic/segnalazione/{segnalazione}', [\App\Http\Controllers\MagicLinkController::class, 'eseguiAzione'])
+        ->name('magic-link.azione');
+});
+
 require __DIR__.'/auth.php';

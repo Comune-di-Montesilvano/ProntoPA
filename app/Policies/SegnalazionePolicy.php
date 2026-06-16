@@ -63,6 +63,10 @@ class SegnalazionePolicy
                 || $segnalazione->id_operatore_assegnato === $user->id;
         }
 
+        if ($user->hasRole('impresa')) {
+            return $segnalazione->appalto?->id_impresa === $user->id_impresa;
+        }
+
         return false;
     }
 
