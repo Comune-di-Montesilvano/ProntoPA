@@ -40,8 +40,12 @@ class GestioneController extends Controller
                         // FULLTEXT per la ricerca in produzione (dati committed);
                         // LIKE come fallback corretto (RefreshDatabase usa transazioni,
                         // InnoDB FULLTEXT non vede righe uncommitted).
-                        $qq->whereFullText('testo_segnalazione', $q)
-                           ->orWhere('testo_segnalazione', 'like', "%{$q}%");
+                        if (\Illuminate\Support\Facades\DB::getDriverName() === 'sqlite') {
+                            $qq->where('testo_segnalazione', 'like', "%{$q}%");
+                        } else {
+                            $qq->whereFullText('testo_segnalazione', $q)
+                               ->orWhere('testo_segnalazione', 'like', "%{$q}%");
+                        }
                     })
                       ->orWhere('segnalante', 'like', "%{$q}%")
                       ->orWhere('id_segnalazione', $q);

@@ -14,17 +14,31 @@ class PublicHomeController extends Controller
         $stats = Cache::remember('public.home.statistics', now()->addMinutes(30), function (): array {
             $baseQuery = Segnalazione::query()->pubbliche();
 
-            $perMese = (clone $baseQuery)
-                ->select(
-                    DB::raw('YEAR(data_segnalazione) as anno'),
-                    DB::raw('MONTH(data_segnalazione) as mese'),
-                    DB::raw('COUNT(*) as totale')
-                )
-                ->where('data_segnalazione', '>=', now()->subYear())
-                ->groupBy('anno', 'mese')
-                ->orderBy('anno')
-                ->orderBy('mese')
-                ->get();
+            if (DB::getDriverName() === 'sqlite') {
+                $perMese = (clone $baseQuery)
+                    ->select(
+                        DB::raw("strftime('%Y', data_segnalazione) as anno"),
+                        DB::raw("strftime('%m', data_segnalazione) as mese"),
+                        DB::raw('COUNT(*) as totale')
+                    )
+                    ->where('data_segnalazione', '>=', now()->subYear())
+                    ->groupBy('anno', 'mese')
+                    ->orderBy('anno')
+                    ->orderBy('mese')
+                    ->get();
+            } else {
+                $perMese = (clone $baseQuery)
+                    ->select(
+                        DB::raw('YEAR(data_segnalazione) as anno'),
+                        DB::raw('MONTH(data_segnalazione) as mese'),
+                        DB::raw('COUNT(*) as totale')
+                    )
+                    ->where('data_segnalazione', '>=', now()->subYear())
+                    ->groupBy('anno', 'mese')
+                    ->orderBy('anno')
+                    ->orderBy('mese')
+                    ->get();
+            }
 
             $mesiLabel = [];
             $mesiTotali = [];

@@ -275,7 +275,7 @@ class Segnalazione extends Model
     {
         return $query->whereNotNull('data_scadenza_sla')
                      ->where('sla_violato', false)
-                     ->whereRaw('data_scadenza_sla > NOW()');
+                     ->where('data_scadenza_sla', '>', now());
     }
 
     public function scopeSlaViolato($query)

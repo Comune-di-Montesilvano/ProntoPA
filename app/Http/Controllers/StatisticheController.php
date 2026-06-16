@@ -16,17 +16,31 @@ class StatisticheController extends Controller
         $user = auth()->user();
 
         // Segnalazioni per mese (ultimi 12 mesi)
-        $perMese = Segnalazione::visibileA($user)
-            ->select(
-                DB::raw('YEAR(data_segnalazione) as anno'),
-                DB::raw('MONTH(data_segnalazione) as mese'),
-                DB::raw('COUNT(*) as totale')
-            )
-            ->where('data_segnalazione', '>=', now()->subYear())
-            ->groupBy('anno', 'mese')
-            ->orderBy('anno')
-            ->orderBy('mese')
-            ->get();
+        if (DB::getDriverName() === 'sqlite') {
+            $perMese = Segnalazione::visibileA($user)
+                ->select(
+                    DB::raw("strftime('%Y', data_segnalazione) as anno"),
+                    DB::raw("strftime('%m', data_segnalazione) as mese"),
+                    DB::raw('COUNT(*) as totale')
+                )
+                ->where('data_segnalazione', '>=', now()->subYear())
+                ->groupBy('anno', 'mese')
+                ->orderBy('anno')
+                ->orderBy('mese')
+                ->get();
+        } else {
+            $perMese = Segnalazione::visibileA($user)
+                ->select(
+                    DB::raw('YEAR(data_segnalazione) as anno'),
+                    DB::raw('MONTH(data_segnalazione) as mese'),
+                    DB::raw('COUNT(*) as totale')
+                )
+                ->where('data_segnalazione', '>=', now()->subYear())
+                ->groupBy('anno', 'mese')
+                ->orderBy('anno')
+                ->orderBy('mese')
+                ->get();
+        }
 
         // Formatta in etichette mese/anno con totali
         $mesiLabel  = [];
