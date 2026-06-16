@@ -62,3 +62,8 @@ services:
       - prontoPA
     profiles:
       - dev
+
+  ollama:
+    ports:
+      - "11434:11434"
+    restart: "no"
