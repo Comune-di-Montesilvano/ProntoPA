@@ -311,8 +311,10 @@
             const ple = document.querySelector('[name=id_plesso]')?.value;
             const lat = document.getElementById('latitudine')?.value;
             const lng = document.getElementById('longitudine')?.value;
+            const txt = document.querySelector('[name=testo_segnalazione]')?.value;
             if (ple) params.set('id_plesso', ple);
             if (lat && lng && lat !== '0') { params.set('latitudine', lat); params.set('longitudine', lng); }
+            if (txt && txt.length > 10) params.set('testo', txt.substring(0, 500));
             try {
                 const res = await fetch('{{ route('segnalazioni.simili') }}?' + params, {
                     headers: { 'Accept': 'application/json' },

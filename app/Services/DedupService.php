@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
+use App\Services\OllamaService;
+use App\Support\CosineSimilarity;
 use Illuminate\Support\Collection;
 
 class DedupService
@@ -18,6 +20,7 @@ class DedupService
         ?int   $idPlesso = null,
         ?float $lat = null,
         ?float $lng = null,
+        ?string $testo = null,
         int    $limite = 5,
     ): Collection {
         if (! Impostazione::get('adesioni_enabled', false)) {
@@ -54,9 +57,26 @@ class DedupService
             }
         });
 
-        return $query->with(['stato', 'tipologia', 'allegati', 'adesioni'])
+        $candidati = $query->with(['stato', 'tipologia', 'allegati', 'adesioni'])
             ->orderByDesc('data_segnalazione')
-            ->limit($limite)
+            ->limit($limite * 3)
             ->get();
+
+        $ollama = app(OllamaService::class);
+        if (filled($testo) && $ollama->isEnabled()) {
+            $embeddingQuery = $ollama->embed($testo);
+            if ($embeddingQuery !== null) {
+                $candidati = $candidati
+                    ->filter(function (Segnalazione $s) use ($embeddingQuery): bool {
+                        if (! is_array($s->embedding) || empty($s->embedding)) {
+                            return true;
+                        }
+                        return CosineSimilarity::compute($embeddingQuery, $s->embedding) >= 0.80;
+                    })
+                    ->values();
+            }
+        }
+
+        return $candidati->take($limite);
     }
 }

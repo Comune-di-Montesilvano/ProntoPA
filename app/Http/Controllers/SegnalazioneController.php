@@ -13,6 +13,9 @@ use App\Models\Specializzazione;
 use App\Models\StatoSegnalazione;
 use App\Models\StoricoStatoSegnalazione;
 use App\Notifications\NuovaNotaSegnalazione;
+use App\Jobs\CalcolaEmbeddingSegnalazione;
+use App\Jobs\GeneraTitoloSegnalazione;
+use App\Jobs\SuggerisciTriageSegnalazione;
 use App\Services\DedupService;
 use App\Services\SlaService;
 use App\Models\TipologiaSegnalazione;
@@ -163,6 +166,12 @@ class SegnalazioneController extends Controller
                     'id_utente_creazione' => $user->id,
                 ]);
             }
+        }
+
+        if (Impostazione::get('ai_enabled', false)) {
+            GeneraTitoloSegnalazione::dispatch($segnalazione->id_segnalazione);
+            SuggerisciTriageSegnalazione::dispatch($segnalazione->id_segnalazione);
+            CalcolaEmbeddingSegnalazione::dispatch($segnalazione->id_segnalazione);
         }
 
         if ($perConto && $request->boolean('salva_e_nuova')) {
@@ -359,6 +368,7 @@ class SegnalazioneController extends Controller
             'id_plesso'                 => ['nullable', 'integer'],
             'latitudine'                => ['nullable', 'numeric'],
             'longitudine'               => ['nullable', 'numeric'],
+            'testo'                     => ['nullable', 'string', 'max:2000'],
         ]);
 
         $simili = $this->dedup->trovaSimili(
@@ -366,6 +376,7 @@ class SegnalazioneController extends Controller
             isset($data['id_plesso']) ? (int) $data['id_plesso'] : null,
             isset($data['latitudine']) ? (float) $data['latitudine'] : null,
             isset($data['longitudine']) ? (float) $data['longitudine'] : null,
+            $data['testo'] ?? null,
         );
 
         $user = $request->user();
