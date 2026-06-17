@@ -53,6 +53,9 @@ class Segnalazione extends Model
         'id_specializzazione',
         'ubicazione_tipo',
         'id_squadra_assegnata',
+        'titolo_generato',
+        'triage_suggerito',
+        'embedding',
     ];
 
     protected function casts(): array
@@ -75,6 +78,8 @@ class Segnalazione extends Model
             'data_scadenza_sla'      => 'datetime',
             'sla_violato'            => 'boolean',
             'sla_warning_inviato'    => 'boolean',
+            'triage_suggerito'       => 'array',
+            'embedding'              => 'array',
         ];
     }
 
