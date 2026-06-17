@@ -21,6 +21,7 @@ use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleDashboardController;
+use App\Http\Controllers\AiTriageController;
 use App\Http\Controllers\SegnalazioneController;
 use App\Http\Controllers\SegnalatoreDashboardController;
 use App\Http\Controllers\StatisticheController;
@@ -77,6 +78,9 @@ Route::middleware('auth')->group(function () {
 
     Route::patch('segnalazioni/{segnalazione}/toggle-riservata', [SegnalazioneController::class, 'toggleRiservata'])
         ->name('segnalazioni.toggle-riservata');
+
+    Route::post('segnalazioni/{segnalazione}/applica-triage', [AiTriageController::class, 'applicaTriage'])
+        ->name('segnalazioni.applica-triage');
 });
 
 // ── Gestione (admin + gestore) ────────────────────────────────────────────────

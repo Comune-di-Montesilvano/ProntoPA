@@ -206,6 +206,38 @@
                     </div>
                 @endif
 
+                {{-- Titolo AI --}}
+                @if($segnalazione->titolo_generato)
+                    <div class="mb-2 flex items-center gap-2">
+                        <p class="text-base font-semibold text-gray-800">{{ $segnalazione->titolo_generato }}</p>
+                        <span class="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">AI</span>
+                    </div>
+                @endif
+
+                {{-- Triage AI --}}
+                @if($segnalazione->triage_suggerito && auth()->user()?->can('update', $segnalazione))
+                    <div class="mt-3 rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm">
+                        <p class="font-semibold text-purple-800 mb-2">
+                            Suggerimento AI (conferma con un tap o ignora):
+                        </p>
+                        <ul class="text-purple-700 space-y-1 text-xs mb-3">
+                            @if(isset($segnalazione->triage_suggerito['id_tipologia_segnalazione']))
+                                <li>Tipologia → ID {{ $segnalazione->triage_suggerito['id_tipologia_segnalazione'] }}</li>
+                            @endif
+                            @if(isset($segnalazione->triage_suggerito['livello_priorita']))
+                                <li>Priorità → {{ $segnalazione->triage_suggerito['livello_priorita'] }}</li>
+                            @endif
+                        </ul>
+                        <form method="POST" action="{{ route('segnalazioni.applica-triage', $segnalazione) }}">
+                            @csrf
+                            <button type="submit"
+                                    class="rounded bg-purple-600 px-3 py-1 text-xs font-medium text-white hover:bg-purple-700">
+                                Applica suggerimento AI
+                            </button>
+                        </form>
+                    </div>
+                @endif
+
                 {{-- Testo segnalazione --}}
                 <div class="border border-gray-300 rounded-md p-4">
                     <div class="font-bold text-gray-800 mb-3">Testo segnalazione:</div>
