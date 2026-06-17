@@ -238,7 +238,10 @@
                                     @endif
                                 </td>
                                 <td class="px-3 py-3 text-gray-600 max-w-[120px] truncate">{{ $s->tipologia?->descrizione ?? '—' }}</td>
-                                <td class="px-3 py-3 text-gray-800 max-w-xs truncate font-medium">{{ Str::limit($s->testo_segnalazione, 70) }}</td>
+                                <td class="px-3 py-3 text-gray-800 max-w-xs truncate font-medium">
+                                    {{ $s->titolo_generato ?? Str::limit($s->testo_segnalazione, 70) }}
+                                    @if($s->titolo_generato)<span class="ml-1 text-purple-400 text-xs">AI</span>@endif
+                                </td>
                                 <td class="px-3 py-3 text-gray-400 whitespace-nowrap text-xs">{{ $s->data_segnalazione?->format('d/m/Y') }}</td>
                                 <td class="px-3 py-3 text-gray-500 text-xs">{{ $s->provenienza?->descrizione ?? '—' }}</td>
                                 <td class="px-3 py-3 text-gray-500 text-xs">{{ $s->operatore?->name ?? '—' }}</td>

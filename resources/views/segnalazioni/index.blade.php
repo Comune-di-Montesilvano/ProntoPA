@@ -33,7 +33,10 @@
                                         <td class="px-4 py-3 text-gray-400 font-mono">{{ $s->id_segnalazione }}</td>
                                         <td class="px-4 py-3 text-gray-700">{{ $s->tipologia?->descrizione ?? '—' }}</td>
                                         <td class="px-4 py-3 text-gray-900 max-w-xs truncate">
-                                            {{ Str::limit($s->testo_segnalazione, 80) }}
+                                            {{ $s->titolo_generato ?? Str::limit($s->testo_segnalazione, 80) }}
+                                            @if($s->titolo_generato)
+                                                <span class="ml-1 text-purple-400 text-xs">AI</span>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-3 text-gray-500 whitespace-nowrap">
                                             {{ $s->data_segnalazione?->format('d/m/Y') }}
