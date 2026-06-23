@@ -95,11 +95,10 @@ class ReportController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->hasRole('impresa')) {
-            $idImpresa = $user->id_impresa;
-        } else {
-            $this->authorize('viewAny', Segnalazione::class);
-            $idImpresa = (int) $request->get('id_impresa');
+        $idImpresa = $user->id_impresa;
+
+        if (!$idImpresa) {
+            abort(403);
         }
 
         $dataDa = $request->get('data_da', now()->startOfMonth()->toDateString());
