@@ -82,6 +82,30 @@ class SegnalazionePolicy
      * - gestore assegnato a quella segnalazione
      * - segnalatore che ha creato la segnalazione
      */
+    /**
+     * Può aderire a una segnalazione:
+     * - admin e gestori sempre
+     * - segnalatori: se è la propria OPPURE la segnalazione non è riservata
+     * - imprese: no (non pertinente)
+     */
+    public function adhere(User $user, Segnalazione $segnalazione): bool
+    {
+        if ($user->isAdmin() || $user->hasRole('admin')) {
+            return true;
+        }
+
+        if ($user->isGestore() || $user->hasRole('gestore')) {
+            return true;
+        }
+
+        if ($user->hasRole('segnalatore')) {
+            return $segnalazione->id_utente_segnalazione === $user->id
+                || ! $segnalazione->flag_riservata;
+        }
+
+        return false;
+    }
+
     public function deleteAllegato(User $user, Segnalazione $segnalazione): bool
     {
         if ($user->isAdmin() || $user->hasRole('admin')) {

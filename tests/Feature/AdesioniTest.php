@@ -41,7 +41,7 @@ class AdesioniTest extends TestCase
 
     public function test_utente_aderisce_a_segnalazione(): void
     {
-        $seg = Segnalazione::factory()->create(['livello_priorita' => 2]);
+        $seg = Segnalazione::factory()->create(['livello_priorita' => 2, 'flag_riservata' => false]);
         $user = $this->utente();
 
         $response = $this->actingAs($user)->post(
@@ -55,7 +55,7 @@ class AdesioniTest extends TestCase
 
     public function test_doppia_adesione_stesso_utente_rifiutata(): void
     {
-        $seg = Segnalazione::factory()->create();
+        $seg = Segnalazione::factory()->create(['flag_riservata' => false]);
         $user = $this->utente();
 
         $this->actingAs($user)->post(route('segnalazioni.adesioni.store', $seg));
@@ -67,7 +67,7 @@ class AdesioniTest extends TestCase
 
     public function test_adesione_per_conto_consente_piu_chiamanti(): void
     {
-        $seg = Segnalazione::factory()->create();
+        $seg = Segnalazione::factory()->create(['flag_riservata' => false]);
         $urp = $this->utente();
         $urp->givePermissionTo('segnalazioni.per-conto');
 
@@ -86,7 +86,7 @@ class AdesioniTest extends TestCase
 
     public function test_escalation_priorita_ogni_n_adesioni(): void
     {
-        $seg = Segnalazione::factory()->create(['livello_priorita' => 2]);
+        $seg = Segnalazione::factory()->create(['livello_priorita' => 2, 'flag_riservata' => false]);
 
         $this->actingAs($this->utente())->post(route('segnalazioni.adesioni.store', $seg));
         $this->assertSame(2, $seg->fresh()->livello_priorita);
@@ -98,7 +98,7 @@ class AdesioniTest extends TestCase
 
     public function test_adesione_negata_su_segnalazione_chiusa(): void
     {
-        $seg = Segnalazione::factory()->create(['data_chiusura' => now()]);
+        $seg = Segnalazione::factory()->create(['data_chiusura' => now(), 'flag_riservata' => false]);
 
         $response = $this->actingAs($this->utente())->post(
             route('segnalazioni.adesioni.store', $seg)
@@ -111,7 +111,7 @@ class AdesioniTest extends TestCase
     public function test_flag_spento_blocca_adesioni(): void
     {
         Impostazione::set('adesioni_enabled', false);
-        $seg = Segnalazione::factory()->create();
+        $seg = Segnalazione::factory()->create(['flag_riservata' => false]);
 
         $response = $this->actingAs($this->utente())->post(
             route('segnalazioni.adesioni.store', $seg)
@@ -122,7 +122,7 @@ class AdesioniTest extends TestCase
 
     public function test_adesione_per_conto_stesso_chiamante_rifiutata(): void
     {
-        $seg = Segnalazione::factory()->create();
+        $seg = Segnalazione::factory()->create(['flag_riservata' => false]);
         $urp = $this->utente();
         $urp->givePermissionTo('segnalazioni.per-conto');
 
@@ -148,7 +148,7 @@ class AdesioniTest extends TestCase
         ]);
         $admin->assignRole('admin');
 
-        $seg = Segnalazione::factory()->create(['id_stato_segnalazione' => \App\Enums\SegnalazioneStato::IN_CARICO]);
+        $seg = Segnalazione::factory()->create(['id_stato_segnalazione' => \App\Enums\SegnalazioneStato::IN_CARICO, 'flag_riservata' => false]);
         $aderente = $this->utente();
 
         $this->actingAs($aderente)->post(route('segnalazioni.adesioni.store', $seg));

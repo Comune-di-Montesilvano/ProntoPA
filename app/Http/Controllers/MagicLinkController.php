@@ -31,16 +31,14 @@ class MagicLinkController extends Controller
             'allegati.utenteCreazione',
         ]);
 
-        // Trova un utente con ruolo impresa per simulare le azioni consentite all'impresa
-        $user = User::role('impresa')
-            ->where('id_impresa', $segnalazione->appalto?->id_impresa)
-            ->first() ?? User::role('impresa')->first();
+        $idImpresa = $segnalazione->appalto?->id_impresa;
+        $user = $idImpresa
+            ? User::role('impresa')->where('id_impresa', $idImpresa)->first()
+            : null;
 
-        if ($user) {
-            $azioniDisponibili = $this->workflow->getAzioniDisponibili($segnalazione, $user);
-        } else {
-            $azioniDisponibili = collect();
-        }
+        $azioniDisponibili = $user
+            ? $this->workflow->getAzioniDisponibili($segnalazione, $user)
+            : collect();
 
         $note = $segnalazione->note()
             ->where('visibile_impresa', true)
@@ -59,10 +57,15 @@ class MagicLinkController extends Controller
         $azioneId = (int) $request->input('id_azione');
         $azione = Azione::findOrFail($azioneId);
 
-        // Trova l'utente per eseguire l'azione
+        // Trova l'utente impresa associato all'appalto di questa segnalazione
+        $idImpresa = $segnalazione->appalto?->id_impresa;
+        if (! $idImpresa) {
+            abort(403, 'Nessun appalto associato a questa segnalazione.');
+        }
+
         $user = User::role('impresa')
-            ->where('id_impresa', $segnalazione->appalto?->id_impresa)
-            ->first() ?? User::role('impresa')->first();
+            ->where('id_impresa', $idImpresa)
+            ->first();
 
         if (! $user) {
             abort(403, 'Nessun utente impresa configurato per eseguire l\'azione.');
@@ -131,11 +134,6 @@ class MagicLinkController extends Controller
             }
         }
 
-        $redirectUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
-            'magic-link.show',
-            now()->addDays(30),
-            ['segnalazione' => $segnalazione->id_segnalazione]
-        );
-        return redirect()->to($redirectUrl)->with('success', 'Azione eseguita con successo via link sicuro.');
+        return redirect()->back()->with('success', 'Azione eseguita con successo.');
     }
 }

@@ -13,6 +13,8 @@ class AdesioniSegnalazioniController extends Controller
 {
     public function store(Request $request, Segnalazione $segnalazione): RedirectResponse
     {
+        $this->authorize('adhere', $segnalazione);
+
         if (! Impostazione::get('adesioni_enabled', false)) {
             throw ValidationException::withMessages([
                 'adesione' => 'Le adesioni non sono abilitate.',
