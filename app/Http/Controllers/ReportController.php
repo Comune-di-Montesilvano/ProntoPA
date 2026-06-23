@@ -70,7 +70,7 @@ class ReportController extends Controller
                 $s->tipologia?->descrizione ?? '',
                 $s->plesso?->nome ?? '',
                 $s->operatore?->name ?? '',
-                $s->appalto?->impresa?->nome ?? '',
+                $s->appalto?->impresa?->ragione_sociale ?? '',
                 $s->sla_violato ? 'Sì' : 'No',
                 $s->importo_liquidato ? number_format((float) $s->importo_liquidato, 2, ',', '.') : '',
             ]], null, "A{$riga}");
@@ -78,7 +78,7 @@ class ReportController extends Controller
         }
 
         $writer   = new Xlsx($spreadsheet);
-        $filename = "report-{$anno}-{$mese}.xlsx";
+        $filename = sprintf('report-%04d-%02d.xlsx', $anno, $mese);
 
         return new StreamedResponse(
             function () use ($writer): void { $writer->save('php://output'); },
