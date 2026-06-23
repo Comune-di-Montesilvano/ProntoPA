@@ -5,6 +5,10 @@
            class="inline-flex items-center px-3 py-2 bg-white border border-gray-300 rounded-md font-semibold text-sm text-gray-700 hover:bg-gray-50 transition">
             Stampa
         </a>
+        <a href="{{ route('segnalazioni.fascicolo-pdf', $segnalazione) }}"
+           class="inline-flex items-center px-3 py-1.5 bg-red-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 transition">
+            PDF Fascicolo
+        </a>
         @can('update', $segnalazione)
             <form method="POST" action="{{ route('segnalazioni.evidenza', $segnalazione->id_segnalazione) }}">
                 @csrf

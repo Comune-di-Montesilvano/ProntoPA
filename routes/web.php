@@ -22,6 +22,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleDashboardController;
 use App\Http\Controllers\AiTriageController;
+use App\Http\Controllers\FascicoloPdfController;
 use App\Http\Controllers\SegnalazioneController;
 use App\Http\Controllers\SegnalatoreDashboardController;
 use App\Http\Controllers\StatisticheController;
@@ -75,6 +76,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('segnalazioni/{segnalazione}/stampa', [SegnalazioneController::class, 'stampa'])
         ->name('segnalazioni.stampa');
+
+    Route::get('segnalazioni/{segnalazione}/fascicolo-pdf', [FascicoloPdfController::class, 'fascicolo'])
+        ->name('segnalazioni.fascicolo-pdf');
 
     Route::patch('segnalazioni/{segnalazione}/toggle-riservata', [SegnalazioneController::class, 'toggleRiservata'])
         ->name('segnalazioni.toggle-riservata');
