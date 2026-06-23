@@ -11,6 +11,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\URL;
 
 class ImpresaAssegnataNotification extends Notification implements ShouldQueue
 {
@@ -38,11 +39,18 @@ class ImpresaAssegnataNotification extends Notification implements ShouldQueue
     {
         $impresa = $this->segnalazione->appalto?->impresa?->ragione_sociale;
 
+        $magicLink = URL::temporarySignedRoute(
+            'magic-link.show',
+            now()->addDays(30),
+            ['segnalazione' => $this->segnalazione->id_segnalazione]
+        );
+
         return $this->baseMailMessage('Nuovo appalto assegnato per segnalazione #' . $this->segnalazione->id_segnalazione)
             ->line('La segnalazione #' . $this->segnalazione->id_segnalazione . ' è stata assegnata alla tua impresa.')
             ->line('Impresa: ' . ($impresa ?: 'N/D'))
             ->line('Stato corrente: ' . ($this->segnalazione->stato?->descrizione ?? 'N/D'))
-            ->action('Apri segnalazione', route('segnalazioni.show', $this->segnalazione->id_segnalazione))
+            ->action('Apri segnalazione (Accesso Diretto)', $magicLink)
+            ->line('Se preferisci usare l\'area riservata standard con login: ' . route('segnalazioni.show', $this->segnalazione->id_segnalazione))
             ->salutation('ProntoPA');
     }
 

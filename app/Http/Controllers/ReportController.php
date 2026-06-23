@@ -7,6 +7,9 @@ use App\Models\Segnalazione;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Support\Carbon;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
@@ -34,6 +37,116 @@ class ReportController extends Controller
         ];
 
         return view('reports.mensile-gestore', compact('segnalazioni', 'kpi', 'mese', 'anno', 'dal', 'al'));
+    }
+
+    public function mensileGestoreXlsx(Request $request): StreamedResponse
+    {
+        $mese = (int) $request->get('mese', now()->month);
+        $anno = (int) $request->get('anno', now()->year);
+        $user = auth()->user();
+
+        $dal = Carbon::createFromDate($anno, $mese, 1)->startOfMonth();
+        $al  = $dal->copy()->endOfMonth();
+
+        $segnalazioni = Segnalazione::visibileA($user)
+            ->with(['stato', 'tipologia', 'plesso.istituto', 'operatore', 'appalto.impresa'])
+            ->whereBetween('data_segnalazione', [$dal, $al])
+            ->orderByDesc('data_segnalazione')
+            ->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle("Report {$mese}-{$anno}");
+
+        $intestazioni = ['#', 'Data', 'Stato', 'Tipologia', 'Sede', 'Operatore', 'Impresa', 'SLA violato', 'Liquidato €'];
+        $sheet->fromArray([$intestazioni], null, 'A1');
+
+        $riga = 2;
+        foreach ($segnalazioni as $s) {
+            $sheet->fromArray([[
+                $s->id_segnalazione,
+                $s->data_segnalazione?->format('d/m/Y') ?? '',
+                $s->stato?->descrizione ?? '',
+                $s->tipologia?->descrizione ?? '',
+                $s->plesso?->nome ?? '',
+                $s->operatore?->name ?? '',
+                $s->appalto?->impresa?->ragione_sociale ?? '',
+                $s->sla_violato ? 'Sì' : 'No',
+                $s->importo_liquidato ? number_format((float) $s->importo_liquidato, 2, ',', '.') : '',
+            ]], null, "A{$riga}");
+            $riga++;
+        }
+
+        $writer   = new Xlsx($spreadsheet);
+        $filename = sprintf('report-%04d-%02d.xlsx', $anno, $mese);
+
+        return new StreamedResponse(
+            function () use ($writer): void { $writer->save('php://output'); },
+            200,
+            [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+                'Cache-Control'       => 'max-age=0',
+            ]
+        );
+    }
+
+    public function riepilogoImpresaXlsx(Request $request): StreamedResponse
+    {
+        $user = auth()->user();
+
+        $idImpresa = $user->id_impresa;
+
+        if (!$idImpresa) {
+            abort(403);
+        }
+
+        $dataDa = $request->get('data_da', now()->startOfMonth()->toDateString());
+        $dataA  = $request->get('data_a', now()->toDateString());
+
+        $segnalazioni = Segnalazione::whereHas('appalto', fn ($q) => $q->where('id_impresa', $idImpresa))
+            ->with(['stato', 'tipologia', 'plesso.istituto', 'appalto.impresa'])
+            ->whereBetween('data_segnalazione', [$dataDa, $dataA])
+            ->orderByDesc('data_segnalazione')
+            ->get();
+
+        $impresa = $idImpresa ? Impresa::find($idImpresa) : null;
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Riepilogo');
+
+        $sheet->fromArray([
+            ['#', 'Data', 'Stato', 'Tipologia', 'Sede', 'Importo affidato €', 'Importo liquidato €']
+        ], null, 'A1');
+
+        $riga = 2;
+        foreach ($segnalazioni as $s) {
+            $sheet->fromArray([[
+                $s->id_segnalazione,
+                $s->data_segnalazione?->format('d/m/Y') ?? '',
+                $s->stato?->descrizione ?? '',
+                $s->tipologia?->descrizione ?? '',
+                $s->plesso?->nome ?? '',
+                $s->appalto?->importo_appalto ? number_format((float) $s->appalto->importo_appalto, 2, ',', '.') : '',
+                $s->importo_liquidato ? number_format((float) $s->importo_liquidato, 2, ',', '.') : '',
+            ]], null, "A{$riga}");
+            $riga++;
+        }
+
+        $writer   = new Xlsx($spreadsheet);
+        $nomeImpresa = $impresa ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $impresa->ragione_sociale) : 'riepilogo';
+        $filename = sprintf('riepilogo-%s-%s-%s.xlsx', $nomeImpresa, $dataDa, $dataA);
+
+        return new StreamedResponse(
+            function () use ($writer): void { $writer->save('php://output'); },
+            200,
+            [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+                'Cache-Control'       => 'max-age=0',
+            ]
+        );
     }
 
     public function riepilogoImpresa(Request $request): View

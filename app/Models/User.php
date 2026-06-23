@@ -107,4 +107,19 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Istituto::class, 'id_istituto', 'id_istituto');
     }
+
+    public function squadre(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Squadra::class, 'squadra_user', 'user_id', 'id_squadra');
+    }
+
+    public function squadreGuidate(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Squadra::class, 'id_caposquadra', 'id');
+    }
+
+    public function isCaposquadra(): bool
+    {
+        return $this->squadreGuidate()->where('attiva', true)->exists();
+    }
 }

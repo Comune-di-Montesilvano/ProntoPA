@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Models\User;
 use App\Notifications\SlaViolazioneNotification;
@@ -32,7 +33,14 @@ class CheckSlaViolazioni extends Command
         foreach ($segnalazioni as $s) {
             if ($sla->isViolato($s) && ! $s->sla_violato) {
                 $s->update(['sla_violato' => true]);
-                if ($supervisori->isNotEmpty()) {
+
+                // Con il digest attivo l'alert immediato resta solo per le critiche:
+                // il resto confluisce nel riepilogo mattutino.
+                $alertImmediato = ! Impostazione::get('digest_enabled', false)
+                    || (int) $s->livello_priorita === 4
+                    || $s->segnalazione_urgente;
+
+                if ($alertImmediato && $supervisori->isNotEmpty()) {
                     Notification::send($supervisori, new SlaViolazioneNotification($s));
                 }
                 $violate++;

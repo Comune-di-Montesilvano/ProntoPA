@@ -204,6 +204,7 @@
                             <th class="px-3 py-3 text-left">Stato</th>
                             <th class="px-3 py-3 text-left">Visibilita</th>
                             <th class="px-3 py-3"></th>
+                            <th class="px-3 py-3"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50">
@@ -237,7 +238,10 @@
                                     @endif
                                 </td>
                                 <td class="px-3 py-3 text-gray-600 max-w-[120px] truncate">{{ $s->tipologia?->descrizione ?? '—' }}</td>
-                                <td class="px-3 py-3 text-gray-800 max-w-xs truncate font-medium">{{ Str::limit($s->testo_segnalazione, 70) }}</td>
+                                <td class="px-3 py-3 text-gray-800 max-w-xs truncate font-medium">
+                                    {{ $s->titolo_generato ?? Str::limit($s->testo_segnalazione, 70) }}
+                                    @if($s->titolo_generato)<span class="ml-1 text-purple-400 text-xs">AI</span>@endif
+                                </td>
                                 <td class="px-3 py-3 text-gray-400 whitespace-nowrap text-xs">{{ $s->data_segnalazione?->format('d/m/Y') }}</td>
                                 <td class="px-3 py-3 text-gray-500 text-xs">{{ $s->provenienza?->descrizione ?? '—' }}</td>
                                 <td class="px-3 py-3 text-gray-500 text-xs">{{ $s->operatore?->name ?? '—' }}</td>
@@ -262,6 +266,33 @@
                                             {{ $s->flag_riservata ? 'Riservata' : 'Pubblica' }}
                                         </span>
                                     @endcan
+                                </td>
+                                <td class="px-2 py-2 text-right">
+                                    @php $rapide = $azioniRapidePerSegnalazione[$s->id_segnalazione] ?? collect(); @endphp
+                                    @if ($rapide->isNotEmpty())
+                                        <div x-data="{ open: false, posX: 0, posY: 0 }" class="inline-block text-left">
+                                            <button type="button"
+                                                    @click="const r = $el.getBoundingClientRect(); posX = r.right; posY = r.bottom; open = !open"
+                                                    class="rounded p-1 text-gray-500 hover:bg-gray-100" title="Azioni rapide">⋮</button>
+                                            <template x-teleport="body">
+                                                <div x-show="open" x-cloak @click.outside="open = false"
+                                                     class="fixed z-50 w-48 rounded-md border border-gray-200 bg-white shadow-lg"
+                                                     :style="`top: ${posY + 4}px; left: ${posX - 192}px`">
+                                                    @foreach ($rapide as $azione)
+                                                        <form method="POST" action="{{ route('segnalazioni.azione', $s->id_segnalazione) }}"
+                                                              onsubmit="return confirm({{ \Illuminate\Support\Js::from('Eseguire: ' . $azione->descrizione . '?') }});">
+                                                            @csrf
+                                                            <input type="hidden" name="id_azione" value="{{ $azione->id_azione }}">
+                                                            <button type="submit"
+                                                                    class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+                                                                {{ $azione->descrizione }}
+                                                            </button>
+                                                        </form>
+                                                    @endforeach
+                                                </div>
+                                            </template>
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="px-3 py-3 text-right">
                                     <a href="{{ route('segnalazioni.show', $s->id_segnalazione) }}"

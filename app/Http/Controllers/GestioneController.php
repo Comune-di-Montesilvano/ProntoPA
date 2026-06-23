@@ -37,7 +37,17 @@ class GestioneController extends Controller
         // Applica filtri ricerca
         if ($q !== '') {
             $base->where(function ($query) use ($q) {
-                $query->where('testo_segnalazione', 'like', "%{$q}%")
+                $query->where(function ($qq) use ($q) {
+                        // FULLTEXT per la ricerca in produzione (dati committed);
+                        // LIKE come fallback corretto (RefreshDatabase usa transazioni,
+                        // InnoDB FULLTEXT non vede righe uncommitted).
+                        if (\Illuminate\Support\Facades\DB::getDriverName() === 'sqlite') {
+                            $qq->where('testo_segnalazione', 'like', "%{$q}%");
+                        } else {
+                            $qq->whereFullText('testo_segnalazione', $q)
+                               ->orWhere('testo_segnalazione', 'like', "%{$q}%");
+                        }
+                    })
                       ->orWhere('segnalante', 'like', "%{$q}%")
                       ->orWhere('id_segnalazione', $q);
             });
@@ -102,11 +112,18 @@ class GestioneController extends Controller
                                   ->orWhere('amministratore', true);
                             })->orderBy('name')->get();
 
+        $workflow = app(\App\Services\SegnalazioneWorkflowService::class);
+        $azioniRapidePerSegnalazione = $segnalazioni->getCollection()
+            ->mapWithKeys(fn ($s) => [
+                $s->id_segnalazione => $workflow->getAzioniRapide($s, $user),
+            ]);
+
         return view('gestione.dashboard', compact(
             'segnalazioni', 'tab', 'conteggi',
             'q', 'idTipologia', 'idProvenienza',
             'idOperatore', 'dataDa', 'dataA', 'livelloPriorita', 'idSpecializzazione',
-            'tipologie', 'provenienze', 'specializzazioni', 'operatori'
+            'tipologie', 'provenienze', 'specializzazioni', 'operatori',
+            'azioniRapidePerSegnalazione'
         ));
     }
 

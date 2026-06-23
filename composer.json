@@ -7,10 +7,12 @@
     "license": "AGPL-3.0-or-later",
     "require": {
         "php": "^8.3",
+        "barryvdh/laravel-dompdf": "^3.0",
         "laravel/breeze": "^2.4",
         "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
+        "phpoffice/phpspreadsheet": "^2.0|^3.0",
         "spatie/laravel-permission": "^6.25"
     },
     "require-dev": {
