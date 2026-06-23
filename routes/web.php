@@ -173,6 +173,7 @@ Route::middleware(['auth', 'role:segnalatore'])->prefix('segnalatore')->name('se
 Route::middleware(['auth', 'role:impresa'])->prefix('imprese-portale')->name('imprese.')->group(function () {
     Route::get('/dashboard', [ImpreseDashboardController::class, 'index'])->name('dashboard');
     Route::get('/reports/riepilogo', [ReportController::class, 'riepilogoImpresa'])->name('reports.riepilogo');
+    Route::get('/reports/riepilogo/xlsx', [ReportController::class, 'riepilogoImpresaXlsx'])->name('reports.riepilogo.xlsx');
 });
 
 // ── Profilo (tutti gli utenti autenticati) ────────────────────────────────────

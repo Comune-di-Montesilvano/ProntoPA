@@ -91,6 +91,65 @@ class ReportController extends Controller
         );
     }
 
+    public function riepilogoImpresaXlsx(Request $request): StreamedResponse
+    {
+        $user = auth()->user();
+
+        if ($user->hasRole('impresa')) {
+            $idImpresa = $user->id_impresa;
+        } else {
+            $this->authorize('viewAny', Segnalazione::class);
+            $idImpresa = (int) $request->get('id_impresa');
+        }
+
+        $dataDa = $request->get('data_da', now()->startOfMonth()->toDateString());
+        $dataA  = $request->get('data_a', now()->toDateString());
+
+        $segnalazioni = Segnalazione::whereHas('appalto', fn ($q) => $q->where('id_impresa', $idImpresa))
+            ->with(['stato', 'tipologia', 'plesso.istituto', 'appalto.impresa'])
+            ->whereBetween('data_segnalazione', [$dataDa, $dataA])
+            ->orderByDesc('data_segnalazione')
+            ->get();
+
+        $impresa = $idImpresa ? Impresa::find($idImpresa) : null;
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Riepilogo');
+
+        $sheet->fromArray([
+            ['#', 'Data', 'Stato', 'Tipologia', 'Sede', 'Importo affidato €', 'Importo liquidato €']
+        ], null, 'A1');
+
+        $riga = 2;
+        foreach ($segnalazioni as $s) {
+            $sheet->fromArray([[
+                $s->id_segnalazione,
+                $s->data_segnalazione?->format('d/m/Y') ?? '',
+                $s->stato?->descrizione ?? '',
+                $s->tipologia?->descrizione ?? '',
+                $s->plesso?->nome ?? '',
+                $s->appalto?->importo_appalto ? number_format((float) $s->appalto->importo_appalto, 2, ',', '.') : '',
+                $s->importo_liquidato ? number_format((float) $s->importo_liquidato, 2, ',', '.') : '',
+            ]], null, "A{$riga}");
+            $riga++;
+        }
+
+        $writer   = new Xlsx($spreadsheet);
+        $nomeImpresa = $impresa ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $impresa->ragione_sociale) : 'riepilogo';
+        $filename = sprintf('riepilogo-%s-%s-%s.xlsx', $nomeImpresa, $dataDa, $dataA);
+
+        return new StreamedResponse(
+            function () use ($writer): void { $writer->save('php://output'); },
+            200,
+            [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+                'Cache-Control'       => 'max-age=0',
+            ]
+        );
+    }
+
     public function riepilogoImpresa(Request $request): View
     {
         $user = auth()->user();

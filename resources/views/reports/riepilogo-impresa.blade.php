@@ -29,6 +29,10 @@
 <body>
     <div class="no-print" style="margin-bottom:16px">
         <button onclick="window.print()" style="padding:6px 16px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Stampa / Salva PDF</button>
+        <a href="{{ route('imprese.reports.riepilogo.xlsx', array_filter(['id_impresa' => request('id_impresa'), 'data_da' => $dataDa, 'data_a' => $dataA])) }}"
+           class="no-print" style="padding:6px 16px;background:#16a34a;color:#fff;border-radius:4px;font-size:12px;text-decoration:none;display:inline-block;margin-left:8px;">
+            Scarica XLSX
+        </a>
         <a href="{{ route('imprese.dashboard') }}" style="margin-left:10px;font-size:12px;color:#6b7280;">← Torna alla dashboard</a>
     </div>
 
