@@ -152,7 +152,7 @@ class StatisticheController extends Controller
 
         // KPI tempi medi permanenza per stato (PHP collection, compat SQLite)
         $kpiTransizioni = Cache::remember('statistiche.kpi_transizioni', now()->addHours(2), function () {
-            $storicoAll = StoricoStatoSegnalazione::with('stato')
+            $storicoAll = StoricoStatoSegnalazione::query()
                 ->orderBy('id_segnalazione')
                 ->orderBy('data_registrazione')
                 ->get()

@@ -105,12 +105,12 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-100">
-                        @foreach($kpiTransizioni as $kpi)
+                        @foreach($kpiTransizioni as $transizione)
                         <tr>
-                            <td class="px-4 py-2 text-gray-800">{{ $kpi['descrizione'] }}</td>
-                            <td class="px-4 py-2 text-right text-gray-600 font-mono">{{ $kpi['ore_medie'] }}h</td>
-                            <td class="px-4 py-2 text-right text-gray-600 font-mono">{{ $kpi['gg_medi'] }}gg</td>
-                            <td class="px-4 py-2 text-right text-gray-400 text-xs">{{ $kpi['campioni'] }}</td>
+                            <td class="px-4 py-2 text-gray-800">{{ $transizione['descrizione'] }}</td>
+                            <td class="px-4 py-2 text-right text-gray-600 font-mono">{{ $transizione['ore_medie'] }}h</td>
+                            <td class="px-4 py-2 text-right text-gray-600 font-mono">{{ $transizione['gg_medi'] }}gg</td>
+                            <td class="px-4 py-2 text-right text-gray-400 text-xs">{{ $transizione['campioni'] }}</td>
                         </tr>
                         @endforeach
                     </tbody>
