@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class RolesAndPermissionsSeeder extends Seeder
@@ -18,6 +19,14 @@ class RolesAndPermissionsSeeder extends Seeder
         foreach ($roles as $nome) {
             Role::firstOrCreate(['name' => $nome, 'guard_name' => 'web']);
         }
+
+        // Permission: inserimento segnalazioni per conto di terzi (URP)
+        $perConto = Permission::firstOrCreate([
+            'name'       => 'segnalazioni.per-conto',
+            'guard_name' => 'web',
+        ]);
+        Role::findByName('admin')->givePermissionTo($perConto);
+        Role::findByName('gestore')->givePermissionTo($perConto);
 
         // Assegna ruoli Spatie agli utenti esistenti in base ai campi boolean legacy
         User::where('amministratore', true)->each(function (User $user) {

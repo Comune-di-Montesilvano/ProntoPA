@@ -33,6 +33,13 @@
                     {{ $label }}
                 </a>
             @endforeach
+            @if(auth()->user()->isCaposquadra())
+                <a href="{{ route('operaio.dashboard', ['tab' => 'squadra']) }}"
+                   class="{{ $tab === 'squadra' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}
+                          whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm">
+                    👷 Squadra
+                </a>
+            @endif
         </nav>
     </div>
 
@@ -42,6 +49,12 @@
     @endif
 
     {{-- Lista card verticali --}}
+    @php
+        $membriSquadre = ($tab === 'squadra')
+            ? auth()->user()->squadreGuidate()->where('attiva', true)->with('membri')->get()
+                ->flatMap->membri->unique('id')
+            : collect();
+    @endphp
     <div class="space-y-3">
         @forelse($segnalazioni as $s)
             <div class="bg-white shadow-sm rounded-xl p-4 active:bg-gray-50 transition">
@@ -86,6 +99,22 @@
                     <div class="mt-2 text-xs {{ $s->sla_violato ? 'text-red-600 font-bold' : 'text-yellow-600' }}">
                         {{ $s->sla_violato ? '🚨 SLA violato — scaduto il ' : '⏰ Scade: ' }}{{ $s->data_scadenza_sla->format('d/m/Y H:i') }}
                     </div>
+                @endif
+
+                {{-- Smista (solo tab squadra, lavori non ancora assegnati a singolo) --}}
+                @if($tab === 'squadra' && (!$s->id_operatore_assegnato || $s->id_operatore_assegnato == 0))
+                    @if($membriSquadre->isNotEmpty())
+                        <form method="POST" action="{{ route('operaio.smista', $s->id_segnalazione) }}" class="mt-2 flex gap-2">
+                            @csrf
+                            <select name="id_membro" class="rounded-md border-gray-300 text-sm" required>
+                                <option value="">Assegna a…</option>
+                                @foreach($membriSquadre as $membro)
+                                    <option value="{{ $membro->id }}">{{ $membro->name }}</option>
+                                @endforeach
+                            </select>
+                            <button type="submit" class="rounded bg-blue-600 px-3 py-1 text-sm text-white">Smista</button>
+                        </form>
+                    @endif
                 @endif
             </div>
         @empty

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Segnalazione;
+use App\Models\StoricoStatoSegnalazione;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -22,6 +24,15 @@ class OperaioDashboardController extends Controller
                 ->with(['stato', 'tipologia', 'plesso'])
                 ->orderByDesc('data_chiusura')
                 ->paginate(15),
+            'squadra' => Segnalazione::whereIn(
+                    'id_squadra_assegnata',
+                    $user->squadreGuidate()->pluck('id_squadra')
+                )
+                ->aperte()
+                ->with(['stato', 'tipologia', 'plesso', 'operatore'])
+                ->orderByDesc('livello_priorita')
+                ->orderBy('data_segnalazione')
+                ->paginate(15),
             default => Segnalazione::where('id_operatore_assegnato', $user->id)
                 ->aperte()
                 ->with(['stato', 'tipologia', 'plesso'])
@@ -33,6 +44,39 @@ class OperaioDashboardController extends Controller
         $kpi = $this->calcolaKpi($user->id);
 
         return view('operaio.dashboard', compact('segnalazioni', 'tab', 'kpi'));
+    }
+
+    public function smista(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $user = auth()->user();
+
+        $squadra = $segnalazione->id_squadra_assegnata
+            ? \App\Models\Squadra::where('attiva', true)->find($segnalazione->id_squadra_assegnata)
+            : null;
+
+        abort_unless($squadra && $squadra->id_caposquadra === $user->id, 403);
+
+        $data = $request->validate([
+            'id_membro' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        if (! $squadra->membri()->where('users.id', $data['id_membro'])->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'id_membro' => 'L\'utente non è membro della squadra.',
+            ]);
+        }
+
+        $segnalazione->update(['id_operatore_assegnato' => $data['id_membro']]);
+
+        StoricoStatoSegnalazione::create([
+            'id_segnalazione'       => $segnalazione->id_segnalazione,
+            'id_stato_segnalazione' => $segnalazione->id_stato_segnalazione,
+            'id_utente'             => $user->id,
+            'id_utente_collegato'   => $data['id_membro'],
+            'id_appalto'            => 0,
+        ]);
+
+        return back()->with('success', 'Lavoro smistato al membro della squadra.');
     }
 
     public function mappa(): JsonResponse

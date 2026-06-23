@@ -59,3 +59,15 @@
 - UI admin per configurare URL e secret (già presente in impostazioni: `webhook_cittadini_url`, `webhook_cittadini_secret`)
 - Log tentativi e risposte nella tabella `api_logs` (già esistente)
 - Retry automatico su errore (Laravel Queue)
+
+---
+
+## v0.6 — Adozione ✅ COMPLETATO
+
+- Inserimento "per conto di" con permission `segnalazioni.per-conto`, form compatto, salva-e-nuova
+- Anti-duplicato: endpoint simili, adesioni con escalation priorità, merge a posteriori, API 409
+- Digest mattutino gestori (`digest:invia`), alert immediato solo per critiche
+- Azioni rapide senza parametri dalla dashboard gestione
+- Squadre: CRUD admin, assegnazione, smistamento caposquadra, visibilità per ruolo
+- Fix disk allegati in creazione + suite test allegati
+- Ricerca FULLTEXT su testo segnalazione

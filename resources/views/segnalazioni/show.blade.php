@@ -69,6 +69,16 @@
                     <strong class="ml-1">{{ $segnalazione->label_ubicazione }}</strong>
                 </div>
             @endif
+            @if($segnalazione->squadraAssegnata)
+                <span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                    👷 {{ $segnalazione->squadraAssegnata->nome }}
+                </span>
+            @endif
+            @if($segnalazione->adesioni->count() > 0)
+                <span class="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
+                    +{{ $segnalazione->adesioni->count() }} adesioni
+                </span>
+            @endif
             @if($segnalazione->flag_evidenza)
                 <div class="ml-auto text-yellow-500 font-bold">★ In evidenza</div>
             @endif
@@ -447,6 +457,24 @@
                                         <option value="{{ $op->id }}">{{ $op->name }}</option>
                                     @endforeach
                                 </select>
+
+                                @if (\App\Models\Impostazione::get('squadre_enabled', false))
+                                    @php $squadre = \App\Models\Squadra::where('attiva', true)->orderBy('nome')->get(); @endphp
+                                    @if ($squadre->isNotEmpty())
+                                        <div class="mt-2">
+                                            <label for="id_squadra" class="block text-sm font-medium text-gray-700">
+                                                Oppure assegna a una squadra
+                                            </label>
+                                            <select name="id_squadra" id="id_squadra"
+                                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                                <option value="">— Nessuna squadra —</option>
+                                                @foreach ($squadre as $squadra)
+                                                    <option value="{{ $squadra->id_squadra }}">{{ $squadra->nome }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    @endif
+                                @endif
                             </div>
 
                             <div x-show="flagAppalto" x-cloak>
@@ -471,6 +499,31 @@
                         </form>
                     </div>
                 @endif
+
+                @unless ($segnalazione->isChiusa())
+                    <div class="bg-white shadow-sm rounded-lg p-5">
+                        <h3 class="font-semibold text-gray-700 mb-3">Unisci come duplicato</h3>
+                        <form method="POST" action="{{ route('segnalazioni.unisci', $segnalazione) }}"
+                              class="flex items-end gap-2"
+                              onsubmit="return confirm('Unire questa segnalazione come duplicato? Verrà chiusa.');">
+                            @csrf
+                            <div>
+                                <label for="id_destinazione" class="block text-xs font-medium text-gray-600">
+                                    Unisci a segnalazione n.
+                                </label>
+                                <input type="number" name="id_destinazione" id="id_destinazione" min="1"
+                                       class="mt-1 w-32 rounded-md border-gray-300 text-sm shadow-sm" required>
+                            </div>
+                            <button type="submit"
+                                    class="rounded-md bg-gray-600 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700">
+                                Unisci duplicato
+                            </button>
+                        </form>
+                        @error('id_destinazione')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                @endunless
             </div>
         @endcan
 
