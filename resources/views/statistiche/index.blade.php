@@ -90,6 +90,35 @@
                 </div>
             </div>
 
+        {{-- KPI Tempi medi per stato --}}
+        @if($kpiTransizioni->isNotEmpty())
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mt-6">
+            <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Tempo medio per stato</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stato</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Ore medie</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Giorni medi</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Campioni</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-100">
+                        @foreach($kpiTransizioni as $kpi)
+                        <tr>
+                            <td class="px-4 py-2 text-gray-800">{{ $kpi['descrizione'] }}</td>
+                            <td class="px-4 py-2 text-right text-gray-600 font-mono">{{ $kpi['ore_medie'] }}h</td>
+                            <td class="px-4 py-2 text-right text-gray-600 font-mono">{{ $kpi['gg_medi'] }}gg</td>
+                            <td class="px-4 py-2 text-right text-gray-400 text-xs">{{ $kpi['campioni'] }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @endif
+
     </div>
 
     @push('scripts')
