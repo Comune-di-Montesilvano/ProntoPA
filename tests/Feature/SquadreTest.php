@@ -57,7 +57,7 @@ class SquadreTest extends TestCase
         ]);
         $admin->assignRole('admin');
 
-        $segnalazione = Segnalazione::factory()->create();
+        $segnalazione = Segnalazione::factory()->create(['id_stato_segnalazione' => \App\Enums\SegnalazioneStato::IN_CARICO]);
 
         $azioneOperatore = Azione::where('flag_operatore', true)->first();
         $this->assertNotNull($azioneOperatore, 'Nessuna azione con flag_operatore nei dati seed');

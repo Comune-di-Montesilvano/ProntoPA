@@ -67,30 +67,22 @@ class DitteECanaliTest extends TestCase
 
     public function test_proposta_chiusura_richiede_foto_e_campi_rapportino(): void
     {
-        $impresaUser = $this->impresaUser();
-        $appalto = Appalto::create([
-            'id_impresa' => $impresaUser->id_impresa,
-            'descrizione' => 'Appalto Test',
-            'importo_appalto' => 10000.00,
-            'valido' => true,
-            'id_gruppo' => 1,
-        ]);
+        $gestore = $this->gestore();
 
         $segnalazione = Segnalazione::factory()->create([
-            'id_appalto' => $appalto->id_appalto,
-            'id_stato_segnalazione' => 7, // ASSEGNATA AD IMPRESA
+            'id_stato_segnalazione' => \App\Enums\SegnalazioneStato::IN_CARICO, // stato 2
         ]);
 
         // 1. Invio senza dati e senza foto -> fallisce
-        $response = $this->actingAs($impresaUser)->post(route('segnalazioni.azione', $segnalazione), [
-            'id_azione' => 6, // PROPONE CHIUSURA
+        $response = $this->actingAs($gestore)->post(route('segnalazioni.azione', $segnalazione), [
+            'id_azione' => 9, // CHIUDI (richiede rapportino)
         ]);
 
         $response->assertSessionHasErrors(['ore_lavoro', 'materiali', 'nota', 'allegati']);
 
         // 2. Invio con dati completi e foto -> ha successo
-        $response = $this->actingAs($impresaUser)->post(route('segnalazioni.azione', $segnalazione), [
-            'id_azione' => 6,
+        $response = $this->actingAs($gestore)->post(route('segnalazioni.azione', $segnalazione), [
+            'id_azione' => 9,
             'ore_lavoro' => 4.5,
             'materiali' => 'Miscelatore, guarnizioni, canapa',
             'nota' => 'Sostituito il rubinetto che perdeva.',
@@ -98,9 +90,9 @@ class DitteECanaliTest extends TestCase
         ]);
 
         $response->assertRedirect();
-        
+
         $segnalazione->refresh();
-        $this->assertEquals(10, $segnalazione->id_stato_segnalazione); // ATTESA COLLAUDO
+        $this->assertEquals(\App\Enums\SegnalazioneStato::COMPLETATA, $segnalazione->id_stato_segnalazione);
 
         // Verifica che la foto sia stata salvata con fase 'dopo'
         $allegato = AllegatoSegnalazione::where('id_segnalazione', $segnalazione->id_segnalazione)->first();
@@ -116,23 +108,23 @@ class DitteECanaliTest extends TestCase
         $this->assertStringContainsString('Sostituito il rubinetto che perdeva.', $nota->testo);
     }
 
-    public function test_gestore_puo_rifiutare_chiusura_rapportino(): void
+    public function test_gestore_puo_annullare_segnalazione_con_nota(): void
     {
         $gestore = $this->gestore();
         $segnalazione = Segnalazione::factory()->create([
-            'id_stato_segnalazione' => 10, // ATTESA COLLAUDO
+            'id_stato_segnalazione' => \App\Enums\SegnalazioneStato::IN_CARICO, // stato 2
         ]);
 
         $response = $this->actingAs($gestore)->post(route('segnalazioni.azione', $segnalazione), [
-            'id_azione' => 12, // RIFIUTA CHIUSURA
+            'id_azione' => 12, // ANNULLA
             'nota' => 'Intervento non eseguito a regola d\'arte. La perdita persiste.',
         ]);
 
         $response->assertRedirect();
 
         $segnalazione->refresh();
-        $this->assertEquals(7, $segnalazione->id_stato_segnalazione); // ASSEGNATA AD IMPRESA
-        
+        $this->assertEquals(\App\Enums\SegnalazioneStato::ANNULLATA, $segnalazione->id_stato_segnalazione);
+
         $nota = $segnalazione->note()->first();
         $this->assertNotNull($nota);
         $this->assertStringContainsString('Intervento non eseguito a regola d\'arte', $nota->testo);
@@ -152,26 +144,26 @@ class DitteECanaliTest extends TestCase
         ]);
         $segnalazione = Segnalazione::factory()->create([
             'id_appalto' => $appalto->id_appalto,
-            'id_stato_segnalazione' => 7,
+            'id_stato_segnalazione' => \App\Enums\SegnalazioneStato::ASSEGNATA_IMPRESA, // stato 4
         ]);
 
         // 1. Invio senza importo -> fallisce
         $response = $this->actingAs($impresaUser)->post(route('segnalazioni.azione', $segnalazione), [
-            'id_azione' => 4, // PRESENTA PREVENTIVO
+            'id_azione' => 6, // PRESENTA PREVENTIVO
         ]);
         $response->assertSessionHasErrors(['importo_preventivo']);
 
         // 2. Invio con importo -> ha successo e lo salva
         $response = $this->actingAs($impresaUser)->post(route('segnalazioni.azione', $segnalazione), [
-            'id_azione' => 4,
+            'id_azione' => 6,
             'importo_preventivo' => 450.50,
             'nota' => 'Preventivo per sostituzione infisso.',
         ]);
 
         $response->assertRedirect();
-        
+
         $segnalazione->refresh();
-        $this->assertEquals(9, $segnalazione->id_stato_segnalazione); // IN APPROVAZIONE PREVENTIVO
+        $this->assertEquals(\App\Enums\SegnalazioneStato::PREVENTIVO_IN_ATTESA, $segnalazione->id_stato_segnalazione);
         $this->assertEquals(450.50, $segnalazione->importo_preventivo);
     }
 
@@ -190,7 +182,7 @@ class DitteECanaliTest extends TestCase
 
         $segnalazione = Segnalazione::factory()->create([
             'id_appalto' => $appalto->id_appalto,
-            'id_stato_segnalazione' => 7,
+            'id_stato_segnalazione' => \App\Enums\SegnalazioneStato::ASSEGNATA_IMPRESA, // stato 4
         ]);
 
         // Genera URL firmato temporaneo
@@ -217,21 +209,15 @@ class DitteECanaliTest extends TestCase
         );
 
         $response = $this->post($postUrl, [
-            'id_azione' => 6, // PROPONE CHIUSURA
-            'ore_lavoro' => 3.0,
-            'materiali' => 'Sifone',
-            'nota' => 'Rapportino caricato via magic link.',
-            'allegati' => [UploadedFile::fake()->image('dopo.jpg')],
+            'id_azione' => 6, // PRESENTA PREVENTIVO
+            'importo_preventivo' => 350.00,
+            'nota' => 'Preventivo caricato via magic link.',
         ]);
 
         $response->assertRedirect();
-        
+
         $segnalazione->refresh();
-        $this->assertEquals(10, $segnalazione->id_stato_segnalazione); // ATTESA COLLAUDO
-        
-        $allegato = AllegatoSegnalazione::where('id_segnalazione', $segnalazione->id_segnalazione)->first();
-        $this->assertNotNull($allegato);
-        $this->assertEquals('dopo', $allegato->fase);
+        $this->assertEquals(\App\Enums\SegnalazioneStato::PREVENTIVO_IN_ATTESA, $segnalazione->id_stato_segnalazione);
     }
 
     // ── 4. TEST TELEGRAM OPERATIVO ───────────────────────────────────────────

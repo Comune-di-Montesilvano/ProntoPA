@@ -80,7 +80,7 @@ class MergeSegnalazioniTest extends TestCase
 
         $duplicato->refresh();
         $this->assertTrue($duplicato->isChiusa());
-        $this->assertSame(4, $duplicato->id_stato_segnalazione); // Annullata (id 4 in seeder)
+        $this->assertEquals(\App\Enums\SegnalazioneStato::DUPLICATA, $duplicato->id_stato_segnalazione);
 
         $adesione = $madre->adesioni()->first();
         $this->assertNotNull($adesione);

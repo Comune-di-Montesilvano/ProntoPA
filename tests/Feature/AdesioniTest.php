@@ -10,6 +10,8 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\TabelleRiferimentoSeeder;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdesioniTest extends TestCase
@@ -146,18 +148,21 @@ class AdesioniTest extends TestCase
         ]);
         $admin->assignRole('admin');
 
-        $seg = Segnalazione::factory()->create();
+        $seg = Segnalazione::factory()->create(['id_stato_segnalazione' => \App\Enums\SegnalazioneStato::IN_CARICO]);
         $aderente = $this->utente();
 
         $this->actingAs($aderente)->post(route('segnalazioni.adesioni.store', $seg));
 
-        $azioneChiusura = \App\Models\Azione::whereHas(
-            'statoTarget', fn ($q) => $q->where('chiusura', true)
-        )->first();
-        $this->assertNotNull($azioneChiusura, 'Nessuna azione di chiusura nei dati seed');
+        $azioneChiusura = \App\Models\Azione::where('codice', 'chiudi')->first();
+        $this->assertNotNull($azioneChiusura, 'Azione chiudi non trovata nei dati seed');
 
+        Storage::fake('local');
         $this->actingAs($admin)->post(route('segnalazioni.azione', $seg), [
-            'id_azione' => $azioneChiusura->id_azione,
+            'id_azione'  => $azioneChiusura->id_azione,
+            'ore_lavoro' => 2,
+            'materiali'  => 'Nessuno',
+            'nota'       => 'Chiusura test.',
+            'allegati'   => [UploadedFile::fake()->image('dopo.jpg')],
         ]);
 
         \Illuminate\Support\Facades\Notification::assertSentTo(
@@ -180,18 +185,22 @@ class AdesioniTest extends TestCase
         $segnalatore = $this->utente();
         $seg = Segnalazione::factory()->create([
             'id_utente_segnalazione' => $segnalatore->id,
+            'id_stato_segnalazione'  => \App\Enums\SegnalazioneStato::IN_CARICO,
         ]);
 
         // Il segnalatore aderisce alla propria segnalazione
         $this->actingAs($segnalatore)->post(route('segnalazioni.adesioni.store', $seg));
 
-        $azioneChiusura = \App\Models\Azione::whereHas(
-            'statoTarget', fn ($q) => $q->where('chiusura', true)
-        )->first();
-        $this->assertNotNull($azioneChiusura, 'Nessuna azione di chiusura nei dati seed');
+        $azioneChiusura = \App\Models\Azione::where('codice', 'chiudi')->first();
+        $this->assertNotNull($azioneChiusura, 'Azione chiudi non trovata nei dati seed');
 
+        Storage::fake('local');
         $this->actingAs($admin)->post(route('segnalazioni.azione', $seg), [
-            'id_azione' => $azioneChiusura->id_azione,
+            'id_azione'  => $azioneChiusura->id_azione,
+            'ore_lavoro' => 2,
+            'materiali'  => 'Nessuno',
+            'nota'       => 'Chiusura test.',
+            'allegati'   => [UploadedFile::fake()->image('dopo.jpg')],
         ]);
 
         \Illuminate\Support\Facades\Notification::assertSentToTimes(

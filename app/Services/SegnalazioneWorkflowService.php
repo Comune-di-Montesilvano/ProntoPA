@@ -299,6 +299,11 @@ class SegnalazioneWorkflowService
             return false;
         }
 
+        // Segnalazione chiusa: solo riapri applicabile
+        if ($segnalazione->data_chiusura && $azione->codice !== 'riapri') {
+            return false;
+        }
+
         // RIAPRI: solo admin o gestore supervisore, solo entro il limite di giorni
         if ($azione->codice === 'riapri') {
             if (! ($user->hasRole('admin') || ($user->hasRole('gestore') && $user->isSupervisore()))) {

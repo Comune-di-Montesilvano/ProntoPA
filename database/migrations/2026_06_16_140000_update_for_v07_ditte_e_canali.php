@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -15,6 +16,8 @@ return new class extends Migration
         Schema::table('db_azioni', function (Blueprint $table) {
             $table->boolean('flag_preventivo')->default(false)->after('flag_notifica');
         });
+
+        DB::table('db_azioni')->where('codice', 'presenta_preventivo')->update(['flag_preventivo' => 1]);
     }
 
     public function down(): void

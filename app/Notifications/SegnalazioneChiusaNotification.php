@@ -27,7 +27,7 @@ class SegnalazioneChiusaNotification extends Notification implements ShouldQueue
     {
         $channels = ['mail'];
 
-        if ($notifiable->routeNotificationForTelegram()) {
+        if (method_exists($notifiable, 'routeNotificationForTelegram') && $notifiable->routeNotificationForTelegram()) {
             $channels[] = TelegramChannel::class;
         }
 

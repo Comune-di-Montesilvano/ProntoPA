@@ -233,7 +233,7 @@ class SegnalazioneController extends Controller
             $rules['importo_preventivo'] = ['required', 'numeric', 'min:0'];
         }
 
-        if ($azioneId === 6) {
+        if ($azione->codice === 'chiudi') {
             $rules['ore_lavoro'] = ['required', 'numeric', 'min:0'];
             $rules['materiali']  = ['required', 'string', 'max:1000'];
             $rules['nota']       = ['required', 'string', 'max:2000'];
@@ -264,7 +264,7 @@ class SegnalazioneController extends Controller
             $data
         );
 
-        if ($request->hasFile('allegati') && $azioneId === 6) {
+        if ($request->hasFile('allegati') && $azione->codice === 'chiudi') {
             $disk = Impostazione::get('allegati_storage_disk', 'local');
             $user = auth()->user();
 
@@ -444,15 +444,15 @@ class SegnalazioneController extends Controller
                 'email'      => $segnalazione->email,
             ]);
 
-            // 4. Chiudi il duplicato come Annullata (id_stato 4 nel seeder)
+            // 4. Chiudi il duplicato come Duplicata
             $segnalazione->update([
-                'id_stato_segnalazione' => 4,
+                'id_stato_segnalazione' => SegnalazioneStato::DUPLICATA->value,
                 'data_chiusura'         => now(),
             ]);
 
             StoricoStatoSegnalazione::create([
                 'id_segnalazione'       => $segnalazione->id_segnalazione,
-                'id_stato_segnalazione' => 4,
+                'id_stato_segnalazione' => SegnalazioneStato::DUPLICATA->value,
                 'id_utente'             => $user->id,
                 'id_utente_collegato'   => 0,
                 'id_appalto'            => 0,

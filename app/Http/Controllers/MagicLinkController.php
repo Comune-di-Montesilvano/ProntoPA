@@ -77,10 +77,10 @@ class MagicLinkController extends Controller
             $rules['importo_preventivo'] = ['required', 'numeric', 'min:0'];
         }
 
-        if ($azioneId === 6) {
+        if ($azione->codice === 'chiudi') {
             $rules['ore_lavoro'] = ['required', 'numeric', 'min:0'];
             $rules['materiali']  = ['required', 'string', 'max:1000'];
-            $rules['nota']       = ['required', 'string', 'max:2000']; // Descrizione obbligatoria
+            $rules['nota']       = ['required', 'string', 'max:2000'];
 
             $maxSizeMb      = (int) Impostazione::get('allegati_max_size_mb', 10);
             $maxPerRequest  = (int) Impostazione::get('allegati_max_per_request', 5);
@@ -108,7 +108,7 @@ class MagicLinkController extends Controller
             $data
         );
 
-        if ($request->hasFile('allegati') && $azioneId === 6) {
+        if ($request->hasFile('allegati') && $azione->codice === 'chiudi') {
             $disk = Impostazione::get('allegati_storage_disk', 'local');
 
             foreach ($request->file('allegati') as $file) {
