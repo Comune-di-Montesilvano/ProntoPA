@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\SegnalazioneStato;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Models\User;
@@ -165,7 +166,7 @@ class TelegramWebhookTest extends TestCase
         $response = $this->postJson('/api/telegram/webhook', [
             'callback_query' => [
                 'id' => 'cbq-1',
-                'data' => 'azione:' . $segnalazione->id_segnalazione . ':3',
+                'data' => 'azione:' . $segnalazione->id_segnalazione . ':9',
                 'message' => [
                     'chat' => ['id' => '445566'],
                 ],
@@ -178,7 +179,7 @@ class TelegramWebhookTest extends TestCase
 
         $segnalazione->refresh();
 
-        $this->assertSame(3, $segnalazione->id_stato_segnalazione);
+        $this->assertSame(SegnalazioneStato::COMPLETATA, $segnalazione->id_stato_segnalazione);
         $this->assertNotNull($segnalazione->data_chiusura);
 
         Http::assertSent(function ($request) use ($segnalazione) {

@@ -24,9 +24,9 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
-      - name: Compute APP_VERSION
+      - name: Compute build config
         id: vars
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
@@ -34,9 +34,6 @@ jobs:
           else
             echo "version=dev" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Set up QEMU (multi-arch)
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -89,3 +86,5 @@ jobs:
           set: |
             app.args.APP_VERSION=${{ steps.vars.outputs.version }}
             web.args.APP_VERSION=${{ steps.vars.outputs.version }}
+        env:
+          PLATFORMS: linux/amd64

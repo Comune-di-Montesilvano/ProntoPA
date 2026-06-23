@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('accounts:annual-check')->dailyAt('02:30');
     })
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,

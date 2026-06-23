@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\mirko.daddiego\\\\Documents\\\\segnalazioni\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "PowerShell(Get-ChildItem -LiteralPath \"C:\\\\Users\\\\mirko.daddiego\\\\Documents\\\\segnalazioni\\\\app\" -Recurse | Select-Object FullName | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -LiteralPath \"C:\\\\Users\\\\mirko.daddiego\\\\Documents\\\\segnalazioni\\\\database\" -Recurse | Select-Object FullName | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -LiteralPath \"C:\\\\Users\\\\mirko.daddiego\\\\Documents\\\\segnalazioni\\\\resources\\\\views\" -Recurse | Select-Object FullName | ForEach-Object { $_.FullName })",
+      "Skill(caveman-commit)",
+      "Skill(update-config)",
+      "Bash(git -C \"C:\\\\Users\\\\mirko.daddiego\\\\Documents\\\\segnalazioni\" status)",
+      "Bash(git -C \"C:\\\\Users\\\\mirko.daddiego\\\\Documents\\\\segnalazioni\" diff)",
+      "Bash(git fetch *)"
+    ]
+  }
+}

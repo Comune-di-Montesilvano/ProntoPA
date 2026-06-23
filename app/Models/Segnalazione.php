@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SegnalazioneStato;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -43,6 +44,8 @@ class Segnalazione extends Model
         'telefono',
         'importo_preventivo',
         'importo_liquidato',
+        'id_segnalazione_madre',
+        'id_segnalazione_correlata',
         'data_chiusura',
         'data_scadenza_sla',
         'sla_violato',
@@ -63,6 +66,7 @@ class Segnalazione extends Model
         return [
             'data_segnalazione'      => 'datetime',
             'data_chiusura'          => 'datetime',
+            'id_stato_segnalazione'  => SegnalazioneStato::class,
             'latitudine'             => 'float',
             'longitudine'            => 'float',
             'flag_riservata'         => 'boolean',
@@ -154,11 +158,39 @@ class Segnalazione extends Model
         return $this->belongsTo(Squadra::class, 'id_squadra_assegnata', 'id_squadra');
     }
 
+    public function segnalazioneMadre(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'id_segnalazione_madre', 'id_segnalazione');
+    }
+
+    public function duplicati(): HasMany
+    {
+        return $this->hasMany(self::class, 'id_segnalazione_madre', 'id_segnalazione');
+    }
+
+    public function segnalazioneCorrelata(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'id_segnalazione_correlata', 'id_segnalazione');
+    }
+
+    public function correlate(): HasMany
+    {
+        return $this->hasMany(self::class, 'id_segnalazione_correlata', 'id_segnalazione');
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     public function isChiusa(): bool
     {
         return $this->data_chiusura !== null;
+    }
+
+    public function statoEnum(): SegnalazioneStato
+    {
+        return SegnalazioneStato::from($this->id_stato_segnalazione instanceof SegnalazioneStato
+            ? $this->id_stato_segnalazione->value
+            : (int) $this->id_stato_segnalazione
+        );
     }
 
     public function getLabelPrioritaAttribute(): string

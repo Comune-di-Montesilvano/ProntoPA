@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SegnalazioneStato;
 use App\Models\AllegatoSegnalazione;
 use App\Models\Azione;
 use App\Models\Impostazione;
@@ -10,7 +11,6 @@ use App\Models\Plesso;
 use App\Models\Provenienza;
 use App\Models\Segnalazione;
 use App\Models\Specializzazione;
-use App\Models\StatoSegnalazione;
 use App\Models\StoricoStatoSegnalazione;
 use App\Notifications\NuovaNotaSegnalazione;
 use App\Jobs\CalcolaEmbeddingSegnalazione;
@@ -115,14 +115,12 @@ class SegnalazioneController extends Controller
 
         $perConto = $user->can('segnalazioni.per-conto');
 
-        // Stato iniziale
-        $statoIniziale = StatoSegnalazione::where('iniziale', true)->first();
 
         $segnalazione = Segnalazione::create(array_merge(
             Arr::except($data, ['allegati', 'segnalante_per_conto', 'telefono_per_conto', 'email_per_conto', 'salva_e_nuova']),
             [
                 'id_utente_segnalazione' => $user->id,
-                'id_stato_segnalazione'  => $statoIniziale?->id_stato ?? 1,
+                'id_stato_segnalazione'  => SegnalazioneStato::NUOVA->value,
                 'id_plesso'              => $data['id_plesso'] ?? 0,
                 'latitudine'             => $data['latitudine'] ?? 0,
                 'longitudine'            => $data['longitudine'] ?? 0,
@@ -193,6 +191,7 @@ class SegnalazioneController extends Controller
             'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
             'operatore', 'utente', 'appalto', 'specializzazione',
             'squadraAssegnata',
+            'segnalazioneMadre', 'duplicati', 'segnalazioneCorrelata', 'correlate',
             'note.autore',
             'storicoStati.stato', 'storicoStati.utente',
             'allegati.utenteCreazione',
@@ -221,11 +220,13 @@ class SegnalazioneController extends Controller
         $azione = Azione::findOrFail($azioneId);
 
         $rules = [
-            'id_azione'    => ['required', 'integer', 'exists:db_azioni,id_azione'],
-            'id_operatore' => ['nullable', 'integer', 'exists:users,id'],
-            'id_appalto'   => ['nullable', 'integer', 'exists:appalti,id_appalto'],
-            'id_squadra'   => ['nullable', 'integer', 'exists:squadre,id_squadra'],
-            'nota'         => ['nullable', 'string', 'max:2000'],
+            'id_azione'                 => ['required', 'integer', 'exists:db_azioni,id_azione'],
+            'id_operatore'              => ['nullable', 'integer', 'exists:users,id'],
+            'id_appalto'                => ['nullable', 'integer', 'exists:appalti,id_appalto'],
+            'id_squadra'                => ['nullable', 'integer', 'exists:squadre,id_squadra'],
+            'nota'                      => ['nullable', 'string', 'max:2000'],
+            'id_segnalazione_madre'     => ['nullable', 'integer', 'exists:segnalazioni,id_segnalazione'],
+            'id_segnalazione_correlata' => ['nullable', 'integer', 'exists:segnalazioni,id_segnalazione'],
         ];
 
         if ($azione->flag_preventivo) {
@@ -236,7 +237,7 @@ class SegnalazioneController extends Controller
             $rules['ore_lavoro'] = ['required', 'numeric', 'min:0'];
             $rules['materiali']  = ['required', 'string', 'max:1000'];
             $rules['nota']       = ['required', 'string', 'max:2000'];
-            
+
             $maxSizeMb      = (int) Impostazione::get('allegati_max_size_mb', 10);
             $maxPerRequest  = (int) Impostazione::get('allegati_max_per_request', 5);
             $mimeConsentiti = array_filter(

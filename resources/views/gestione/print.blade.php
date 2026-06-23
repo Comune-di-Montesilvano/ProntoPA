@@ -129,7 +129,7 @@
                         <td>{{ $s->plesso?->nome ?? '—' }}</td>
                         <td>{{ $s->provenienza?->descrizione ?? '—' }}</td>
                         <td>{{ $s->operatore?->name ?? '—' }}</td>
-                        <td><span class="stato">{{ $s->stato?->descrizione ?? '—' }}</span></td>
+                        <td><span class="stato">{{ $s->statoEnum()->label() }}</span></td>
                     </tr>
                 @endforeach
             </tbody>

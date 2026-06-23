@@ -54,18 +54,17 @@ class AutoPublishSegnalazioni extends Command
         }
 
         $this->withProgressBar($toPublish, function (Segnalazione $segnalazione) use ($triggerStateId) {
-            $oldState = $segnalazione->id_stato_segnalazione;
+            $oldStateId = $segnalazione->statoEnum()->value;
 
             $segnalazione->update([
                 'flag_pubblicata' => true,
                 'flag_riservata'  => false,
             ]);
 
-            // Emetti evento audit
             SegnalazionePublishedAutomatically::dispatch(
                 $segnalazione->fresh(),
-                $oldState,
-                $oldState, // Stesso stato, perché non è un cambio
+                $oldStateId,
+                $oldStateId,
             );
         });
 

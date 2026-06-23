@@ -39,7 +39,9 @@
         <div class="bg-white border-l-4 {{ $segnalazione->flag_evidenza ? 'border-yellow-400' : 'border-blue-400' }} rounded-lg shadow-sm px-5 py-3 mb-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
             <div>
                 <span class="text-gray-500">Stato:</span>
-                <strong class="ml-1">{{ $segnalazione->stato?->descrizione ?? '—' }}</strong>
+                <span class="ml-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $segnalazione->statoEnum()->badgeClass() }}">
+                    {{ $segnalazione->statoEnum()->label() }}
+                </span>
             </div>
             @if($segnalazione->operatore)
                 <div>
@@ -260,6 +262,67 @@
                     <div class="text-sm text-gray-500">
                         Data chiusura :
                         <strong class="ml-1">{{ \Carbon\Carbon::parse($segnalazione->data_chiusura)->format('d/m/Y H:i') }}</strong>
+                    </div>
+                @endif
+
+                {{-- Segnalazione madre (DUPLICATA) --}}
+                @if($segnalazione->segnalazioneMadre)
+                    <div class="border border-amber-200 bg-amber-50 rounded-md px-4 py-3 text-sm">
+                        <span class="font-semibold text-amber-800">Duplicata di:</span>
+                        <a href="{{ route('segnalazioni.show', $segnalazione->segnalazioneMadre->id_segnalazione) }}"
+                           class="ml-2 text-amber-700 hover:underline font-medium">
+                            #{{ $segnalazione->segnalazioneMadre->id_segnalazione }} — {{ Str::limit($segnalazione->segnalazioneMadre->testo_segnalazione, 80) }}
+                        </a>
+                        <span class="ml-2 text-amber-600 text-xs">({{ $segnalazione->segnalazioneMadre->statoEnum()->label() }})</span>
+                    </div>
+                @endif
+
+                {{-- Segnalazione correlata (problema ricorrente) --}}
+                @if($segnalazione->segnalazioneCorrelata)
+                    <div class="border border-blue-200 bg-blue-50 rounded-md px-4 py-3 text-sm">
+                        <span class="font-semibold text-blue-800">Problema già segnalato in:</span>
+                        <a href="{{ route('segnalazioni.show', $segnalazione->segnalazioneCorrelata->id_segnalazione) }}"
+                           class="ml-2 text-blue-700 hover:underline font-medium">
+                            #{{ $segnalazione->segnalazioneCorrelata->id_segnalazione }} — {{ Str::limit($segnalazione->segnalazioneCorrelata->testo_segnalazione, 80) }}
+                        </a>
+                        <span class="ml-2 text-blue-600 text-xs">({{ $segnalazione->segnalazioneCorrelata->data_segnalazione?->format('d/m/Y') }} · {{ $segnalazione->segnalazioneCorrelata->statoEnum()->label() }})</span>
+                    </div>
+                @endif
+
+                {{-- Segnalazioni che si collegano a questa --}}
+                @if($segnalazione->correlate->isNotEmpty())
+                    <div class="border border-gray-200 rounded-md px-4 py-3 text-sm">
+                        <div class="font-semibold text-gray-700 mb-1">Segnalazioni correlate ({{ $segnalazione->correlate->count() }}):</div>
+                        <ul class="space-y-1">
+                            @foreach($segnalazione->correlate as $cor)
+                                <li>
+                                    <a href="{{ route('segnalazioni.show', $cor->id_segnalazione) }}"
+                                       class="text-blue-700 hover:underline">
+                                        #{{ $cor->id_segnalazione }}
+                                    </a>
+                                    — {{ Str::limit($cor->testo_segnalazione, 70) }}
+                                    <span class="text-gray-400 text-xs ml-1">({{ $cor->statoEnum()->label() }})</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                {{-- Duplicati di questa --}}
+                @if($segnalazione->duplicati->isNotEmpty())
+                    <div class="border border-amber-100 bg-amber-50 rounded-md px-4 py-3 text-sm">
+                        <div class="font-semibold text-amber-800 mb-1">Duplicati di questa segnalazione ({{ $segnalazione->duplicati->count() }}):</div>
+                        <ul class="space-y-1">
+                            @foreach($segnalazione->duplicati as $dup)
+                                <li>
+                                    <a href="{{ route('segnalazioni.show', $dup->id_segnalazione) }}"
+                                       class="text-amber-700 hover:underline">
+                                        #{{ $dup->id_segnalazione }}
+                                    </a>
+                                    — {{ Str::limit($dup->testo_segnalazione, 70) }}
+                                </li>
+                            @endforeach
+                        </ul>
                     </div>
                 @endif
             </div>
@@ -540,9 +603,27 @@
                         <h3 class="font-semibold text-gray-700 mb-4">Esegui azione</h3>
                         <form method="POST" action="{{ route('segnalazioni.azione', $segnalazione->id_segnalazione) }}"
                               enctype="multipart/form-data"
-                              x-data="{ azioneId: null, flagOperatore: false, flagAppalto: false, flagPreventivo: false,
-                                azioni: {{ $azioniDisponibili->keyBy('id_azione')->map(fn($a) => ['flag_operatore' => (bool)$a->flag_operatore, 'flag_appalto' => (bool)$a->flag_appalto, 'flag_preventivo' => (bool)$a->flag_preventivo])->toJson() }} }"
-                              @change="let a = azioni[azioneId]; flagOperatore = a ? a.flag_operatore : false; flagAppalto = a ? a.flag_appalto : false; flagPreventivo = a ? a.flag_preventivo : false;"
+                              x-data="{
+                                azioneId: null,
+                                flagOperatore: false, flagAppalto: false, flagPreventivo: false,
+                                flagMadre: false, flagCorrelata: false, notaObbligatoria: false,
+                                azioni: {{ $azioniDisponibili->keyBy('id_azione')->map(fn($a) => [
+                                    'flag_operatore'   => (bool) $a->flag_operatore,
+                                    'flag_appalto'     => (bool) $a->flag_appalto,
+                                    'flag_preventivo'  => (bool) $a->flag_preventivo,
+                                    'codice'           => $a->codice,
+                                ])->toJson() }},
+                                onAzione() {
+                                    let a = this.azioni[this.azioneId];
+                                    this.flagOperatore    = a ? a.flag_operatore : false;
+                                    this.flagAppalto      = a ? a.flag_appalto : false;
+                                    this.flagPreventivo   = a ? a.flag_preventivo : false;
+                                    this.flagMadre        = a ? a.codice === 'segna_duplicata' : false;
+                                    this.flagCorrelata    = a ? a.codice === 'collega' : false;
+                                    this.notaObbligatoria = a ? a.codice === 'annulla' : false;
+                                }
+                              }"
+                              @change="onAzione()"
                               class="space-y-4">
                             @csrf
 
@@ -630,10 +711,30 @@
 
                             <div>
                                 <x-input-label for="nota" x-text='azioneId == 6 ? "Descrizione dell\u0027intervento *" : "Nota (opzionale)"' />
+
+                            <div x-show="flagMadre" x-cloak>
+                                <x-input-label for="id_segnalazione_madre" value="Segnalazione madre (obbligatoria) *" />
+                                <x-text-input id="id_segnalazione_madre" name="id_segnalazione_madre" type="number"
+                                    class="mt-1 block w-full" placeholder="# ID segnalazione originale" />
+                                <x-input-error :messages="$errors->get('id_segnalazione_madre')" class="mt-1" />
+                            </div>
+
+                            <div x-show="flagCorrelata" x-cloak>
+                                <x-input-label for="id_segnalazione_correlata" value="Segnalazione precedente da collegare *" />
+                                <x-text-input id="id_segnalazione_correlata" name="id_segnalazione_correlata" type="number"
+                                    class="mt-1 block w-full" placeholder="# ID segnalazione precedente" />
+                                <x-input-error :messages="$errors->get('id_segnalazione_correlata')" class="mt-1" />
+                            </div>
+
+                                                        <div>
+                                <label for="nota" class="block font-medium text-sm text-gray-700"
+                                       x-text="notaObbligatoria ? 'Nota (obbligatoria) *' : (azioneId == 6 ? 'Descrizione dell'intervento *' : 'Nota (opzionale)')">Nota (opzionale)</label>
                                 <textarea id="nota" name="nota" rows="2" maxlength="2000"
+                                          :required="notaObbligatoria"
                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-base"
-                                          :placeholder="azioneId == 6 ? 'Descrizione dettagliata dell\'intervento...' : 'Nota interna...'"
-                                          :required="azioneId == 6"></textarea>
+                                          :placeholder="azioneId == 6 ? 'Descrizione dettagliata dell'intervento...' : 'Nota interna...'"
+                                          ></textarea>
+                                <x-input-error :messages="$errors->get('nota')" class="mt-1" />
                             </div>
 
                             <div class="text-right">

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SegnalazioneStato;
 use App\Models\Provenienza;
 use App\Models\Segnalazione;
 use App\Models\Specializzazione;
@@ -31,7 +32,7 @@ class GestioneController extends Controller
         $idSpecializzazione = $request->get('id_specializzazione');
 
         $base = Segnalazione::visibileA($user)
-            ->with(['stato', 'tipologia', 'operatore', 'provenienza']);
+            ->with(['tipologia', 'operatore', 'provenienza']);
 
         // Applica filtri ricerca
         if ($q !== '') {
@@ -73,14 +74,17 @@ class GestioneController extends Controller
             $base->where('id_specializzazione', $idSpecializzazione);
         }
 
+        $statiInCarico   = [SegnalazioneStato::IN_CARICO->value, SegnalazioneStato::SOSPESA->value];
+        $statiInGestione = [SegnalazioneStato::ASSEGNATA_OPERATORE->value, SegnalazioneStato::ASSEGNATA_IMPRESA->value, SegnalazioneStato::PREVENTIVO_IN_ATTESA->value];
+
         $segnalazioni = match($tab) {
             'evidenza'    => (clone $base)->inEvidenza()
                                 ->orderByDesc('data_segnalazione')->paginate(30),
             'in_carico'   => (clone $base)->aperte()
-                                ->whereHas('stato', fn ($q) => $q->where('in_carico', true))
+                                ->whereIn('id_stato_segnalazione', $statiInCarico)
                                 ->orderByDesc('data_segnalazione')->paginate(30),
             'in_gestione' => (clone $base)->aperte()
-                                ->whereHas('stato', fn ($q) => $q->where('id_gestione', true))
+                                ->whereIn('id_stato_segnalazione', $statiInGestione)
                                 ->orderByDesc('data_segnalazione')->paginate(30),
             'chiuse'      => (clone $base)->whereNotNull('data_chiusura')
                                 ->orderByDesc('data_chiusura')->paginate(30),
@@ -92,10 +96,8 @@ class GestioneController extends Controller
         $baseCount = Segnalazione::visibileA($user);
         $conteggi  = [
             'evidenza'    => (clone $baseCount)->inEvidenza()->count(),
-            'in_carico'   => (clone $baseCount)->aperte()
-                                ->whereHas('stato', fn ($q) => $q->where('in_carico', true))->count(),
-            'in_gestione' => (clone $baseCount)->aperte()
-                                ->whereHas('stato', fn ($q) => $q->where('id_gestione', true))->count(),
+            'in_carico'   => (clone $baseCount)->aperte()->whereIn('id_stato_segnalazione', $statiInCarico)->count(),
+            'in_gestione' => (clone $baseCount)->aperte()->whereIn('id_stato_segnalazione', $statiInGestione)->count(),
             'aperte'      => (clone $baseCount)->aperte()->count(),
             'chiuse'      => (clone $baseCount)->whereNotNull('data_chiusura')->count(),
             'sla_rischio' => (clone $baseCount)->aperte()->slaArischio()->count(),
@@ -139,7 +141,7 @@ class GestioneController extends Controller
         $idSpec          = $request->get('id_specializzazione');
 
         $base = Segnalazione::visibileA($user)
-            ->with(['stato', 'tipologia', 'plesso', 'operatore', 'appalto.impresa', 'specializzazione']);
+            ->with(['tipologia', 'plesso', 'operatore', 'appalto.impresa', 'specializzazione']);
 
         if ($q !== '') {
             $base->where(function ($query) use ($q) {
@@ -156,10 +158,13 @@ class GestioneController extends Controller
         if ($livelloPriorita) { $base->where('livello_priorita', $livelloPriorita); }
         if ($idSpec)          { $base->where('id_specializzazione', $idSpec); }
 
+        $statiInCarico   = [SegnalazioneStato::IN_CARICO->value, SegnalazioneStato::SOSPESA->value];
+        $statiInGestione = [SegnalazioneStato::ASSEGNATA_OPERATORE->value, SegnalazioneStato::ASSEGNATA_IMPRESA->value, SegnalazioneStato::PREVENTIVO_IN_ATTESA->value];
+
         $segnalazioni = match($tab) {
             'evidenza'    => (clone $base)->inEvidenza()->orderByDesc('data_segnalazione')->get(),
-            'in_carico'   => (clone $base)->aperte()->whereHas('stato', fn ($q) => $q->where('in_carico', true))->orderByDesc('data_segnalazione')->get(),
-            'in_gestione' => (clone $base)->aperte()->whereHas('stato', fn ($q) => $q->where('id_gestione', true))->orderByDesc('data_segnalazione')->get(),
+            'in_carico'   => (clone $base)->aperte()->whereIn('id_stato_segnalazione', $statiInCarico)->orderByDesc('data_segnalazione')->get(),
+            'in_gestione' => (clone $base)->aperte()->whereIn('id_stato_segnalazione', $statiInGestione)->orderByDesc('data_segnalazione')->get(),
             'chiuse'      => (clone $base)->whereNotNull('data_chiusura')->orderByDesc('data_chiusura')->get(),
             default       => (clone $base)->aperte()->orderByDesc('data_segnalazione')->get(),
         };
@@ -180,7 +185,7 @@ class GestioneController extends Controller
                     $s->data_segnalazione?->format('d/m/Y'),
                     $s->tipologia?->descrizione,
                     $s->plesso?->nome,
-                    $s->stato?->descrizione,
+                    $s->statoEnum()->label(),
                     $s->operatore?->name,
                     $s->label_priorita,
                     $s->specializzazione?->descrizione,
@@ -204,7 +209,7 @@ class GestioneController extends Controller
         $idProvenienza = $request->get('id_provenienza');
 
         $base = Segnalazione::visibileA($user)
-            ->with(['stato', 'tipologia', 'operatore', 'provenienza', 'plesso.istituto', 'utente']);
+            ->with(['tipologia', 'operatore', 'provenienza', 'plesso.istituto', 'utente']);
 
         if ($q !== '') {
             $base->where(function ($query) use ($q) {
@@ -216,10 +221,13 @@ class GestioneController extends Controller
         if ($idTipologia)   { $base->where('id_tipologia_segnalazione', $idTipologia); }
         if ($idProvenienza) { $base->where('id_provenienza', $idProvenienza); }
 
+        $statiInCarico   = [SegnalazioneStato::IN_CARICO->value, SegnalazioneStato::SOSPESA->value];
+        $statiInGestione = [SegnalazioneStato::ASSEGNATA_OPERATORE->value, SegnalazioneStato::ASSEGNATA_IMPRESA->value, SegnalazioneStato::PREVENTIVO_IN_ATTESA->value];
+
         $segnalazioni = match($tab) {
             'evidenza'    => (clone $base)->inEvidenza()->orderByDesc('data_segnalazione')->get(),
-            'in_carico'   => (clone $base)->aperte()->whereHas('stato', fn ($q) => $q->where('in_carico', true))->orderByDesc('data_segnalazione')->get(),
-            'in_gestione' => (clone $base)->aperte()->whereHas('stato', fn ($q) => $q->where('id_gestione', true))->orderByDesc('data_segnalazione')->get(),
+            'in_carico'   => (clone $base)->aperte()->whereIn('id_stato_segnalazione', $statiInCarico)->orderByDesc('data_segnalazione')->get(),
+            'in_gestione' => (clone $base)->aperte()->whereIn('id_stato_segnalazione', $statiInGestione)->orderByDesc('data_segnalazione')->get(),
             'chiuse'      => (clone $base)->whereNotNull('data_chiusura')->orderByDesc('data_chiusura')->get(),
             default       => (clone $base)->aperte()->orderByDesc('data_segnalazione')->get(),
         };
