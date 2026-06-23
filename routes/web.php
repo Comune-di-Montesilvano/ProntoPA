@@ -89,6 +89,7 @@ Route::middleware(['auth', 'role:admin|gestore'])->prefix('gestione')->name('ges
     Route::get('/stampa', [GestioneController::class, 'stampaLista'])->name('stampa');
     Route::get('/export-csv', [GestioneController::class, 'exportCsv'])->name('export-csv');
     Route::get('/reports/mensile', [ReportController::class, 'mensileGestore'])->name('reports.mensile');
+    Route::get('/reports/mensile/xlsx', [ReportController::class, 'mensileGestoreXlsx'])->name('reports.mensile.xlsx');
 });
 
 // ── Imprese CRUD (admin + gestore) ────────────────────────────────────────────
