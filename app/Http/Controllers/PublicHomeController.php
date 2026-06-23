@@ -70,6 +70,19 @@ class PublicHomeController extends Controller
                         ->whereMonth('data_segnalazione', now()->month)
                         ->whereYear('data_segnalazione', now()->year)
                         ->count(),
+                    'tempo_medio_gg' => (function () use ($baseQuery): ?int {
+                        $query = (clone $baseQuery)->whereNotNull('data_chiusura');
+                        if (DB::getDriverName() === 'sqlite') {
+                            $v = $query->selectRaw(
+                                "AVG((julianday(data_chiusura) - julianday(data_segnalazione))) as v"
+                            )->value('v');
+                        } else {
+                            $v = $query->selectRaw(
+                                'AVG(TIMESTAMPDIFF(HOUR, data_segnalazione, data_chiusura) / 24) as v'
+                            )->value('v');
+                        }
+                        return $v !== null ? (int) round($v) : null;
+                    })(),
                 ],
                 'mesiLabel' => $mesiLabel,
                 'mesiTotali' => $mesiTotali,

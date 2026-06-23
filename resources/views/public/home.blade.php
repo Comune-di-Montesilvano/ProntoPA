@@ -12,7 +12,7 @@
         </div>
 
         {{-- KPI Cards --}}
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
             @foreach([
                 ['label' => 'Totale pubblicate', 'value' => $kpi['totale'],       'icon' => '📋'],
                 ['label' => 'Ancora aperte',     'value' => $kpi['aperte'],       'icon' => '🔄'],
@@ -29,6 +29,17 @@
                     <div class="text-3xl font-black text-brand">{{ number_format($card['value'], 0, ',', '.') }}</div>
                 </div>
             @endforeach
+            @if(isset($kpi['tempo_medio_gg']) && $kpi['tempo_medio_gg'] !== null)
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="kpi-icon h-9 w-9 rounded-lg flex items-center justify-center text-base shrink-0">
+                            ⏱
+                        </div>
+                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide leading-tight">Tempo medio risoluzione</span>
+                    </div>
+                    <div class="text-3xl font-black text-brand">{{ $kpi['tempo_medio_gg'] }} <span class="text-base font-normal text-gray-400">gg</span></div>
+                </div>
+            @endif
         </div>
 
         {{-- Grafici principali --}}
