@@ -28,14 +28,8 @@ class ImpostazioniController extends Controller
             'impostazioni.*'        => ['nullable', 'string', 'max:500'],
         ]);
 
-        // Chiavi di tipo password: non sovrascrivere se il campo è stato lasciato vuoto
-        $passwordChiavi = Impostazione::where('tipo', 'password')->pluck('chiave')->all();
-
         foreach ($data['impostazioni'] as $chiave => $valore) {
-            if (($valore === null || $valore === '') && in_array($chiave, $passwordChiavi, true)) {
-                continue;
-            }
-
+            // Cast specifici per certi campi
             if ($chiave === 'publication_auto_state_id' && $valore !== '' && $valore !== null) {
                 $valore = (int) $valore;
             }

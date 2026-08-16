@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Admin\ImpostazioniController;
-use App\Http\Controllers\SetupController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\OrganizzazioniController;
 use App\Http\Controllers\Admin\ProfiliController;
@@ -29,11 +28,6 @@ use App\Http\Controllers\SegnalatoreDashboardController;
 use App\Http\Controllers\StatisticheController;
 use App\Http\Controllers\TelegramAccountController;
 use Illuminate\Support\Facades\Route;
-
-// Setup wizard (primo avvio — nessuna autenticazione richiesta)
-Route::get('/setup', [SetupController::class, 'show'])->name('setup.show');
-Route::post('/setup', [SetupController::class, 'store'])->name('setup.store');
-Route::get('/setup/done', [SetupController::class, 'done'])->name('setup.done');
 
 // Home
 Route::get('/', [PublicHomeController::class, 'index'])->name('home');

@@ -121,8 +121,8 @@
                     <x-sidebar-link href="{{ route('admin.dashboard') }}" :active="request()->is('admin') && !request()->routeIs('admin.impostazioni.*')" icon="cog">
                         Pannello admin
                     </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.utenti.index') }}" :active="request()->routeIs('admin.utenti.*')" icon="users">
-                        Utenti
+                    <x-sidebar-link href="{{ route('admin.impostazioni.index') }}" :active="request()->routeIs('admin.impostazioni.*')" icon="adjustments">
+                        Impostazioni ente
                     </x-sidebar-link>
                     <x-sidebar-link href="{{ route('admin.organizzazioni.index') }}" :active="request()->routeIs('admin.organizzazioni.*')" icon="office-building">
                         Organizzazioni
@@ -133,14 +133,8 @@
                     <x-sidebar-link href="{{ route('admin.sla.index') }}" :active="request()->routeIs('admin.sla.*')" icon="clock">
                         SLA
                     </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.profili.index') }}" :active="request()->routeIs('admin.profili.*')" icon="identification">
-                        Profili
-                    </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.provenienze.index') }}" :active="request()->routeIs('admin.provenienze.*')" icon="tag">
-                        Provenienze
-                    </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.impostazioni.index') }}" :active="request()->routeIs('admin.impostazioni.*')" icon="adjustments">
-                        Impostazioni ente
+                    <x-sidebar-link href="{{ route('admin.profili.index') }}" :active="request()->routeIs('admin.profili.*') || request()->routeIs('admin.provenienze.*')" icon="user-group">
+                        Profili e provenienze
                     </x-sidebar-link>
                 </div>
             @endif

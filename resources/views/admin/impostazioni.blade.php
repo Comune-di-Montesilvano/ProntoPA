@@ -11,16 +11,14 @@
                             <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                 {{ match($gruppo) {
                                     'brand'             => 'Brandizzazione ente',
-                                    'email'             => 'Email / SMTP / PEC',
+                                    'email'             => 'Email / Notifiche',
                                     'mappa'             => 'Mappa (OpenStreetMap)',
                                     'telegram'          => 'Bot Telegram',
                                     'notifiche_telegram'=> 'Notifiche Telegram',
                                     'webhook'           => 'Webhook cittadini',
                                     'pubblicazione'     => 'Pubblicazione automatica',
                                     'allegati'          => 'Allegati segnalazioni',
-                                    'workflow'          => 'Workflow',
                                     'verifica_account'  => 'Verifica annuale account',
-                                    'sistema'           => 'Sistema',
                                     default             => ucfirst($gruppo),
                                 } }}
                             </h3>
@@ -82,14 +80,6 @@
                                                    class="h-9 w-16 rounded border border-gray-300 cursor-pointer p-0.5">
                                             <span class="text-xs text-gray-400 font-mono" x-text="hex"></span>
                                         </div>
-                                    @elseif($imp->tipo === 'password')
-                                        <input type="password"
-                                               id="imp_{{ $imp->chiave }}"
-                                               name="impostazioni[{{ $imp->chiave }}]"
-                                               value=""
-                                               autocomplete="new-password"
-                                               placeholder="{{ $imp->valore ? '(salvata — lascia vuoto per non modificare)' : 'Nessuna password impostata' }}"
-                                               class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
                                     @elseif($imp->tipo === 'integer')
                                         <input type="number"
                                                id="imp_{{ $imp->chiave }}"
