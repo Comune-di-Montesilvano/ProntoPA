@@ -33,5 +33,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // No-op se SENTRY_LARAVEL_DSN non è configurato (vedi config/sentry.php).
+        \Sentry\Laravel\Integration::handles($exceptions);
     })->create();
