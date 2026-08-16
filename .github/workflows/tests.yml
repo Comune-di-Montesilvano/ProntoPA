@@ -41,5 +41,8 @@ jobs:
       - name: Build assets
         run: npm run build
 
+      - name: Static analysis (PHPStan/Larastan)
+        run: composer run analyse
+
       - name: Run tests
         run: php artisan test

@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    paths:
+        - app
+
+    # Livello 4: type coverage utile (errori di tipo, chiamate a metodi
+    # inesistenti, ecc.) senza il rumore dei livelli stretti (8-9) che
+    # richiederebbero annotazioni estese su un codebase esistente.
+    level: 4
+
+    excludePaths:
+        - app/Console/Commands/PopulateDemoData.php # fixture demo, tolleranza volutamente bassa

@@ -1,0 +1,613 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Anonymous function has an unused use \$triggerStateId\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Console/Commands/AutoPublishSegnalazioni.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Console/Commands/CheckAnnualAccountVerification.php
+
+		-
+			message: '#^Comparison operation "\>" between int\<1, max\> and 0 is always true\.$#'
+			identifier: greater.alwaysTrue
+			count: 1
+			path: app/Console/Commands/CheckAnnualAccountVerification.php
+
+		-
+			message: '#^Relation ''istituto'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Admin/AdminDashboardController.php
+
+		-
+			message: '#^Relation ''istituto'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Admin/UtentiController.php
+
+		-
+			message: '#^Relation ''profilo'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Admin/UtentiController.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Http/Controllers/AiTriageController.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/AiTriageController.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Http/Controllers/AiTriageController.php
+
+		-
+			message: '#^Variable \$triage in empty\(\) is never defined\.$#'
+			identifier: empty.variable
+			count: 1
+			path: app/Http/Controllers/AiTriageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/SegnalazioneApiController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id_stato\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/SegnalazioneApiController.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Api/SegnalazioneApiController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>descrizione" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Api/SegnalazioneApiController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id_stato" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Api/SegnalazioneApiController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 6
+			path: app/Http/Controllers/Api/TelegramWebhookController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$impresa\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TelegramWebhookController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TelegramWebhookController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$testo\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TelegramWebhookController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>descrizione" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 6
+			path: app/Http/Controllers/Api/TelegramWebhookController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Api/TelegramWebhookController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>ragione_sociale" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Api/TelegramWebhookController.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Auth/AnnualAccountVerificationController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/GestioneController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/GestioneController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$nome\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/GestioneController.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/GestioneController.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/GestioneController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id_impresa\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/MagicLinkController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/OperaioDashboardController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>descrizione" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/OperaioDashboardController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$anno\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PublicHomeController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$mese\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PublicHomeController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$totale\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PublicHomeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/PublicHomeController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>descrizione" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/PublicHomeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$importo_appalto\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$impresa\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$nome\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 2
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>descrizione" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 4
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>importo_appalto" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>nome" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>ragione_sociale" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$profilo\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/SegnalazioneController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/SegnalazioneController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id_impresa\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/SegnalazioneController.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/SegnalazioneController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$anno\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/StatisticheController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$mese\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/StatisticheController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$settimana\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/StatisticheController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$totale\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/StatisticheController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/StatisticheController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/StatisticheController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>descrizione" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
+			path: app/Http/Controllers/StatisticheController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/StatisticheController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>attivo" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Requests/Auth/LoginRequest.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>valore" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/Impostazione.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$profilo\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Segnalazione.php
+
+		-
+			message: '#^Instanceof between int\<0, max\> and App\\Enums\\SegnalazioneStato will always evaluate to false\.$#'
+			identifier: instanceof.alwaysFalse
+			count: 1
+			path: app/Models/Segnalazione.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Notifications/DigestGestoreNotification.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Notifications/ImpresaAssegnataNotification.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$impresa\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Notifications/ImpresaAssegnataNotification.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>descrizione" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Notifications/ImpresaAssegnataNotification.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>ragione_sociale" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Notifications/ImpresaAssegnataNotification.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Notifications/OperatoreAssegnatoNotification.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>descrizione" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Notifications/OperatoreAssegnatoNotification.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Notifications/SegnalazioneChiusaNotification.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>descrizione" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Notifications/SegnalazioneChiusaNotification.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Notifications/SegnalazioneStatoCambiato.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>descrizione" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Notifications/SegnalazioneStatoCambiato.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Notifications/SlaViolazioneNotification.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Notifications/SlaWarningNotification.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id_impresa\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Policies/SegnalazionePolicy.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/DedupService.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Services/DedupService.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Services/DedupService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$attivo\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id_impresa\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$impresa\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$segnalante\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$utente\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:notify\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments 1\|2\|3\|4\|5\|6\|7\|8\|9\|10, array\{\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Instanceof between int\<0, max\> and App\\Enums\\SegnalazioneStato will always evaluate to false\.$#'
+			identifier: instanceof.alwaysFalse
+			count: 1
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Offset ''stati'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Services/SegnalazioneWorkflowService.php
+
+		-
+			message: '#^Cannot call method diffInHours\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/SlaService.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/SlaService.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 1
+			path: app/Services/SlaService.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/SlaService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>ore_warning" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/SlaService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WebhookService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id_stato\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WebhookService.php
