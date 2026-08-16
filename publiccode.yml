@@ -1,0 +1,103 @@
+publiccodeYmlVersion: "0.4"
+
+name: ProntoPA
+applicationSuite: ProntoPA
+url: "https://github.com/Comune-di-Montesilvano/ProntoPA.git"
+landingURL: "https://github.com/Comune-di-Montesilvano/ProntoPA"
+
+softwareVersion: "0.6.2"
+
+platforms:
+  - web
+
+categories:
+  - facility-management
+  - it-service-management
+  - workflow-management
+
+developmentStatus: development
+
+softwareType: standalone
+
+intendedAudience:
+  scope:
+    - local-authorities
+  countries:
+    - it
+
+description:
+  it:
+    localisedName: ProntoPA
+    genericName: Gestione segnalazioni manutenzione
+    shortDescription: >-
+      Gestisce le segnalazioni di manutenzione di scuole, comuni e URP:
+      dalla richiesta all'assegnazione a imprese e operatori, fino alla
+      chiusura tracciata del lavoro.
+    longDescription: >
+      ProntoPA è il sistema con cui un ente locale raccoglie, smista e
+      chiude le segnalazioni di manutenzione ordinaria e straordinaria
+      su scuole, plessi ed edifici pubblici.
+
+
+      Scuole, URP e uffici interni segnalano un guasto in meno di 30
+      secondi; il gestore valuta, assegna a un'impresa esterna o a una
+      squadra di operai interni, e il workflow (14 stati, transizioni
+      tracciate) accompagna la pratica fino alla chiusura, con notifiche
+      email e Telegram a ogni passaggio.
+
+
+      Punti di forza pensati per l'uso quotidiano in un ufficio tecnico:
+
+      - anti-duplicato con adesioni multiple e merge a posteriori;
+
+      - digest mattutino automatico per i gestori;
+
+      - rapportino fotografico con prova documentale prima/dopo;
+
+      - magic link per le imprese non registrate (zero login via email);
+
+      - assistente locale opzionale (LLM on-premise via Ollama) per
+        titoli automatici, triage suggerito e dedup semantico — i dati
+        non escono mai dall'ente;
+
+      - report mensili, export XLSX e fascicolo PDF per la
+        rendicontazione;
+
+      - API REST e webhook HMAC per integrarsi col sito istituzionale
+        del Comune;
+
+      - wizard di primo avvio: nessuna configurazione da riga di
+        comando per mettere in produzione una nuova istanza.
+
+
+      Multi-ente per brand: logo, colori e testata si configurano da
+      interfaccia, non da file di ambiente, così lo stesso pacchetto
+      software si riusa senza fork.
+    features:
+      - Gestione segnalazioni con workflow a 14 stati
+      - Assegnazione a imprese esterne o squadre di operai interni
+      - Anti-duplicato con adesioni e merge segnalazioni simili
+      - Notifiche email e bot Telegram sul cambio stato
+      - Rapportino fotografico prima/dopo con approvazione gestore
+      - Magic link per imprese senza account
+      - Assistente locale opzionale (LLM on-premise, dati mai in cloud)
+      - Dashboard e KPI per gestori, operai e imprese
+      - Report mensili, export XLSX, fascicolo PDF
+      - API REST e webhook outbound per il portale del Comune
+      - Wizard di primo avvio per l'installazione
+      - Brandizzazione multi-ente da interfaccia amministrativa
+
+legal:
+  license: EUPL-1.2
+  mainCopyrightOwner: Comune di Montesilvano
+  repoOwner: Comune di Montesilvano
+
+maintenance:
+  type: internal
+  contacts:
+    - name: Ufficio Tecnico — Comune di Montesilvano
+
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - it

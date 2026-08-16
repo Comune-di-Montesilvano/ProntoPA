@@ -71,3 +71,19 @@
 - Squadre: CRUD admin, assegnazione, smistamento caposquadra, visibilità per ruolo
 - Fix disk allegati in creazione + suite test allegati
 - Ricerca FULLTEXT su testo segnalazione
+
+---
+
+## v1.0 — Riuso e numeri 🔄 IN CORSO
+
+### Pacchetto riuso
+- Wizard primo avvio (`/setup`) ✅
+- `publiccode.yml` + `LICENSE` (EUPL-1.2) ✅
+- Comando `artisan demo` per dati realistici — da fare
+- Documentazione API OpenAPI — da fare
+- Audit accessibilità AGID (L. 4/2004) — da fare
+
+### KPI e rendicontazione ✅
+- Tempi medi per transizione da storico stati, report mensile gestore, riepilogo impresa
+- Export XLSX, fascicolo PDF completo
+- Indicatori aggregati in home pubblica
