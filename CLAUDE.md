@@ -1,10 +1,11 @@
 # ProntoPA
 
-Open-source manutenzione PA. Scuole/comuni/URP segnalano guasti, gestori assegnano imprese/operatori, traccia workflow chiusura. Brand via tabella `impostazioni` (non `.env`).
+Open-source manutenzione PA. Scuole/comuni/URP segnalano guasti, gestori assegnano imprese/operatori, traccia workflow chiusura. Brand via tabella `impostazioni` (non `.env`). Licenza EUPL-1.2, riuso via `publiccode.yml`.
 
 ## Convenzioni Claude Code
 
 - Commit con `/commit` (skill caveman-commit)
+- Roadmap: `PIANO-SVILUPPO.md` (piano per release) · `TODO.md` (stato completato/in corso)
 
 ## Stack
 
@@ -22,7 +23,13 @@ MSYS_NO_PATHCONV=1 docker compose exec php npm run build
 
 App: http://localhost | Adminer: :8081 | Mailpit: :8025 (profilo `dev`)  
 Dev: `docker compose --profile dev up -d`  
-`docker-compose.yml`=prod · `docker-compose.override.yml`=dev (auto, bind mount+Adminer+Mailpit)
+`docker-compose.yml`=prod · `docker-compose.override.yml`=dev (auto, bind mount+Adminer+Mailpit, OPcache hot-reload)  
+AI locale opzionale: `docker compose --profile ai up -d` (container Ollama)
+
+Dati demo realistici (istituti/utenti/segnalazioni in tutti gli stati, rilanciabile senza accumulo):
+```bash
+docker compose exec php php artisan demo
+```
 
 ```bash
 docker compose up -d / down / logs -f php
@@ -42,6 +49,7 @@ REDIS_HOST=redis
 MAIL_MAILER=smtp  MAIL_HOST=mailpit  MAIL_PORT=1025
 PEC_HOST=mbox.cert.legalmail.it  PEC_USERNAME=  PEC_PASSWORD=
 WEBHOOK_CITTADINI_URL=  WEBHOOK_CITTADINI_SECRET=
+SETUP_TOKEN=  # wizard primo avvio (/setup); vuoto = wizard disattivato
 ```
 
 Brand/mappa/email → **Admin → Impostazioni**.
@@ -64,16 +72,30 @@ $val = Impostazione::get('ente_nome', 'ProntoPA');
 
 ```
 app/Http/Controllers/
-  Auth/  GestioneController  SegnalazioneController  SegnalatoreDashboardController
-  ImpresaController  ImpreseCRUDController  AppaltiController  StatisticheController
-  Admin/{AdminController,ImpostazioniController}
-  Api/SegnalazioneApiController
+  Auth/  SetupController  GestioneController  SegnalazioneController
+  SegnalatoreDashboardController  OperaioDashboardController  RoleDashboardController
+  ImpreseDashboardController  ImpreseCRUDController  AppaltiController
+  StatisticheController  ReportController  FascicoloPdfController
+  AdesioniSegnalazioniController  AllegatiSegnalazioniController  MagicLinkController
+  AiTriageController  PublicHomeController  ProfileController  TelegramAccountController
+  Admin/{ImpostazioniController,UtentiController,ProfiliController,ProvenienzaController,
+         SediController,SlaController,SquadreController,OrganizzazioniController,AdminDashboardController}
+  Api/{SegnalazioneApiController,TelegramWebhookController}
 app/Models/
-  Segnalazione  User  Impresa  Appalto  NotaSegnalazione  StatoSegnalazione
-  Istituto  Plesso  Provenienza  Impostazione (helper statico+cache)
+  Segnalazione  User  Impresa  Appalto  NotaSegnalazione  AllegatoSegnalazione
+  StatoSegnalazione  StoricoStatoSegnalazione  Squadra  AdesioneSegnalazione
+  SlaConfigurazione  Specializzazione  TipologiaSegnalazione  Profilo  Azione  ApiLog
+  Istituto  Plesso  Provenienza  GruppoSegnalazione  Impostazione (helper statico+cache)
+app/Enums/SegnalazioneStato.php    # fonte di verità sugli stati, vedi sotto
 app/Policies/SegnalazionePolicy.php
-app/Services/SegnalazioneWorkflowService.php  NotificaEmailService  WebhookService
-app/Http/Middleware/RoleRedirect.php
+app/Services/
+  SegnalazioneWorkflowService  WebhookService  SlaService
+  DedupService     # anti-duplicato: simili per tipologia/plesso/vicinanza + embeddings
+  OllamaService    # LLM locale opzionale (titolo auto, triage suggerito, embeddings)
+  TelegramBotService
+app/Jobs/           CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
+app/Http/Middleware/EnsureSetupComplete.php  EnsureUserIsActive.php
+app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni
 ```
 
 ## Ruoli (Spatie)
@@ -81,31 +103,44 @@ app/Http/Middleware/RoleRedirect.php
 | Ruolo | Accesso |
 |---|---|
 | `admin` | Totale: utenti, impostazioni, sistema |
-| `gestore` | Segnalazioni. `supervisore=true`→tutto; altrimenti solo assegnate |
-| `segnalatore` | Proprie segnalazioni. Ha `provenienza` (scuola/URP/portale/interno) |
-| `impresa` | Solo lavori propria impresa |
+| `gestore` | Segnalazioni. `supervisore_segnalazioni=true`→tutto; altrimenti solo assegnate |
+| `operaio` | Lavori assegnati a sé o alla propria squadra (`Squadra`, caposquadra riassegna ai membri) |
+| `segnalatore` | Proprie segnalazioni. Ha `id_provenienza` (scuola/URP/portale/interno) |
+| `impresa` | Solo lavori propria impresa. Ditte non registrate operano via magic-link firmato (no login) |
 
 ## Workflow Stati
 
-1=In attesa esame 2=In carico 3=Completata† 4=Annullata† 5=Archiviata† 6=Val.fattibilità 7=Assegnata impresa 8=Assegnata squadra 9=In approvazione preventivo 10=Attesa collaudo 11=Preventivo accettato 12=Sospesa 13=Attesa pareri 14=Sopralluogo († = chiusura) — fonte: `TabelleRiferimentoSeeder`
+Fonte di verità: `app/Enums/SegnalazioneStato.php` (int-backed enum, **non** una tabella di riferimento).
 
-Azioni: assegna impresa/operatore · chiudi · invia/accetta preventivo · pianifica · proponi chiusura · archivia · richiedi accertamento/valutazione · riapri
+1=Nuova 2=In carico 3=Assegnata a operatore 4=Assegnata a impresa 5=Preventivo in attesa 6=Sospesa 7=Completata† 8=Duplicata† 9=Annullata† 10=Archiviata† († = `isTerminale()`)
 
-Transizioni: `app/Services/SegnalazioneWorkflowService.php`
+Azioni: assegna impresa/operatore/squadra · chiudi · invia/accetta preventivo · proponi chiusura (con rapportino fotografico) · archivia · sospendi · riapri · unisci a duplicato
+
+Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella `stati_segnalazioni` (model `StoricoStatoSegnalazione`, alimenta i KPI)
+
+## Funzionalità v0.6+
+
+- **Anti-duplicato**: adesioni multiple a una segnalazione esistente + merge a posteriori (`DedupService`, `AdesioneSegnalazione`)
+- **Squadre**: assegnazione a operatore singolo o squadra, notifica al solo caposquadra
+- **Assistente AI locale opzionale** (profilo Docker `ai`, Ollama): titolo auto-generato, triage suggerito, dedup semantico via embeddings — sempre asincrono (queue), mai sul path sincrono; degrada in silenzio se Ollama non è raggiungibile (`Impostazione::get('ai_enabled')`)
+- **Digest mattutino gestori**: comando `digest:invia` / `InviaDigestGestori`
+- **Rendicontazione**: export XLSX (report mensile gestore, riepilogo impresa) e fascicolo PDF per segnalazione (richiede `composer install` per `phpoffice/phpspreadsheet` e `barryvdh/laravel-dompdf`)
+- **Wizard primo avvio** (`/setup`): gate su `User::query()->exists()`, attivo solo se `SETUP_TOKEN` è valorizzato in `.env`; token + email + password → OTP via email → crea admin (`SetupController`, `EnsureSetupComplete`)
 
 ## Database
 
-Migrations `database/migrations/` da `legacy/export.sql`:  
-`000000` users · `000001` ref tables · `000002` imprese · `000003` segnalazioni · `000004` webhook_logs · `000005` impostazioni
+Migrations `database/migrations/` (27 file, naming datato `YYYY_MM_DD_......`), schema base da `legacy/export.sql`, evoluto per release additiva (v0.5→v1.0). Non fare affidamento sui nomi legacy `000000..000005`, ormai storici.
 
-Seeders: `TabelleRiferimentoSeeder` · `IstitutiPlessiSeeder` · `ImpostazioniSeeder` · `RolesAndPermissionsSeeder`
+Seeders (`DatabaseSeeder`): `TabelleRiferimentoSeeder` · `IstitutiPlessiSeeder` (vuoto by design, no dati demo in prod — usa `artisan demo`) · `ImpostazioniSeeder` · `RolesAndPermissionsSeeder` · `AdminUserSeeder` (dev/CI, marca `setup_completato`)
 
 Import prod: `docker compose exec -T mariadb mariadb -u segnalazioni -p segnalazioni < legacy/export.sql`
 
 ## API
 
+Spec completa: [`docs/API.md`](docs/API.md) · [`docs/openapi.yaml`](docs/openapi.yaml) (OpenAPI 3.1, importabile Swagger/Postman).
+
 ```
-POST /api/segnalazioni              # crea da sito Comune (Sanctum)
+POST /api/segnalazioni              # crea da sito Comune (Sanctum), 409 se simili aperte (anti-dup)
 GET  /api/segnalazioni/{id}/stato   # legge stato
 ```
 
@@ -113,7 +148,7 @@ Webhook outbound: HTTP POST HMAC-firmato al cambio stato → Admin → Impostazi
 
 ## CI/CD
 
-Tag `v*.*.*` → `.github/workflows/release.yml` → build multi-arch (amd64+arm64) → push GHCR `:tag`+`:latest`.
+Tag `v*.*.*` → `.github/workflows/release.yml` → build **amd64 only** (arm64 droppato, niente QEMU) → push GHCR `:tag`+`:latest`.
 
 ```bash
 git tag v1.2.0 && git push origin v1.2.0
@@ -129,8 +164,14 @@ git tag v1.2.0 && git push origin v1.2.0
 ## Deploy Prod (Portainer/Podman rootless)
 
 1. `git push tag` → Actions builda GHCR
-2. Portainer stack → `docker-compose.yml`, env vars (APP_KEY, DB_PASSWORD…)
-3. `docker compose exec php php artisan migrate --seed`
-4. Admin → Impostazioni → configura ente
+2. Portainer stack → `docker-compose.yml`, env vars (APP_KEY, DB_PASSWORD, `SETUP_TOKEN`…)
+3. **Non usare `migrate --seed`**: `DatabaseSeeder` include sempre `AdminUserSeeder`, che crea un admin con password da `.env` (default `password` se `ADMIN_PASSWORD` non è settata) e disabilita per sempre il wizard (gate su `User::exists()`). Seed selettivo:
+   ```bash
+   docker compose exec php php artisan migrate
+   docker compose exec php php artisan db:seed --class=TabelleRiferimentoSeeder
+   docker compose exec php php artisan db:seed --class=ImpostazioniSeeder
+   docker compose exec php php artisan db:seed --class=RolesAndPermissionsSeeder
+   ```
+4. Vai su `/setup`, inserisci `SETUP_TOKEN` → crea admin → Admin → Impostazioni per configurare ente
 
 Rootless: no bind mount, named volumes `mariadb_data` `redis_data` `app_storage` → `/var/www/html/storage`
