@@ -10,8 +10,8 @@
     {{-- Filtro per organizzazione --}}
     <form method="GET" action="{{ route('admin.sedi.index') }}" class="bg-white shadow-sm rounded-xl px-4 py-3 mb-4 flex flex-wrap gap-2 items-end">
         <div class="flex-1 min-w-[200px]">
-            <label class="block text-xs text-gray-500 mb-1">Filtra per organizzazione</label>
-            <select name="id_istituto"
+            <label for="filtro_id_istituto" class="block text-xs text-gray-500 mb-1">Filtra per organizzazione</label>
+            <select name="id_istituto" id="filtro_id_istituto"
                     class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
                 <option value="">— Tutte —</option>
                 @foreach($organizzazioni->groupBy('tipo') as $tipo => $items)

@@ -37,13 +37,13 @@
           class="bg-white shadow-sm rounded-xl px-4 py-3 mb-4 flex flex-wrap gap-2 items-end">
         <input type="hidden" name="tab" value="{{ $tab }}">
         <div class="min-w-[120px]">
-            <label class="block text-xs text-gray-500 mb-1">Dal</label>
-            <input type="date" name="data_da" value="{{ $dataDa }}"
+            <label for="filtro_data_da" class="block text-xs text-gray-500 mb-1">Dal</label>
+            <input type="date" name="data_da" id="filtro_data_da" value="{{ $dataDa }}"
                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
         </div>
         <div class="min-w-[120px]">
-            <label class="block text-xs text-gray-500 mb-1">Al</label>
-            <input type="date" name="data_a" value="{{ $dataA }}"
+            <label for="filtro_data_a" class="block text-xs text-gray-500 mb-1">Al</label>
+            <input type="date" name="data_a" id="filtro_data_a" value="{{ $dataA }}"
                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
         </div>
         <button type="submit"
@@ -137,8 +137,8 @@
                       class="flex items-end gap-3 flex-wrap">
                     @csrf
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">Preventivo / Documento (PDF, JPG, PNG)</label>
-                        <input type="file" name="allegati[]"
+                        <label for="allegato_{{ $s->id_segnalazione }}" class="block text-xs text-gray-500 mb-1">Preventivo / Documento (PDF, JPG, PNG)</label>
+                        <input type="file" name="allegati[]" id="allegato_{{ $s->id_segnalazione }}"
                                accept="application/pdf,image/jpeg,image/png"
                                class="block text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                     </div>

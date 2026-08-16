@@ -63,15 +63,15 @@
         <input type="hidden" name="tab" value="{{ $tab }}">
 
         <div class="flex-1 min-w-[180px]">
-            <label class="block text-xs text-gray-500 mb-1">Cerca</label>
-            <input type="text" name="q" value="{{ $q }}"
+            <label for="filtro_q" class="block text-xs text-gray-500 mb-1">Cerca</label>
+            <input type="text" name="q" id="filtro_q" value="{{ $q }}"
                    placeholder="Testo, segnalante, n° segnalazione…"
                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
 
         <div class="min-w-[160px]">
-            <label class="block text-xs text-gray-500 mb-1">Tipologia</label>
-            <select name="id_tipologia"
+            <label for="filtro_id_tipologia" class="block text-xs text-gray-500 mb-1">Tipologia</label>
+            <select name="id_tipologia" id="filtro_id_tipologia"
                     class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
                 <option value="">— Tutte —</option>
                 @foreach($tipologie as $t)
@@ -84,8 +84,8 @@
         </div>
 
         <div class="min-w-[160px]">
-            <label class="block text-xs text-gray-500 mb-1">Provenienza</label>
-            <select name="id_provenienza"
+            <label for="filtro_id_provenienza" class="block text-xs text-gray-500 mb-1">Provenienza</label>
+            <select name="id_provenienza" id="filtro_id_provenienza"
                     class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
                 <option value="">— Tutte —</option>
                 @foreach($provenienze as $p)
@@ -98,8 +98,8 @@
         </div>
 
         <div class="min-w-[140px]">
-            <label class="block text-xs text-gray-500 mb-1">Operatore</label>
-            <select name="id_operatore"
+            <label for="filtro_id_operatore" class="block text-xs text-gray-500 mb-1">Operatore</label>
+            <select name="id_operatore" id="filtro_id_operatore"
                     class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
                 <option value="">— Tutti —</option>
                 @foreach($operatori as $op)
@@ -111,8 +111,8 @@
         </div>
 
         <div class="min-w-[120px]">
-            <label class="block text-xs text-gray-500 mb-1">Priorità</label>
-            <select name="livello_priorita"
+            <label for="filtro_livello_priorita" class="block text-xs text-gray-500 mb-1">Priorità</label>
+            <select name="livello_priorita" id="filtro_livello_priorita"
                     class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
                 <option value="">— Tutte —</option>
                 <option value="1" {{ $livelloPriorita == 1 ? 'selected' : '' }}>Bassa</option>
@@ -124,8 +124,8 @@
 
         @if($specializzazioni->isNotEmpty())
         <div class="min-w-[140px]">
-            <label class="block text-xs text-gray-500 mb-1">Specializzazione</label>
-            <select name="id_specializzazione"
+            <label for="filtro_id_specializzazione" class="block text-xs text-gray-500 mb-1">Specializzazione</label>
+            <select name="id_specializzazione" id="filtro_id_specializzazione"
                     class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
                 <option value="">— Tutte —</option>
                 @foreach($specializzazioni as $sp)
@@ -138,14 +138,14 @@
         @endif
 
         <div class="min-w-[120px]">
-            <label class="block text-xs text-gray-500 mb-1">Dal</label>
-            <input type="date" name="data_da" value="{{ $dataDa }}"
+            <label for="filtro_data_da" class="block text-xs text-gray-500 mb-1">Dal</label>
+            <input type="date" name="data_da" id="filtro_data_da" value="{{ $dataDa }}"
                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
 
         <div class="min-w-[120px]">
-            <label class="block text-xs text-gray-500 mb-1">Al</label>
-            <input type="date" name="data_a" value="{{ $dataA }}"
+            <label for="filtro_data_a" class="block text-xs text-gray-500 mb-1">Al</label>
+            <input type="date" name="data_a" id="filtro_data_a" value="{{ $dataA }}"
                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
 
