@@ -10,6 +10,57 @@
 # Dev (con override): docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
 #   oppure semplicemente: docker compose up -d  (override caricato automaticamente)
 
+x-php-env: &php-env
+  APP_ENV: ${APP_ENV:-production}
+  APP_KEY: ${APP_KEY}
+  APP_DEBUG: ${APP_DEBUG:-false}
+  APP_URL: ${APP_URL:-http://localhost}
+  APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Rome}
+  APP_LOCALE: ${APP_LOCALE:-it}
+  APP_VERSION: ${APP_VERSION:-latest}
+  LOG_CHANNEL: ${LOG_CHANNEL:-stack}
+  LOG_LEVEL: ${LOG_LEVEL:-error}
+  DB_CONNECTION: mysql
+  DB_HOST: mariadb
+  DB_PORT: 3306
+  DB_DATABASE: ${DB_DATABASE:-segnalazioni}
+  DB_USERNAME: ${DB_USERNAME:-segnalazioni}
+  DB_PASSWORD: ${DB_PASSWORD}
+  CACHE_STORE: redis
+  SESSION_DRIVER: redis
+  QUEUE_CONNECTION: redis
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  MAIL_MAILER: ${MAIL_MAILER:-smtp}
+  MAIL_HOST: ${MAIL_HOST}
+  MAIL_PORT: ${MAIL_PORT:-587}
+  MAIL_USERNAME: ${MAIL_USERNAME}
+  MAIL_PASSWORD: ${MAIL_PASSWORD}
+  MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+  MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
+  MAIL_FROM_NAME: ${MAIL_FROM_NAME:-ProntoPA}
+  PEC_HOST: ${PEC_HOST}
+  PEC_PORT: ${PEC_PORT:-465}
+  PEC_USERNAME: ${PEC_USERNAME}
+  PEC_PASSWORD: ${PEC_PASSWORD}
+  PEC_ENCRYPTION: ${PEC_ENCRYPTION:-ssl}
+  WEBHOOK_CITTADINI_URL: ${WEBHOOK_CITTADINI_URL}
+  WEBHOOK_CITTADINI_SECRET: ${WEBHOOK_CITTADINI_SECRET}
+  SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost,127.0.0.1}
+  SESSION_LIFETIME: ${SESSION_LIFETIME:-480}
+  SESSION_COOKIE: ${SESSION_COOKIE:-prontoPA_session}
+  REDIS_PASSWORD: ${REDIS_PASSWORD}
+  ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+  ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:-password}
+  ADMIN_NAME: ${ADMIN_NAME:-Amministratore}
+  SETUP_TOKEN: ${SETUP_TOKEN:-}
+  PHP_OPCACHE_ENABLE: 1
+
+x-php-volumes: &php-volumes
+  - app_storage:/var/www/html/storage
+  - uploads:/var/www/html/storage/app/public
+
 services:
 
   nginx:
@@ -28,54 +79,46 @@ services:
 
   php:
     image: ghcr.io/comune-di-montesilvano/pronto-pa:${APP_VERSION:-latest}
-    volumes:
-      - app_storage:/var/www/html/storage
-      - uploads:/var/www/html/storage/app/public
-    environment:
-      APP_ENV: ${APP_ENV:-production}
-      APP_KEY: ${APP_KEY}
-      APP_DEBUG: ${APP_DEBUG:-false}
-      APP_URL: ${APP_URL:-http://localhost}
-      APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Rome}
-      APP_LOCALE: ${APP_LOCALE:-it}
-      APP_VERSION: ${APP_VERSION:-latest}
-      LOG_CHANNEL: ${LOG_CHANNEL:-stack}
-      LOG_LEVEL: ${LOG_LEVEL:-error}
-      DB_CONNECTION: mysql
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_DATABASE: ${DB_DATABASE:-segnalazioni}
-      DB_USERNAME: ${DB_USERNAME:-segnalazioni}
-      DB_PASSWORD: ${DB_PASSWORD}
-      CACHE_STORE: redis
-      SESSION_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      MAIL_MAILER: ${MAIL_MAILER:-smtp}
-      MAIL_HOST: ${MAIL_HOST}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
-      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-ProntoPA}
-      PEC_HOST: ${PEC_HOST}
-      PEC_PORT: ${PEC_PORT:-465}
-      PEC_USERNAME: ${PEC_USERNAME}
-      PEC_PASSWORD: ${PEC_PASSWORD}
-      PEC_ENCRYPTION: ${PEC_ENCRYPTION:-ssl}
-      WEBHOOK_CITTADINI_URL: ${WEBHOOK_CITTADINI_URL}
-      WEBHOOK_CITTADINI_SECRET: ${WEBHOOK_CITTADINI_SECRET}
-      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost,127.0.0.1}
-      SESSION_LIFETIME: ${SESSION_LIFETIME:-480}
-      SESSION_COOKIE: ${SESSION_COOKIE:-prontoPA_session}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-password}
-      ADMIN_NAME: ${ADMIN_NAME:-Amministratore}
-      PHP_OPCACHE_ENABLE: 1
+    volumes: *php-volumes
+    environment: *php-env
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - prontoPA
+    restart: unless-stopped
+
+  # Consumer della coda Redis: senza questo container QUEUE_CONNECTION=redis
+  # accoda i job (webhook outbound, job AI) senza mai eseguirli.
+  # entrypoint svuotato: niente wait-db/migrate/seed qui, se ne occupa solo
+  # il servizio "php" — evita race condition di seed concorrenti al boot.
+  queue:
+    image: ghcr.io/comune-di-montesilvano/pronto-pa:${APP_VERSION:-latest}
+    entrypoint: []
+    command: php artisan queue:work --tries=3 --backoff=30,120 --sleep=3 --max-time=3600
+    volumes: *php-volumes
+    environment: *php-env
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - prontoPA
+    restart: unless-stopped
+
+  # Trigger dello scheduler Laravel (sla:check, digest:invia, verifica
+  # annuale account): senza questo container i comandi schedulati non
+  # partono mai — Laravel richiede una chiamata esterna a schedule:run
+  # ogni minuto, non la fa da solo.
+  scheduler:
+    image: ghcr.io/comune-di-montesilvano/pronto-pa:${APP_VERSION:-latest}
+    entrypoint: []
+    command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
+    volumes: *php-volumes
+    environment: *php-env
     depends_on:
       mariadb:
         condition: service_healthy

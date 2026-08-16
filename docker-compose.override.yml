@@ -29,6 +29,30 @@ services:
       - ./docker/php/opcache-dev.ini:/usr/local/etc/php/conf.d/opcache.ini:ro
     restart: "no"
 
+  # Stesso build locale del servizio "php" — altrimenti tenterebbero di
+  # scaricare l'immagine GHCR di produzione (rete + codice disallineato).
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    image: pronto-pa-dev:local
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+      - ./public/storage:/var/www/html/public/storage
+    restart: "no"
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    image: pronto-pa-dev:local
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+      - ./public/storage:/var/www/html/public/storage
+    restart: "no"
+
   mariadb:
     volumes:
       - mariadb_data:/var/lib/mysql
