@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Impostazione;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -30,6 +31,9 @@ class AdminUserSeeder extends Seeder
         );
 
         $user->syncRoles(['admin']);
+
+        // Il seeder ha creato l'admin: il setup wizard non è necessario
+        Impostazione::set('setup_completato', '1');
 
         $this->command->info("Utente admin creato: {$username} / (password da .env ADMIN_PASSWORD)");
     }

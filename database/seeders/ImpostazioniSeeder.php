@@ -47,6 +47,80 @@ class ImpostazioniSeeder extends Seeder
                 'descrizione' => 'URL del sito web dell\'ente (usato nei link footer)',
             ],
 
+            // SMTP server (sovrascritto a runtime dal ServiceProvider se configurato da UI)
+            [
+                'chiave'      => 'smtp_host',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'email',
+                'descrizione' => 'Host server SMTP (es. smtp.gmail.com). Se vuoto, usa MAIL_HOST da .env',
+            ],
+            [
+                'chiave'      => 'smtp_port',
+                'valore'      => null,
+                'tipo'        => 'integer',
+                'gruppo'      => 'email',
+                'descrizione' => 'Porta SMTP (587=STARTTLS, 465=SSL, 25=no-auth)',
+            ],
+            [
+                'chiave'      => 'smtp_username',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'email',
+                'descrizione' => 'Username SMTP',
+            ],
+            [
+                'chiave'      => 'smtp_password',
+                'valore'      => null,
+                'tipo'        => 'password',
+                'gruppo'      => 'email',
+                'descrizione' => 'Password SMTP (lascia vuoto per non modificare)',
+            ],
+            [
+                'chiave'      => 'smtp_encryption',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'email',
+                'descrizione' => 'Cifratura SMTP: tls, ssl, oppure vuoto',
+            ],
+
+            // PEC
+            [
+                'chiave'      => 'pec_host',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'email',
+                'descrizione' => 'Host server PEC (es. mbox.cert.legalmail.it)',
+            ],
+            [
+                'chiave'      => 'pec_port',
+                'valore'      => null,
+                'tipo'        => 'integer',
+                'gruppo'      => 'email',
+                'descrizione' => 'Porta PEC (465=SSL)',
+            ],
+            [
+                'chiave'      => 'pec_username',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'email',
+                'descrizione' => 'Username PEC',
+            ],
+            [
+                'chiave'      => 'pec_password',
+                'valore'      => null,
+                'tipo'        => 'password',
+                'gruppo'      => 'email',
+                'descrizione' => 'Password PEC (lascia vuoto per non modificare)',
+            ],
+            [
+                'chiave'      => 'pec_encryption',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'email',
+                'descrizione' => 'Cifratura PEC: ssl o tls',
+            ],
+
             // Email
             [
                 'chiave'      => 'mail_from_address',
@@ -64,6 +138,13 @@ class ImpostazioniSeeder extends Seeder
             ],
 
             // Mappa OpenStreetMap
+            [
+                'chiave'      => 'osm_nominatim_url',
+                'valore'      => 'https://nominatim.openstreetmap.org',
+                'tipo'        => 'url',
+                'gruppo'      => 'mappa',
+                'descrizione' => 'URL endpoint Nominatim per il geocoding (default: server pubblico OSM)',
+            ],
             [
                 'chiave'      => 'osm_lat',
                 'valore'      => '41.9028',
