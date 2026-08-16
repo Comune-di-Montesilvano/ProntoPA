@@ -13,7 +13,13 @@ class DatabaseSeeder extends Seeder
             IstitutiPlessiSeeder::class,
             ImpostazioniSeeder::class,
             RolesAndPermissionsSeeder::class,
-            AdminUserSeeder::class,
         ]);
+
+        // Se SETUP_TOKEN è configurato, l'admin va creato dal wizard /setup
+        // (token + email + password + OTP), non da qui con la password in
+        // chiaro da .env. Senza SETUP_TOKEN, comportamento legacy invariato.
+        if (blank(config('app.setup_token'))) {
+            $this->call(AdminUserSeeder::class);
+        }
     }
 }
