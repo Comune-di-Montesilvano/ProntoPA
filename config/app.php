@@ -17,6 +17,10 @@ return [
 
     'version' => env('APP_VERSION', 'dev'),
 
+    // Token segreto richiesto dal wizard di primo setup (/setup) per creare
+    // l'account amministratore iniziale. Vuoto = wizard disabilitato.
+    'setup_token' => env('SETUP_TOKEN'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

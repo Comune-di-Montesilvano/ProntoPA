@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
 
+        $middleware->web(prepend: [
+            \App\Http\Middleware\EnsureSetupComplete::class,
+        ]);
+
         $middleware->web(append: [
             \App\Http\Middleware\EnsureUserIsActive::class,
         ]);
