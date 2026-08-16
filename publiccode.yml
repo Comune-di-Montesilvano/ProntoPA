@@ -17,22 +17,20 @@ categories:
 
 developmentStatus: development
 
-softwareType: standalone
+softwareType: standalone/web
 
 intendedAudience:
   scope:
     - local-authorities
   countries:
-    - it
+    - IT
 
 description:
   it:
     localisedName: ProntoPA
-    genericName: Gestione segnalazioni manutenzione
     shortDescription: >-
-      Gestisce le segnalazioni di manutenzione di scuole, comuni e URP:
-      dalla richiesta all'assegnazione a imprese e operatori, fino alla
-      chiusura tracciata del lavoro.
+      Segnalazioni di manutenzione PA: da scuole/URP a imprese e
+      operatori, workflow tracciato fino alla chiusura.
     longDescription: >
       ProntoPA è il sistema con cui un ente locale raccoglie, smista e
       chiude le segnalazioni di manutenzione ordinaria e straordinaria
@@ -41,7 +39,7 @@ description:
 
       Scuole, URP e uffici interni segnalano un guasto in meno di 30
       secondi; il gestore valuta, assegna a un'impresa esterna o a una
-      squadra di operai interni, e il workflow (14 stati, transizioni
+      squadra di operai interni, e il workflow (10 stati, transizioni
       tracciate) accompagna la pratica fino alla chiusura, con notifiche
       email e Telegram a ogni passaggio.
 
@@ -74,7 +72,7 @@ description:
       interfaccia, non da file di ambiente, così lo stesso pacchetto
       software si riusa senza fork.
     features:
-      - Gestione segnalazioni con workflow a 14 stati
+      - Gestione segnalazioni con workflow a 10 stati
       - Assegnazione a imprese esterne o squadre di operai interni
       - Anti-duplicato con adesioni e merge segnalazioni simili
       - Notifiche email e bot Telegram sul cambio stato
@@ -90,7 +88,9 @@ description:
 legal:
   license: EUPL-1.2
   mainCopyrightOwner: Comune di Montesilvano
-  repoOwner: Comune di Montesilvano
+
+organisation:
+  name: Comune di Montesilvano
 
 maintenance:
   type: internal
