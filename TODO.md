@@ -74,14 +74,14 @@
 
 ---
 
-## v1.0 — Riuso e numeri 🔄 IN CORSO
+## v1.0 — Riuso e numeri ✅ COMPLETATO
 
 ### Pacchetto riuso
 - Wizard primo avvio (`/setup`, token + OTP via email) ✅
 - `publiccode.yml` + `LICENSE` (EUPL-1.2) ✅
 - Comando `artisan demo` per dati realistici ✅
-- Documentazione API OpenAPI — da fare
-- Audit accessibilità AGID (L. 4/2004) — da fare
+- Documentazione API OpenAPI (`docs/openapi.yaml`) ✅
+- Audit accessibilità AGID (L. 4/2004): home/login/setup a 100/100 Lighthouse ✅
 
 ### KPI e rendicontazione ✅
 - Tempi medi per transizione da storico stati, report mensile gestore, riepilogo impresa
