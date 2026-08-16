@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('/segnalazioni', [SegnalazioneApiController::class, 'store'])
         ->name('api.segnalazioni.store');
 
@@ -26,4 +26,5 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::post('/telegram/webhook', TelegramWebhookController::class)
+    ->middleware('throttle:120,1')
     ->name('api.telegram.webhook');
