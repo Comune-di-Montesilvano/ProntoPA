@@ -6,7 +6,7 @@
 
 **Sistema open-source di pronto intervento e manutenzione per la Pubblica Amministrazione**
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![License: EUPL-1.2](https://img.shields.io/badge/License-EUPL--1.2-blue.svg)](https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12)
 [![PHP](https://img.shields.io/badge/PHP-8.4-purple.svg)](https://php.net)
 [![Laravel](https://img.shields.io/badge/Laravel-13-red.svg)](https://laravel.com)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://docker.com)
@@ -277,7 +277,6 @@ Contributi benvenuti! Apri una issue o una pull request su
 
 ## Licenza
 
-ProntoPA è distribuito sotto licenza **GNU Affero General Public License v3.0 (AGPL-3.0)**.
-
-Questo significa che anche le versioni distribuite come servizio web (SaaS) devono rendere
-disponibile il codice sorgente. Vedi [LICENSE](LICENSE) per i dettagli.
+ProntoPA è distribuito sotto licenza **European Union Public Licence v1.2 (EUPL-1.2)**,
+la licenza copyleft raccomandata da AGID/Developers Italia per il riuso di software PA-PA.
+Vedi [LICENSE](LICENSE) per i dettagli.

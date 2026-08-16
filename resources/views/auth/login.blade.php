@@ -67,7 +67,7 @@
         </div>
 
         <div style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,.8); position:relative; z-index:1;">
-            v{{ config('app.version', 'dev') }} · AGPL-3.0
+            v{{ config('app.version', 'dev') }} · EUPL-1.2
         </div>
     </div>
 
