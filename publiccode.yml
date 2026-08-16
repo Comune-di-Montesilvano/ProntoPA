@@ -91,6 +91,7 @@ legal:
 
 organisation:
   name: Comune di Montesilvano
+  uri: "https://www.comune.montesilvano.pe.it"
 
 maintenance:
   type: internal
