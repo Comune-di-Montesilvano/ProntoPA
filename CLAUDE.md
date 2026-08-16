@@ -175,3 +175,5 @@ git tag v1.2.0 && git push origin v1.2.0
 4. Vai su `/setup`, inserisci `SETUP_TOKEN` → crea admin → Admin → Impostazioni per configurare ente
 
 Rootless: no bind mount, named volumes `mariadb_data` `redis_data` `app_storage` → `/var/www/html/storage`
+
+Servizi `queue` (`queue:work`) e `scheduler` (loop `schedule:run` ogni 60s) obbligatori: senza, webhook/job AI restano in coda per sempre e i comandi schedulati (`sla:check`, `digest:invia`, verifica annuale) non partono mai. Stessa immagine di `php`, `entrypoint: []` (niente migrate/seed duplicato).
