@@ -74,6 +74,25 @@
 
 ---
 
+## v0.7 — Ditte e canali ✅ COMPLETATO
+
+- Rapportino fotografico di fine lavoro (foto prima/dopo, descrizione, ore/materiali)
+- Magic link firmato per imprese non registrate (`MagicLinkController`, zero login)
+- Telegram esteso: ricezione foto via chat come allegato
+- Accettazione preventivo tracciata (data + utente in storico)
+
+---
+
+## v0.8 — Assistente locale ✅ COMPLETATO
+
+AI opzionale on-premise (Ollama, profilo Docker `ai`), sempre asincrona (job in coda), degrada in silenzio se disattivata o non raggiungibile.
+
+- Titolo automatico generato dal testo libero (`GeneraTitoloSegnalazione`)
+- Triage suggerito: tipologia/specializzazione/priorità proposti, mai scritti senza conferma gestore (`SuggerisciTriageSegnalazione`)
+- Dedup semantico via embeddings, coseno sui candidati già filtrati per luogo (`DedupService`, `CalcolaEmbeddingSegnalazione`)
+
+---
+
 ## v1.0 — Riuso e numeri ✅ COMPLETATO
 
 ### Pacchetto riuso
