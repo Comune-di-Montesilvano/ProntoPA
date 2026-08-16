@@ -14,17 +14,31 @@ class PublicHomeController extends Controller
         $stats = Cache::remember('public.home.statistics', now()->addMinutes(30), function (): array {
             $baseQuery = Segnalazione::query()->pubbliche();
 
-            $perMese = (clone $baseQuery)
-                ->select(
-                    DB::raw('YEAR(data_segnalazione) as anno'),
-                    DB::raw('MONTH(data_segnalazione) as mese'),
-                    DB::raw('COUNT(*) as totale')
-                )
-                ->where('data_segnalazione', '>=', now()->subYear())
-                ->groupBy('anno', 'mese')
-                ->orderBy('anno')
-                ->orderBy('mese')
-                ->get();
+            if (DB::getDriverName() === 'sqlite') {
+                $perMese = (clone $baseQuery)
+                    ->select(
+                        DB::raw("strftime('%Y', data_segnalazione) as anno"),
+                        DB::raw("strftime('%m', data_segnalazione) as mese"),
+                        DB::raw('COUNT(*) as totale')
+                    )
+                    ->where('data_segnalazione', '>=', now()->subYear())
+                    ->groupBy('anno', 'mese')
+                    ->orderBy('anno')
+                    ->orderBy('mese')
+                    ->get();
+            } else {
+                $perMese = (clone $baseQuery)
+                    ->select(
+                        DB::raw('YEAR(data_segnalazione) as anno'),
+                        DB::raw('MONTH(data_segnalazione) as mese'),
+                        DB::raw('COUNT(*) as totale')
+                    )
+                    ->where('data_segnalazione', '>=', now()->subYear())
+                    ->groupBy('anno', 'mese')
+                    ->orderBy('anno')
+                    ->orderBy('mese')
+                    ->get();
+            }
 
             $mesiLabel = [];
             $mesiTotali = [];
@@ -56,6 +70,19 @@ class PublicHomeController extends Controller
                         ->whereMonth('data_segnalazione', now()->month)
                         ->whereYear('data_segnalazione', now()->year)
                         ->count(),
+                    'tempo_medio_gg' => (function () use ($baseQuery): ?int {
+                        $query = (clone $baseQuery)->whereNotNull('data_chiusura');
+                        if (DB::getDriverName() === 'sqlite') {
+                            $v = $query->selectRaw(
+                                "AVG((julianday(data_chiusura) - julianday(data_segnalazione))) as v"
+                            )->value('v');
+                        } else {
+                            $v = $query->selectRaw(
+                                'AVG(TIMESTAMPDIFF(HOUR, data_segnalazione, data_chiusura) / 24) as v'
+                            )->value('v');
+                        }
+                        return $v !== null ? (int) round($v) : null;
+                    })(),
                 ],
                 'mesiLabel' => $mesiLabel,
                 'mesiTotali' => $mesiTotali,

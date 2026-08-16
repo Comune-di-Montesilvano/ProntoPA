@@ -13,7 +13,7 @@ class Azione extends Model
 
     protected $fillable = [
         'codice', 'descrizione', 'id_stato_segnalazione', 'competenza_azione',
-        'colore', 'flag_appalto', 'flag_operatore', 'flag_notifica', 'ordine', 'parametri_filtro',
+        'colore', 'flag_appalto', 'flag_operatore', 'flag_notifica', 'flag_preventivo', 'ordine', 'parametri_filtro',
     ];
 
     protected function casts(): array
@@ -22,6 +22,7 @@ class Azione extends Model
             'flag_appalto'     => 'boolean',
             'flag_operatore'   => 'boolean',
             'flag_notifica'    => 'boolean',
+            'flag_preventivo'  => 'boolean',
             'parametri_filtro' => 'array',
         ];
     }

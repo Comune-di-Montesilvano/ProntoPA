@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AllegatoSegnalazione;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Models\User;
@@ -10,6 +11,8 @@ use App\Services\SegnalazioneWorkflowService;
 use App\Services\TelegramBotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 class TelegramWebhookController extends Controller
@@ -71,8 +74,18 @@ class TelegramWebhookController extends Controller
             return;
         }
 
+        if (isset($message['photo'])) {
+            $this->handlePhotoMessage($user, $message);
+            return;
+        }
+
         if ($text === '/lista') {
             $this->handleListCommand($user);
+            return;
+        }
+
+        if ($text === '/oggi') {
+            $this->handleOggiCommand($user);
             return;
         }
 
@@ -337,7 +350,7 @@ class TelegramWebhookController extends Controller
 
     private function buildHelpMessage(User $user): string
     {
-        return "Comandi disponibili:\n/lista\n/apri <id>\n/chiudi <id>\n/note <id> [testo]\n/priorita";
+        return "Comandi disponibili:\n/lista\n/oggi\n/apri <id>\n/chiudi <id>\n/note <id> [testo]\n/priorita";
     }
 
     private function buildUnlinkedMessage(): string
@@ -346,5 +359,128 @@ class TelegramWebhookController extends Controller
         $botLabel = $botUsername ? '@' . ltrim($botUsername, '@') : 'il bot configurato';
 
         return "Account non collegato. Genera un token dal tuo profilo ProntoPA e avvia {$botLabel} con /start <token>.";
+    }
+
+    private function handleOggiCommand(User $user): void
+    {
+        $query = Segnalazione::aperte();
+
+        if ($user->hasRole('impresa')) {
+            $appaltiIds = \App\Models\Appalto::where('id_impresa', $user->id_impresa)
+                ->where('valido', true)
+                ->pluck('id_appalto');
+            $query->whereIn('id_appalto', $appaltiIds);
+        } else {
+            $query->where('id_operatore_assegnato', $user->id);
+        }
+
+        $segnalazioni = $query->with(['stato', 'tipologia'])
+            ->orderBy('livello_priorita', 'desc')
+            ->orderBy('data_segnalazione')
+            ->limit(10)
+            ->get();
+
+        if ($segnalazioni->isEmpty()) {
+            $this->telegram->sendMessage($user->telegram_chat_id, 'Nessun lavoro programmato per oggi.');
+            return;
+        }
+
+        $lines = ['Lavori per priorità:'];
+        foreach ($segnalazioni as $s) {
+            $prioritaStr = $s->label_priorita;
+            if ($s->segnalazione_urgente) {
+                $prioritaStr .= ' (URGENTE)';
+            }
+            $lines[] = sprintf(
+                "• #%d - %s\n  Stato: %s | Priorità: %s",
+                $s->id_segnalazione,
+                $s->tipologia?->descrizione ?? 'Intervento',
+                $s->stato?->descrizione ?? 'N/D',
+                $prioritaStr
+            );
+        }
+
+        $this->telegram->sendMessage($user->telegram_chat_id, implode("\n\n", $lines));
+    }
+
+    private function handlePhotoMessage(User $user, array $message): void
+    {
+        $chatId = (string) data_get($message, 'chat.id', '');
+        $caption = trim((string) data_get($message, 'caption', ''));
+
+        if (preg_match('/#?(\d+)/', $caption, $matches) !== 1) {
+            $this->telegram->sendMessage($chatId, "Per favore, invia nuovamente la foto specificando il numero della segnalazione nella didascalia (es: 'Foto intervento #123' o '123').");
+            return;
+        }
+
+        $idSegnalazione = (int) $matches[1];
+        $segnalazione = Segnalazione::visibileA($user)->find($idSegnalazione);
+
+        if (! $segnalazione) {
+            $this->telegram->sendMessage($chatId, "Segnalazione #{$idSegnalazione} non trovata o non sei autorizzato ad accedervi.");
+            return;
+        }
+
+        if ($segnalazione->isChiusa()) {
+            $this->telegram->sendMessage($chatId, "Impossibile aggiungere foto ad una segnalazione chiusa.");
+            return;
+        }
+
+        $photos = data_get($message, 'photo', []);
+        if (empty($photos)) {
+            $this->telegram->sendMessage($chatId, "Nessuna foto trovata nel messaggio.");
+            return;
+        }
+
+        $largestPhoto = end($photos);
+        $fileId = data_get($largestPhoto, 'file_id');
+
+        $filePath = $this->telegram->getFilePath($fileId);
+        if (! $filePath) {
+            $this->telegram->sendMessage($chatId, "Errore nel recuperare i dettagli della foto da Telegram.");
+            return;
+        }
+
+        $fileContent = $this->telegram->downloadFile($filePath);
+        if (! $fileContent) {
+            $this->telegram->sendMessage($chatId, "Errore nel download della foto.");
+            return;
+        }
+
+        $disk = Impostazione::get('allegati_storage_disk', 'local');
+        $filename = Str::uuid() . '.' . pathinfo($filePath, PATHINFO_EXTENSION);
+        $localPath = 'allegati/' . $segnalazione->id_segnalazione . '/' . $filename;
+
+        Storage::disk($disk)->put($localPath, $fileContent);
+
+        $mime = 'image/jpeg';
+        if (Str::endsWith(Str::lower($filePath), '.png')) {
+            $mime = 'image/png';
+        }
+
+        $fase = $user->hasRole('impresa') ? 'dopo' : 'prima';
+
+        AllegatoSegnalazione::create([
+            'id_segnalazione'     => $segnalazione->id_segnalazione,
+            'percorso'            => $localPath,
+            'tipo'                => $mime,
+            'nome_originale'      => basename($filePath),
+            'dimensione'          => strlen($fileContent),
+            'id_utente_creazione' => $user->id,
+            'fase'                => $fase,
+        ]);
+
+        $reply = "Foto caricata con successo per la segnalazione #{$segnalazione->id_segnalazione} (Fase: " . ($fase === 'dopo' ? 'Dopo' : 'Prima') . ").";
+
+        if ($user->hasRole('impresa')) {
+            $magicLink = URL::temporarySignedRoute(
+                'magic-link.show',
+                now()->addDays(7),
+                ['segnalazione' => $segnalazione->id_segnalazione]
+            );
+            $reply .= "\n\nPer compilare il rapportino di fine lavoro (ore e materiali), usa questo link sicuro:\n" . $magicLink;
+        }
+
+        $this->telegram->sendMessage($chatId, $reply);
     }
 }

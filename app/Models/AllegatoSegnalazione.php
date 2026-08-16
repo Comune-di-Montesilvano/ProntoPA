@@ -20,6 +20,7 @@ class AllegatoSegnalazione extends Model
         'nome_originale',
         'dimensione',
         'id_utente_creazione',
+        'fase',
     ];
 
     protected function casts(): array

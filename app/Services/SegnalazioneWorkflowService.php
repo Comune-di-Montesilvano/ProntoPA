@@ -8,12 +8,14 @@ use App\Jobs\InviaWebhookOutbound;
 use App\Models\Azione;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
+use App\Models\Squadra;
 use App\Models\StoricoStatoSegnalazione;
 use App\Models\User;
 use App\Notifications\ImpresaAssegnataNotification;
 use App\Notifications\OperatoreAssegnatoNotification;
 use App\Notifications\SegnalazioneChiusaNotification;
 use App\Notifications\SegnalazioneStatoCambiato;
+use App\Notifications\SquadraAssegnataNotification;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Collection;
@@ -45,6 +47,16 @@ class SegnalazioneWorkflowService
         return $query->get()->filter(function (Azione $azione) use ($segnalazione, $user, $statoCorrente) {
             return $this->azioneApplicabile($azione, $segnalazione, $user, $statoCorrente);
         })->values();
+    }
+
+    /**
+     * Azioni eseguibili senza parametri aggiuntivi (per i menu rapidi in lista).
+     */
+    public function getAzioniRapide(Segnalazione $segnalazione, User $user): Collection
+    {
+        return $this->getAzioniDisponibili($segnalazione, $user)
+            ->reject(fn (Azione $a) => $a->flag_operatore || $a->flag_appalto)
+            ->values();
     }
 
     /**
@@ -172,8 +184,21 @@ class SegnalazioneWorkflowService
             $update['id_operatore_assegnato'] = $params['id_operatore'];
         }
 
+        if ($azione->flag_operatore && isset($params['id_squadra']) && $params['id_squadra']
+            && Impostazione::get('squadre_enabled', false)
+        ) {
+            $update['id_squadra_assegnata'] = $params['id_squadra'];
+            if (empty($params['id_operatore'])) {
+                $update['id_operatore_assegnato'] = 0;
+            }
+        }
+
         if ($azione->flag_appalto && ! empty($params['id_appalto'])) {
             $update['id_appalto'] = $params['id_appalto'];
+        }
+
+        if ($azione->flag_preventivo && isset($params['importo_preventivo'])) {
+            $update['importo_preventivo'] = $params['importo_preventivo'];
         }
 
         // Gestione DUPLICATA: imposta la segnalazione madre
@@ -231,12 +256,24 @@ class SegnalazioneWorkflowService
             'id_appalto'            => $params['id_appalto'] ?? 0,
         ]);
 
-        if (! empty($params['nota'])) {
+        $notaTesto = $params['nota'] ?? '';
+        if (isset($params['ore_lavoro']) || isset($params['materiali'])) {
+            $rapportinoTesto = "Rapportino di fine lavoro:\n";
+            if (filled($params['ore_lavoro'] ?? null)) {
+                $rapportinoTesto .= "- Ore impiegate: " . $params['ore_lavoro'] . "\n";
+            }
+            if (filled($params['materiali'] ?? null)) {
+                $rapportinoTesto .= "- Materiali usati: " . $params['materiali'] . "\n";
+            }
+            $notaTesto = $rapportinoTesto . "\nDescrizione:\n" . $notaTesto;
+        }
+
+        if (! empty($notaTesto)) {
             $segnalazione->note()->create([
-                'testo'            => $params['nota'],
+                'testo'            => $notaTesto,
                 'id_utente'        => $user->id,
                 'visibile_web'     => false,
-                'visibile_impresa' => $azione->flag_notifica,
+                'visibile_impresa' => $azione->flag_notifica || isset($params['ore_lavoro']),
             ]);
         }
 
@@ -262,6 +299,11 @@ class SegnalazioneWorkflowService
             return false;
         }
 
+        // Segnalazione chiusa: solo riapri applicabile
+        if ($segnalazione->data_chiusura && $azione->codice !== 'riapri') {
+            return false;
+        }
+
         // RIAPRI: solo admin o gestore supervisore, solo entro il limite di giorni
         if ($azione->codice === 'riapri') {
             if (! ($user->hasRole('admin') || ($user->hasRole('gestore') && $user->isSupervisore()))) {
@@ -283,6 +325,21 @@ class SegnalazioneWorkflowService
 
     private function inviaNotifiche(Segnalazione $segnalazione, Azione $azione, User $attore): void
     {
+        if ($segnalazione->id_squadra_assegnata && $azione->flag_operatore) {
+            $squadra = Squadra::with('caposquadra')->find($segnalazione->id_squadra_assegnata);
+
+            if ($squadra?->caposquadra && $squadra->caposquadra->attivo !== false
+                && $squadra->caposquadra->id !== $attore->id
+            ) {
+                $squadra->caposquadra->notify(new SquadraAssegnataNotification(
+                    $segnalazione->id_segnalazione,
+                    $squadra->id_squadra,
+                ));
+            }
+
+            return;
+        }
+
         if ($azione->flag_operatore && $segnalazione->id_operatore_assegnato) {
             $operatore = User::find($segnalazione->id_operatore_assegnato);
 
@@ -319,6 +376,8 @@ class SegnalazioneWorkflowService
         $statoEnum = $segnalazione->statoEnum();
 
         if ($statoEnum->isTerminale()) {
+            $this->notificaAderenti($segnalazione, $azione, $attore);
+
             $segnalatore = $segnalazione->id_utente_segnalazione
                 ? User::find($segnalazione->id_utente_segnalazione)
                 : null;
@@ -371,7 +430,30 @@ class SegnalazioneWorkflowService
         return $azione->flag_notifica
             || ($azione->flag_operatore && (bool) $segnalazione->id_operatore_assegnato)
             || ($azione->flag_appalto && (bool) $segnalazione->id_appalto)
-            || $segnalazione->statoEnum()->isTerminale();
+            || $segnalazione->statoEnum()->isTerminale()
+            || ($azione->flag_operatore && (bool) $segnalazione->id_squadra_assegnata);
+    }
+
+    private function notificaAderenti(Segnalazione $segnalazione, Azione $azione, User $attore): void
+    {
+        foreach ($segnalazione->adesioni()->with('utente')->get() as $adesione) {
+            if ($adesione->segnalante !== null) {
+                if ($adesione->email) {
+                    Notification::route('mail', $adesione->email)
+                        ->notify(new SegnalazioneChiusaNotification($segnalazione, $azione, $attore));
+                }
+                continue;
+            }
+
+            $utente = $adesione->utente;
+            if ($utente
+                && $utente->id !== $attore->id
+                && $utente->id !== $segnalazione->id_utente_segnalazione
+                && $utente->attivo !== false
+            ) {
+                $utente->notify(new SegnalazioneChiusaNotification($segnalazione, $azione, $attore));
+            }
+        }
     }
 
     private function automaticallyPublish(Segnalazione $segnalazione, int $previousStateId, int $newStateId): void

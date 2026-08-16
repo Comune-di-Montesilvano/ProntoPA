@@ -244,6 +244,94 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'verifica_account',
                 'descrizione' => 'Sospende automaticamente gli account che non confermano entro la scadenza',
             ],
+
+            // v0.6 — Adozione
+            [
+                'chiave'      => 'adesioni_enabled',
+                'valore'      => '1',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'adesioni',
+                'descrizione' => 'Abilita suggerimento duplicati e adesioni alle segnalazioni',
+            ],
+            [
+                'chiave'      => 'adesioni_soglia_priorita',
+                'valore'      => '3',
+                'tipo'        => 'integer',
+                'gruppo'      => 'adesioni',
+                'descrizione' => 'Ogni quante adesioni la priorità aumenta di un livello',
+            ],
+            [
+                'chiave'      => 'dedup_raggio_metri',
+                'valore'      => '150',
+                'tipo'        => 'integer',
+                'gruppo'      => 'adesioni',
+                'descrizione' => 'Raggio in metri per considerare simili due segnalazioni geolocalizzate',
+            ],
+            [
+                'chiave'      => 'dedup_giorni',
+                'valore'      => '90',
+                'tipo'        => 'integer',
+                'gruppo'      => 'adesioni',
+                'descrizione' => 'Finestra temporale in giorni per la ricerca di segnalazioni simili',
+            ],
+            [
+                'chiave'      => 'digest_enabled',
+                'valore'      => '1',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'digest',
+                'descrizione' => 'Abilita il digest mattutino per i gestori',
+            ],
+            [
+                'chiave'      => 'digest_ora',
+                'valore'      => '07:30',
+                'tipo'        => 'text',
+                'gruppo'      => 'digest',
+                'descrizione' => 'Orario di invio del digest (HH:MM)',
+            ],
+            [
+                'chiave'      => 'digest_skip_weekend',
+                'valore'      => '1',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'digest',
+                'descrizione' => 'Non inviare il digest il sabato e la domenica',
+            ],
+            [
+                'chiave'      => 'squadre_enabled',
+                'valore'      => '0',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'squadre',
+                'descrizione' => 'Abilita la gestione squadre di operai',
+            ],
+
+            // v0.8 — Assistente locale
+            [
+                'chiave'      => 'ai_enabled',
+                'valore'      => '0',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'ai',
+                'descrizione' => 'Abilita suggerimenti LLM locali (richiede Ollama)',
+            ],
+            [
+                'chiave'      => 'ai_modello',
+                'valore'      => 'qwen2.5:3b',
+                'tipo'        => 'text',
+                'gruppo'      => 'ai',
+                'descrizione' => 'Modello Ollama per generazione testo (titoli, triage)',
+            ],
+            [
+                'chiave'      => 'ai_embedding_modello',
+                'valore'      => 'nomic-embed-text',
+                'tipo'        => 'text',
+                'gruppo'      => 'ai',
+                'descrizione' => 'Modello Ollama per embeddings semantici (dedup)',
+            ],
+            [
+                'chiave'      => 'ai_ollama_url',
+                'valore'      => 'http://ollama:11434',
+                'tipo'        => 'text',
+                'gruppo'      => 'ai',
+                'descrizione' => 'URL interno del servizio Ollama',
+            ],
         ];
 
         foreach ($impostazioni as $impostazione) {

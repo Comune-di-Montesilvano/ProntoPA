@@ -111,12 +111,23 @@ services:
       - prontoPA
     restart: unless-stopped
 
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - prontoPA
+    restart: unless-stopped
+    profiles:
+      - ai
+
 volumes:
   mariadb_data:
   redis_data:
   app_storage:
   uploads:
   nginx_ssl:
+  ollama_data:
 
 networks:
   prontoPA:

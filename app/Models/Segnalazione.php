@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Squadra;
 
 class Segnalazione extends Model
 {
@@ -54,6 +55,10 @@ class Segnalazione extends Model
         'livello_priorita',
         'id_specializzazione',
         'ubicazione_tipo',
+        'id_squadra_assegnata',
+        'titolo_generato',
+        'triage_suggerito',
+        'embedding',
     ];
 
     protected function casts(): array
@@ -77,6 +82,8 @@ class Segnalazione extends Model
             'data_scadenza_sla'      => 'datetime',
             'sla_violato'            => 'boolean',
             'sla_warning_inviato'    => 'boolean',
+            'triage_suggerito'       => 'array',
+            'embedding'              => 'array',
         ];
     }
 
@@ -138,6 +145,17 @@ class Segnalazione extends Model
     {
         return $this->hasMany(AllegatoSegnalazione::class, 'id_segnalazione', 'id_segnalazione')
             ->orderByDesc('created_at');
+    }
+
+    public function adesioni(): HasMany
+    {
+        return $this->hasMany(AdesioneSegnalazione::class, 'id_segnalazione', 'id_segnalazione')
+            ->orderByDesc('created_at');
+    }
+
+    public function squadraAssegnata(): BelongsTo
+    {
+        return $this->belongsTo(Squadra::class, 'id_squadra_assegnata', 'id_squadra');
     }
 
     public function segnalazioneMadre(): BelongsTo
@@ -215,7 +233,26 @@ class Segnalazione extends Model
         }
 
         if ($user->hasRole('operaio')) {
-            return $query->where('id_operatore_assegnato', $user->id);
+            $squadreIds        = $user->squadre()->where('attiva', true)->pluck('squadre.id_squadra');
+            $squadreGuidateIds = $user->squadreGuidate()->where('attiva', true)->pluck('id_squadra');
+
+            return $query->where(function ($q) use ($user, $squadreIds, $squadreGuidateIds) {
+                $q->where('id_operatore_assegnato', $user->id);
+
+                if ($squadreGuidateIds->isNotEmpty()) {
+                    // Caposquadra: tutto ciò che è della squadra
+                    $q->orWhereIn('id_squadra_assegnata', $squadreGuidateIds);
+                }
+
+                if ($squadreIds->isNotEmpty()) {
+                    // Membro: lavori di squadra non ancora smistati a un singolo
+                    $q->orWhere(function ($qq) use ($squadreIds) {
+                        $qq->whereIn('id_squadra_assegnata', $squadreIds)
+                           ->where(fn ($z) => $z->where('id_operatore_assegnato', 0)
+                                                 ->orWhereNull('id_operatore_assegnato'));
+                    });
+                }
+            });
         }
 
         if ($user->hasRole('gestore') || $user->isGestore()) {
@@ -275,7 +312,7 @@ class Segnalazione extends Model
     {
         return $query->whereNotNull('data_scadenza_sla')
                      ->where('sla_violato', false)
-                     ->whereRaw('data_scadenza_sla > NOW()');
+                     ->where('data_scadenza_sla', '>', now());
     }
 
     public function scopeSlaViolato($query)

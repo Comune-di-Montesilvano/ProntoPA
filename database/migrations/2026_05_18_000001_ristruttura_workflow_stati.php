@@ -36,7 +36,9 @@ return new class extends Migration
 
     public function up(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        }
 
         // ── 1. Remap stati in segnalazioni ────────────────────────────────────
         $this->remapColonna('segnalazioni', 'id_stato_segnalazione');
@@ -98,7 +100,9 @@ return new class extends Migration
             ['id_azione' => 14, 'codice' => 'riapri',               'descrizione' => 'Riapri',                 'id_stato_segnalazione' => 2,    'competenza_azione' => 0, 'colore' => 'warning',   'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 1, 'ordine' => 120, 'parametri_filtro' => '{"stati":[7,8,9,10]}'],
         ]);
 
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        }
     }
 
     public function down(): void

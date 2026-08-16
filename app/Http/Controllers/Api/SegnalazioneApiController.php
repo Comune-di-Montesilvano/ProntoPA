@@ -33,7 +33,28 @@ class SegnalazioneApiController extends Controller
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
             'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
             'ubicazione_tipo'           => ['nullable', 'integer', 'between:0,4'],
+            'force'                     => ['nullable', 'boolean'],
         ]);
+
+        if (! $request->boolean('force')) {
+            $simili = app(\App\Services\DedupService::class)->trovaSimili(
+                (int) $request->input('id_tipologia_segnalazione'),
+                $request->filled('id_plesso') ? (int) $request->input('id_plesso') : null,
+                $request->filled('latitudine') ? (float) $request->input('latitudine') : null,
+                $request->filled('longitudine') ? (float) $request->input('longitudine') : null,
+            );
+
+            if ($simili->isNotEmpty()) {
+                return response()->json([
+                    'message' => 'Esistono segnalazioni simili già aperte. Ripeti con force=true per creare comunque.',
+                    'simili'  => $simili->map(fn ($s) => [
+                        'id'    => $s->id_segnalazione,
+                        'stato' => $s->stato?->descrizione,
+                        'data'  => $s->data_segnalazione?->toDateString(),
+                    ])->values(),
+                ], 409);
+            }
+        }
 
         $statoIniziale = StatoSegnalazione::where('iniziale', true)->first();
 

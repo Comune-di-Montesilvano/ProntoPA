@@ -11,8 +11,43 @@
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <form method="POST" action="{{ route('segnalazioni.store') }}" class="p-6 space-y-6"
                   enctype="multipart/form-data"
-                  x-data="{ tipologiaId: {{ old('id_tipologia_segnalazione', 'null') }} }">
+                  x-data="{ tipologiaId: {{ old('id_tipologia_segnalazione', 'null') }}, simili: [], ignora: false }"
+                  x-init="$watch('tipologiaId', () => { ignora = false; controllaSimili($data) })"
+                  x-on:change.capture="if ($event.target.name === 'id_plesso') { ignora = false; controllaSimili($data) }">
                 @csrf
+
+                {{-- Per conto di (telefonata / sportello) --}}
+                @can('segnalazioni.per-conto')
+                    <fieldset class="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4">
+                        <legend class="px-2 text-sm font-semibold text-amber-800">
+                            Per conto di (telefonata / sportello)
+                        </legend>
+                        <div class="grid gap-4 sm:grid-cols-3">
+                            <div>
+                                <x-input-label for="segnalante_per_conto" value="Nome chiamante" />
+                                <input type="text" name="segnalante_per_conto" id="segnalante_per_conto"
+                                       value="{{ old('segnalante_per_conto') }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <x-input-error :messages="$errors->get('segnalante_per_conto')" class="mt-1" />
+                            </div>
+                            <div>
+                                <x-input-label for="telefono_per_conto" value="Telefono" />
+                                <input type="text" name="telefono_per_conto" id="telefono_per_conto"
+                                       value="{{ old('telefono_per_conto') }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <x-input-error :messages="$errors->get('telefono_per_conto')" class="mt-1" />
+                            </div>
+                            <div>
+                                <x-input-label for="email_per_conto" value="Email (per la notifica di chiusura)" />
+                                <input type="email" name="email_per_conto" id="email_per_conto"
+                                       value="{{ old('email_per_conto') }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <x-input-error :messages="$errors->get('email_per_conto')" class="mt-1" />
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs text-amber-700">Campi facoltativi: compilali se segnali per conto di qualcun altro.</p>
+                    </fieldset>
+                @endcan
 
                 {{-- Tipologia — griglia icone --}}
                 <div>
@@ -116,40 +151,6 @@
                     <x-input-error :messages="$errors->get('livello_priorita')" class="mt-1" />
                 </div>
 
-                {{-- Specializzazione --}}
-                @if($specializzazioni->isNotEmpty())
-                <div>
-                    <x-input-label for="id_specializzazione" value="Tipo di intervento richiesto" />
-                    <select id="id_specializzazione" name="id_specializzazione"
-                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">— Generico / Non specificato —</option>
-                        @foreach($specializzazioni as $sp)
-                            <option value="{{ $sp->id_specializzazione }}"
-                                {{ old('id_specializzazione') == $sp->id_specializzazione ? 'selected' : '' }}>
-                                {{ $sp->descrizione }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <x-input-error :messages="$errors->get('id_specializzazione')" class="mt-1" />
-                </div>
-                @endif
-
-                {{-- Ubicazione --}}
-                <div>
-                    <x-input-label value="Dove si trova il problema" />
-                    <div class="mt-2 flex flex-wrap gap-2">
-                        @foreach([0 => 'Non specificato', 1 => 'Interno edificio', 2 => 'Esterno', 3 => 'Impianto', 4 => 'Area verde'] as $val => $label)
-                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
-                                <input type="radio" name="ubicazione_tipo" value="{{ $val }}"
-                                       {{ old('ubicazione_tipo', 0) == $val ? 'checked' : '' }}
-                                       class="text-blue-600 focus:ring-blue-500">
-                                <span class="text-sm text-gray-700">{{ $label }}</span>
-                            </label>
-                        @endforeach
-                    </div>
-                    <x-input-error :messages="$errors->get('ubicazione_tipo')" class="mt-1" />
-                </div>
-
                 {{-- Testo --}}
                 <div>
                     <x-input-label for="testo_segnalazione" value="Descrizione del problema *" />
@@ -161,7 +162,81 @@
                     <x-input-error :messages="$errors->get('testo_segnalazione')" class="mt-1" />
                 </div>
 
-                {{-- Geolocalizzazione --}}
+                {{-- Più dettagli (progressive disclosure) --}}
+                <div x-data="{ dettagli: {{ $errors->any() ? 'true' : 'false' }} }" class="mt-6">
+                    <button type="button" @click="dettagli = !dettagli"
+                            class="flex items-center gap-2 text-sm font-medium text-blue-700">
+                        <span x-text="dettagli ? '▾' : '▸'"></span> Più dettagli
+                    </button>
+                    <div x-show="dettagli" class="mt-4 space-y-6">
+
+                        {{-- Specializzazione --}}
+                        @if($specializzazioni->isNotEmpty())
+                        <div>
+                            <x-input-label for="id_specializzazione" value="Tipo di intervento richiesto" />
+                            <select id="id_specializzazione" name="id_specializzazione"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">— Generico / Non specificato —</option>
+                                @foreach($specializzazioni as $sp)
+                                    <option value="{{ $sp->id_specializzazione }}"
+                                        {{ old('id_specializzazione') == $sp->id_specializzazione ? 'selected' : '' }}>
+                                        {{ $sp->descrizione }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('id_specializzazione')" class="mt-1" />
+                        </div>
+                        @endif
+
+                        {{-- Ubicazione --}}
+                        <div>
+                            <x-input-label value="Dove si trova il problema" />
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                @foreach([0 => 'Non specificato', 1 => 'Interno edificio', 2 => 'Esterno', 3 => 'Impianto', 4 => 'Area verde'] as $val => $label)
+                                    <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="ubicazione_tipo" value="{{ $val }}"
+                                               {{ old('ubicazione_tipo', 0) == $val ? 'checked' : '' }}
+                                               class="text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm text-gray-700">{{ $label }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <x-input-error :messages="$errors->get('ubicazione_tipo')" class="mt-1" />
+                        </div>
+
+                        {{-- Allegati --}}
+                        @php
+                            $allegatiMaxSizeMb      = (int) \App\Models\Impostazione::get('allegati_max_size_mb', 10);
+                            $allegatiMaxPerRequest  = (int) \App\Models\Impostazione::get('allegati_max_per_request', 5);
+                            $allegatiMime           = \App\Models\Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png');
+                        @endphp
+                        <div>
+                            <x-input-label for="allegati_create" value="Allegati (foto / video — opzionale)" />
+                            <p class="text-xs text-gray-400 mb-2">
+                                Max {{ $allegatiMaxPerRequest }} file, {{ $allegatiMaxSizeMb }}&nbsp;MB ciascuno.
+                                Formati accettati: foto e video.
+                            </p>
+                            <input id="allegati_create" type="file" name="allegati[]" multiple
+                                   accept="{{ $allegatiMime }}"
+                                   capture="environment"
+                                   class="block w-full text-sm text-gray-500
+                                          file:mr-4 file:py-2 file:px-4
+                                          file:rounded-md file:border-0
+                                          file:text-sm file:font-semibold
+                                          file:bg-blue-50 file:text-blue-700
+                                          hover:file:bg-blue-100" />
+                            @error('allegati')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                            @error('allegati.*')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                    </div>{{-- /x-show dettagli --}}
+                </div>{{-- /x-data dettagli --}}
+
+                {{-- Geolocalizzazione (outside collapse — Leaflet must init on visible DOM) --}}
                 <input type="hidden" name="latitudine" id="latitudine" value="{{ old('latitudine', '0') }}">
                 <input type="hidden" name="longitudine" id="longitudine" value="{{ old('longitudine', '0') }}">
 
@@ -175,34 +250,35 @@
                     </div>
                 </div>
 
-                {{-- Allegati --}}
-                @php
-                    $allegatiMaxSizeMb      = (int) \App\Models\Impostazione::get('allegati_max_size_mb', 10);
-                    $allegatiMaxPerRequest  = (int) \App\Models\Impostazione::get('allegati_max_per_request', 5);
-                    $allegatiMime           = \App\Models\Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png');
-                @endphp
-                <div>
-                    <x-input-label for="allegati_create" value="Allegati (foto / video — opzionale)" />
-                    <p class="text-xs text-gray-400 mb-2">
-                        Max {{ $allegatiMaxPerRequest }} file, {{ $allegatiMaxSizeMb }}&nbsp;MB ciascuno.
-                        Formati accettati: foto e video.
-                    </p>
-                    <input id="allegati_create" type="file" name="allegati[]" multiple
-                           accept="{{ $allegatiMime }}"
-                           capture="environment"
-                           class="block w-full text-sm text-gray-500
-                                  file:mr-4 file:py-2 file:px-4
-                                  file:rounded-md file:border-0
-                                  file:text-sm file:font-semibold
-                                  file:bg-blue-50 file:text-blue-700
-                                  hover:file:bg-blue-100" />
-                    @error('allegati')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                    @error('allegati.*')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                {{-- Banner segnalazioni simili --}}
+                <template x-if="simili.length > 0 && !ignora">
+                    <div class="mb-4 rounded-lg border border-yellow-400 bg-yellow-50 p-4">
+                        <p class="font-semibold text-yellow-800">
+                            ⚠ <span x-text="simili.length"></span> segnalazioni simili già aperte
+                        </p>
+                        <ul class="mt-2 space-y-2">
+                            <template x-for="s in simili" :key="s.id">
+                                <li class="flex items-center justify-between gap-3 text-sm">
+                                    <span>
+                                        <strong x-text="'#' + s.id"></strong>
+                                        <template x-if="s.testo"><span x-text="' ' + s.testo"></span></template>
+                                        <em class="text-gray-500" x-text="' (' + s.stato + ', ' + s.data + ')'"></em>
+                                        <template x-if="s.adesioni > 0"><span class="text-purple-700" x-text="' +' + s.adesioni + ' adesioni'"></span></template>
+                                    </span>
+                                    <button type="button"
+                                            @click="aderisciSimile(s.id)"
+                                            class="shrink-0 rounded bg-yellow-600 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-700">
+                                        È la stessa cosa → aggiungiti
+                                    </button>
+                                </li>
+                            </template>
+                        </ul>
+                        <button type="button" @click="ignora = true"
+                                class="mt-3 text-xs text-yellow-700 underline">
+                            È un problema diverso, continua con l'invio
+                        </button>
+                    </div>
+                </template>
 
                 {{-- Actions --}}
                 <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
@@ -211,6 +287,12 @@
                             class="inline-flex items-center px-5 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-sm text-white uppercase tracking-widest hover:bg-blue-700 transition">
                         Invia segnalazione
                     </button>
+                    @can('segnalazioni.per-conto')
+                        <button type="submit" name="salva_e_nuova" value="1"
+                                class="ml-3 inline-flex items-center rounded-md border border-blue-600 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">
+                            Salva e inserisci nuova
+                        </button>
+                    @endcan
                 </div>
             </form>
         </div>
@@ -221,6 +303,52 @@
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     @endpush
     @push('scripts')
+        <script>
+        async function controllaSimili(data) {
+            const tip = data.tipologiaId;
+            if (!tip) { data.simili = []; return; }
+            const params = new URLSearchParams({ id_tipologia_segnalazione: tip });
+            const ple = document.querySelector('[name=id_plesso]')?.value;
+            const lat = document.getElementById('latitudine')?.value;
+            const lng = document.getElementById('longitudine')?.value;
+            const txt = document.querySelector('[name=testo_segnalazione]')?.value;
+            if (ple) params.set('id_plesso', ple);
+            if (lat && lng && lat !== '0') { params.set('latitudine', lat); params.set('longitudine', lng); }
+            if (txt && txt.length > 10) params.set('testo', txt.substring(0, 500));
+            try {
+                const res = await fetch('{{ route('segnalazioni.simili') }}?' + params, {
+                    headers: { 'Accept': 'application/json' },
+                });
+                data.simili = res.ok ? await res.json() : [];
+            } catch (e) {
+                data.simili = [];
+            }
+        }
+
+        let _aderisciSubmitting = false;
+        function aderisciSimile(id) {
+            if (_aderisciSubmitting) return;
+            _aderisciSubmitting = true;
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ url('segnalazioni') }}/' + id + '/adesioni';
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden'; csrf.name = '_token'; csrf.value = '{{ csrf_token() }}';
+            form.appendChild(csrf);
+            ['segnalante_per_conto', 'telefono_per_conto', 'email_per_conto'].forEach((name, i) => {
+                const src = document.querySelector('[name=' + name + ']');
+                if (src?.value) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = ['segnalante', 'telefono', 'email'][i];
+                    input.value = src.value;
+                    form.appendChild(input);
+                }
+            });
+            document.body.appendChild(form);
+            form.submit();
+        }
+        </script>
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script>
             const defaultLat  = {{ \App\Models\Impostazione::get('osm_lat', 42.5098) }};
