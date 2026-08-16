@@ -37,7 +37,12 @@ docker compose exec php sh
 docker compose exec php php artisan <cmd>
 docker compose exec php composer <cmd>
 docker compose exec php npm run build
+docker compose exec php composer run analyse   # larastan, baseline in phpstan-baseline.neon
 ```
+
+**Dopo `git pull`/merge**: se `composer.json` è cambiato, `composer install` — vendor/ non tracciato, "Class not found" spesso è solo questo, non un bug.
+
+**Gotcha Docker dev**: `docker compose restart php` da solo → nginx tiene l'IP upstream vecchio (risolto una volta sola all'avvio) → 502. Riavvia anche `nginx`, o l'intero stack.
 
 ## .env
 
@@ -108,6 +113,8 @@ app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  Ch
 | `segnalatore` | Proprie segnalazioni. Ha `id_provenienza` (scuola/URP/portale/interno) |
 | `impresa` | Solo lavori propria impresa. Ditte non registrate operano via magic-link firmato (no login) |
 
+Login: campo form si chiama `username` (accetta lo username, non l'email) — `AuthenticatedSessionController`/`LoginRequest`.
+
 ## Workflow Stati
 
 Fonte di verità: `app/Enums/SegnalazioneStato.php` (int-backed enum, **non** una tabella di riferimento).
@@ -160,6 +167,10 @@ git tag v1.2.0 && git push origin v1.2.0
 - Models: Eloquent+relazioni esplicite, `scopeVisibileA(User $user)`, cast date+bool
 - Views: layout `layouts/app.blade.php`, componenti `components/`, sezioni `gestione/ segnalatore/ imprese/ admin/`
 - Email: Laravel Notifications → Mailpit dev, SMTP/PEC prod
+
+## Test
+
+CSRF/throttle non auto-bypassati nei Feature test nonostante `APP_ENV=testing` (`app()->runningUnitTests()` risulta `false` qui). Sui POST a rotte `web`: `$this->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class, \Illuminate\Routing\Middleware\ThrottleRequests::class])`.
 
 ## Deploy Prod (Portainer/Podman rootless)
 
