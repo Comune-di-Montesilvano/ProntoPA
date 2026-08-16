@@ -26,8 +26,7 @@ services:
       - ./:/var/www/html
       - ./storage:/var/www/html/storage
       - ./public/storage:/var/www/html/public/storage
-    environment:
-      PHP_OPCACHE_ENABLE: 0
+      - ./docker/php/opcache-dev.ini:/usr/local/etc/php/conf.d/opcache.ini:ro
     restart: "no"
 
   mariadb:
