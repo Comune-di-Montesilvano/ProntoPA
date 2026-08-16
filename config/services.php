@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Fallback .env per webhook_cittadini_url/secret quando non configurati
+    // da Admin → Impostazioni. env() letto qui (dentro config/), non nel
+    // service: altrimenti ritorna null se l'app gira con config:cache.
+    'webhook_cittadini' => [
+        'url'    => env('WEBHOOK_CITTADINI_URL'),
+        'secret' => env('WEBHOOK_CITTADINI_SECRET'),
+    ],
+
 ];

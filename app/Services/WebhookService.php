@@ -17,8 +17,8 @@ class WebhookService
      */
     public function notificaCambioStato(Segnalazione $segnalazione): void
     {
-        $url    = Impostazione::get('webhook_cittadini_url') ?: env('WEBHOOK_CITTADINI_URL');
-        $secret = Impostazione::get('webhook_cittadini_secret') ?: env('WEBHOOK_CITTADINI_SECRET');
+        $url    = Impostazione::get('webhook_cittadini_url') ?: config('services.webhook_cittadini.url');
+        $secret = Impostazione::get('webhook_cittadini_secret') ?: config('services.webhook_cittadini.secret');
 
         if (empty($url)) {
             return;
