@@ -106,3 +106,18 @@ AI opzionale on-premise (Ollama, profilo Docker `ai`), sempre asincrona (job in 
 - Tempi medi per transizione da storico stati, report mensile gestore, riepilogo impresa
 - Export XLSX, fascicolo PDF completo
 - Indicatori aggregati in home pubblica
+
+---
+
+## v1.1 — Hardening 📋 SPEC (non iniziato)
+
+Spec: [`docs/superpowers/specs/2026-08-17-v11-hardening-design.md`](docs/superpowers/specs/2026-08-17-v11-hardening-design.md)
+
+- Password policy coerente (wizard vs registrazione/cambio password)
+- Dependabot (composer/npm/github-actions)
+- Alert su job falliti in coda
+- 2FA obbligatoria admin/gestore
+- Scan antimalware upload allegati
+- Test E2E (Dusk) sui flow critici
+- Retention/cancellazione dati GDPR (richiede decisione ente)
+- Ambiente di staging (richiede infrastruttura)
