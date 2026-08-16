@@ -77,9 +77,9 @@
 ## v1.0 — Riuso e numeri 🔄 IN CORSO
 
 ### Pacchetto riuso
-- Wizard primo avvio (`/setup`) ✅
+- Wizard primo avvio (`/setup`, token + OTP via email) ✅
 - `publiccode.yml` + `LICENSE` (EUPL-1.2) ✅
-- Comando `artisan demo` per dati realistici — da fare
+- Comando `artisan demo` per dati realistici ✅
 - Documentazione API OpenAPI — da fare
 - Audit accessibilità AGID (L. 4/2004) — da fare
 

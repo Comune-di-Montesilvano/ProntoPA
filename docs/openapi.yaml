@@ -1,0 +1,184 @@
+openapi: 3.1.0
+
+info:
+  title: ProntoPA — API integrazione portale cittadini
+  version: "1.0"
+  description: >
+    Endpoint REST per integrare il sito istituzionale del Comune con ProntoPA:
+    creazione segnalazioni dal portale cittadini e lettura dello stato.
+    Documentazione narrativa: docs/API.md.
+  license:
+    name: EUPL-1.2
+    url: https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+
+servers:
+  - url: https://{host}/api
+    variables:
+      host:
+        default: your-instance.example.it
+
+security:
+  - bearerAuth: []
+
+paths:
+  /segnalazioni:
+    post:
+      operationId: creaSegnalazione
+      summary: Crea una nuova segnalazione
+      description: >
+        Crea una segnalazione ricevuta dal sito web del Comune. Se esistono
+        segnalazioni simili già aperte (stessa tipologia, stesso plesso o
+        entro ~150m, ultimi 90 giorni) e `force` non è `true`, risponde 409
+        con l'elenco invece di creare un duplicato.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NuovaSegnalazione'
+            examples:
+              base:
+                value:
+                  id_tipologia_segnalazione: 3
+                  testo_segnalazione: "Infiltrazione d'acqua nel tetto della palestra"
+                  id_provenienza: 1
+                  segnalante: "Mario Rossi"
+                  email: "mario@example.it"
+                  latitudine: 42.461
+                  longitudine: 14.214
+      responses:
+        '201':
+          description: Segnalazione creata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id_segnalazione: { type: integer, example: 42 }
+                  stato: { type: string, example: "In attesa di esame" }
+        '409':
+          description: Segnalazioni simili già aperte (dedup)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  simili:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        stato: { type: string }
+                        data: { type: string, format: date }
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /segnalazioni/{id}/stato:
+    get:
+      operationId: leggiStatoSegnalazione
+      summary: Legge lo stato corrente di una segnalazione
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+          description: id_segnalazione
+      responses:
+        '200':
+          description: Stato corrente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatoSegnalazione'
+        '404':
+          description: Segnalazione non trovata
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+webhooks:
+  statoSegnalazioneCambiato:
+    post:
+      operationId: webhookStatoCambiato
+      summary: Notifica al sito del Comune al cambio di stato di una segnalazione
+      description: >
+        Inviato da ProntoPA (non ricevuto) quando lo stato di una
+        segnalazione cambia, se un URL è configurato in
+        Admin → Impostazioni → Webhook cittadini. Firmato HMAC-SHA256,
+        3 tentativi con backoff 30s/120s se il ricevente non risponde 2xx.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                evento: { type: string, example: stato_cambiato }
+                id_segnalazione: { type: integer }
+                stato:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    descrizione: { type: string }
+                data_aggiornamento: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Il ricevente conferma la ricezione (qualunque 2xx va bene)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: "Laravel Sanctum personal access token"
+
+  schemas:
+    NuovaSegnalazione:
+      type: object
+      required: [id_tipologia_segnalazione, testo_segnalazione, id_provenienza]
+      properties:
+        id_tipologia_segnalazione: { type: integer, description: "Deve esistere in tipologie_segnalazioni" }
+        testo_segnalazione: { type: string, maxLength: 2000 }
+        id_provenienza: { type: integer, description: "Deve esistere in provenienze_segnalazioni" }
+        id_plesso: { type: integer, nullable: true }
+        segnalante: { type: string, maxLength: 100, nullable: true }
+        email: { type: string, format: email, maxLength: 100, nullable: true }
+        telefono: { type: string, maxLength: 50, nullable: true }
+        latitudine: { type: number, nullable: true }
+        longitudine: { type: number, nullable: true }
+        segnalazione_urgente: { type: boolean, nullable: true }
+        livello_priorita: { type: integer, minimum: 1, maximum: 4, nullable: true }
+        id_specializzazione: { type: integer, nullable: true, description: "Deve esistere in db_specializzazioni" }
+        ubicazione_tipo: { type: integer, minimum: 0, maximum: 4, nullable: true }
+        force:
+          type: boolean
+          nullable: true
+          description: "true per creare comunque nonostante segnalazioni simili aperte"
+
+    StatoSegnalazione:
+      type: object
+      properties:
+        id_segnalazione: { type: integer }
+        stato:
+          type: object
+          properties:
+            id: { type: integer, description: "1=Nuova 2=In carico 3=Assegnata a operatore 4=Assegnata a impresa 5=Preventivo in attesa 6=Sospesa 7=Completata 8=Duplicata 9=Annullata 10=Archiviata" }
+            descrizione: { type: string }
+        data_segnalazione: { type: string, format: date-time }
+        data_chiusura: { type: string, format: date-time, nullable: true }
+        flag_evidenza: { type: boolean }
+
+  responses:
+    ValidationError:
+      description: Dati non validi
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+              errors: { type: object, additionalProperties: { type: array, items: { type: string } } }
+    Unauthorized:
+      description: Token Sanctum mancante o non valido

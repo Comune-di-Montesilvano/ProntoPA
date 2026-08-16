@@ -1,5 +1,7 @@
 # ProntoPA — Documentazione API REST
 
+Spec machine-readable (OpenAPI 3.1, importabile in Swagger UI/Postman/Insomnia): [`openapi.yaml`](openapi.yaml).
+
 ## Autenticazione
 
 Tutti gli endpoint richiedono un **Laravel Sanctum token** inviato come Bearer:
@@ -37,6 +39,11 @@ Crea una nuova segnalazione da portale cittadini esterno.
 | `telefono` | string | ❌ | Telefono di contatto, max 50 |
 | `latitudine` | numeric | ❌ | Coordinate GPS |
 | `longitudine` | numeric | ❌ | Coordinate GPS |
+| `segnalazione_urgente` | boolean | ❌ | |
+| `livello_priorita` | integer | ❌ | 1–4 |
+| `id_specializzazione` | integer | ❌ | Deve esistere in `db_specializzazioni` |
+| `ubicazione_tipo` | integer | ❌ | 0–4 |
+| `force` | boolean | ❌ | `true` per creare comunque nonostante segnalazioni simili aperte (vedi 409 sotto) |
 
 **Risposta 201 Created:**
 
@@ -55,6 +62,19 @@ Crea una nuova segnalazione da portale cittadini esterno.
     "errors": {
         "id_tipologia_segnalazione": ["The id_tipologia_segnalazione field is required."]
     }
+}
+```
+
+**Risposta 409 Conflict** (segnalazioni simili già aperte — stessa tipologia,
+stesso plesso o entro ~150m, ultimi 90 giorni; salta questo controllo con
+`force: true` nel body):
+
+```json
+{
+    "message": "Esistono segnalazioni simili già aperte. Ripeti con force=true per creare comunque.",
+    "simili": [
+        { "id": 17, "stato": "In carico", "data": "2026-05-20" }
+    ]
 }
 ```
 
@@ -94,7 +114,7 @@ Restituisce lo stato corrente di una segnalazione.
     "id_segnalazione": 42,
     "stato": {
         "id": 3,
-        "descrizione": "In gestione"
+        "descrizione": "Assegnata a operatore"
     },
     "data_segnalazione": "2026-05-01T10:00:00+02:00",
     "data_chiusura": null,
@@ -126,7 +146,7 @@ se configurato in **Admin → Impostazioni → Webhook cittadini**.
     "id_segnalazione": 42,
     "stato": {
         "id": 3,
-        "descrizione": "In gestione"
+        "descrizione": "Assegnata a operatore"
     },
     "data_aggiornamento": "2026-05-13T14:30:00+02:00"
 }
