@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="Area riservata operatori — accedi per gestire le segnalazioni di manutenzione di {{ \App\Models\Impostazione::get('ente_nome', 'ProntoPA') }}.">
 
     <title>Accedi — {{ \App\Models\Impostazione::get('ente_nome', 'ProntoPA') }}</title>
 
@@ -60,18 +61,18 @@
                        font-style:italic; color:#fff; margin:0; line-height:1.2; letter-spacing:-.005em;">
                 Ogni segnalazione<br>è una promessa<br>al cittadino.
             </h1>
-            <p style="font-size:14px; color:rgba(255,255,255,.72); margin:8px 0 0; line-height:1.55; max-width:320px;">
+            <p style="font-size:14px; color:rgba(255,255,255,.88); margin:8px 0 0; line-height:1.55; max-width:320px;">
                 Gestisci flussi, imprese e tempi di risposta di {{ $enteNome }}.
             </p>
         </div>
 
-        <div style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,.4); position:relative; z-index:1;">
+        <div style="font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,.8); position:relative; z-index:1;">
             v{{ config('app.version', 'dev') }} · AGPL-3.0
         </div>
     </div>
 
     {{-- ── Colonna destra — form ───────────────────────────────────────────── --}}
-    <div style="background:var(--paper); padding:64px 56px;
+    <main style="background:var(--paper); padding:64px 56px;
                 display:flex; flex-direction:column; justify-content:center; gap:24px;">
 
         <div>
@@ -141,7 +142,7 @@
                 </a>
             </p>
         @endif
-    </div>
+    </main>
 </div>
 </body>
 </html>

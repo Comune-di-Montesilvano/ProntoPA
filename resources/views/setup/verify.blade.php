@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="Conferma il codice ricevuto via email per completare il setup di ProntoPA.">
     <title>Conferma codice — ProntoPA</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -11,7 +12,7 @@
 </head>
 <body class="antialiased" style="background: var(--slate-50); font-family: var(--font-ui);">
 
-<div class="min-h-screen flex flex-col sm:justify-center items-center py-10 px-4">
+<main class="min-h-screen flex flex-col sm:justify-center items-center py-10 px-4">
     <div class="w-full max-w-md">
 
         <div class="text-center mb-8">
@@ -22,7 +23,7 @@
                 </svg>
             </div>
             <h1 class="text-2xl font-bold" style="color: var(--ink);">Controlla la tua email</h1>
-            <p class="mt-1 text-sm" style="color: var(--slate-500);">
+            <p class="mt-1 text-sm" style="color: var(--slate-600);">
                 Codice inviato a <strong>{{ $email }}</strong>
             </p>
         </div>
@@ -43,15 +44,15 @@
                 @csrf
 
                 <div>
-                    <label class="block text-sm font-medium mb-1" style="color: var(--ink);">
+                    <label for="otp" class="block text-sm font-medium mb-1" style="color: var(--ink);">
                         Codice di conferma <span style="color: #EF4444;">*</span>
                     </label>
-                    <input type="text" name="otp" required autocomplete="one-time-code" inputmode="numeric"
+                    <input id="otp" type="text" name="otp" required autocomplete="one-time-code" inputmode="numeric"
                            maxlength="6" pattern="[0-9]{6}"
                            class="block w-full rounded-lg text-center text-2xl tracking-[0.5em] font-mono px-3 py-3"
                            style="border: 1px solid var(--slate-300); outline: none;"
                            placeholder="000000" autofocus>
-                    <p class="mt-1 text-xs" style="color: var(--slate-400);">Valido per 10 minuti.</p>
+                    <p class="mt-1 text-xs" style="color: var(--slate-500);">Valido per 10 minuti.</p>
                 </div>
 
                 <button type="submit"
@@ -68,7 +69,7 @@
             </a>
         </div>
     </div>
-</div>
+</main>
 
 </body>
 </html>

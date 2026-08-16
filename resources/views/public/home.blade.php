@@ -88,7 +88,7 @@
                     <canvas id="chartMesi" height="100"></canvas>
                 @else
                     <div style="display:flex; align-items:center; justify-content:center; height:120px;
-                                font-size:13px; color:var(--slate-400);">
+                                font-size:13px; color:var(--slate-500);">
                         Nessun dato disponibile.
                     </div>
                 @endif
@@ -125,7 +125,7 @@
                 @if(count($tipologiaLabel) > 0)
                     <canvas id="chartTipologia"></canvas>
                 @else
-                    <div style="display:flex;align-items:center;justify-content:center;height:120px;font-size:13px;color:var(--slate-400);">
+                    <div style="display:flex;align-items:center;justify-content:center;height:120px;font-size:13px;color:var(--slate-500);">
                         Nessuna tipologia disponibile.
                     </div>
                 @endif
@@ -137,7 +137,7 @@
                 @if(count($statoLabel) > 0)
                     <canvas id="chartStato"></canvas>
                 @else
-                    <div style="display:flex;align-items:center;justify-content:center;height:120px;font-size:13px;color:var(--slate-400);">
+                    <div style="display:flex;align-items:center;justify-content:center;height:120px;font-size:13px;color:var(--slate-500);">
                         Nessuno stato disponibile.
                     </div>
                 @endif

@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="Configurazione guidata del primo account amministratore di ProntoPA.">
     <title>Setup iniziale — ProntoPA</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -11,7 +12,7 @@
 </head>
 <body class="antialiased" style="background: var(--slate-50); font-family: var(--font-ui);">
 
-<div class="min-h-screen flex flex-col sm:justify-center items-center py-10 px-4">
+<main class="min-h-screen flex flex-col sm:justify-center items-center py-10 px-4">
     <div class="w-full max-w-md">
 
         {{-- Header --}}
@@ -25,7 +26,7 @@
                 </svg>
             </div>
             <h1 class="text-2xl font-bold" style="color: var(--ink);">Setup iniziale ProntoPA</h1>
-            <p class="mt-1 text-sm" style="color: var(--slate-500);">Crea l'account amministratore per iniziare</p>
+            <p class="mt-1 text-sm" style="color: var(--slate-600);">Crea l'account amministratore per iniziare</p>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm p-8" style="border: 1px solid var(--slate-200);">
@@ -44,23 +45,23 @@
                 @csrf
 
                 <div>
-                    <label class="block text-sm font-medium mb-1" style="color: var(--ink);">
+                    <label for="token" class="block text-sm font-medium mb-1" style="color: var(--ink);">
                         Token di avvio <span style="color: #EF4444;">*</span>
                     </label>
-                    <input type="password" name="token" required autocomplete="off"
+                    <input id="token" type="password" name="token" required autocomplete="off"
                            class="block w-full rounded-lg text-sm px-3 py-2"
                            style="border: 1px solid var(--slate-300); outline: none;"
                            placeholder="SETUP_TOKEN da .env">
-                    <p class="mt-1 text-xs" style="color: var(--slate-400);">
+                    <p class="mt-1 text-xs" style="color: var(--slate-600);">
                         Valore di <code>SETUP_TOKEN</code> configurato sul server.
                     </p>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium mb-1" style="color: var(--ink);">
+                    <label for="email" class="block text-sm font-medium mb-1" style="color: var(--ink);">
                         Email amministratore <span style="color: #EF4444;">*</span>
                     </label>
-                    <input type="email" name="email" value="{{ old('email') }}"
+                    <input id="email" type="email" name="email" value="{{ old('email') }}"
                            required maxlength="200"
                            class="block w-full rounded-lg text-sm px-3 py-2"
                            style="border: 1px solid var(--slate-300); outline: none;"
@@ -68,25 +69,25 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium mb-1" style="color: var(--ink);">
+                    <label for="password" class="block text-sm font-medium mb-1" style="color: var(--ink);">
                         Password <span style="color: #EF4444;">*</span>
                     </label>
-                    <input type="password" name="password" required autocomplete="new-password"
+                    <input id="password" type="password" name="password" required autocomplete="new-password"
                            class="block w-full rounded-lg text-sm px-3 py-2"
                            style="border: 1px solid var(--slate-300); outline: none;">
-                    <p class="mt-1 text-xs" style="color: var(--slate-400);">Almeno 10 caratteri, maiuscole/minuscole e numeri.</p>
+                    <p class="mt-1 text-xs" style="color: var(--slate-600);">Almeno 10 caratteri, maiuscole/minuscole e numeri.</p>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium mb-1" style="color: var(--ink);">
+                    <label for="password_confirmation" class="block text-sm font-medium mb-1" style="color: var(--ink);">
                         Conferma password <span style="color: #EF4444;">*</span>
                     </label>
-                    <input type="password" name="password_confirmation" required autocomplete="new-password"
+                    <input id="password_confirmation" type="password" name="password_confirmation" required autocomplete="new-password"
                            class="block w-full rounded-lg text-sm px-3 py-2"
                            style="border: 1px solid var(--slate-300); outline: none;">
                 </div>
 
-                <p class="text-xs" style="color: var(--slate-400);">
+                <p class="text-xs" style="color: var(--slate-500);">
                     Riceverai un codice di conferma via email da inserire nel passaggio successivo.
                 </p>
 
@@ -98,7 +99,7 @@
             </form>
         </div>
     </div>
-</div>
+</main>
 
 </body>
 </html>

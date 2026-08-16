@@ -25,14 +25,14 @@
                     <div class="text-4xl font-bold text-green-600">{{ $slaCompliance !== null ? $slaCompliance.'%' : '—' }}</div>
                     <div>
                         <div class="text-sm font-semibold text-gray-700">SLA compliance</div>
-                        <div class="text-xs text-gray-400 mt-0.5">Interventi chiusi senza violazione SLA</div>
+                        <div class="text-xs text-gray-500 mt-0.5">Interventi chiusi senza violazione SLA</div>
                     </div>
                 </div>
                 <div class="bg-white shadow-sm rounded-lg p-5 flex items-center gap-4">
-                    <div class="text-4xl font-bold text-purple-600">{{ $tempoMedioGg }}<span class="text-lg font-normal text-gray-400 ml-1">gg</span></div>
+                    <div class="text-4xl font-bold text-purple-600">{{ $tempoMedioGg }}<span class="text-lg font-normal text-gray-500 ml-1">gg</span></div>
                     <div>
                         <div class="text-sm font-semibold text-gray-700">Tempo medio risoluzione</div>
-                        <div class="text-xs text-gray-400 mt-0.5">Media su tutti gli interventi chiusi</div>
+                        <div class="text-xs text-gray-500 mt-0.5">Media su tutti gli interventi chiusi</div>
                     </div>
                 </div>
             </div>
@@ -43,7 +43,7 @@
                 @if(count($mesiLabel) > 0)
                     <canvas id="chartMesi" height="80"></canvas>
                 @else
-                    <p class="text-center text-gray-400 text-sm py-8">Nessun dato disponibile.</p>
+                    <p class="text-center text-gray-500 text-sm py-8">Nessun dato disponibile.</p>
                 @endif
             </div>
 
@@ -54,7 +54,7 @@
                     @if(count($tipologiaLabel) > 0)
                         <canvas id="chartTipologia"></canvas>
                     @else
-                        <p class="text-center text-gray-400 text-sm py-8">Nessun dato.</p>
+                        <p class="text-center text-gray-500 text-sm py-8">Nessun dato.</p>
                     @endif
                 </div>
 
@@ -64,7 +64,7 @@
                     @if(count($statoLabel) > 0)
                         <canvas id="chartStato"></canvas>
                     @else
-                        <p class="text-center text-gray-400 text-sm py-8">Nessun dato.</p>
+                        <p class="text-center text-gray-500 text-sm py-8">Nessun dato.</p>
                     @endif
                 </div>
             </div>
@@ -76,7 +76,7 @@
                     @if(count($caricoLabel) > 0)
                         <canvas id="chartCarico" height="200"></canvas>
                     @else
-                        <p class="text-center text-gray-400 text-sm py-8">Nessun operatore con segnalazioni aperte.</p>
+                        <p class="text-center text-gray-500 text-sm py-8">Nessun operatore con segnalazioni aperte.</p>
                     @endif
                 </div>
 
@@ -85,7 +85,7 @@
                     @if(count($trendLabel) > 0)
                         <canvas id="chartTrend" height="200"></canvas>
                     @else
-                        <p class="text-center text-gray-400 text-sm py-8">Nessun dato.</p>
+                        <p class="text-center text-gray-500 text-sm py-8">Nessun dato.</p>
                     @endif
                 </div>
             </div>
@@ -110,7 +110,7 @@
                             <td class="px-4 py-2 text-gray-800">{{ $transizione['descrizione'] }}</td>
                             <td class="px-4 py-2 text-right text-gray-600 font-mono">{{ $transizione['ore_medie'] }}h</td>
                             <td class="px-4 py-2 text-right text-gray-600 font-mono">{{ $transizione['gg_medi'] }}gg</td>
-                            <td class="px-4 py-2 text-right text-gray-400 text-xs">{{ $transizione['campioni'] }}</td>
+                            <td class="px-4 py-2 text-right text-gray-500 text-xs">{{ $transizione['campioni'] }}</td>
                         </tr>
                         @endforeach
                     </tbody>
