@@ -204,9 +204,27 @@ ProntoPA usa due immagini Docker pre-compilate, pubblicate su GHCR dopo ogni rel
 
 ### Prima installazione
 
-Dopo il primo avvio il container esegue automaticamente le migrations. Se il database è vuoto viene anche eseguito il seed iniziale (crea l'utente admin).
+Dopo il primo avvio il container esegue automaticamente le migrations e il seed dei dati di riferimento.
+
+**Imposta `SETUP_TOKEN`** nelle variabili d'ambiente dello stack (un valore casuale, es. `openssl rand -hex 32`) prima del primo avvio: apri `/setup`, inserisci il token, email e password del futuro admin → conferma via OTP ricevuto via email. Senza `SETUP_TOKEN`, comportamento legacy: l'admin viene creato subito da `ADMIN_*` (password in chiaro nelle env vars — sconsigliato in produzione).
 
 Poi accedi e configura il tuo ente in **Admin → Impostazioni**.
+
+### Backup
+
+Dati persistenti in 3 named volume: `mariadb_data` (database), `app_storage`+`uploads` (allegati segnalazioni, logo ente). Backup minimo:
+
+```bash
+# Dump del database
+docker compose exec mariadb mariadb-dump -u segnalazioni -p segnalazioni > backup-$(date +%F).sql
+
+# Copia degli allegati (storage) — il nome del volume dipende dal nome
+# dello stack Portainer, verifica con `docker volume ls | grep uploads`
+docker run --rm -v <stack>_uploads:/data -v $(pwd):/backup alpine \
+  tar czf /backup/uploads-$(date +%F).tar.gz -C /data .
+```
+
+Pianifica entrambi via cron esterno all'host (non c'è nulla nello stack che lo fa automaticamente).
 
 ### Aggiornamento
 
@@ -236,7 +254,7 @@ git push origin v0.6.0
 
 GitHub Actions:
 1. Compila le dipendenze PHP e gli asset frontend
-2. Crea le immagini multi-arch (`linux/amd64`, `linux/arm64`)
+2. Crea le immagini (`linux/amd64`)
 3. Pubblica su GHCR con i tag `v0.6.0`, `0.6` e `latest`
 
 La versione è visibile nel footer dell'interfaccia.
