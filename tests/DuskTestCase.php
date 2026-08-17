@@ -29,7 +29,7 @@ abstract class DuskTestCase extends BaseTestCase
      * apparire un browser "già loggato" come un utente che nel DB fresco
      * non esiste più più. Ogni test parte da uno stato guest pulito.
      */
-    protected function browse(\Closure $callback): void
+    public function browse(\Closure $callback): void
     {
         parent::browse(function (...$browsers) use ($callback) {
             foreach ($browsers as $browser) {
