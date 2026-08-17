@@ -226,7 +226,18 @@ dopo troppo tempo a scavare senza costrutto: CI (ubuntu-latest, percorso
 standard, nessun `--env` flag) è la verifica reale.
 
 **Effort**: ~1 giorno (più la falsa partenza di verifica locale, poi
-abbandonata).
+abbandonata) + 5 cicli di fix basati su screenshot/log CI reali: trait
+`DatabaseMigrations` chiamava `down()` (irreversibile per design, sostituito
+con `DatabaseTruncation`), `SetupWizardTest` senza seed ruoli, bottoni
+Alpine-reattivi non trovati da `press()` (aggiunti attributi `dusk="..."` +
+`waitFor()`), cookie di sessione sopravvissuti tra test (Dusk riusa il
+browser — cookie-clear in `DuskTestCase::browse()`), assert su path/testo
+non verificati (`/dashboard` è solo un dispatcher, `trans('auth.failed')`
+senza `lang/it/` cade sul default inglese di Laravel).
+
+**Scoperto per strada, non risolto (fuori scope)**: manca `lang/it/` —
+il messaggio di credenziali errate è l'unica stringa in inglese di
+un'app altrimenti interamente italiana.
 
 ## Priorità consigliata
 
