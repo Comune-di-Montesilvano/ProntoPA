@@ -55,6 +55,36 @@ parameters:
 			path: app/Http/Controllers/Admin/AdminDashboardController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Istituto\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/OrganizzazioniController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Profilo\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/ProfiliController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Provenienza\:\:\$descrizione\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/ProvenienzaController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Plesso\:\:\$id_istituto\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/SediController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Plesso\:\:\$nome\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/SediController.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$amministratore\.$#'
 			identifier: property.notFound
 			count: 1
@@ -781,6 +811,42 @@ parameters:
 			path: app/Http/Requests/Auth/LoginRequest.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$embedding\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/CalcolaEmbeddingSegnalazione.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$testo_segnalazione\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/CalcolaEmbeddingSegnalazione.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$testo_segnalazione\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/GeneraTitoloSegnalazione.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$testo_segnalazione\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/SuggerisciTriageSegnalazione.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$triage_suggerito\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/SuggerisciTriageSegnalazione.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Azione\:\:\$colore\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Azione.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\Impostazione\:\:\$valore\.$#'
 			identifier: property.notFound
 			count: 1
@@ -827,6 +893,12 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Models/Segnalazione.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\StatoSegnalazione\:\:\$colore_sfondo\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/StatoSegnalazione.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$amministratore\.$#'
@@ -887,6 +959,12 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Notifications/ImpresaAssegnataNotification.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\NotaSegnalazione\:\:\$testo\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Notifications/NuovaNotaSegnalazione.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$name\.$#'
@@ -953,6 +1031,18 @@ parameters:
 			identifier: property.notFound
 			count: 2
 			path: app/Notifications/SlaWarningNotification.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$testo_segnalazione\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Notifications/SquadraAssegnataNotification.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Squadra\:\:\$nome\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Notifications/SquadraAssegnataNotification.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$flag_riservata\.$#'
