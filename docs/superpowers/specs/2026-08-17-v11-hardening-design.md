@@ -194,18 +194,39 @@ che si tocca un file esistente in baseline (aggiungere `@property` al
 model, spostare lo style inline in una classe Tailwind). Nessun effort
 stimabile in blocco, è manutenzione continua.
 
-## H9 — Test E2E
+## H9 — Test E2E ✅ FATTO
 
 **Problema**: le verifiche Lighthouse/CSP/accessibilità di v1.0 sono state
 fatte a mano via Chrome DevTools — non ripetibili in CI, si degradano alla
 prossima modifica senza che nessuno se ne accorga.
 
-**Soluzione**: Laravel Dusk (già nell'ecosistema, zero infra aggiuntiva vs
-Playwright) per 3-4 flow critici: login, creazione segnalazione, wizard
-setup, cambio stato. Non sostituisce Feature test, li completa dove serve
-un browser reale (CSP, JS, mappa Leaflet).
+**Soluzione**: Laravel Dusk, zero infra aggiuntiva — niente Selenium/
+Docker profile dedicato: `ubuntu-latest` ha già Chrome, la ricetta CI è
+solo `chromedriver-linux &` + `php artisan serve &` + `php artisan dusk`
+(`.github/workflows/dusk.yml`, workflow separato da `tests.yml` così un
+E2E flaky non blocca la suite veloce). 4 flow in `tests/Browser/`: login
+(successo + credenziali errate), creazione segnalazione, gestore prende
+in carico una segnalazione (cambio stato), wizard di setup completo
+(OTP letto da `storage/logs/laravel.log` con `MAIL_MAILER=log`, non c'è
+un server SMTP finto da interrogare in un browser test reale).
 
-**Effort**: 1-2 giorni setup + primi 4 test.
+Ogni classe usa `DatabaseMigrations` (migrate:fresh per test, non la
+sqlite `:memory:` di `phpunit.xml` — Dusk pilota un browser contro un vero
+`php artisan serve`, serve un DB su file condiviso tra i due processi) —
+questo permette anche di tenere `SETUP_TOKEN` sempre impostato in un job
+CI unico: i test con utenti già creati non vedono comunque la wizard
+(gate su `User::exists()`), niente bisogno di un job separato.
+
+**Non verificato in locale**: l'immagine dev è Alpine (musl), il binario
+chromedriver di Dusk è glibc — non gira senza `gcompat`. Provato un giro
+con `chromium`+`chromium-chromedriver` nativi Alpine ma la combinazione
+`--env=` di `artisan serve`/`migrate` con file .env alternativi si è
+rivelata inaffidabile in questo ambiente (vedi commit) — abbandonato
+dopo troppo tempo a scavare senza costrutto: CI (ubuntu-latest, percorso
+standard, nessun `--env` flag) è la verifica reale.
+
+**Effort**: ~1 giorno (più la falsa partenza di verifica locale, poi
+abbandonata).
 
 ## Priorità consigliata
 
@@ -216,7 +237,7 @@ un browser reale (CSP, JS, mappa Leaflet).
 | H3 | Alert job falliti | 2-3h | Medio |
 | H7 | 2FA admin/gestore | 2-3 gg | Alto (dati minori) ✅ |
 | H5 | Scan upload | 1-2 gg | Medio ✅ |
-| H9 | Test E2E | 1-2 gg | Medio |
+| H9 | Test E2E | 1-2 gg | Medio ✅ |
 | H6 | Retention GDPR | 1 gg + decisione ente | Medio, blocca su policy non tecnica |
 | H4 | Staging | infrastruttura | Medio, blocca su decisione ente |
 | H8 | Debito PHPStan/CSP | continuo | Basso, nessuno sprint dedicato |

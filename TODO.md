@@ -118,6 +118,6 @@ Spec: [`docs/superpowers/specs/2026-08-17-v11-hardening-design.md`](docs/superpo
 - Alert su job falliti in coda ✅
 - 2FA via Fortify (TOTP + recovery codes), opzionale self-service da profilo ✅
 - Scan antimalware upload allegati (ClamAV, profilo Docker `security`) ✅
-- Test E2E (Dusk) sui flow critici
+- Test E2E (Dusk) sui flow critici: login, creazione segnalazione, cambio stato, wizard setup ✅
 - Retention/cancellazione dati GDPR (richiede decisione ente)
 - Ambiente di staging (richiede infrastruttura)

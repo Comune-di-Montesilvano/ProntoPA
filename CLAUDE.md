@@ -161,6 +161,10 @@ GET  /api/segnalazioni/{id}/stato   # legge stato
 
 Webhook outbound: HTTP POST HMAC-firmato al cambio stato → Admin → Impostazioni → Webhook.
 
+## Test E2E (Dusk)
+
+`tests/Browser/` (login, creazione segnalazione, cambio stato, wizard setup) gira solo in CI (`.github/workflows/dusk.yml`, `ubuntu-latest` ha Chrome già installato) — **non nell'immagine dev**, Alpine/musl non è compatibile col chromedriver glibc di Dusk (serve `gcompat`, non vale la pena). Se serve debuggare un test Dusk localmente, usa un ambiente Linux glibc (o WSL), non il container `php`.
+
 ## CI/CD
 
 Tag `v*.*.*` → `.github/workflows/release.yml` → build **amd64 only** (arm64 droppato, niente QEMU) → push GHCR `:tag`+`:latest`.

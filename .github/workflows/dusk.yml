@@ -1,0 +1,98 @@
+name: Dusk (E2E)
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  dusk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, pdo_sqlite, bcmath, gd, zip, intl, redis
+          coverage: none
+
+      - name: Copy .env
+        run: cp .env.example .env
+
+      - name: Install composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      # Dusk pilota un browser reale contro `php artisan serve` via HTTP: gli
+      # serve un DB persistito su file, non lo sqlite :memory: di phpunit.xml
+      # (quello vive solo dentro il processo di test, invisibile al server).
+      # DatabaseMigrations (usato da ogni test in tests/Browser) fa
+      # migrate:fresh prima di ogni test — SETUP_TOKEN può restare sempre
+      # impostato: per i test con utenti già creati la wizard è comunque
+      # irraggiungibile (gate su User::exists()), quindi non serve un job
+      # separato per SetupWizardTest.
+      - name: Configure env for Dusk (real HTTP server, not the phpunit sqlite :memory:)
+        run: |
+          touch database/database.sqlite
+          {
+            echo "DB_CONNECTION=sqlite"
+            echo "DB_DATABASE=$(pwd)/database/database.sqlite"
+            echo "MAIL_MAILER=log"
+            echo "QUEUE_CONNECTION=sync"
+            echo "CACHE_STORE=array"
+            echo "SESSION_DRIVER=array"
+            echo "SETUP_TOKEN=dusk-e2e-setup-token"
+          } >> .env
+
+      - name: Run migrations
+        run: php artisan migrate --force
+
+      - name: Install ChromeDriver matching the runner's Chrome
+        run: php artisan dusk:chrome-driver --detect
+
+      - name: Start ChromeDriver
+        run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
+
+      - name: Start app server
+        run: php artisan serve --host=127.0.0.1 --port=8000 &
+
+      - name: Wait for app server
+        run: npx wait-on http://127.0.0.1:8000/login --timeout 30000
+
+      - name: Run Dusk tests
+        env:
+          APP_URL: http://127.0.0.1:8000
+          DUSK_DRIVER_URL: http://localhost:9515
+        run: php artisan dusk
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dusk-screenshots
+          path: tests/Browser/screenshots
+
+      - name: Upload console logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dusk-console
+          path: tests/Browser/console
