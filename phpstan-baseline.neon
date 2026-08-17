@@ -829,6 +829,24 @@ parameters:
 			path: app/Jobs/GeneraTitoloSegnalazione.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\AllegatoSegnalazione\:\:\$id_segnalazione\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/ScansionaAllegato.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\AllegatoSegnalazione\:\:\$nome_originale\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/ScansionaAllegato.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\AllegatoSegnalazione\:\:\$percorso\.$#'
+			identifier: property.notFound
+			count: 5
+			path: app/Jobs/ScansionaAllegato.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$testo_segnalazione\.$#'
 			identifier: property.notFound
 			count: 1
@@ -839,6 +857,12 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Jobs/SuggerisciTriageSegnalazione.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\AllegatoSegnalazione\:\:\$stato_scansione\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/AllegatoSegnalazione.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Azione\:\:\$colore\.$#'

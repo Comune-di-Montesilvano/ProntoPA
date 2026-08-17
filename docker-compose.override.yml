@@ -90,3 +90,8 @@ services:
     ports:
       - "11434:11434"
     restart: "no"
+
+  clamav:
+    ports:
+      - "3310:3310"
+    restart: "no"

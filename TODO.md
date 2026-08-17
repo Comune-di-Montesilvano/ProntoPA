@@ -117,7 +117,7 @@ Spec: [`docs/superpowers/specs/2026-08-17-v11-hardening-design.md`](docs/superpo
 - Dependabot (composer/npm/github-actions) ✅
 - Alert su job falliti in coda ✅
 - 2FA via Fortify (TOTP + recovery codes), opzionale self-service da profilo ✅
-- Scan antimalware upload allegati
+- Scan antimalware upload allegati (ClamAV, profilo Docker `security`) ✅
 - Test E2E (Dusk) sui flow critici
 - Retention/cancellazione dati GDPR (richiede decisione ente)
 - Ambiente di staging (richiede infrastruttura)

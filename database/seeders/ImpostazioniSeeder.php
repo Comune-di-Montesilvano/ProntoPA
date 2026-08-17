@@ -332,6 +332,15 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'ai',
                 'descrizione' => 'URL interno del servizio Ollama',
             ],
+
+            // v1.1 — Scansione antimalware allegati
+            [
+                'chiave'      => 'antivirus_enabled',
+                'valore'      => '0',
+                'tipo'        => 'boolean',
+                'gruppo'      => 'antivirus',
+                'descrizione' => 'Scansiona gli allegati caricati con ClamAV (richiede il profilo Docker "security")',
+            ],
         ];
 
         foreach ($impostazioni as $impostazione) {

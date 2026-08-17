@@ -46,6 +46,8 @@ x-php-env: &php-env
   PEC_ENCRYPTION: ${PEC_ENCRYPTION:-ssl}
   WEBHOOK_CITTADINI_URL: ${WEBHOOK_CITTADINI_URL}
   WEBHOOK_CITTADINI_SECRET: ${WEBHOOK_CITTADINI_SECRET}
+  CLAMAV_HOST: ${CLAMAV_HOST:-clamav}
+  CLAMAV_PORT: ${CLAMAV_PORT:-3310}
   SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost,127.0.0.1}
   SESSION_LIFETIME: ${SESSION_LIFETIME:-480}
   SESSION_COOKIE: ${SESSION_COOKIE:-prontoPA_session}
@@ -166,6 +168,20 @@ services:
     profiles:
       - ai
 
+  # Scansione antimalware allegati (H5). Opzionale come ollama: se il
+  # profilo non è attivo, ScansionaAllegato degrada in silenzio e gli
+  # allegati restano in stato 'in_attesa' — mai bloccante sull'upload.
+  # Serve anche il toggle Admin → Impostazioni → antivirus_enabled.
+  clamav:
+    image: clamav/clamav:stable
+    volumes:
+      - clamav_data:/var/lib/clamav
+    networks:
+      - prontoPA
+    restart: unless-stopped
+    profiles:
+      - security
+
 volumes:
   mariadb_data:
   redis_data:
@@ -173,6 +189,7 @@ volumes:
   uploads:
   nginx_ssl:
   ollama_data:
+  clamav_data:
 
 networks:
   prontoPA:

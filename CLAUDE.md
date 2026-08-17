@@ -140,6 +140,7 @@ Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella 
 - **Rendicontazione**: export XLSX (report mensile gestore, riepilogo impresa) e fascicolo PDF per segnalazione (richiede `composer install` per `phpoffice/phpspreadsheet` e `barryvdh/laravel-dompdf`)
 - **Wizard primo avvio** (`/setup`): gate su `User::query()->exists()`, attivo solo se `SETUP_TOKEN` è valorizzato in `.env`; token + email + password → OTP via email → crea admin (`SetupController`, `EnsureSetupComplete`)
 - **2FA opzionale** (TOTP + recovery codes): Fortify usato solo come libreria (`Fortify::ignoreRoutes()` in `App\Providers\FortifyServiceProvider::register()`) — login/registrazione/reset restano ai controller custom in `routes/auth.php`, zero rotte Fortify attive. **Va registrato a mano in `bootstrap/providers.php`** (non auto-discovered come le altre integrazioni Laravel). Self-service da profilo, dietro `password.confirm`.
+- **Scan antimalware allegati** (opzionale, profilo Docker `security` + `Impostazione::get('antivirus_enabled')`): `ClamAvService` parla INSTREAM via socket raw a `clamav/clamav:stable` (no dipendenza composer), job `ScansionaAllegato` dispatchato da un unico hook su `AllegatoSegnalazione::booted()` (created event) — copre tutti i path di upload senza doverli aggiornare uno per uno. Infetto → spostato (non cancellato) su disco `quarantena`, mai servito dalla route di download. Degrada in silenzio se disattivato/clamd irraggiungibile.
 
 ## Database
 
@@ -181,6 +182,8 @@ git tag v1.2.0 && git push origin v1.2.0
 ## Test
 
 CSRF/throttle non auto-bypassati nei Feature test nonostante `APP_ENV=testing` (`app()->runningUnitTests()` risulta `false` qui). Sui POST a rotte `web`: `$this->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class, \Illuminate\Routing\Middleware\ThrottleRequests::class])`.
+
+Stesso sintomo si estende agli `<env>` di `phpunit.xml` in generale, non solo `APP_ENV`: `QUEUE_CONNECTION=sync` e `CACHE_STORE=array` dichiarati lì **non vengono applicati** — a runtime restano i valori reali (redis). Conseguenze pratiche: (1) un job dispatchato in un test NON gira sincrono — se devi verificarne l'esito, chiama `->handle()` a mano invece di fidarti del dispatch, oppure usa `Queue::fake()` + `assertPushed` per verificare solo che sia stato accodato; (2) `Impostazione` (cache `rememberForever`) non si resetta tra test — `Cache::flush()` esplicito nel `setUp()`, altrimenti un test eredita valori settati da un altro.
 
 ## Deploy Prod (Portainer/Podman rootless)
 

@@ -75,6 +75,7 @@ class AllegatiSegnalazioniController extends Controller
     {
         $this->authorize('view', $segnalazione);
         abort_if($allegato->id_segnalazione !== $segnalazione->id_segnalazione, 404);
+        abort_if($allegato->isInfetto(), 403, 'File in quarantena: rilevato come infetto dalla scansione antivirus.');
         abort_unless(Storage::disk($this->disk())->exists($allegato->percorso), 404);
 
         return Storage::disk($this->disk())->download($allegato->percorso, $allegato->nome_originale);

@@ -47,6 +47,16 @@ return [
             'report' => false,
         ],
 
+        // Allegati messi in quarantena da ScansionaAllegato — disco separato
+        // dal servizio pubblico, mai raggiungibile via download route se non
+        // esplicitamente riletto da lì (nessuna route lo espone).
+        'quarantena' => [
+            'driver' => 'local',
+            'root' => storage_path('app/quarantena'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

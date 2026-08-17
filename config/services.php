@@ -43,4 +43,13 @@ return [
         'secret' => env('WEBHOOK_CITTADINI_SECRET'),
     ],
 
+    // Scansione antimalware allegati (ScansionaAllegato, profilo Docker
+    // opzionale `security`). Infra, non brand: resta in .env, non in
+    // Admin → Impostazioni (che ha solo il toggle on/off `antivirus_enabled`).
+    'clamav' => [
+        'host'    => env('CLAMAV_HOST', 'clamav'),
+        'port'    => (int) env('CLAMAV_PORT', 3310),
+        'timeout' => (int) env('CLAMAV_TIMEOUT', 15),
+    ],
+
 ];

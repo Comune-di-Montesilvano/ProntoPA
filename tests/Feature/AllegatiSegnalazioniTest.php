@@ -194,6 +194,28 @@ class AllegatiSegnalazioniTest extends TestCase
         $response->assertDownload('foto.jpg');
     }
 
+    public function test_download_negato_se_allegato_infetto(): void
+    {
+        $user = $this->segnalatore();
+        $segnalazione = Segnalazione::factory()->create([
+            'id_utente_segnalazione' => $user->id,
+        ]);
+
+        $this->actingAs($user)->post(
+            route('segnalazioni.allegati.store', $segnalazione),
+            ['allegati' => [UploadedFile::fake()->image('foto.jpg')]]
+        );
+
+        $allegato = $segnalazione->allegati()->first();
+        $allegato->update(['stato_scansione' => 'infetto']);
+
+        $response = $this->actingAs($user)->get(
+            route('segnalazioni.allegati.download', [$segnalazione, $allegato])
+        );
+
+        $response->assertForbidden();
+    }
+
     public function test_download_negato_a_utente_estraneo(): void
     {
         $proprietario = $this->segnalatore();

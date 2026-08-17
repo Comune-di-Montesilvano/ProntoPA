@@ -103,20 +103,33 @@ di taggare una release.
 **Effort**: infrastruttura, non codice — richiede decisione ente su dove
 ospitarla.
 
-## H5 — Scan antimalware upload
+## H5 — Scan antimalware upload ✅ FATTO
 
 **Problema**: `AllegatiSegnalazioniController` valida `mimetypes` lato
 Laravel (bypassabile con un file rinominato/polyglot) — nessuno scan
 contenuto reale. Segnalanti esterni e imprese caricano file liberamente.
 
-**Soluzione**: container ClamAV (`clamav/clamav` su Docker Hub) + job
-`ScansionaAllegato` in coda che scansiona dopo l'upload, quarantena
-(spostamento su disco separato, non cancellazione — serve per contestazioni)
-se positivo. Coerente col pattern AI già in uso: async, degrada in silenzio
-se il container non è attivo (profilo Docker opzionale `security`, come `ai`
-per Ollama).
+**Soluzione**: container `clamav/clamav:stable`, profilo Docker opzionale
+`security` (come `ai` per Ollama). `ClamAvService` parla il protocollo
+INSTREAM di clamd via socket raw (nessuna dipendenza composer aggiuntiva —
+nessun client PHP mantenuto in modo affidabile in giro). `ScansionaAllegato`
+(job in coda) scatta da un unico hook — `AllegatoSegnalazione::booted()` —
+così nessun punto di upload (diretto, Telegram, magic-link, rapportino) può
+dimenticarsene. Se infetto: spostato (non cancellato — serve per eventuali
+contestazioni) sul disco `quarantena`, mai esposto dalla route di download.
+Degrada in silenzio se `antivirus_enabled` (Admin → Impostazioni) è off o
+clamd non è raggiungibile — mai bloccante sull'upload, stato resta
+`in_attesa`.
 
-**Effort**: 1-2 giorni (container + job + test + UI stato scansione).
+**Nota debug**: `phpunit.xml` non applica i suoi `<env>` override in questo
+setup (stesso sintomo già noto per `runningUnitTests()`, vedi `## Test` in
+CLAUDE.md) — `QUEUE_CONNECTION` e `CACHE_STORE` restano quelli reali
+(redis), non `sync`/`array`. I test sul job chiamano `handle()` a mano
+invece di fidarsi del dispatch sincrono, e serve `Cache::flush()` esplicito
+nel `setUp()` per non ereditare `Impostazione` cachate da test precedenti —
+stesso pattern già usato in `AllegatiSegnalazioniTest`.
+
+**Effort**: ~1 giorno.
 
 ## H6 — Retention/cancellazione dati (GDPR)
 
@@ -201,8 +214,8 @@ un browser reale (CSP, JS, mappa Leaflet).
 | H1 | Password policy | < 1h | Alto |
 | H2 | Dependabot | < 30 min | Alto (previene regressione v1.0) |
 | H3 | Alert job falliti | 2-3h | Medio |
-| H7 | 2FA admin/gestore | 2-3 gg | Alto (dati minori) |
-| H5 | Scan upload | 1-2 gg | Medio |
+| H7 | 2FA admin/gestore | 2-3 gg | Alto (dati minori) ✅ |
+| H5 | Scan upload | 1-2 gg | Medio ✅ |
 | H9 | Test E2E | 1-2 gg | Medio |
 | H6 | Retention GDPR | 1 gg + decisione ente | Medio, blocca su policy non tecnica |
 | H4 | Staging | infrastruttura | Medio, blocca su decisione ente |

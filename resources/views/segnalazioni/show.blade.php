@@ -439,14 +439,25 @@
                                 @if($allegato->utenteCreazione)
                                     &middot; {{ $allegato->utenteCreazione->name }}
                                 @endif
+                                @if($allegato->stato_scansione === 'infetto')
+                                    &middot; <span class="text-red-600 font-semibold"><i class="fas fa-biohazard mr-0.5"></i>Infetto — in quarantena</span>
+                                @elseif(\App\Models\Impostazione::get('antivirus_enabled', false))
+                                    @if($allegato->stato_scansione === 'errore')
+                                        &middot; <span class="text-amber-600">Scansione non riuscita</span>
+                                    @elseif($allegato->stato_scansione === 'in_attesa')
+                                        &middot; <span class="text-gray-400">In attesa di scansione</span>
+                                    @endif
+                                @endif
                             </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
-                        <a href="{{ route('segnalazioni.allegati.download', [$segnalazione->id_segnalazione, $allegato->id_allegato]) }}"
-                           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-50 transition">
-                            <i class="fas fa-download mr-1"></i> Download
-                        </a>
+                        @unless($allegato->isInfetto())
+                            <a href="{{ route('segnalazioni.allegati.download', [$segnalazione->id_segnalazione, $allegato->id_allegato]) }}"
+                               class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-50 transition">
+                                <i class="fas fa-download mr-1"></i> Download
+                            </a>
+                        @endunless
                         @can('deleteAllegato', $segnalazione)
                             <form method="POST"
                                   action="{{ route('segnalazioni.allegati.destroy', [$segnalazione->id_segnalazione, $allegato->id_allegato]) }}"
