@@ -13,3 +13,12 @@ parameters:
 
     excludePaths:
         - app/Console/Commands/PopulateDemoData.php # fixture demo, tolleranza volutamente bassa
+
+    # La baseline (145+ entry, in gran parte model senza @property, vedi
+    # CLAUDE.md H8) non riproduce esattamente lo stesso set di errori tra
+    # dev locale e CI: piccole differenze di patch PHP/piattaforma bastano
+    # a far apparire/sparire singoli property.notFound. Bloccare la build
+    # su "baseline entry non trovata" quando il codice non è cambiato è
+    # rumore, non un segnale utile — coerente con l'approccio "baseline =
+    # debito accettato" del progetto.
+    reportUnmatchedIgnoredErrors: false
