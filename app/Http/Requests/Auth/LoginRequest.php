@@ -7,7 +7,6 @@ use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -31,9 +30,10 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Tenta l'autenticazione.
-     * Prima prova bcrypt standard; se fallisce e l'utente ha una password legacy
-     * SHA256 (sistema precedente), verifica e migra automaticamente a bcrypt.
+     * Tenta l'autenticazione (bcrypt standard). Se l'utente ha il 2FA
+     * attivo, la sessione viene subito chiusa e il completamento del
+     * login è demandato a TwoFactorChallengeController (session
+     * 'login.id' come chiave di stato, stesso pattern di Fortify).
      *
      * @throws ValidationException
      */
@@ -41,39 +41,30 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        // Tentativo standard (bcrypt)
-        if (Auth::attempt(
+        if (! Auth::attempt(
             ['username' => $this->string('username'), 'password' => $this->string('password')],
             $this->boolean('remember')
         )) {
-            $this->ensureUserIsActive(Auth::user());
-            RateLimiter::clear($this->throttleKey());
-            return;
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'username' => trans('auth.failed'),
+            ]);
         }
 
-        // Fallback: migrazione da SHA256 legacy
-        $user = User::where('username', $this->string('username'))->first();
+        /** @var User $user */
+        $user = Auth::user();
+        $this->ensureUserIsActive($user);
+        RateLimiter::clear($this->throttleKey());
 
-        if ($user?->password_legacy &&
-            hash_equals($user->password_legacy, hash('sha256', $this->string('password')))
-        ) {
-            $this->ensureUserIsActive($user);
+        if ($user->hasEnabledTwoFactorAuthentication()) {
+            Auth::logout();
 
-            $user->forceFill([
-                'password'        => Hash::make($this->string('password')),
-                'password_legacy' => null,
-            ])->save();
-
-            Auth::login($user, $this->boolean('remember'));
-            RateLimiter::clear($this->throttleKey());
-            return;
+            $this->session()->put([
+                'login.id'       => $user->getKey(),
+                'login.remember' => $this->boolean('remember'),
+            ]);
         }
-
-        RateLimiter::hit($this->throttleKey());
-
-        throw ValidationException::withMessages([
-            'username' => trans('auth.failed'),
-        ]);
     }
 
     private function ensureUserIsActive(?User $user): void

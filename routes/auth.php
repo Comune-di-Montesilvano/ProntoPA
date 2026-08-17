@@ -6,6 +6,9 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\TwoFactorAuthenticationController;
+use App\Http\Controllers\Auth\TwoFactorChallengeController;
+use App\Http\Controllers\Auth\TwoFactorRecoveryCodesController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -30,6 +33,12 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
+
+    Route::get('two-factor-challenge', [TwoFactorChallengeController::class, 'create'])
+        ->name('two-factor.login');
+
+    Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
+        ->middleware('throttle:two-factor');
 });
 
 Route::middleware('auth')->group(function () {
@@ -43,4 +52,21 @@ Route::middleware('auth')->group(function () {
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
+
+    Route::middleware('password.confirm')->group(function () {
+        Route::post('user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'store'])
+            ->name('two-factor.enable');
+
+        Route::post('user/confirmed-two-factor-authentication', [TwoFactorAuthenticationController::class, 'confirm'])
+            ->name('two-factor.confirm');
+
+        Route::delete('user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'destroy'])
+            ->name('two-factor.disable');
+
+        Route::get('user/two-factor-recovery-codes', [TwoFactorRecoveryCodesController::class, 'index'])
+            ->name('two-factor.recovery-codes');
+
+        Route::post('user/two-factor-recovery-codes', [TwoFactorRecoveryCodesController::class, 'store'])
+            ->name('two-factor.recovery-codes.regenerate');
+    });
 });
