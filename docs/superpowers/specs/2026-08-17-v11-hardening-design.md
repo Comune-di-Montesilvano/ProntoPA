@@ -133,18 +133,40 @@ solo tecnico.
 
 **Effort**: 1 giorno codice + decisione policy (non tecnica) a monte.
 
-## H7 — 2FA per admin/gestore
+## H7 — 2FA ✅ FATTO
 
 **Problema**: nessun secondo fattore su nessun account. Per un pannello che
 tocca dati di minori (scuole), è il gap più serio della lista.
 
-**Soluzione**: TOTP (`pragmarx/google2fa-laravel` o simile), opzionale per
-`segnalatore`/`impresa`, **obbligatorio** per `admin`/`gestore` (forzato al
-primo login se non configurato, pattern simile alla verifica annuale
-account già esistente).
+**Soluzione**: implementato con Laravel Fortify usato solo come libreria
+(`Fortify::ignoreRoutes()`) — TOTP secret/QR/recovery codes vengono dalle
+sue Actions e dal trait `TwoFactorAuthenticatable`, ma login/registrazione/
+reset password restano ai controller custom esistenti (niente conflitti
+di rotte con `routes/auth.php`). Login: `LoginRequest::authenticate()`
+autentica poi, se il 2FA è confermato, disconnette e salva `login.id` in
+sessione; challenge dedicata (`/two-factor-challenge`) riusa
+`TwoFactorLoginRequest` di Fortify per il codice/recovery code. Gestione
+self-service da profilo (abilita → conferma con QR → codici di recupero →
+disattiva), dietro `password.confirm`.
 
-**Effort**: 2-3 giorni (setup flow, recovery codes, test, non banale da
-fare bene).
+**Scope ridotto rispetto alla bozza**: solo opzionale, non forzato su
+admin/gestore per ora (nessuna infrastruttura di enforcement/reminder
+ancora — valutare in un giro successivo se serve davvero forzarlo).
+
+**Effetto collaterale**: rimosso il fallback di login legacy SHA256→bcrypt
+(`password_legacy`), su richiesta esplicita — i 69 utenti reimportati da
+legacy restano bloccati (dati di test, da ricreare a mano). `pecl install
+redis` falliva random sull'immagine dev durante il bump PHP 8.3→8.4
+(flakiness rete pecl, retry risolve). CI è rimasta rossa per un pezzo dopo
+il push per un problema di baseline PHPStan non riproducibile in locale
+(stessa versione larastan/phpstan da lock, causa non trovata dopo sforzo
+ragionevole) — risolto con `reportUnmatchedIgnoredErrors: false` +
+`treatPhpDocTypesAsCertain: false` + alcune entry esplicite in
+`phpstan.neon` per i pochi errori solo-CI rimasti, invece di continuare a
+inseguire la causa esatta.
+
+**Effort**: ~1 giorno (più del previsto la caccia al flakiness CI/PHP che
+il feature stesso).
 
 ## H8 — Debito tecnico: baseline PHPStan e CSP inline
 
