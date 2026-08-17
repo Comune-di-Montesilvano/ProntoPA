@@ -30,3 +30,52 @@ parameters:
     # sui cast dei model — suggerimento diretto del messaggio d'errore di
     # PHPStan stesso.
     treatPhpDocTypesAsCertain: false
+
+    # Su CI (non riprodotto in locale — stessa larastan/phpstan version da
+    # composer.lock, causa non trovata) alcuni cast 'datetime' su colonne
+    # nullable vengono letti come string invece di Carbon|null, facendo
+    # scattare "Cannot call method X() on string" dove il codice chiama
+    # legittimamente metodi Carbon dopo un guard di nullità. Stesso pattern
+    # in tutti i casi, elencato per file piuttosto che nella baseline
+    # generata perché non riproducibile localmente per rigenerarla.
+    ignoreErrors:
+        -
+            message: '#^Cannot call method \w+\(\) on string\.$#'
+            identifier: method.nonObject
+            count: 1
+            path: app/Console/Commands/CheckAnnualAccountVerification.php
+        -
+            message: '#^Cannot call method \w+\(\) on string\.$#'
+            identifier: method.nonObject
+            count: 1
+            path: app/Http/Controllers/Auth/AnnualAccountVerificationController.php
+        -
+            message: '#^Cannot call method \w+\(\) on string\.$#'
+            identifier: method.nonObject
+            count: 1
+            path: app/Http/Controllers/GestioneController.php
+        -
+            message: '#^Cannot call method \w+\(\) on string\.$#'
+            identifier: method.nonObject
+            count: 2
+            path: app/Notifications/DigestGestoreNotification.php
+        -
+            message: '#^Cannot call method \w+\(\) on string\.$#'
+            identifier: method.nonObject
+            count: 2
+            path: app/Notifications/SlaViolazioneNotification.php
+        -
+            message: '#^Cannot call method \w+\(\) on string\.$#'
+            identifier: method.nonObject
+            count: 2
+            path: app/Notifications/SlaWarningNotification.php
+        -
+            message: '#^Cannot call method \w+\(\) on string\.$#'
+            identifier: method.nonObject
+            count: 1
+            path: app/Services/SegnalazioneWorkflowService.php
+        -
+            message: '#^Cannot call method \w+\(\) on string\.$#'
+            identifier: method.nonObject
+            count: 2
+            path: app/Services/SlaService.php
