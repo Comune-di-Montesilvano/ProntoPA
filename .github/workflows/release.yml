@@ -49,7 +49,7 @@ jobs:
 
       - name: Docker metadata (app)
         id: meta-app
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_APP }}
           bake-target: app
@@ -61,7 +61,7 @@ jobs:
 
       - name: Docker metadata (web)
         id: meta-web
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_WEB }}
           bake-target: web
