@@ -44,6 +44,12 @@ docker compose exec php composer run analyse   # larastan, baseline in phpstan-b
 
 **Gotcha Docker dev**: `docker compose restart php` da solo → nginx tiene l'IP upstream vecchio (risolto una volta sola all'avvio) → 502. Riavvia anche `nginx`, o l'intero stack.
 
+**Gotcha versione PHP**: `docker/php/Dockerfile` (dev) e `Dockerfile` (prod, usato anche da CI) possono disallinearsi silenziosamente — verifica `php -v` nel container dev contro `tests.yml` prima di fidarti che riproducano lo stesso ambiente (es. differenze `phpstan`/larastan tra versioni PHP).
+
+**Gotcha build dev**: `pecl install redis` nel build dell'immagine PHP fallisce a volte con "No releases available" (flakiness rete pecl) — retry del build risolve, non è un problema del Dockerfile.
+
+**Gotcha PHPStan CI**: `phpstan.neon` ha `reportUnmatchedIgnoredErrors: false` e `treatPhpDocTypesAsCertain: false` — un run locale pulito non garantisce CI verde, larastan risolve i cast dei model (`casts(): array`) in modo leggermente diverso tra ambienti per motivi mai isolati con certezza. Se tocchi `phpstan-baseline.neon`, verifica sempre su CI (push), non fidarti solo del locale.
+
 ## .env
 
 ```env
@@ -133,6 +139,7 @@ Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella 
 - **Digest mattutino gestori**: comando `digest:invia` / `InviaDigestGestori`
 - **Rendicontazione**: export XLSX (report mensile gestore, riepilogo impresa) e fascicolo PDF per segnalazione (richiede `composer install` per `phpoffice/phpspreadsheet` e `barryvdh/laravel-dompdf`)
 - **Wizard primo avvio** (`/setup`): gate su `User::query()->exists()`, attivo solo se `SETUP_TOKEN` è valorizzato in `.env`; token + email + password → OTP via email → crea admin (`SetupController`, `EnsureSetupComplete`)
+- **2FA opzionale** (TOTP + recovery codes): Fortify usato solo come libreria (`Fortify::ignoreRoutes()` in `App\Providers\FortifyServiceProvider::register()`) — login/registrazione/reset restano ai controller custom in `routes/auth.php`, zero rotte Fortify attive. **Va registrato a mano in `bootstrap/providers.php`** (non auto-discovered come le altre integrazioni Laravel). Self-service da profilo, dietro `password.confirm`.
 
 ## Database
 
@@ -160,6 +167,9 @@ Tag `v*.*.*` → `.github/workflows/release.yml` → build **amd64 only** (arm64
 ```bash
 git tag v1.2.0 && git push origin v1.2.0
 ```
+
+**Dependabot**: PR con conflitto `composer.lock`/`package-lock.json` (tipico se ne mergi più di una in sequenza) → commenta `@dependabot rebase`, aspetta, ricontrolla `gh pr checks`. Se lento/bloccato, applicare il bump a mano (`composer require pkg:^X` o `npm install pkg@X`) è più veloce che aspettare — poi chiudi la PR come superata (`gh pr close N --comment "..." --delete-branch`).
+**Gotcha peer-dep**: `vite` e `laravel-vite-plugin` sono accoppiati (`laravel-vite-plugin` fissa la major di vite richiesta) — dependabot le propone come PR separate ma vanno bumpate insieme o falliscono con `ERESOLVE`.
 
 ## Convenzioni
 
