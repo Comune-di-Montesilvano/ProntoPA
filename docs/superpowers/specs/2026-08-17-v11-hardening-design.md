@@ -22,7 +22,7 @@ senza worker, wizard irraggiungibile, licenza incoerente, 42 CVE). Questo
 spec copre quello che restava *a rischio* ma non *rotto*: emerso rileggendo
 il codice con occhio da manutentore a lungo termine, non da checklist.
 
-## H1 — Password policy coerente
+## H1 — Password policy coerente ✅ FATTO
 
 **Problema**: il wizard di setup (`SetupController::richiediOtp`) impone
 `Password::min(10)->mixedCase()->numbers()`. Registrazione utente
@@ -43,7 +43,7 @@ password esistenti (si applica solo a nuove/cambiate).
 
 **Effort**: < 1h.
 
-## H2 — Dependabot per Composer e npm
+## H2 — Dependabot per Composer e npm ✅ FATTO
 
 **Problema**: le 42 CVE risolte in v1.0 si erano accumulate perché nessuna
 automazione segnala dipendenze vulnerabili — solo un audit manuale le ha

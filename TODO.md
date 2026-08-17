@@ -113,8 +113,8 @@ AI opzionale on-premise (Ollama, profilo Docker `ai`), sempre asincrona (job in 
 
 Spec: [`docs/superpowers/specs/2026-08-17-v11-hardening-design.md`](docs/superpowers/specs/2026-08-17-v11-hardening-design.md)
 
-- Password policy coerente (wizard vs registrazione/cambio password)
-- Dependabot (composer/npm/github-actions)
+- Password policy coerente (wizard vs registrazione/cambio password) ✅
+- Dependabot (composer/npm/github-actions) ✅
 - Alert su job falliti in coda
 - 2FA obbligatoria admin/gestore
 - Scan antimalware upload allegati
