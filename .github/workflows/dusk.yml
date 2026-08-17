@@ -58,7 +58,7 @@ jobs:
             echo "MAIL_MAILER=log"
             echo "QUEUE_CONNECTION=sync"
             echo "CACHE_STORE=array"
-            echo "SESSION_DRIVER=array"
+            echo "SESSION_DRIVER=file"
             echo "SETUP_TOKEN=dusk-e2e-setup-token"
           } >> .env
 
