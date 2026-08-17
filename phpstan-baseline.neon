@@ -13,12 +13,6 @@ parameters:
 			path: app/Console/Commands/CheckAnnualAccountVerification.php
 
 		-
-			message: '#^Comparison operation "\>" between int\<1, max\> and 0 is always true\.$#'
-			identifier: greater.alwaysTrue
-			count: 1
-			path: app/Console/Commands/CheckAnnualAccountVerification.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$livello_priorita\.$#'
 			identifier: property.notFound
 			count: 1
@@ -568,6 +562,12 @@ parameters:
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$nome\.$#'
 			identifier: property.notFound
 			count: 2
+			path: app/Http/Controllers/ReportController.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 1
 			path: app/Http/Controllers/ReportController.php
 
 		-

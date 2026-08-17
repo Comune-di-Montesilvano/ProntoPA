@@ -22,3 +22,11 @@ parameters:
     # rumore, non un segnale utile — coerente con l'approccio "baseline =
     # debito accettato" del progetto.
     reportUnmatchedIgnoredErrors: false
+
+    # I cast dei model (es. 'datetime') dichiarano un tipo PHPDoc certo
+    # (Carbon non-null) che può divergere dal dato reale (colonna
+    # nullable). treatPhpDocTypesAsCertain:true genera falsi positivi
+    # ("nullsafe su tipo mai null", "instanceof sempre falso") proprio
+    # sui cast dei model — suggerimento diretto del messaggio d'errore di
+    # PHPStan stesso.
+    treatPhpDocTypesAsCertain: false
