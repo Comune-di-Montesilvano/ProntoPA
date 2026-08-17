@@ -15,7 +15,7 @@
         "laravel/tinker": "^3.0",
         "phpoffice/phpspreadsheet": "^2.0|^3.0",
         "sentry/sentry-laravel": "^4.27",
-        "spatie/laravel-permission": "^6.25"
+        "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
