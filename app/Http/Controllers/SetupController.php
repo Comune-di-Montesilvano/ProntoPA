@@ -38,7 +38,7 @@ class SetupController extends Controller
         $data = $request->validate([
             'token'    => ['required', 'string'],
             'email'    => ['required', 'email', 'max:200'],
-            'password' => ['required', 'confirmed', Password::min(10)->mixedCase()->numbers()],
+            'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
         $tokenAtteso = (string) config('app.setup_token');

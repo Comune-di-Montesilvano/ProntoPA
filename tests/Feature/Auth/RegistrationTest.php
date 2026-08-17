@@ -42,8 +42,8 @@ class RegistrationTest extends TestCase
             'cognome' => 'Rossi',
             'partita_iva' => '12345678901',
             'email' => 'mario.rossi@comune.test.it',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'Sup3rSegreta1',
+            'password_confirmation' => 'Sup3rSegreta1',
         ]);
 
         $user = User::where('email', 'mario.rossi@comune.test.it')->first();
@@ -71,8 +71,8 @@ class RegistrationTest extends TestCase
             'cognome' => 'Rossi',
             'partita_iva' => '12345678901',
             'email' => 'info@comune.test.it',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'Sup3rSegreta1',
+            'password_confirmation' => 'Sup3rSegreta1',
         ]);
 
         $response->assertRedirect('/register');
