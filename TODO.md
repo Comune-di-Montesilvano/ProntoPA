@@ -115,7 +115,7 @@ Spec: [`docs/superpowers/specs/2026-08-17-v11-hardening-design.md`](docs/superpo
 
 - Password policy coerente (wizard vs registrazione/cambio password) ✅
 - Dependabot (composer/npm/github-actions) ✅
-- Alert su job falliti in coda
+- Alert su job falliti in coda ✅
 - 2FA obbligatoria admin/gestore
 - Scan antimalware upload allegati
 - Test E2E (Dusk) sui flow critici

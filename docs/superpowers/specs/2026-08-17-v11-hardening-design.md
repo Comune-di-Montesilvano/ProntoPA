@@ -70,7 +70,7 @@ updates:
 
 **Effort**: < 30 min.
 
-## H3 — Alert su job falliti
+## H3 — Alert su job falliti ✅ FATTO
 
 **Problema**: `failed_jobs` esiste (migrazione base Laravel) ma nessuno la
 guarda. Un webhook verso un host irraggiungibile fallisce 3 volte
