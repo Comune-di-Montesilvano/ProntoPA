@@ -20,3 +20,8 @@ Schedule::command('digest:invia')
         }
     })())
     ->runInBackground();
+
+// Difesa in profondità se Sentry non è configurato: senza questo, job
+// falliti (webhook irraggiungibile, Ollama giù) restano invisibili in
+// failed_jobs a tempo indefinito.
+Schedule::command('jobs:check-failed')->weeklyOn(1, '08:00')->runInBackground();
