@@ -6,13 +6,13 @@ use App\Models\Segnalazione;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\TabelleRiferimentoSeeder;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 class CambioStatoTest extends DuskTestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
 
     protected function setUp(): void
     {
@@ -41,7 +41,8 @@ class CambioStatoTest extends DuskTestCase
                 ->press('Gestione Segnalazione')
                 ->waitFor('#gestione')
                 ->select('id_azione', '1') // Prendi in carico
-                ->press('Esegui azione')
+                ->waitFor('@esegui-azione')
+                ->press('@esegui-azione')
                 ->waitForText('In carico');
         });
     }

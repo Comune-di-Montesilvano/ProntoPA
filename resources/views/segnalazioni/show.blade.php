@@ -749,7 +749,7 @@
                             </div>
 
                             <div class="text-right">
-                                <button type="submit"
+                                <button type="submit" dusk="esegui-azione"
                                         class="inline-flex items-center px-5 py-2 bg-blue-600 rounded-md font-semibold text-sm text-white hover:bg-blue-700 transition">
                                     Esegui azione
                                 </button>

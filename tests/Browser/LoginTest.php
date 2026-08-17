@@ -4,13 +4,13 @@ namespace Tests\Browser;
 
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 class LoginTest extends DuskTestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
 
     protected function setUp(): void
     {
@@ -29,8 +29,12 @@ class LoginTest extends DuskTestCase
                 ->type('username', $user->username)
                 ->type('password', 'password')
                 ->press('Accedi')
-                ->waitForLocation('/dashboard')
-                ->assertPathIs('/dashboard');
+                // /dashboard è solo un dispatcher: RoleDashboardController
+                // reindirizza subito alla dashboard del ruolo (qui
+                // segnalatore.dashboard) — non resta mai su /dashboard.
+                ->waitUntilMissing('#password')
+                ->assertPathIsNot('/login')
+                ->assertSee('Le mie segnalazioni');
         });
     }
 

@@ -23,6 +23,24 @@ abstract class DuskTestCase extends BaseTestCase
     }
 
     /**
+     * Dusk riusa lo stesso browser/profilo Chrome tra un test e l'altro
+     * (per velocità) — i cookie di sessione di un test precedente
+     * sopravvivono altrimenti anche dopo un `migrate:fresh`, facendo
+     * apparire un browser "già loggato" come un utente che nel DB fresco
+     * non esiste più più. Ogni test parte da uno stato guest pulito.
+     */
+    protected function browse(\Closure $callback): void
+    {
+        parent::browse(function (...$browsers) use ($callback) {
+            foreach ($browsers as $browser) {
+                $browser->driver->manage()->deleteAllCookies();
+            }
+
+            $callback(...$browsers);
+        });
+    }
+
+    /**
      * Create the RemoteWebDriver instance.
      */
     protected function driver(): RemoteWebDriver

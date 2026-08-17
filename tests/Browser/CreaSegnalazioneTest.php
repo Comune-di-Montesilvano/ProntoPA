@@ -5,13 +5,13 @@ namespace Tests\Browser;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\TabelleRiferimentoSeeder;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 class CreaSegnalazioneTest extends DuskTestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
 
     protected function setUp(): void
     {
@@ -37,7 +37,8 @@ class CreaSegnalazioneTest extends DuskTestCase
                 ->press('IMPIANTO ELETTRICO')
                 ->select('id_provenienza', '1')
                 ->type('testo_segnalazione', 'Lampione spento in via Roma, test E2E Dusk.')
-                ->press('Invia segnalazione')
+                ->waitFor('@submit-segnalazione')
+                ->press('@submit-segnalazione')
                 ->waitForLocation('/segnalazioni')
                 ->assertSee('Lampione spento in via Roma, test E2E Dusk.');
         });

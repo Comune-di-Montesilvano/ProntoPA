@@ -3,13 +3,14 @@
 namespace Tests\Browser;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 class SetupWizardTest extends DuskTestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
 
     /**
      * Deve combaciare con SETUP_TOKEN nell'.env usato da `php artisan serve`
@@ -17,6 +18,15 @@ class SetupWizardTest extends DuskTestCase
      * possibile impostarlo da qui via config()).
      */
     private const TOKEN = 'dusk-e2e-setup-token';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Il ruolo 'admin' deve esistere per SetupController::conferma()
+        // (syncRoles(['admin'])) — non tocca la tabella users, il wizard
+        // resta raggiungibile (gate è su User::exists(), non sui ruoli).
+        $this->seed(RolesAndPermissionsSeeder::class);
+    }
 
     public function test_wizard_crea_il_primo_admin(): void
     {
