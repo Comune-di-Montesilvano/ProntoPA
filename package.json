@@ -9,7 +9,7 @@
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.10",
         "@tailwindcss/vite": "^4.3.3",
-        "alpinejs": "^3.16.1",
+        "alpinejs": "^3.16.2",
         "axios": "^1.19.0",
         "concurrently": "^10.0.4",
         "laravel-vite-plugin": "^3.2.0",
