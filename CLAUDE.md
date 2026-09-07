@@ -176,6 +176,10 @@ git tag v1.2.0 && git push origin v1.2.0
 **Dependabot**: PR con conflitto `composer.lock`/`package-lock.json` (tipico se ne mergi più di una in sequenza) → commenta `@dependabot rebase`, aspetta, ricontrolla `gh pr checks`. Se lento/bloccato, applicare il bump a mano (`composer require pkg:^X` o `npm install pkg@X`) è più veloce che aspettare — poi chiudi la PR come superata (`gh pr close N --comment "..." --delete-branch`).
 **Gotcha peer-dep**: `vite` e `laravel-vite-plugin` sono accoppiati (`laravel-vite-plugin` fissa la major di vite richiesta) — dependabot le propone come PR separate ma vanno bumpate insieme o falliscono con `ERESOLVE`.
 
+**Baseline sicurezza (dal 2026-09-07)**: `tests.yml` scansiona con Trivy (`scan-type: fs`) le dipendenze composer/npm ad ogni push/PR, **bloccante** su CRITICAL/HIGH (`.trivyignore` a root per i falsi positivi verificati); `release.yml` scansiona entrambe le immagini pubblicate (app+web), **report-only**, risultati su tab Security via SARIF. Tutte le Action nei 4 workflow pinnate per commit SHA (`# vX` a commento). `dependabot.yml` ha `cooldown` (7gg default, 14gg sui major) su tutti e 3 gli ecosistemi. `main` è protetto: required check `test`+`dusk`, no force-push, no delete branch.
+
+**`aquasecurity/trivy-action` — il binario Trivy pinnato di default da certe release dell'action può non esistere/non installare** (visto dal vivo: v0.34.0 dell'action prova a scaricare Trivy `0.69.1`, fallisce silenziosamente con solo "Process completed with exit code 1", nessun dettaglio). Fix: `version: latest` esplicito nell'input dello step — stesso gotcha già preso una volta su ComunicaPA.
+
 ## Convenzioni
 
 - Controller: Resource Controllers, autorizzazione via Policy (no ruoli nel controller)
