@@ -5,16 +5,21 @@ on:
     branches: [main, dev]
   pull_request:
 
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
         with:
           php-version: "8.4"
           extensions: mbstring, pdo_sqlite, bcmath, gd, zip, intl, redis
@@ -30,7 +35,7 @@ jobs:
         run: php artisan key:generate
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: npm
@@ -46,3 +51,16 @@ jobs:
 
       - name: Run tests
         run: php artisan test
+
+      # Scan bloccante su dipendenze composer/npm — coglie CVE note prima
+      # ancora di arrivare al build immagine (che le scansiona di nuovo,
+      # report-only, in release.yml).
+      - name: Trivy scan filesystem dependencies
+        uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # v0.34.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          trivyignores: ${{ github.workspace }}/.trivyignore
