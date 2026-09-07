@@ -11,7 +11,7 @@
         "@tailwindcss/vite": "^4.3.3",
         "alpinejs": "^3.16.1",
         "axios": "^1.19.0",
-        "concurrently": "^10.0.4",
+        "concurrently": "^10.0.5",
         "laravel-vite-plugin": "^3.2.0",
         "postcss": "^8.5.26",
         "tailwindcss": "^4.1.7",
