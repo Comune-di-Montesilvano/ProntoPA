@@ -5,16 +5,21 @@ on:
     branches: [main, dev]
   pull_request:
 
+concurrency:
+  group: dusk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   dusk:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
         with:
           php-version: "8.4"
           extensions: mbstring, pdo_sqlite, bcmath, gd, zip, intl, redis
@@ -30,7 +35,7 @@ jobs:
         run: php artisan key:generate
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: npm
@@ -85,14 +90,14 @@ jobs:
 
       - name: Upload screenshots on failure
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: dusk-screenshots
           path: tests/Browser/screenshots
 
       - name: Upload console logs on failure
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: dusk-console
           path: tests/Browser/console
