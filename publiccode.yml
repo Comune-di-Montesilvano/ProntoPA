@@ -5,7 +5,7 @@ applicationSuite: ProntoPA
 url: "https://github.com/Comune-di-Montesilvano/ProntoPA.git"
 landingURL: "https://github.com/Comune-di-Montesilvano/ProntoPA"
 
-softwareVersion: "0.6.2"
+softwareVersion: "0.6.3"
 
 platforms:
   - web
