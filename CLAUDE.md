@@ -221,6 +221,18 @@ git tag v1.2.0 && git push origin v1.2.0
 
 **`aquasecurity/trivy-action` — il binario Trivy pinnato di default da certe release dell'action può non esistere/non installare** (visto dal vivo: v0.34.0 dell'action prova a scaricare Trivy `0.69.1`, fallisce silenziosamente con solo "Process completed with exit code 1", nessun dettaglio). Fix: `version: latest` esplicito nell'input dello step — stesso gotcha già preso una volta su ComunicaPA.
 
+**Gotcha `release.yml` bake/trivy (risolti 2026-09-08, 4 bug in cascata su `docker/metadata-action@v6`+`bake-action`+trivy+codeql, ognuno emerso solo dopo il fix del precedente — verificabili solo su un vero tag push, non in locale)**:
+- `docker/metadata-action@v6` non setta più l'output combinato `bake-file` (rimosso, nonostante il README lo elenchi ancora) — usare `bake-file-tags`+`bake-file-labels`.
+- `docker/bake-action` risolve quei path solo se prefissati `cwd://` (`cwd://${{ steps.meta.outputs.bake-file-tags }}`), altrimenti "no such file or directory" anche se il file esiste.
+- Il tag pushato da bake è quello risolto da metadata-action (`type=semver,pattern={{version}}` strippa la "v": `0.6.3`, non `v0.6.3`) — uno step successivo che referenzia il ref git grezzo (`v0.6.3`, es. per lo scan Trivy) punta a un tag inesistente (`MANIFEST_UNKNOWN`). Usare `steps.meta-*.outputs.version`.
+- `upload-sarif` con più file (app+web) sotto la stessa `category` di default viene rifiutato da CodeQL dal 2025-07-21 ("multiple SARIF runs with the same category") — uno step `upload-sarif` per file, `category` esplicita e distinta.
+
+**Rilanciare la build su un tag già esistente**: spostare il tag (`git tag -f vX.Y.Z <commit> && git push origin vX.Y.Z --force`) ritriggera `release.yml` — utile per iterare su fix del workflow senza bumpare versione. Force-push su tag già pubblicato è distruttivo (sovrascrive ref remoto, immagini GHCR già pushate restano finché non arriva il prossimo push): conferma con l'utente prima.
+
+**gh CLI come fallback quando l'MCP GitHub è down**: `gh run list`/`gh run view --log-failed`/`gh pr create`/`gh pr checks --watch`/`gh pr merge` coprono l'intero giro PR senza bisogno dell'MCP.
+
+**Gotcha ambiente Windows**: la Bash tool (MSYS) può crashare a metà sessione con `fatal error - add_item (...) failed, errno 1` su comandi altrimenti innocui (git, gh log a file) — non è un errore del comando, è l'MSYS runtime. Fix: retry con PowerShell tool sullo stesso comando, poi si può tornare a Bash (era transiente qui).
+
 ## Convenzioni
 
 - Controller: Resource Controllers, autorizzazione via Policy (no ruoli nel controller)
