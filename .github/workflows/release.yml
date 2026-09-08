@@ -86,8 +86,10 @@ jobs:
         with:
           files: |
             ./docker-bake.hcl
-            ${{ steps.meta-app.outputs.bake-file }}
-            ${{ steps.meta-web.outputs.bake-file }}
+            ${{ steps.meta-app.outputs.bake-file-tags }}
+            ${{ steps.meta-app.outputs.bake-file-labels }}
+            ${{ steps.meta-web.outputs.bake-file-tags }}
+            ${{ steps.meta-web.outputs.bake-file-labels }}
           push: true
           set: |
             app.args.APP_VERSION=${{ steps.vars.outputs.version }}
