@@ -105,7 +105,7 @@ jobs:
         uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # v0.34.0
         with:
           version: latest # il binario Trivy pinnato di default da questa release dell'action (0.69.1) non installa
-          image-ref: ${{ env.IMAGE_APP }}:${{ steps.vars.outputs.version }}
+          image-ref: ${{ env.IMAGE_APP }}:${{ steps.meta-app.outputs.version }}
           format: sarif
           output: trivy-app.sarif
           severity: CRITICAL,HIGH
@@ -116,7 +116,7 @@ jobs:
         uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # v0.34.0
         with:
           version: latest # il binario Trivy pinnato di default da questa release dell'action (0.69.1) non installa
-          image-ref: ${{ env.IMAGE_WEB }}:${{ steps.vars.outputs.version }}
+          image-ref: ${{ env.IMAGE_WEB }}:${{ steps.meta-web.outputs.version }}
           format: sarif
           output: trivy-web.sarif
           severity: CRITICAL,HIGH
