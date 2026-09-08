@@ -123,8 +123,16 @@ jobs:
           ignore-unfixed: true
           exit-code: "0"
 
-      - name: Upload Trivy results to Security tab
+      - name: Upload Trivy results (app) to Security tab
         uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
         if: always()
         with:
-          sarif_file: .
+          sarif_file: trivy-app.sarif
+          category: trivy-app
+
+      - name: Upload Trivy results (web) to Security tab
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+        if: always()
+        with:
+          sarif_file: trivy-web.sarif
+          category: trivy-web
