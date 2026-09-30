@@ -5,12 +5,12 @@ namespace App\Services\Directory;
 /**
  * Simulatore AD per sviluppo locale (LDAP_HOST=mock). Password = username.
  * Rifiutato in produzione da LdapConfigGuard. Prefisso "mock." per non
- * collidere con gli utenti locali creati da `artisan demo`.
+ * collidere con gli utenti locali esistenti (admin legacy, `artisan demo`).
  */
 final class MockDirectory implements Directory
 {
     private const UTENTI = [
-        'admin' => 'PRONTOPA_ADMIN',
+        'mock.admin' => 'PRONTOPA_ADMIN',
         'mock.supervisore' => 'PRONTOPA_SUPERVISORI',
         'mock.gestore' => 'PRONTOPA_GESTORI',
         'mock.operaio' => 'PRONTOPA_OPERAI',

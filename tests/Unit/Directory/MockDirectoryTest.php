@@ -23,8 +23,8 @@ class MockDirectoryTest extends TestCase
         $dir = new MockDirectory();
 
         $this->assertSame(
-            $dir->authenticate('admin', 'admin')->guid,
-            $dir->authenticate('ADMIN', 'admin')->guid,
+            $dir->authenticate('mock.admin', 'mock.admin')->guid,
+            $dir->authenticate('MOCK.ADMIN', 'mock.admin')->guid,
         );
     }
 
@@ -32,7 +32,8 @@ class MockDirectoryTest extends TestCase
     {
         $dir = new MockDirectory();
 
-        $this->assertNull($dir->authenticate('admin', 'sbagliata'));
+        $this->assertNull($dir->authenticate('mock.admin', 'sbagliata'));
+        $this->assertNull($dir->authenticate('admin', 'admin'));
         $this->assertNull($dir->authenticate('sconosciuto', 'sconosciuto'));
     }
 

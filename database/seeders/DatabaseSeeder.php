@@ -15,11 +15,8 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
         ]);
 
-        // Se SETUP_TOKEN è configurato, l'admin va creato dal wizard /setup
-        // (token + email + password + OTP), non da qui con la password in
-        // chiaro da .env. Senza SETUP_TOKEN, comportamento legacy invariato.
-        if (blank(config('app.setup_token'))) {
-            $this->call(AdminUserSeeder::class);
-        }
+        // Nessun utente creato qui: i dipendenti (admin compreso) entrano da
+        // Active Directory, il primo admin è chi sta in PRONTOPA_ADMIN. In
+        // sviluppo: LDAP_HOST=mock → mock.admin/mock.admin.
     }
 }

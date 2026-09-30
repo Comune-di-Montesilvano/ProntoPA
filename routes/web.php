@@ -25,18 +25,9 @@ use App\Http\Controllers\AiTriageController;
 use App\Http\Controllers\FascicoloPdfController;
 use App\Http\Controllers\SegnalazioneController;
 use App\Http\Controllers\SegnalatoreDashboardController;
-use App\Http\Controllers\SetupController;
 use App\Http\Controllers\StatisticheController;
 use App\Http\Controllers\TelegramAccountController;
 use Illuminate\Support\Facades\Route;
-
-// Setup wizard (primo avvio — nessuna autenticazione richiesta)
-// throttle sul POST verifica: OTP a 6 cifre, senza limite sarebbe forzabile
-// entro i 10 minuti di validità (10^6 combinazioni).
-Route::get('/setup', [SetupController::class, 'show'])->name('setup.show');
-Route::post('/setup', [SetupController::class, 'richiediOtp'])->middleware('throttle:6,1')->name('setup.richiedi-otp');
-Route::get('/setup/verifica', [SetupController::class, 'verify'])->name('setup.verify');
-Route::post('/setup/verifica', [SetupController::class, 'conferma'])->middleware('throttle:6,1')->name('setup.conferma');
 
 // Home
 Route::get('/', [PublicHomeController::class, 'index'])->name('home');
