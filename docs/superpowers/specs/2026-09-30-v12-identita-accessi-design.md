@@ -18,7 +18,7 @@ dell'accesso è governato da chi ha titolo a governarlo:
 |---|---|---|
 | Segnalatori scuole | SPID/CIE via `pa-sso-proxy` | Segreteria della scuola (delega + rinnovo annuale) |
 | Dipendenti ente (gestori, operai, admin, URP, uffici) | LDAP/Active Directory | Gruppi AD (sistemista) |
-| Ditte | username/password locale (+2FA), magic link per non registrate | Admin ProntoPA |
+| Ditte | email + password locale + 2FA (codice via email o TOTP), magic link per non registrate | Admin ProntoPA |
 | Admin d'emergenza | account locale creato dal wizard `/setup` | — |
 
 ## Stato del progetto e readiness produzione
@@ -126,6 +126,7 @@ Migrazioni additive o che allentano vincoli; nessuna colonna rimossa.
 | `ldap_guid` | `varchar(36)` nullable, **unique** | `objectGUID` AD, stabile ai rename |
 | `bloccato_at` | timestamp nullable | Blocco su segnalazione segreteria o admin |
 | `motivo_blocco` | `varchar(255)` nullable | |
+| `two_factor_metodo` | `varchar(5)` nullable | `email` · `totp` · NULL — solo account `locale` |
 
 Vincoli modificati:
 
@@ -239,24 +240,40 @@ Ogni variabile va aggiunta anche al blocco `environment:` dei servizi in
 ### Pagina di login
 
 Due blocchi: **"Scuole: entra con SPID/CIE"** (pulsante) e **"Personale
-dell'ente e ditte"** (username + password).
+dell'ente e ditte"** (un campo "Username dipendente o email ditta" +
+password).
 
-Il form username/password instrada:
+Il form instrada sul contenuto del campo:
 
-1. utente con quello `username` e `auth_source = locale` → autenticazione
-   locale (+2FA Fortify se attiva);
-2. altrimenti → bind AD.
+1. contiene `@` → account `locale` (ditte, admin d'emergenza) cercato per
+   **email** tra gli utenti `locale` attivi → password → 2FA;
+2. altrimenti → username AD → bind LDAP.
+
+I due spazi di nomi non si sovrappongono (uno username AD non contiene
+`@`), quindi nessuna collisione possibile. Gli account `locale` si
+identificano solo per email: unicità dell'email tra utenti `locale`
+attivi garantita da validazione applicativa (creazione/modifica ditta da
+admin, wizard setup).
 
 Rate limit e messaggio generico (`auth.failed`) come oggi in `LoginRequest`:
-il messaggio non rivela se lo username esiste né dove.
+il messaggio non rivela se l'account esiste né dove.
 
-Collisione di username: un account `locale` (ditta) con lo stesso username
-di un dipendente AD renderebbe quel dipendente impossibilitato a entrare
-(vince sempre il locale). Mitigazioni: gli username delle ditte creati
-dall'admin hanno prefisso obbligatorio (`ditta.`), validato in
-`ImpreseCRUDController`/`UtentiController`; se al primo login LDAP lo
-sAMAccountName coincide con un utente non `ldap` diverso da quello
-agganciato, login rifiutato con messaggio per l'admin e log warning.
+### 2FA degli account locali (ditte, admin d'emergenza)
+
+- Nuova colonna `users.two_factor_metodo`: `email` · `totp` · NULL.
+- **Ditte: 2FA obbligatoria**, default `email` (nessuna app da installare).
+  Dopo la password: codice di 6 cifre inviato all'email dell'account,
+  hash in cache Redis (chiave per user id), validità 10 minuti, max 5
+  tentativi poi codice invalidato, reinvio con throttle (1/min). La ditta
+  può passare a `totp` dal profilo (Fortify esistente, con recovery code).
+- **Admin d'emergenza: `totp` obbligatorio**, `email` non ammesso: l'account
+  d'emergenza deve funzionare proprio quando l'infrastruttura (SMTP
+  compreso) è giù.
+- Utenti `ldap`/`spid`: nessuna 2FA ProntoPA (l'autenticazione forte è di
+  AD/SPID); la 2FA TOTP self-service esistente resta disponibile solo agli
+  account `locale`.
+- `TwoFactorChallengeController` esteso: se `two_factor_metodo = email`
+  mostra il form codice email invece di quello TOTP.
 
 ### Login dipendenti (LDAP)
 
@@ -519,6 +536,10 @@ funziona con AD e proxy giù.
   errato/riusato, `client_secret_basic` (header verificato, nessun secret
   nel body), userinfo con `sub` diverso, stesso CF con `sub` diverso.
 - Completa profilo + verifica email; aggancio pre-delega.
+- Instradamento form: con `@` → locale per email, senza `@` → LDAP;
+  utente `ldap`/`spid` con email digitata → nessun login locale.
+- 2FA email ditte: codice corretto/errato/scaduto, 5 tentativi, throttle
+  reinvio; admin d'emergenza non può scegliere `email`.
 - LDAP con fake LdapRecord: percorso felice, password vuota, nessun gruppo,
   senza `mail`, aggancio legacy per email (0/1/2 risultati), rimozione
   gruppo.
@@ -546,9 +567,9 @@ Ogni fase è rilasciabile da sola.
 
 | Fase | Contenuto |
 |---|---|
-| **1 — Dipendenti via AD** | `ext-ldap` nei Dockerfile, LdapRecord, `LdapLoginService`, `MappaGruppiLdap`, instradamento form login, colonne `auth_source`/`ldap_guid`, `password` nullable, impostazioni gruppi, mock dev, test |
+| **1 — Dipendenti via AD + ditte via email** | `ext-ldap` nei Dockerfile, LdapRecord, `LdapLoginService`, `MappaGruppiLdap`, instradamento form login (`@` → locale per email), 2FA via email per le ditte, colonne `auth_source`/`ldap_guid`/`two_factor_metodo`, `password` nullable, impostazioni gruppi, mock dev, test |
 | **2 — Scuole via SPID/CIE + deleghe** | `OidcClient`, `SpidLoginService`, completa profilo + verifica email, `deleghe` + `deleghe_storico`, `DelegaService`, email e pagine segreteria, rinnovo e scadenze, Admin → Deleghe con pre-delega, visibilità, impostazioni OIDC, mock SPID, test + Dusk |
-| **3 — Cutover** | Comando `utenze:cutover` (default dry-run): disattiva segnalatori `locale`; elenca utenti `locale` non ditta e non admin d'emergenza per decisione manuale; report istituti attivi senza `email`. Rimozione `/register` e `accounts:annual-check` dallo scheduler. Aggiornamento `CLAUDE.md`, `CHANGELOG.md`, `TODO.md` |
+| **3 — Cutover** | Comando `utenze:cutover` (default dry-run): disattiva segnalatori `locale`; elenca utenti `locale` non ditta e non admin d'emergenza per decisione manuale; report ditte `locale` attive con email mancante o duplicata (da sistemare, altrimenti non possono entrare) e imposta `two_factor_metodo = email` su quelle senza 2FA; report istituti attivi senza `email`. Rimozione `/register` e `accounts:annual-check` dallo scheduler. Aggiornamento `CLAUDE.md`, `CHANGELOG.md`, `TODO.md` |
 
 ## Fuori scope
 
