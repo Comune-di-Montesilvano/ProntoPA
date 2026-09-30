@@ -47,7 +47,8 @@ class UtentiController extends Controller
         $data = $request->validate([
             'name'       => ['required', 'string', 'max:100'],
             'username'   => ['required', 'string', 'max:50', 'unique:users,username'],
-            'email'      => ['required', 'email', 'max:100', 'unique:users,email'],
+            'email'      => ['required', 'email', 'max:100', Rule::unique('users', 'email')
+                ->where(fn ($q) => $q->where('auth_source', 'locale')->where('attivo', true))],
             'password'   => ['required', 'string', 'min:8'],
             'ruolo'      => ['required', Rule::in(['admin', 'gestore', 'segnalatore', 'impresa'])],
             'id_profilo'    => ['nullable', 'integer', 'exists:profili,id_profilo'],
@@ -97,7 +98,9 @@ class UtentiController extends Controller
         $data = $request->validate([
             'name'       => ['required', 'string', 'max:100'],
             'username'   => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($utente->id)],
-            'email'      => ['required', 'email', 'max:100', Rule::unique('users', 'email')->ignore($utente->id)],
+            'email'      => ['required', 'email', 'max:100', Rule::unique('users', 'email')
+                ->where(fn ($q) => $q->where('auth_source', 'locale')->where('attivo', true))
+                ->ignore($utente->id)],
             'password'   => ['nullable', 'string', 'min:8'],
             'ruolo'      => ['required', Rule::in(['admin', 'gestore', 'segnalatore', 'impresa'])],
             'id_profilo'    => ['nullable', 'integer', 'exists:profili,id_profilo'],
