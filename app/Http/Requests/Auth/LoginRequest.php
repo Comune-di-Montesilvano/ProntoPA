@@ -19,6 +19,8 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
+    private const MAX_FALLIMENTI_PER_IP = 20;
+
     public function authorize(): bool
     {
         return true;
@@ -48,20 +50,15 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $login = trim((string) $this->input('username'));
         $password = (string) $this->input('password');
-        $template = (string) config('ldap.user_dn_template', '%s');
+        [$canale, $identita] = $this->identitaLogin();
 
-        $user = str_contains($login, '@') && ! NormalizzaUsernameAd::èUpn($login, $template)
-            ? $this->tentaLocale('email', mb_strtolower($login), $password)
-            : $this->tentaDipendente(NormalizzaUsernameAd::normalizza($login, $template), $password);
+        $user = $canale === 'email'
+            ? $this->tentaLocale('email', $identita, $password)
+            : $this->tentaDipendente($identita, $password);
 
         if ($user === null) {
-            RateLimiter::hit($this->throttleKey());
-
-            throw ValidationException::withMessages([
-                'username' => trans('auth.failed'),
-            ]);
+            $this->fallito(trans('auth.failed'));
         }
 
         $this->ensureUserIsActive($user);
@@ -94,14 +91,12 @@ class LoginRequest extends FormRequest
         try {
             $user = app(LdapLoginService::class)->login($username, $password);
         } catch (AccessoLdapNegato $e) {
-            throw ValidationException::withMessages(['username' => $e->getMessage()]);
+            $this->fallito($e->getMessage());
         } catch (DirectoryNonDisponibile $e) {
             report($e);
 
             return $this->tentaLocale('username', $username, $password)
-                ?? throw ValidationException::withMessages([
-                    'username' => 'Autenticazione dei dipendenti temporaneamente non disponibile. Riprova più tardi.',
-                ]);
+                ?? $this->fallito('Autenticazione dei dipendenti temporaneamente non disponibile. Riprova più tardi.');
         }
 
         // TRANSITORIO fino al cutover (fase 3): account locali legacy che
@@ -165,13 +160,19 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        $chiave = match (true) {
+            RateLimiter::tooManyAttempts($this->throttleKey(), 5) => $this->throttleKey(),
+            RateLimiter::tooManyAttempts($this->throttleKeyIp(), self::MAX_FALLIMENTI_PER_IP) => $this->throttleKeyIp(),
+            default => null,
+        };
+
+        if ($chiave === null) {
             return;
         }
 
         event(new Lockout($this));
 
-        $seconds = RateLimiter::availableIn($this->throttleKey());
+        $seconds = RateLimiter::availableIn($chiave);
 
         throw ValidationException::withMessages([
             'username' => trans('auth.throttle', [
@@ -181,8 +182,47 @@ class LoginRequest extends FormRequest
         ]);
     }
 
+    /**
+     * Chiave sull'identità reale, non sulla stringa digitata: "a\m.rossi",
+     * "b\m.rossi" e "m.rossi@ente.local" sono la stessa persona per AD e
+     * devono condividere lo stesso budget di tentativi.
+     */
     public function throttleKey(): string
     {
-        return Str::lower($this->string('username')).'|'.$this->ip();
+        [$canale, $identita] = $this->identitaLogin();
+
+        return $canale.':'.mb_strtolower($identita).'|'.$this->ip();
+    }
+
+    /** Limite trasversale agli username, contro tentativi su tanti account dallo stesso IP. */
+    private function throttleKeyIp(): string
+    {
+        return 'login-ip|'.$this->ip();
+    }
+
+    /**
+     * @return array{0: 'email'|'ad', 1: string}
+     */
+    private function identitaLogin(): array
+    {
+        $login = trim((string) $this->input('username'));
+        $template = (string) config('ldap.user_dn_template', '%s');
+
+        return str_contains($login, '@') && ! NormalizzaUsernameAd::èUpn($login, $template)
+            ? ['email', mb_strtolower($login)]
+            : ['ad', NormalizzaUsernameAd::normalizza($login, $template)];
+    }
+
+    /**
+     * Ogni tentativo fallito conta, qualunque sia il motivo.
+     *
+     * @throws ValidationException
+     */
+    private function fallito(string $messaggio): never
+    {
+        RateLimiter::hit($this->throttleKey());
+        RateLimiter::hit($this->throttleKeyIp());
+
+        throw ValidationException::withMessages(['username' => $messaggio]);
     }
 }

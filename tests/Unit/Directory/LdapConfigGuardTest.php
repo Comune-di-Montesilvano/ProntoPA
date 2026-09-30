@@ -25,6 +25,15 @@ class LdapConfigGuardTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
+    public function test_avviso_template_username_nudo_in_produzione(): void
+    {
+        $this->assertNotNull(LdapConfigGuard::avvisoTemplate('production', 'ldap://dc', '%s'));
+        $this->assertNull(LdapConfigGuard::avvisoTemplate('production', 'ldap://dc', '%s@ente.local'));
+        $this->assertNull(LdapConfigGuard::avvisoTemplate('production', 'ldap://dc', 'ENTE\\%s'));
+        $this->assertNull(LdapConfigGuard::avvisoTemplate('production', null, '%s'));
+        $this->assertNull(LdapConfigGuard::avvisoTemplate('local', 'ldap://dc', '%s'));
+    }
+
     public function test_avviso_tls_senza_verifica_solo_in_produzione(): void
     {
         $this->assertNotNull(LdapConfigGuard::avviso('production', true));

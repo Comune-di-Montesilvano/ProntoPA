@@ -33,7 +33,13 @@ class AppServiceProvider extends ServiceProvider
     {
         LdapConfigGuard::verifica((string) $this->app->environment(), config('ldap.host'));
 
-        if ($avviso = LdapConfigGuard::avviso((string) $this->app->environment(), (bool) config('ldap.tls_skip_verify'))) {
+        $ambiente = (string) $this->app->environment();
+        $avvisi = [
+            LdapConfigGuard::avviso($ambiente, (bool) config('ldap.tls_skip_verify')),
+            LdapConfigGuard::avvisoTemplate($ambiente, config('ldap.host'), (string) config('ldap.user_dn_template')),
+        ];
+
+        foreach (array_filter($avvisi) as $avviso) {
             Log::warning($avviso);
         }
 

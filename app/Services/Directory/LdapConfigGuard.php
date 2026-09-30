@@ -13,6 +13,17 @@ final class LdapConfigGuard
         }
     }
 
+    /**
+     * AD non accetta un simple bind col solo sAMAccountName: con "%s" nessun
+     * dipendente riesce a entrare. Serve UPN (%s@dominio), DOMINIO\%s o DN.
+     */
+    public static function avvisoTemplate(string $ambiente, ?string $host, string $template): ?string
+    {
+        return $ambiente === 'production' && filled($host) && $host !== 'mock' && $template === '%s'
+            ? 'LDAP_USER_DN_TEMPLATE=%s: Active Directory rifiuta il bind col solo username. Usa %s@dominio (UPN) o DOMINIO\\%s.'
+            : null;
+    }
+
     public static function avviso(string $ambiente, bool $tlsSkipVerify): ?string
     {
         return $ambiente === 'production' && $tlsSkipVerify

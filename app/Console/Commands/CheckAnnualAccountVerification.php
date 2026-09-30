@@ -34,7 +34,10 @@ class CheckAnnualAccountVerification extends Command
 
         $now = now();
 
+        // Solo account locali: per ldap/spid la validità dell'accesso la
+        // governano AD e le deleghe (v1.2), non questa verifica email.
         $toSend = User::query()
+            ->where('auth_source', 'locale')
             ->where('attivo', true)
             ->where('approval_status', 'approved')
             ->whereNull('annual_verification_sent_at')
@@ -73,6 +76,7 @@ class CheckAnnualAccountVerification extends Command
         }
 
         $toRemind = User::query()
+            ->where('auth_source', 'locale')
             ->where('attivo', true)
             ->where('approval_status', 'approved')
             ->whereNotNull('annual_verification_token_hash')
@@ -112,6 +116,7 @@ class CheckAnnualAccountVerification extends Command
 
         if ($autoSuspend) {
             $toSuspend = User::query()
+                ->where('auth_source', 'locale')
                 ->where('attivo', true)
                 ->where('approval_status', 'approved')
                 ->whereNotNull('annual_verification_token_hash')
@@ -137,6 +142,7 @@ class CheckAnnualAccountVerification extends Command
 
         if (! $dryRun && $annualDays > 0) {
             User::query()
+                ->where('auth_source', 'locale')
                 ->where('approval_status', 'approved')
                 ->whereNull('prossima_verifica_annuale_at')
                 ->update(['prossima_verifica_annuale_at' => now()->addDays($annualDays)]);

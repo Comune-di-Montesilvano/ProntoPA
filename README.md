@@ -141,6 +141,8 @@ Il ruolo dei dipendenti deriva dai gruppi AD, riletti a ogni accesso (un solo ru
 
 I nomi dei gruppi sono modificabili in **Admin → Impostazioni**. Verifica rapida di un utente: `php artisan ldap:prova <username>`.
 
+`LDAP_USER_DN_TEMPLATE` va impostato in formato UPN (`%s@ente.local`, consigliato: i dipendenti possono scrivere anche il proprio UPN) o `DOMINIO\%s`: Active Directory rifiuta il bind col solo username, e con `%s` nessun dipendente riesce a entrare (l'app lo segnala nei log all'avvio).
+
 > **Le impostazioni applicative** (nome ente, logo, colori, coordinate mappa)
 > si configurano dall'interfaccia admin in **Admin → Impostazioni** — non dal file `.env`.
 

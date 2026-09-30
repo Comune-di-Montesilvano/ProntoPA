@@ -195,4 +195,24 @@ class CheckAnnualAccountVerificationTest extends TestCase
 
         Notification::assertNothingSent();
     }
+
+    public function test_utenti_ad_esclusi_da_verifica_e_sospensione(): void
+    {
+        Notification::fake();
+
+        $nuovo = $this->approvedUser(['auth_source' => 'ldap', 'ldap_guid' => 'g-1', 'prossima_verifica_annuale_at' => null]);
+        $scaduto = $this->approvedUser([
+            'auth_source' => 'ldap',
+            'ldap_guid' => 'g-2',
+            'annual_verification_token_hash' => hash('sha256', 'x'),
+            'annual_verification_sent_at' => now()->subDays(40),
+            'annual_verification_due_at' => now()->subDay(),
+        ]);
+
+        $this->artisan('accounts:annual-check')->assertSuccessful();
+
+        Notification::assertNothingSent();
+        $this->assertTrue($scaduto->fresh()->attivo);
+        $this->assertNull($nuovo->fresh()->annual_verification_sent_at);
+    }
 }

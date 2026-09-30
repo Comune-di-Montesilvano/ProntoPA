@@ -48,6 +48,30 @@ final class LdapRecordDirectory implements Directory
         return $codiceErrore === self::ERRORE_CREDENZIALI;
     }
 
+    /** Il template DN (CN=%s,...) richiede l'escape DN dello username. */
+    public static function bindDn(string $template, string $username): string
+    {
+        $valore = str_contains($template, '=') ? ldap_escape($username, '', LDAP_ESCAPE_DN) : $username;
+
+        return sprintf($template, $valore);
+    }
+
+    /**
+     * Attributo + valore per rileggere ESATTAMENTE il principal che ha fatto
+     * bind: con il template UPN il prefisso digitato può non coincidere col
+     * sAMAccountName di nessuno, o coincidere con quello di un'ALTRA persona.
+     *
+     * @return array{0: string, 1: string}
+     */
+    public static function filtroIdentita(string $template, string $username): array
+    {
+        return match (true) {
+            str_contains($template, '=') => ['distinguishedname', self::bindDn($template, $username)],
+            str_contains($template, '@') => ['userprincipalname', sprintf($template, $username)],
+            default => ['samaccountname', $username],
+        };
+    }
+
     public function authenticate(string $username, string $password): ?DirectoryIdentity
     {
         if ($password === '' || trim($username) === '') {
@@ -70,7 +94,8 @@ final class LdapRecordDirectory implements Directory
             ],
         ]);
 
-        $bindDn = sprintf($this->config['user_dn_template'], $username);
+        $bindDn = self::bindDn($this->config['user_dn_template'], $username);
+        [$attributo, $valore] = self::filtroIdentita($this->config['user_dn_template'], $username);
 
         try {
             try {
@@ -87,7 +112,7 @@ final class LdapRecordDirectory implements Directory
 
             /** @var array<string, array<int, string>>|null $entry */
             $entry = $connection->query()
-                ->where('samaccountname', '=', $username)
+                ->where($attributo, '=', $valore)
                 ->select(['objectguid', 'samaccountname', 'displayname', 'mail', 'distinguishedname'])
                 ->first();
 

@@ -52,6 +52,20 @@ class LdapRecordDirectoryTest extends TestCase
         $this->assertFalse(LdapRecordDirectory::credenzialiNonValide(81));
     }
 
+    public function test_identita_cercata_per_il_principal_che_ha_fatto_bind(): void
+    {
+        $this->assertSame(['userprincipalname', 'M.Rossi@ente.local'], LdapRecordDirectory::filtroIdentita('%s@ente.local', 'M.Rossi'));
+        $this->assertSame(['samaccountname', 'm.rossi'], LdapRecordDirectory::filtroIdentita('ENTE\\%s', 'm.rossi'));
+        $this->assertSame(['samaccountname', 'm.rossi'], LdapRecordDirectory::filtroIdentita('%s', 'm.rossi'));
+        $this->assertSame(['distinguishedname', 'CN=m.rossi,OU=Utenti,DC=ente,DC=local'], LdapRecordDirectory::filtroIdentita('CN=%s,OU=Utenti,DC=ente,DC=local', 'm.rossi'));
+    }
+
+    public function test_template_dn_esegue_escape_dello_username(): void
+    {
+        $this->assertSame('CN=a\2cb,OU=U,DC=x', LdapRecordDirectory::bindDn('CN=%s,OU=U,DC=x', 'a,b'));
+        $this->assertSame('a,b@ente.local', LdapRecordDirectory::bindDn('%s@ente.local', 'a,b'));
+    }
+
     public function test_host_irraggiungibile_lancia_non_disponibile(): void
     {
         $dir = new LdapRecordDirectory($this->config('ldap://127.0.0.1:1'));
