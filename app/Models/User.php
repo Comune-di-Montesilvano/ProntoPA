@@ -18,6 +18,9 @@ class User extends Authenticatable
         'email',
         'password',
         'password_legacy',
+        'auth_source',
+        'ldap_guid',
+        'two_factor_metodo',
         'id_profilo',
         'id_istituto',
         'amministratore',
@@ -92,6 +95,33 @@ class User extends Authenticatable
     public function isSupervisore(): bool
     {
         return (bool) $this->supervisore_segnalazioni;
+    }
+
+    public function isLocale(): bool
+    {
+        return ($this->auth_source ?? 'locale') === 'locale';
+    }
+
+    /**
+     * Secondo fattore richiesto al login, solo per account locali (ditte e
+     * legacy): per ldap/spid l'autenticazione forte è di AD/SPID.
+     * TOTP confermato vince; le ditte hanno email come default obbligatorio.
+     */
+    public function metodoSecondoFattore(): ?string
+    {
+        if (! $this->isLocale()) {
+            return null;
+        }
+
+        if ($this->hasEnabledTwoFactorAuthentication()) {
+            return 'totp';
+        }
+
+        if ($this->two_factor_metodo === 'email' || $this->hasRole('impresa')) {
+            return 'email';
+        }
+
+        return null;
     }
 
     // --- Relazioni ---
