@@ -4,6 +4,7 @@ namespace App\Http\Requests\Auth;
 
 use App\Models\User;
 use App\Services\Auth\AccessoLdapNegato;
+use App\Services\Auth\CodiceAccessoEmail;
 use App\Services\Auth\LdapLoginService;
 use App\Services\Auth\NormalizzaUsernameAd;
 use App\Services\Directory\DirectoryNonDisponibile;
@@ -74,6 +75,10 @@ class LoginRequest extends FormRequest
                 'login.remember' => $this->boolean('remember'),
                 'login.metodo'   => $metodo,
             ]);
+
+            if ($metodo === 'email') {
+                app(CodiceAccessoEmail::class)->invia($user);
+            }
 
             return;
         }

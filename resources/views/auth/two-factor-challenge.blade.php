@@ -31,12 +31,23 @@
         <h2 style="font-family:var(--font-ui); font-size:24px; font-weight:700;
                    color:var(--ink); margin:0; letter-spacing:-.01em;">Verifica in due passaggi</h2>
         <p style="font-size:14px; color:var(--slate-600); margin:6px 0 0;">
-            Inserisci il codice generato dall'app di autenticazione, oppure uno dei tuoi codici di recupero.
+            @if(($metodo ?? 'totp') === 'email')
+                Abbiamo inviato un codice a 6 cifre a <strong>{{ $emailMascherata }}</strong>. Scade tra 10 minuti.
+            @else
+                Inserisci il codice generato dall'app di autenticazione, oppure uno dei tuoi codici di recupero.
+            @endif
         </p>
     </div>
 
+    @if(session('status'))
+        <div role="status" style="background:var(--emerald-100); color:var(--emerald); border-radius:var(--radius-sm);
+                    padding:10px 14px; font-size:13px;">
+            {{ session('status') }}
+        </div>
+    @endif
+
     @if($errors->any())
-        <div style="background:var(--rose-100); color:var(--rose); border-radius:var(--radius-sm);
+        <div role="alert" style="background:var(--rose-100); color:var(--rose); border-radius:var(--radius-sm);
                     padding:10px 14px; font-size:13px; border:1px solid color-mix(in srgb,var(--rose) 25%,#fff);">
             @foreach($errors->all() as $error)
                 <div>{{ $error }}</div>
@@ -53,15 +64,25 @@
                    autocomplete="one-time-code" autofocus placeholder="000000">
         </div>
 
-        <div class="pa-field">
-            <label class="pa-field-label" for="recovery_code">Oppure codice di recupero</label>
-            <input id="recovery_code" type="text" name="recovery_code" class="pa-input" autocomplete="off">
-        </div>
+        @if(($metodo ?? 'totp') !== 'email')
+            <div class="pa-field">
+                <label class="pa-field-label" for="recovery_code">Oppure codice di recupero</label>
+                <input id="recovery_code" type="text" name="recovery_code" class="pa-input" autocomplete="off">
+            </div>
+        @endif
 
         <button type="submit" class="pa-btn pa-btn-primary pa-btn-lg" style="width:100%;">
             Verifica e accedi
         </button>
     </form>
+
+    @if(($metodo ?? 'totp') === 'email')
+        <form method="POST" action="{{ route('two-factor.reinvia') }}" style="text-align:center;">
+            @csrf
+            <button type="submit" style="background:none; border:none; cursor:pointer; font-size:13px;
+                           font-weight:600; color:var(--ente-primary);">Non è arrivato? Invia un nuovo codice</button>
+        </form>
+    @endif
 
     <p style="font-size:12px; color:var(--slate-500); text-align:center; margin:0;">
         <a href="{{ route('login') }}" style="color:var(--ente-primary); font-weight:600; text-decoration:none;">
