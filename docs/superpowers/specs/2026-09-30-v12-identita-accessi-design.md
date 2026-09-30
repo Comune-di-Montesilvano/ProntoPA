@@ -19,7 +19,6 @@ dell'accesso è governato da chi ha titolo a governarlo:
 | Segnalatori scuole | SPID/CIE via `pa-sso-proxy` | Segreteria della scuola (delega + rinnovo annuale) |
 | Dipendenti ente (gestori, operai, admin, URP, uffici) | LDAP/Active Directory | Gruppi AD (sistemista) |
 | Ditte | email + password locale + 2FA (codice via email o TOTP), magic link per non registrate | Admin ProntoPA |
-| Admin d'emergenza | account locale creato dal wizard `/setup` | — |
 
 ## Stato del progetto e readiness produzione
 
@@ -88,7 +87,7 @@ Scuole ──► /auth/spid ──► OidcClient ──► SpidLoginService ─�
                                                                  ▼
                                                Segnalazione::scopeVisibileA (per deleghe attive)
 
-Dipendenti ─► /login ──► LoginRequest ──┬─► locale (ditte, admin emergenza)
+Dipendenti ─► /login ──► LoginRequest ──┬─► locale (solo ditte)
 Ditte ──────►                           └─► LdapLoginService ──► AD (bind + gruppi)
                                                     │
                                                     ▼
@@ -226,6 +225,15 @@ Ogni variabile va aggiunta anche al blocco `environment:` dei servizi in
 `docker-compose.yml` (lezione `comunicapa`: il compose non fa passthrough).
 `ext-ldap` va aggiunta a entrambi i Dockerfile (dev e prod).
 
+### Cosa va in pensione (fase 1)
+
+- Wizard di primo avvio `/setup`: `SetupController`, `EnsureSetupComplete`,
+  view `setup/*`, `SetupOtpNotification`, route, `SETUP_TOKEN` in
+  `.env.example`/compose, test Feature/Unit/Dusk collegati. Creava solo
+  l'admin: con LDAP fonte di verità il primo admin è chi sta in
+  `PRONTOPA_ADMIN`. Aggiornare README, `CLAUDE.md`, `publiccode.yml`
+  (se lo cita), `CHANGELOG.md`.
+
 ### Cosa va in pensione (fase 3)
 
 - Route `/register` e `RegisteredUserController` (registrazione con password).
@@ -245,7 +253,7 @@ password).
 
 Il form instrada sul contenuto del campo:
 
-1. contiene `@` → account `locale` (ditte, admin d'emergenza) cercato per
+1. contiene `@` → account `locale` (solo ditte) cercato per
    **email** tra gli utenti `locale` attivi → password → 2FA;
 2. altrimenti → username AD → bind LDAP.
 
@@ -253,12 +261,12 @@ I due spazi di nomi non si sovrappongono (uno username AD non contiene
 `@`), quindi nessuna collisione possibile. Gli account `locale` si
 identificano solo per email: unicità dell'email tra utenti `locale`
 attivi garantita da validazione applicativa (creazione/modifica ditta da
-admin, wizard setup).
+admin).
 
 Rate limit e messaggio generico (`auth.failed`) come oggi in `LoginRequest`:
 il messaggio non rivela se l'account esiste né dove.
 
-### 2FA degli account locali (ditte, admin d'emergenza)
+### 2FA degli account locali (ditte)
 
 - Nuova colonna `users.two_factor_metodo`: `email` · `totp` · NULL.
 - **Ditte: 2FA obbligatoria**, default `email` (nessuna app da installare).
@@ -266,9 +274,6 @@ il messaggio non rivela se l'account esiste né dove.
   hash in cache Redis (chiave per user id), validità 10 minuti, max 5
   tentativi poi codice invalidato, reinvio con throttle (1/min). La ditta
   può passare a `totp` dal profilo (Fortify esistente, con recovery code).
-- **Admin d'emergenza: `totp` obbligatorio**, `email` non ammesso: l'account
-  d'emergenza deve funzionare proprio quando l'infrastruttura (SMTP
-  compreso) è giù.
 - Utenti `ldap`/`spid`: nessuna 2FA ProntoPA (l'autenticazione forte è di
   AD/SPID); la 2FA TOTP self-service esistente resta disponibile solo agli
   account `locale`.
@@ -517,8 +522,11 @@ impresa, segnalatore legacy) invariati. Stessa regola applicata a
 | Oltre tetto giornaliero | "Richiesta inviata alla segreteria domani mattina" | Avviso admin |
 | Email non consegnabile | — | Job fallito → alert `CheckFailedJobs` esistente |
 
-Accesso d'emergenza: l'admin locale del wizard `/setup` resta `locale` e
-funziona con AD e proxy giù.
+Nessun account d'emergenza: AD è la fonte di verità per il personale
+dell'ente, incluso l'admin. Se AD non risponde, i problemi dell'ente sono
+più gravi di ProntoPA; le ditte (locali) continuano comunque a lavorare.
+Il primo admin di un'installazione nuova è chiunque sia nel gruppo
+`PRONTOPA_ADMIN` al suo primo login.
 
 ## Test
 
@@ -539,7 +547,7 @@ funziona con AD e proxy giù.
 - Instradamento form: con `@` → locale per email, senza `@` → LDAP;
   utente `ldap`/`spid` con email digitata → nessun login locale.
 - 2FA email ditte: codice corretto/errato/scaduto, 5 tentativi, throttle
-  reinvio; admin d'emergenza non può scegliere `email`.
+  reinvio.
 - LDAP con fake LdapRecord: percorso felice, password vuota, nessun gruppo,
   senza `mail`, aggancio legacy per email (0/1/2 risultati), rimozione
   gruppo.
@@ -567,9 +575,9 @@ Ogni fase è rilasciabile da sola.
 
 | Fase | Contenuto |
 |---|---|
-| **1 — Dipendenti via AD + ditte via email** | `ext-ldap` nei Dockerfile, LdapRecord, `LdapLoginService`, `MappaGruppiLdap`, instradamento form login (`@` → locale per email), 2FA via email per le ditte, colonne `auth_source`/`ldap_guid`/`two_factor_metodo`, `password` nullable, impostazioni gruppi, mock dev, test |
+| **1 — Dipendenti via AD + ditte via email** | `ext-ldap` nei Dockerfile, LdapRecord, `LdapLoginService`, `MappaGruppiLdap`, instradamento form login (`@` → locale per email), 2FA via email per le ditte, colonne `auth_source`/`ldap_guid`/`two_factor_metodo`, `password` nullable, impostazioni gruppi, mock dev, rimozione wizard `/setup`, test |
 | **2 — Scuole via SPID/CIE + deleghe** | `OidcClient`, `SpidLoginService`, completa profilo + verifica email, `deleghe` + `deleghe_storico`, `DelegaService`, email e pagine segreteria, rinnovo e scadenze, Admin → Deleghe con pre-delega, visibilità, impostazioni OIDC, mock SPID, test + Dusk |
-| **3 — Cutover** | Comando `utenze:cutover` (default dry-run): disattiva segnalatori `locale`; elenca utenti `locale` non ditta e non admin d'emergenza per decisione manuale; report ditte `locale` attive con email mancante o duplicata (da sistemare, altrimenti non possono entrare) e imposta `two_factor_metodo = email` su quelle senza 2FA; report istituti attivi senza `email`. Rimozione `/register` e `accounts:annual-check` dallo scheduler. Aggiornamento `CLAUDE.md`, `CHANGELOG.md`, `TODO.md` |
+| **3 — Cutover** | Comando `utenze:cutover` (default dry-run): disattiva segnalatori `locale`; elenca utenti `locale` non ditta (admin locali compresi) per decisione manuale; report ditte `locale` attive con email mancante o duplicata (da sistemare, altrimenti non possono entrare) e imposta `two_factor_metodo = email` su quelle senza 2FA; report istituti attivi senza `email`. Rimozione `/register` e `accounts:annual-check` dallo scheduler. Aggiornamento `CLAUDE.md`, `CHANGELOG.md`, `TODO.md` |
 
 ## Fuori scope
 
