@@ -13,6 +13,7 @@ RUN apk add --no-cache \
     unzip \
     oniguruma-dev \
     icu-dev \
+    openldap-dev \
     linux-headers \
     nodejs \
     npm
@@ -28,6 +29,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
         gd \
         zip \
         intl \
+        ldap \
         opcache
 
 # Redis extension

@@ -11,7 +11,7 @@ FROM php:8.4-fpm-alpine AS php-extensions
 RUN --mount=type=cache,id=apk-${TARGETARCH},target=/var/cache/apk \
     ln -sf /var/cache/apk /etc/apk/cache \
     && apk add \
-        libpng libjpeg-turbo libwebp freetype libzip oniguruma icu-libs \
+        libpng libjpeg-turbo libwebp freetype libzip oniguruma icu-libs libldap \
         git curl zip unzip
 
 # Layer 2: compile deps + build extensions + cleanup in singolo layer
@@ -20,16 +20,16 @@ RUN --mount=type=cache,id=apk-${TARGETARCH},target=/var/cache/apk \
     apk add \
         $PHPIZE_DEPS linux-headers \
         libpng-dev libjpeg-turbo-dev libwebp-dev freetype-dev \
-        libzip-dev oniguruma-dev icu-dev \
+        libzip-dev oniguruma-dev icu-dev openldap-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install \
-        pdo_mysql mbstring exif pcntl bcmath gd zip intl opcache \
+        pdo_mysql mbstring exif pcntl bcmath gd zip intl ldap opcache \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apk del \
         $PHPIZE_DEPS linux-headers \
         libpng-dev libjpeg-turbo-dev libwebp-dev freetype-dev \
-        libzip-dev oniguruma-dev icu-dev
+        libzip-dev oniguruma-dev icu-dev openldap-dev
 
 ############################################
 # Stage 1: builder
@@ -78,7 +78,7 @@ ENV APP_VERSION=${APP_VERSION}
 
 # Runtime libs identici a php-extensions Layer 1
 RUN apk add --no-cache \
-    libpng libjpeg-turbo libwebp freetype libzip oniguruma icu-libs
+    libpng libjpeg-turbo libwebp freetype libzip oniguruma icu-libs libldap
 
 # Copia solo extensions compilate dallo stage dedicato
 COPY --link --from=php-extensions /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
