@@ -75,7 +75,7 @@ MSYS_NO_PATHCONV=1 docker compose exec php npm run build
 > `docker-compose.yml` è il file di **produzione** (immagini GHCR, named volumes, no bind mount).
 > `docker-compose.override.yml` viene caricato automaticamente in sviluppo (bind mount, build locale, Adminer, Mailpit).
 
-L'app è disponibile su **http://localhost**.
+L'app è disponibile su **http://localhost**. Con `LDAP_HOST=mock` (default in `.env.example`) si accede con l'utente simulato `mock.admin` / `mock.admin`.
 
 ### Tool sviluppo (opzionali)
 
@@ -119,6 +119,27 @@ Copia `.env.example` in `.env` e imposta i valori sistemistici:
 | `DB_ROOT_PASSWORD` | Password root MariaDB (per l'init del container) |
 | `MAIL_HOST` / `MAIL_PORT` | Server SMTP per le email |
 | `PEC_*` | Credenziali PEC (solo produzione) |
+| `LDAP_HOST` / `LDAP_BASE_DN` / `LDAP_USER_DN_TEMPLATE` | Active Directory per il login dei dipendenti (`mock` solo in sviluppo) |
+
+### Accesso
+
+| Chi | Come |
+|---|---|
+| Dipendenti dell'ente (admin compreso) | Credenziali di dominio Active Directory — **requisito obbligatorio** |
+| Ditte | Email + password + codice di verifica via email (o app TOTP) |
+
+Il ruolo dei dipendenti deriva dai gruppi AD, riletti a ogni accesso (un solo ruolo, vince il più alto):
+
+| Gruppo AD | Ruolo ProntoPA |
+|---|---|
+| `PRONTOPA_ADMIN` | Amministratore |
+| `PRONTOPA_SUPERVISORI` | Gestore supervisore (vede tutto) |
+| `PRONTOPA_GESTORI` | Gestore (solo segnalazioni assegnate) |
+| `PRONTOPA_OPERAI` | Operaio |
+| `PRONTOPA_URP` | Segnalatore URP (inserisce per conto di chi telefona) |
+| `PRONTOPA_SEGNALATORI` | Segnalatore uffici interni |
+
+I nomi dei gruppi sono modificabili in **Admin → Impostazioni**. Verifica rapida di un utente: `php artisan ldap:prova <username>`.
 
 > **Le impostazioni applicative** (nome ente, logo, colori, coordinate mappa)
 > si configurano dall'interfaccia admin in **Admin → Impostazioni** — non dal file `.env`.
@@ -206,9 +227,9 @@ ProntoPA usa due immagini Docker pre-compilate, pubblicate su GHCR dopo ogni rel
 
 Dopo il primo avvio il container esegue automaticamente le migrations e il seed dei dati di riferimento.
 
-**Imposta `SETUP_TOKEN`** nelle variabili d'ambiente dello stack (un valore casuale, es. `openssl rand -hex 32`) prima del primo avvio: apri `/setup`, inserisci il token, email e password del futuro admin → conferma via OTP ricevuto via email. Senza `SETUP_TOKEN`, comportamento legacy: l'admin viene creato subito da `ADMIN_*` (password in chiaro nelle env vars — sconsigliato in produzione).
+Nessun utente viene creato: configura `LDAP_HOST`, `LDAP_BASE_DN` e `LDAP_USER_DN_TEMPLATE` nello stack, crea in Active Directory i gruppi `PRONTOPA_*` (vedi [Accesso](#accesso)) e accedi con un utente del gruppo `PRONTOPA_ADMIN`. Prima, verifica la connessione con `docker compose exec php php artisan ldap:prova <username>`.
 
-Poi accedi e configura il tuo ente in **Admin → Impostazioni**.
+Poi configura il tuo ente in **Admin → Impostazioni**.
 
 ### Backup
 

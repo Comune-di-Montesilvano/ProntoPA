@@ -7,9 +7,12 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 ## [Unreleased]
 
 ### Added
-- Wizard di primo avvio (`/setup`): token `.env` + email + password → OTP via
-  email → crea l'account amministratore, senza password in chiaro nelle
-  variabili d'ambiente
+- Login dipendenti con Active Directory: ruolo, flag supervisore,
+  provenienza e permesso "per conto di" derivati dai gruppi AD a ogni
+  accesso; aggancio automatico degli account legacy con la stessa email;
+  comando `ldap:prova` per la diagnosi
+- Login ditte con email + password e verifica in due passaggi con codice
+  via email (obbligatoria), in alternativa all'app TOTP
 - Comando `artisan demo`: dati realistici (istituti, utenti, ~50 segnalazioni
   in tutti gli stati) per chi valuta il riuso, rilanciabile senza accumulo
 - `publiccode.yml` + `LICENSE` (EUPL-1.2) per il riuso via Developers Italia
@@ -21,13 +24,19 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
   configura `SENTRY_LARAVEL_DSN`)
 - Analisi statica PHP (Larastan) e workflow CI per test automatici e
   validazione `publiccode.yml`
-- Security header e CSP su nginx; rate limit su wizard OTP e API pubblica
+- Security header e CSP su nginx; rate limit su API pubblica
+
+### Changed
+- Reset password e unicità email limitati agli account locali (ditte)
+
+### Removed
+- Creazione dell'amministratore da variabili `ADMIN_*` (password in chiaro
+  nelle env vars): il primo amministratore è chi appartiene al gruppo AD
+  `PRONTOPA_ADMIN`
 
 ### Fixed
 - Licenza incoerente tra README/footer login (AGPL-3.0) e LICENSE/publiccode.yml
   (EUPL-1.2) — allineata a EUPL-1.2 ovunque
-- Wizard di setup irraggiungibile in produzione: l'entrypoint creava sempre
-  un admin da `.env` prima che il wizard potesse partire
 - 42 vulnerabilità nelle dipendenze Composer (11 high, incluso Laravel
   framework) risolte con aggiornamento entro i vincoli esistenti
 - Fallback `.env` del webhook outbound si rompeva silenziosamente con

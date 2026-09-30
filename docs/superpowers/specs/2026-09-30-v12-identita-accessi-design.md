@@ -298,6 +298,16 @@ il messaggio non rivela se l'account esiste né dove.
 6. Sync `name`, `email` (`email_verified_at = now`), `username` =
    sAMAccountName, ruolo/flag/provenienza/permesso da `MappaGruppiLdap`,
    `attivo = true`, `last_login`. Login, sessione rigenerata.
+7. Username AD già usato da un altro account ProntoPA (es. admin locale
+   legacy o utente demo con lo stesso username, non agganciato per email) →
+   login rifiutato con messaggio "contatta l'amministratore" e log warning;
+   l'admin rinomina o disattiva l'account locale. Nessun errore di vincolo.
+8. Transitorio fino al cutover: input senza `@` non riconosciuto da AD (o AD
+   irraggiungibile) → tentativo sugli account `locale` per username
+   (segnalatori legacy). Rimosso da `utenze:cutover` (fase 3).
+9. Solo il codice LDAP 49 (credenziali non valide; su AD anche account
+   disabilitato/scaduto) vale "credenziali errate"; ogni altro errore di
+   bind → "non disponibile".
 
 ### Mapping gruppi → ruolo
 

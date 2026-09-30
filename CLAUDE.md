@@ -21,6 +21,8 @@ MSYS_NO_PATHCONV=1 docker compose exec php php artisan migrate --seed
 MSYS_NO_PATHCONV=1 docker compose exec php npm run build
 ```
 
+`migrate --seed` non crea utenti: con `LDAP_HOST=mock` (default `.env.example`) si entra con `mock.admin`/`mock.admin`. Altri utenti AD simulati (password = username): `mock.supervisore` `mock.gestore` `mock.operaio` `mock.urp` `mock.segnalatore` `mock.nessungruppo`. Prefisso `mock.` voluto: `admin`/`gestore` collidono con admin legacy e utenti `artisan demo` (login rifiutato "username già usato").
+
 App: http://localhost | Adminer: :8081 | Mailpit: :8025 (profilo `dev`)  
 Dev: `docker compose --profile dev up -d`  
 `docker-compose.yml`=prod · `docker-compose.override.yml`=dev (auto, bind mount+Adminer+Mailpit, OPcache hot-reload)  
@@ -60,8 +62,10 @@ REDIS_HOST=redis
 MAIL_MAILER=smtp  MAIL_HOST=mailpit  MAIL_PORT=1025
 PEC_HOST=mbox.cert.legalmail.it  PEC_USERNAME=  PEC_PASSWORD=
 WEBHOOK_CITTADINI_URL=  WEBHOOK_CITTADINI_SECRET=
-SETUP_TOKEN=  # wizard primo avvio (/setup); vuoto = wizard disattivato
+LDAP_HOST=mock  LDAP_BASE_DN=  LDAP_USER_DN_TEMPLATE=%s@ente.local  # mock vietato in prod (app non parte)
 ```
+
+Nuova env var → anche nel blocco `x-php-env` di `docker-compose.yml` (niente passthrough automatico).
 
 Brand/mappa/email → **Admin → Impostazioni**.
 
@@ -83,7 +87,7 @@ $val = Impostazione::get('ente_nome', 'ProntoPA');
 
 ```
 app/Http/Controllers/
-  Auth/  SetupController  GestioneController  SegnalazioneController
+  Auth/  GestioneController  SegnalazioneController
   SegnalatoreDashboardController  OperaioDashboardController  RoleDashboardController
   ImpreseDashboardController  ImpreseCRUDController  AppaltiController
   StatisticheController  ReportController  FascicoloPdfController
@@ -104,9 +108,11 @@ app/Services/
   DedupService     # anti-duplicato: simili per tipologia/plesso/vicinanza + embeddings
   OllamaService    # LLM locale opzionale (titolo auto, triage suggerito, embeddings)
   TelegramBotService
+  Directory/  Directory (interfaccia) · LdapRecordDirectory (AD reale) · MockDirectory · NullDirectory
+  Auth/       LdapLoginService · MappaGruppiLdap · NormalizzaUsernameAd · CodiceAccessoEmail (2FA email)
 app/Jobs/           CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
-app/Http/Middleware/EnsureSetupComplete.php  EnsureUserIsActive.php
-app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni
+app/Http/Middleware/EnsureUserIsActive.php
+app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni  ProvaLdap (ldap:prova)
 ```
 
 ## Ruoli (Spatie)
@@ -119,7 +125,24 @@ app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  Ch
 | `segnalatore` | Proprie segnalazioni. Ha `id_provenienza` (scuola/URP/portale/interno) |
 | `impresa` | Solo lavori propria impresa. Ditte non registrate operano via magic-link firmato (no login) |
 
-Login: campo form si chiama `username` (accetta lo username, non l'email) — `AuthenticatedSessionController`/`LoginRequest`.
+**Accesso (v1.2, spec `docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md`)** — campo form `username`, instradato da `LoginRequest`:
+- contiene `@` e non è l'UPN AD (suffisso di `LDAP_USER_DN_TEMPLATE`) → account `locale` per email (ditte) → 2FA (`User::metodoSecondoFattore()`: TOTP se attivo, altrimenti email obbligatoria per ruolo `impresa`)
+- altrimenti (`m.rossi`, `m.rossi@ente.local`, `ENTE\m.rossi`) → AD via `LdapLoginService`; **transitorio fino al cutover (fase 3)**: se AD non riconosce, fallback account `locale` per username (segnalatori legacy)
+- `users.auth_source` = `locale`·`ldap`·`spid`; `ldap_guid` chiave identità AD; `email` NON unique a DB (unicità applicativa solo tra `locale` attivi); reset password solo `locale` attivi
+
+Gruppi AD → ruolo (nomi in Admin → Impostazioni, gruppo `ldap`), precedenza in quest'ordine, un solo ruolo, ricalcolato a ogni login:
+
+| Gruppo default | Ruolo | Note |
+|---|---|---|
+| `PRONTOPA_ADMIN` | `admin` | |
+| `PRONTOPA_SUPERVISORI` | `gestore` | `supervisore_segnalazioni=true` |
+| `PRONTOPA_GESTORI` | `gestore` | |
+| `PRONTOPA_OPERAI` | `operaio` | caposquadra NON da AD: si decide sulla squadra |
+| `PRONTOPA_URP` | `segnalatore` | + permesso `segnalazioni.per-conto`, provenienza 3 |
+| `PRONTOPA_SEGNALATORI` | `segnalatore` | provenienza 1 |
+
+Primo login AD: aggancio account legacy `locale` non-ditta con stessa email (se unico). Username AD già usato da altro account → login rifiutato ("contatta l'amministratore"). Diagnosi: `php artisan ldap:prova <username>` (nessuna scrittura DB).
+**Gotcha LdapRecord**: `Guard::attempt()` restituisce `false` per QUALSIASI errore di bind (anche server irraggiungibile) — `LdapRecordDirectory` usa `auth()->bind()` e solo codice 49 = credenziali errate.
 
 ## Workflow Stati
 
@@ -138,8 +161,8 @@ Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella 
 - **Assistente AI locale opzionale** (profilo Docker `ai`, Ollama): titolo auto-generato, triage suggerito, dedup semantico via embeddings — sempre asincrono (queue), mai sul path sincrono; degrada in silenzio se Ollama non è raggiungibile (`Impostazione::get('ai_enabled')`)
 - **Digest mattutino gestori**: comando `digest:invia` / `InviaDigestGestori`
 - **Rendicontazione**: export XLSX (report mensile gestore, riepilogo impresa) e fascicolo PDF per segnalazione (richiede `composer install` per `phpoffice/phpspreadsheet` e `barryvdh/laravel-dompdf`)
-- **Wizard primo avvio** (`/setup`): gate su `User::query()->exists()`, attivo solo se `SETUP_TOKEN` è valorizzato in `.env`; token + email + password → OTP via email → crea admin (`SetupController`, `EnsureSetupComplete`)
-- **2FA opzionale** (TOTP + recovery codes): Fortify usato solo come libreria (`Fortify::ignoreRoutes()` in `App\Providers\FortifyServiceProvider::register()`) — login/registrazione/reset restano ai controller custom in `routes/auth.php`, zero rotte Fortify attive. **Va registrato a mano in `bootstrap/providers.php`** (non auto-discovered come le altre integrazioni Laravel). Self-service da profilo, dietro `password.confirm`.
+- **Nessun wizard/admin da `.env`** (rimossi in v1.2): il primo admin è chi sta nel gruppo AD `PRONTOPA_ADMIN`
+- **2FA** (TOTP + recovery codes, oppure codice via email per le ditte: 6 cifre, 10 min, 5 tentativi, cache `2fa-email:{id}`): Fortify usato solo come libreria (`Fortify::ignoreRoutes()` in `App\Providers\FortifyServiceProvider::register()`) — login/registrazione/reset restano ai controller custom in `routes/auth.php`, zero rotte Fortify attive. **Va registrato a mano in `bootstrap/providers.php`** (non auto-discovered come le altre integrazioni Laravel). Self-service da profilo, dietro `password.confirm`.
 - **Scan antimalware allegati** (opzionale, profilo Docker `security` + `Impostazione::get('antivirus_enabled')`): `ClamAvService` parla INSTREAM via socket raw a `clamav/clamav:stable` (no dipendenza composer), job `ScansionaAllegato` dispatchato da un unico hook su `AllegatoSegnalazione::booted()` (created event) — copre tutti i path di upload senza doverli aggiornare uno per uno. Infetto → spostato (non cancellato) su disco `quarantena`, mai servito dalla route di download. Degrada in silenzio se disattivato/clamd irraggiungibile.
 
 ## Database
@@ -163,7 +186,7 @@ Webhook outbound: HTTP POST HMAC-firmato al cambio stato → Admin → Impostazi
 
 ## Test E2E (Dusk)
 
-`tests/Browser/` (login, creazione segnalazione, cambio stato, wizard setup) gira solo in CI (`.github/workflows/dusk.yml`, `ubuntu-latest` ha Chrome già installato) — **non nell'immagine dev**, Alpine/musl non è compatibile col chromedriver glibc di Dusk (serve `gcompat`, non vale la pena). Se serve debuggare un test Dusk localmente, usa un ambiente Linux glibc (o WSL), non il container `php`.
+`tests/Browser/` (login, login AD mock, creazione segnalazione, cambio stato) gira solo in CI (con `LDAP_HOST=mock`) (`.github/workflows/dusk.yml`, `ubuntu-latest` ha Chrome già installato) — **non nell'immagine dev**, Alpine/musl non è compatibile col chromedriver glibc di Dusk (serve `gcompat`, non vale la pena). Se serve debuggare un test Dusk localmente, usa un ambiente Linux glibc (o WSL), non il container `php`.
 
 ## CI/CD
 
@@ -191,20 +214,14 @@ git tag v1.2.0 && git push origin v1.2.0
 
 CSRF/throttle non auto-bypassati nei Feature test nonostante `APP_ENV=testing` (`app()->runningUnitTests()` risulta `false` qui). Sui POST a rotte `web`: `$this->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class, \Illuminate\Routing\Middleware\ThrottleRequests::class])`.
 
-Stesso sintomo si estende agli `<env>` di `phpunit.xml` in generale, non solo `APP_ENV`: `QUEUE_CONNECTION=sync` e `CACHE_STORE=array` dichiarati lì **non vengono applicati** — a runtime restano i valori reali (redis). Conseguenze pratiche: (1) un job dispatchato in un test NON gira sincrono — se devi verificarne l'esito, chiama `->handle()` a mano invece di fidarti del dispatch, oppure usa `Queue::fake()` + `assertPushed` per verificare solo che sia stato accodato; (2) `Impostazione` (cache `rememberForever`) non si resetta tra test — `Cache::flush()` esplicito nel `setUp()`, altrimenti un test eredita valori settati da un altro.
+Causa trovata (v1.2): nel container dev `CACHE_STORE`/`SESSION_DRIVER`/`QUEUE_CONNECTION`/`MAIL_MAILER` arrivano dall'env del compose (redis/smtp) e Laravel legge `$_SERVER` prima di `$_ENV` — un `<env>` senza `force` non li sovrascrive, e i test scrivevano nella cache Redis del dev (test flaky + impostazioni dev inquinate). `phpunit.xml` ora li forza con `<env … force="true"/>` **e** `<server … force="true"/>` (idem `LDAP_HOST` vuoto). Nuova variabile che il compose passa al container e che i test devono controllare → stessa coppia env+server forzata. `APP_ENV` resta non forzato.
 
 ## Deploy Prod (Portainer/Podman rootless)
 
 1. `git push tag` → Actions builda GHCR
-2. Portainer stack → `docker-compose.yml`, env vars (APP_KEY, DB_PASSWORD, `SETUP_TOKEN`…)
-3. **Non usare `migrate --seed`**: `DatabaseSeeder` include sempre `AdminUserSeeder`, che crea un admin con password da `.env` (default `password` se `ADMIN_PASSWORD` non è settata) e disabilita per sempre il wizard (gate su `User::exists()`). Seed selettivo:
-   ```bash
-   docker compose exec php php artisan migrate
-   docker compose exec php php artisan db:seed --class=TabelleRiferimentoSeeder
-   docker compose exec php php artisan db:seed --class=ImpostazioniSeeder
-   docker compose exec php php artisan db:seed --class=RolesAndPermissionsSeeder
-   ```
-4. Vai su `/setup`, inserisci `SETUP_TOKEN` → crea admin → Admin → Impostazioni per configurare ente
+2. Portainer stack → `docker-compose.yml`, env vars (APP_KEY, DB_PASSWORD, `LDAP_HOST` `LDAP_BASE_DN` `LDAP_USER_DN_TEMPLATE`…). **Mai `LDAP_HOST=mock`**
+3. L'entrypoint esegue migrate + seed dei dati di riferimento al primo avvio (nessun utente creato)
+4. Crea in AD i gruppi `PRONTOPA_*`, verifica con `php artisan ldap:prova <utente>`, entra con un utente di `PRONTOPA_ADMIN` → Admin → Impostazioni per configurare ente
 
 Rootless: no bind mount, named volumes `mariadb_data` `redis_data` `app_storage` → `/var/www/html/storage`
 
