@@ -341,6 +341,50 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'antivirus',
                 'descrizione' => 'Scansiona gli allegati caricati con ClamAV (richiede il profilo Docker "security")',
             ],
+
+            // v1.2 — Gruppi Active Directory → ruolo ProntoPA
+            [
+                'chiave'      => 'ldap_gruppo_admin',
+                'valore'      => 'PRONTOPA_ADMIN',
+                'tipo'        => 'text',
+                'gruppo'      => 'ldap',
+                'descrizione' => 'Gruppo AD degli amministratori ProntoPA',
+            ],
+            [
+                'chiave'      => 'ldap_gruppo_supervisori',
+                'valore'      => 'PRONTOPA_SUPERVISORI',
+                'tipo'        => 'text',
+                'gruppo'      => 'ldap',
+                'descrizione' => 'Gruppo AD dei gestori supervisori (vedono tutte le segnalazioni)',
+            ],
+            [
+                'chiave'      => 'ldap_gruppo_gestori',
+                'valore'      => 'PRONTOPA_GESTORI',
+                'tipo'        => 'text',
+                'gruppo'      => 'ldap',
+                'descrizione' => 'Gruppo AD dei gestori (solo segnalazioni assegnate)',
+            ],
+            [
+                'chiave'      => 'ldap_gruppo_operai',
+                'valore'      => 'PRONTOPA_OPERAI',
+                'tipo'        => 'text',
+                'gruppo'      => 'ldap',
+                'descrizione' => 'Gruppo AD degli operai',
+            ],
+            [
+                'chiave'      => 'ldap_gruppo_urp',
+                'valore'      => 'PRONTOPA_URP',
+                'tipo'        => 'text',
+                'gruppo'      => 'ldap',
+                'descrizione' => 'Gruppo AD URP/centralino (segnalano per conto di terzi)',
+            ],
+            [
+                'chiave'      => 'ldap_gruppo_segnalatori',
+                'valore'      => 'PRONTOPA_SEGNALATORI',
+                'tipo'        => 'text',
+                'gruppo'      => 'ldap',
+                'descrizione' => 'Gruppo AD degli uffici interni che segnalano',
+            ],
         ];
 
         foreach ($impostazioni as $impostazione) {
