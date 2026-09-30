@@ -104,9 +104,13 @@
             @csrf
 
             <div class="pa-field">
-                <label class="pa-field-label" for="username">Username</label>
+                <label class="pa-field-label" for="username">Utente di dominio (dipendenti) o email (ditte)</label>
                 <input id="username" type="text" name="username" class="pa-input"
-                       value="{{ old('username') }}" required autofocus autocomplete="username">
+                       value="{{ old('username') }}" required autofocus autocomplete="username"
+                       aria-describedby="username-aiuto">
+                <span id="username-aiuto" style="font-size:12px; color:var(--slate-500);">
+                    Dipendenti: le credenziali del PC dell'ufficio. Ditte: l'email registrata.
+                </span>
             </div>
 
             <div class="pa-field">
