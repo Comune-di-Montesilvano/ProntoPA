@@ -23,6 +23,8 @@ MSYS_NO_PATHCONV=1 docker compose exec php npm run build
 
 `migrate --seed` non crea utenti: con `LDAP_HOST=mock` (default `.env.example`) si entra con `mock.admin`/`mock.admin`. Altri utenti AD simulati (password = username): `mock.supervisore` `mock.gestore` `mock.operaio` `mock.urp` `mock.segnalatore` `mock.nessungruppo`. Prefisso `mock.` voluto: `admin`/`gestore` collidono con admin legacy e utenti `artisan demo` (login rifiutato "username già usato").
 
+**Smoke login via curl** (porta = `HTTP_PORT` del `.env`): `T=$(curl -s -c c.txt -b c.txt localhost:$PORT/login | grep -o 'name="_token" value="[^"]*"' | sed 's/.*value="//;s/"//')` poi `curl -b c.txt -c c.txt --data-urlencode "_token=$T" --data-urlencode username=mock.admin --data-urlencode password=mock.admin localhost:$PORT/login -w '%{redirect_url}'`. Stesso schema per `/auth/spid/mock` (`OIDC_MOCK=true`).
+
 App: http://localhost | Adminer: :8081 | Mailpit: :8025 (profilo `dev`)  
 Dev: `docker compose --profile dev up -d`  
 `docker-compose.yml`=prod · `docker-compose.override.yml`=dev (auto, bind mount+Adminer+Mailpit, OPcache hot-reload)  
@@ -195,13 +197,16 @@ Webhook outbound: HTTP POST HMAC-firmato al cambio stato → Admin → Impostazi
 
 ## CI/CD
 
-Tag `v*.*.*` → `.github/workflows/release.yml` → build **amd64 only** (arm64 droppato, niente QEMU) → push GHCR `:tag`+`:latest`.
+Tag `v*.*.*` → `.github/workflows/release.yml` → build **amd64 only** (arm64 droppato, niente QEMU) → push GHCR `:X.Y.Z`+`:X.Y`+`:latest` (**senza `v`**; `APP_VERSION=vX.Y.Z` cotta nell'immagine).
+
+**Rilascio**: bump `publiccode.yml` `softwareVersion` + CHANGELOG `## [X.Y.Z] - data` **nella stessa PR della modifica** (preferenza committente, niente PR di rilascio separata) → `main` protetto: PR squash con CI verde (`test`+`dusk`+`publiccode.yml validation`) → `git switch main && git pull` → `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z` → `gh run watch <id> --exit-status` sul workflow release.
 
 ```bash
 git tag v1.2.0 && git push origin v1.2.0
 ```
 
 **Dependabot**: PR con conflitto `composer.lock`/`package-lock.json` (tipico se ne mergi più di una in sequenza) → commenta `@dependabot rebase`, aspetta, ricontrolla `gh pr checks`. Se lento/bloccato, applicare il bump a mano (`composer require pkg:^X` o `npm install pkg@X`) è più veloce che aspettare — poi chiudi la PR come superata (`gh pr close N --comment "..." --delete-branch`).
+**Tante PR Dependabot insieme** → un'unica PR: cherry-pick dei commit actions/npm (file distinti, niente conflitti); per composer rigenera il lock con `composer update <pkg...> -w --with symfony/<x>:^7.4 ... --with guzzlehttp/guzzle:^7 --no-install` su `php:8.4-cli` (l'immagine `composer:2` è PHP 8.5) per non tirare major non richiesti. `Closes #N` nel body NON chiude le PR: chiuderle con `gh pr close N --comment "Consolidata in #M" --delete-branch`.
 **Gotcha peer-dep**: `vite` e `laravel-vite-plugin` sono accoppiati (`laravel-vite-plugin` fissa la major di vite richiesta) — dependabot le propone come PR separate ma vanno bumpate insieme o falliscono con `ERESOLVE`.
 
 **Baseline sicurezza (dal 2026-09-07)**: `tests.yml` scansiona con Trivy (`scan-type: fs`) le dipendenze composer/npm ad ogni push/PR, **bloccante** su CRITICAL/HIGH (`.trivyignore` a root per i falsi positivi verificati); `release.yml` scansiona entrambe le immagini pubblicate (app+web), **report-only**, risultati su tab Security via SARIF. Tutte le Action nei 4 workflow pinnate per commit SHA (`# vX` a commento). `dependabot.yml` ha `cooldown` (7gg default, 14gg sui major) su tutti e 3 gli ecosistemi. `main` è protetto: required check `test`+`dusk`, no force-push, no delete branch.
