@@ -9,6 +9,7 @@
         "php": "^8.3",
         "barryvdh/laravel-dompdf": "^3.0",
         "directorytree/ldaprecord": "^3",
+        "firebase/php-jwt": "^6",
         "laravel/breeze": "^2.4",
         "laravel/fortify": "^1.38",
         "laravel/framework": "^13.0",

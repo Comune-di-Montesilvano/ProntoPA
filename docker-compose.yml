@@ -61,6 +61,8 @@ x-php-env: &php-env
   LDAP_STARTTLS: ${LDAP_STARTTLS:-false}
   LDAP_TLS_SKIP_VERIFY: ${LDAP_TLS_SKIP_VERIFY:-false}
   LDAP_TIMEOUT: ${LDAP_TIMEOUT:-5}
+  OIDC_MOCK: ${OIDC_MOCK:-false}
+  OIDC_TIMEOUT: ${OIDC_TIMEOUT:-10}
   PHP_OPCACHE_ENABLE: 1
 
 x-php-volumes: &php-volumes
