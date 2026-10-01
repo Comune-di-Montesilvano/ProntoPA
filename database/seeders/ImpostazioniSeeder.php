@@ -385,6 +385,29 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'ldap',
                 'descrizione' => 'Gruppo AD degli uffici interni che segnalano',
             ],
+
+            // v1.2 — SPID/CIE via pa-sso-proxy (OIDC)
+            [
+                'chiave'      => 'oidc_issuer',
+                'valore'      => null,
+                'tipo'        => 'url',
+                'gruppo'      => 'spid',
+                'descrizione' => 'Issuer di pa-sso-proxy (radice, senza /OIDC finale)',
+            ],
+            [
+                'chiave'      => 'oidc_client_id',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'spid',
+                'descrizione' => 'Client ID registrato su pa-sso-proxy',
+            ],
+            [
+                'chiave'      => 'oidc_client_secret',
+                'valore'      => null,
+                'tipo'        => 'secret',
+                'gruppo'      => 'spid',
+                'descrizione' => 'Client secret (salvato cifrato; lascia vuoto per non modificarlo)',
+            ],
         ];
 
         foreach ($impostazioni as $impostazione) {

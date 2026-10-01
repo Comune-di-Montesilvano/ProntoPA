@@ -20,6 +20,8 @@
                                     'allegati'          => 'Allegati segnalazioni',
                                     'verifica_account'  => 'Verifica annuale account',
                                     'antivirus'         => 'Scansione allegati',
+                                    'spid'              => 'SPID/CIE (scuole)',
+                                    'ldap'              => 'Gruppi Active Directory',
                                     default             => ucfirst($gruppo),
                                 } }}
                             </h3>
@@ -58,6 +60,14 @@
                                                 </option>
                                             @endforeach
                                         </select>
+                                    @elseif($imp->tipo === 'secret')
+                                        <input type="password"
+                                               id="imp_{{ $imp->chiave }}"
+                                               name="impostazioni[{{ $imp->chiave }}]"
+                                               value=""
+                                               autocomplete="new-password"
+                                               class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                               placeholder="{{ filled($imp->valore) ? 'Configurato — lascia vuoto per non modificarlo' : 'Non configurato' }}">
                                     @elseif($imp->tipo === 'image')
                                         <div x-data="{ url: '{{ $imp->valore }}' }">
                                             <input type="url"
@@ -99,6 +109,13 @@
                                     <p class="mt-0.5 text-xs text-gray-400 font-mono">{{ $imp->chiave }}</p>
                                 </div>
                             @endforeach
+
+                            @if($gruppo === 'spid')
+                                <div>
+                                    <p class="block text-sm font-medium text-gray-700 mb-1">Redirect URI da registrare su pa-sso-proxy</p>
+                                    <code class="block w-full rounded bg-gray-50 border border-gray-200 px-3 py-2 text-sm select-all">{{ $oidcRedirectUri }}</code>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 @endforeach
