@@ -225,7 +225,7 @@ ProntoPA usa due immagini Docker pre-compilate, pubblicate su GHCR dopo ogni rel
 1. In Portainer crea un nuovo **Stack**
 2. Punta al repository Git e usa `docker-compose.yml` (il file di default è già prod)
 3. Imposta le variabili d'ambiente nello stack (`APP_KEY`, `DB_PASSWORD`, ecc.)
-4. Scegli la versione: imposta `APP_VERSION=v0.6.0` (o `latest`)
+4. Scegli la versione dell'immagine: imposta `IMAGE_TAG=0.7.0` (tag GHCR senza `v`: `0.7.0`, `0.7` o `latest`). La versione mostrata dall'app è iniettata nel build dal tag git, non si configura
 5. Deploy
 
 ### Prima installazione

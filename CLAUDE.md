@@ -82,7 +82,7 @@ Brand/mappa/email → **Admin → Impostazioni**.
 $val = Impostazione::get('ente_nome', 'ProntoPA');
 ```
 
-`APP_VERSION` iniettato build Docker → `config('app.version')`. Dev=`dev`.
+`APP_VERSION` iniettato SOLO nel build Docker (`release.yml` → build-arg dal tag git → `ENV` nell'immagine) → `config('app.version')`. Dev=`dev` (default config). **Mai** nell'env del container né in `.env`: lo riscriverebbe (bug v0.7.0: il compose lo forzava a `latest`). Il tag dell'immagine da scaricare è `IMAGE_TAG` (stesso schema di ComunicaPA).
 
 ## Architettura
 
