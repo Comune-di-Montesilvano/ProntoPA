@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\CompletaProfiloController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\SpidController;
+use App\Http\Controllers\Auth\SpidMockController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\NewPasswordController;
@@ -63,6 +64,10 @@ Route::middleware('guest')->group(function () {
     Route::post('auth/spid/completa-profilo', [CompletaProfiloController::class, 'store'])
         ->middleware('throttle:10,1')
         ->name('spid.completa-profilo.store');
+
+    // Simulatore SPID: 404 se OIDC_MOCK è spento, vietato in produzione
+    Route::get('auth/spid/mock', [SpidMockController::class, 'show'])->name('spid.mock');
+    Route::post('auth/spid/mock', [SpidMockController::class, 'store'])->name('spid.mock.store');
 });
 
 Route::middleware('auth')->group(function () {

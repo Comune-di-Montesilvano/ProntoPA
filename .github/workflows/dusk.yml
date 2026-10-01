@@ -61,6 +61,7 @@ jobs:
             echo "SESSION_DRIVER=file"
             echo "LDAP_HOST=mock"
             echo "LDAP_USER_DN_TEMPLATE=%s@ente.local"
+            echo "OIDC_MOCK=true"
           } >> .env
 
       - name: Run migrations
