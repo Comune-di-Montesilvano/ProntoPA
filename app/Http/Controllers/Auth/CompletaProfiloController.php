@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
 
 /**
  * Primo accesso SPID: l'utente nasce qui, con l'email (sempre da
@@ -53,7 +54,16 @@ class CompletaProfiloController extends Controller
         $request->session()->regenerate();
 
         if (! $user->hasVerifiedEmail()) {
-            $user->sendEmailVerificationNotification();
+            try {
+                $user->sendEmailVerificationNotification();
+            } catch (Throwable $e) {
+                // Account già creato: niente 500, la persona può ritentare
+                // l'invio dalla pagina di verifica.
+                report($e);
+
+                return redirect()->route('verification.notice')
+                    ->with('status', 'Non siamo riusciti a inviare l\'email di conferma. Riprova con "Invia di nuovo il link".');
+            }
         }
 
         return redirect()->route('verification.notice');

@@ -75,6 +75,20 @@ class SpidFlussoTest extends TestCase
         $this->assertNull(session('spid.identita'));
     }
 
+    public function test_smtp_giu_non_da_errore_e_porta_alla_verifica_con_avviso(): void
+    {
+        $state = $this->avvia();
+        $this->get('/auth/spid/callback?code=c1&state='.$state);
+
+        Notification::shouldReceive('send')->andThrow(new \RuntimeException('SMTP giù'));
+
+        $this->post(route('spid.completa-profilo.store'), ['email' => 'mario.rossi@scuola.it'])
+            ->assertRedirect(route('verification.notice'))
+            ->assertSessionHas('status', 'Non siamo riusciti a inviare l\'email di conferma. Riprova con "Invia di nuovo il link".');
+
+        $this->assertAuthenticated();
+    }
+
     public function test_utente_esistente_entra_direttamente(): void
     {
         $user = User::factory()->create(['auth_source' => 'spid', 'codice_fiscale' => 'RSSMRA80A01G482X', 'password' => null]);
