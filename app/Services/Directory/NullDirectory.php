@@ -12,4 +12,9 @@ final class NullDirectory implements Directory
     {
         return null;
     }
+
+    public function motivoUltimoRifiuto(): string
+    {
+        return 'LDAP_HOST non configurato: nessun login dipendenti possibile.';
+    }
 }

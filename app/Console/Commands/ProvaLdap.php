@@ -15,6 +15,17 @@ class ProvaLdap extends Command
 
     public function handle(Directory $directory, MappaGruppiLdap $mappa): int
     {
+        $this->table(['Configurazione letta', 'Valore'], [
+            ['LDAP_HOST', (string) config('ldap.host') ?: '— (vuoto)'],
+            ['LDAP_PORT', (string) config('ldap.port')],
+            ['LDAP_BASE_DN', (string) config('ldap.base_dn') ?: '— (vuoto)'],
+            ['LDAP_USER_DN_TEMPLATE', (string) config('ldap.user_dn_template')],
+            ['LDAP_STARTTLS', config('ldap.starttls') ? 'true' : 'false'],
+            ['LDAP_TLS_SKIP_VERIFY', config('ldap.tls_skip_verify') ? 'true' : 'false'],
+            ['Directory', class_basename($directory)],
+            ['Gruppi', implode(', ', array_map(fn ($k, $v) => "{$k}={$v}", array_keys((array) config('ldap.gruppi')), (array) config('ldap.gruppi')))],
+        ]);
+
         $password = (string) $this->secret('Password');
 
         try {
@@ -26,7 +37,7 @@ class ProvaLdap extends Command
         }
 
         if ($identita === null) {
-            $this->error('Credenziali non valide (o LDAP_HOST vuoto).');
+            $this->error('Accesso rifiutato: '.($directory->motivoUltimoRifiuto() ?? 'credenziali non valide.'));
 
             return self::FAILURE;
         }

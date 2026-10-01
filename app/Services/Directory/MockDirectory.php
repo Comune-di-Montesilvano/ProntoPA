@@ -38,6 +38,11 @@ final class MockDirectory implements Directory
         );
     }
 
+    public function motivoUltimoRifiuto(): string
+    {
+        return 'Mock: utente sconosciuto o password diversa dallo username.';
+    }
+
     private function guid(string $username): string
     {
         $h = md5('prontopa-mock-'.$username);

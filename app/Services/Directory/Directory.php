@@ -12,4 +12,10 @@ interface Directory
      * @throws DirectoryNonDisponibile directory configurata ma non raggiungibile
      */
     public function authenticate(string $username, string $password): ?DirectoryIdentity;
+
+    /**
+     * Perché l'ultimo authenticate() ha restituito null, per la diagnosi
+     * (ldap:prova, log). Mai mostrato all'utente nel form di login.
+     */
+    public function motivoUltimoRifiuto(): ?string;
 }

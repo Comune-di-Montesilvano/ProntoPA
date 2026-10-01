@@ -13,6 +13,13 @@ final class FakeDirectory implements Directory
 
     public bool $nonDisponibile = false;
 
+    public ?string $motivo = null;
+
+    public function motivoUltimoRifiuto(): ?string
+    {
+        return $this->motivo;
+    }
+
     /**
      * @param  list<string>  $groups
      * @param  string|null|false  $email  false = default "<username>@ente.local"; null = account AD senza email

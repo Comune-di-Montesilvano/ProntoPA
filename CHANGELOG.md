@@ -6,6 +6,23 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-10-01
+
+### Changed
+- Nomi dei gruppi Active Directory → ruolo spostati da Admin → Impostazioni
+  alle variabili `LDAP_GRUPPO_ADMIN`, `LDAP_GRUPPO_SUPERVISORI`,
+  `LDAP_GRUPPO_GESTORI`, `LDAP_GRUPPO_OPERAI`, `LDAP_GRUPPO_URP`,
+  `LDAP_GRUPPO_SEGNALATORI` (stessi default): servono già al primo accesso,
+  quando non esiste ancora un amministratore che possa cambiarli da UI
+- `php artisan ldap:prova` mostra la configurazione letta e il motivo esatto
+  di un rifiuto (messaggio diagnostico di AD sul bind, oppure bind riuscito
+  ma utente non trovato con base DN/template indicati)
+
+### Fixed
+- Messaggi di accesso e reset password in inglese ("These credentials do not
+  match our records"): aggiunte le traduzioni italiane e lingua predefinita
+  `it`
+
 ## [0.7.1] - 2026-10-01
 
 ### Fixed
@@ -63,6 +80,7 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
 | Versione | Tema |
 |---|---|
+| v0.7.2 | Gruppi AD in env, diagnosi `ldap:prova`, messaggi di accesso in italiano |
 | v0.7.1 | Fix versione applicativa da build (IMAGE_TAG) |
 | v0.7.0 | Ditte, assistente AI locale, rendicontazione, hardening, accessi con AD (dipendenti), email+2FA (ditte), SPID/CIE (scuole) |
 | v0.6.x | Adozione: form compatto, anti-duplicato, digest, squadre |

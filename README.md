@@ -140,7 +140,7 @@ Il ruolo dei dipendenti deriva dai gruppi AD, riletti a ogni accesso (un solo ru
 | `PRONTOPA_URP` | Segnalatore URP (inserisce per conto di chi telefona) |
 | `PRONTOPA_SEGNALATORI` | Segnalatore uffici interni |
 
-I nomi dei gruppi sono modificabili in **Admin → Impostazioni**. Verifica rapida di un utente: `php artisan ldap:prova <username>`.
+I nomi dei gruppi si impostano con le variabili `LDAP_GRUPPO_ADMIN`, `LDAP_GRUPPO_SUPERVISORI`, `LDAP_GRUPPO_GESTORI`, `LDAP_GRUPPO_OPERAI`, `LDAP_GRUPPO_URP`, `LDAP_GRUPPO_SEGNALATORI` (default quelli in tabella): stanno in env perché servono già al primo accesso. Diagnosi di un utente: `php artisan ldap:prova <username>` mostra la configurazione letta e il motivo esatto di un rifiuto.
 
 **SPID/CIE**: registra su pa-sso-proxy un client OIDC con il redirect URI mostrato in **Admin → Impostazioni → SPID/CIE** (`<APP_URL>/auth/spid/callback`), poi inserisci lì issuer (radice del proxy, senza `/OIDC`), client id e secret. Il secret è salvato cifrato con `APP_KEY`: se cambi `APP_KEY` va reinserito.
 

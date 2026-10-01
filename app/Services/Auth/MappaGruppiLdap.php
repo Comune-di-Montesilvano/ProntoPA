@@ -2,8 +2,6 @@
 
 namespace App\Services\Auth;
 
-use App\Models\Impostazione;
-
 /**
  * Gruppi AD → ruolo ProntoPA. Un solo ruolo per persona (vince il più
  * alto): Segnalazione::scopeVisibileA valuta i ruoli in cascata e un
@@ -16,14 +14,14 @@ final class MappaGruppiLdap
 
     public const PROVENIENZA_URP = 3;
 
-    /** Ordine = precedenza: [chiave impostazione, default, ruolo, supervisore, per-conto, provenienza] */
+    /** Ordine = precedenza: [chiave config('ldap.gruppi'), ruolo, supervisore, per-conto, provenienza] */
     private const LIVELLI = [
-        ['ldap_gruppo_admin', 'PRONTOPA_ADMIN', 'admin', false, false, self::PROVENIENZA_INTERNA],
-        ['ldap_gruppo_supervisori', 'PRONTOPA_SUPERVISORI', 'gestore', true, false, self::PROVENIENZA_INTERNA],
-        ['ldap_gruppo_gestori', 'PRONTOPA_GESTORI', 'gestore', false, false, self::PROVENIENZA_INTERNA],
-        ['ldap_gruppo_operai', 'PRONTOPA_OPERAI', 'operaio', false, false, self::PROVENIENZA_INTERNA],
-        ['ldap_gruppo_urp', 'PRONTOPA_URP', 'segnalatore', false, true, self::PROVENIENZA_URP],
-        ['ldap_gruppo_segnalatori', 'PRONTOPA_SEGNALATORI', 'segnalatore', false, false, self::PROVENIENZA_INTERNA],
+        ['admin', 'admin', false, false, self::PROVENIENZA_INTERNA],
+        ['supervisori', 'gestore', true, false, self::PROVENIENZA_INTERNA],
+        ['gestori', 'gestore', false, false, self::PROVENIENZA_INTERNA],
+        ['operai', 'operaio', false, false, self::PROVENIENZA_INTERNA],
+        ['urp', 'segnalatore', false, true, self::PROVENIENZA_URP],
+        ['segnalatori', 'segnalatore', false, false, self::PROVENIENZA_INTERNA],
     ];
 
     /**
@@ -33,8 +31,9 @@ final class MappaGruppiLdap
     {
         $utente = array_map(fn (string $g) => mb_strtoupper(trim($g)), $gruppi);
 
-        foreach (self::LIVELLI as [$chiave, $default, $ruolo, $supervisore, $perConto, $provenienza]) {
-            $nome = mb_strtoupper(trim((string) Impostazione::get($chiave, $default)));
+        foreach (self::LIVELLI as [$chiave, $ruolo, $supervisore, $perConto, $provenienza]) {
+            // Nomi in env (LDAP_GRUPPO_*): servono già al primo login, prima che esista un admin.
+            $nome = mb_strtoupper(trim((string) config("ldap.gruppi.{$chiave}")));
 
             if ($nome !== '' && in_array($nome, $utente, true)) {
                 return new RuoloLdap($ruolo, $supervisore, $perConto, $provenienza);
