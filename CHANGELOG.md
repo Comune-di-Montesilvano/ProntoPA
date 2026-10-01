@@ -6,6 +6,8 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-01
+
 ### Added
 - Login dipendenti con Active Directory: ruolo, flag supervisore,
   provenienza e permesso "per conto di" derivati dai gruppi AD a ogni
@@ -52,6 +54,7 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
 | Versione | Tema |
 |---|---|
+| v0.7.0 | Ditte, assistente AI locale, rendicontazione, hardening, accessi con AD (dipendenti), email+2FA (ditte), SPID/CIE (scuole) |
 | v0.6.x | Adozione: form compatto, anti-duplicato, digest, squadre |
 | v0.5.0 | Integrazioni esterne: API REST, webhook outbound |
 | v0.3 | UX e comunicazioni: landing page, notifiche email, bot Telegram |
