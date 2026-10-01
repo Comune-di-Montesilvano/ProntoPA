@@ -13,6 +13,9 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
   comando `ldap:prova` per la diagnosi
 - Login ditte con email + password e verifica in due passaggi con codice
   via email (obbligatoria), in alternativa all'app TOTP
+- Login delle scuole con SPID/CIE tramite pa-sso-proxy (OIDC + PKCE):
+  primo accesso con conferma dell'email, configurazione da Admin →
+  Impostazioni con secret cifrato, logout anche sul proxy
 - Comando `artisan demo`: dati realistici (istituti, utenti, ~50 segnalazioni
   in tutti gli stati) per chi valuta il riuso, rilanciabile senza accumulo
 - `publiccode.yml` + `LICENSE` (EUPL-1.2) per il riuso via Developers Italia

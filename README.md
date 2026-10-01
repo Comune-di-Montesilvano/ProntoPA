@@ -127,6 +127,7 @@ Copia `.env.example` in `.env` e imposta i valori sistemistici:
 |---|---|
 | Dipendenti dell'ente (admin compreso) | Credenziali di dominio Active Directory — **requisito obbligatorio** |
 | Ditte | Email + password + codice di verifica via email (o app TOTP) |
+| Personale delle scuole | SPID o CIE tramite pa-sso-proxy, con email confermata al primo accesso; per segnalare serve la delega della segreteria (in arrivo) |
 
 Il ruolo dei dipendenti deriva dai gruppi AD, riletti a ogni accesso (un solo ruolo, vince il più alto):
 
@@ -140,6 +141,8 @@ Il ruolo dei dipendenti deriva dai gruppi AD, riletti a ogni accesso (un solo ru
 | `PRONTOPA_SEGNALATORI` | Segnalatore uffici interni |
 
 I nomi dei gruppi sono modificabili in **Admin → Impostazioni**. Verifica rapida di un utente: `php artisan ldap:prova <username>`.
+
+**SPID/CIE**: registra su pa-sso-proxy un client OIDC con il redirect URI mostrato in **Admin → Impostazioni → SPID/CIE** (`<APP_URL>/auth/spid/callback`), poi inserisci lì issuer (radice del proxy, senza `/OIDC`), client id e secret. Il secret è salvato cifrato con `APP_KEY`: se cambi `APP_KEY` va reinserito.
 
 `LDAP_USER_DN_TEMPLATE` va impostato in formato UPN (`%s@ente.local`, consigliato: i dipendenti possono scrivere anche il proprio UPN) o `DOMINIO\%s`: Active Directory rifiuta il bind col solo username, e con `%s` nessun dipendente riesce a entrare (l'app lo segnala nei log all'avvio).
 

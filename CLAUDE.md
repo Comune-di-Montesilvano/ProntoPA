@@ -63,6 +63,7 @@ MAIL_MAILER=smtp  MAIL_HOST=mailpit  MAIL_PORT=1025
 PEC_HOST=mbox.cert.legalmail.it  PEC_USERNAME=  PEC_PASSWORD=
 WEBHOOK_CITTADINI_URL=  WEBHOOK_CITTADINI_SECRET=
 LDAP_HOST=mock  LDAP_BASE_DN=  LDAP_USER_DN_TEMPLATE=%s@ente.local  # mock vietato in prod (app non parte)
+OIDC_MOCK=true  # simulatore SPID dev (/auth/spid/mock), vietato in prod
 ```
 
 Nuova env var → anche nel blocco `x-php-env` di `docker-compose.yml` (niente passthrough automatico).
@@ -109,9 +110,10 @@ app/Services/
   OllamaService    # LLM locale opzionale (titolo auto, triage suggerito, embeddings)
   TelegramBotService
   Directory/  Directory (interfaccia) · LdapRecordDirectory (AD reale) · MockDirectory · NullDirectory
-  Auth/       LdapLoginService · MappaGruppiLdap · NormalizzaUsernameAd · CodiceAccessoEmail (2FA email)
+  Auth/       LdapLoginService · MappaGruppiLdap · NormalizzaUsernameAd · CodiceAccessoEmail (2FA email) · SpidLoginService
+  Oidc/       OidcClient (discovery/PKCE/token/id_token/userinfo) · OidcConfig · ClaimsSpid · IdentitaSpid
 app/Jobs/           CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
-app/Http/Middleware/EnsureUserIsActive.php
+app/Http/Middleware/EnsureUserIsActive.php  LimitaAccessoSpid.php
 app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni  ProvaLdap (ldap:prova)
 ```
 
@@ -129,6 +131,8 @@ app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  Ch
 - contiene `@` e non è l'UPN AD (suffisso di `LDAP_USER_DN_TEMPLATE`) → account `locale` per email (ditte) → 2FA (`User::metodoSecondoFattore()`: TOTP se attivo, altrimenti email obbligatoria per ruolo `impresa`)
 - altrimenti (`m.rossi`, `m.rossi@ente.local`, `ENTE\m.rossi`) → AD via `LdapLoginService`; **transitorio fino al cutover (fase 3)**: se AD non riconosce, fallback account `locale` per username (segnalatori legacy)
 - `users.auth_source` = `locale`·`ldap`·`spid`; `ldap_guid` chiave identità AD; `email` NON unique a DB (unicità applicativa solo tra `locale` attivi); reset password solo `locale` attivi
+
+**Scuole via SPID/CIE** (`/auth/spid` → pa-sso-proxy): OIDC Authorization Code + PKCE, solo `client_secret_basic`, id_token verificato via JWKS (senza `kid` ok se JWKS ha una chiave) + claim persona da userinfo (`sub` deve coincidere). Identità = `users.codice_fiscale` (`TINIT-` rimosso), **mai** il `sub`. Primo accesso → "Completa profilo" (utente creato SOLO con l'email) → verifica email (`verification.*`) → `LimitaAccessoSpid` confina gli utenti `spid` a verifica/attesa (2b: deleghe). `state`/`nonce`/`verifier` in sessione Laravel (monouso). Config in Admin → Impostazioni → SPID: issuer (radice, senza `/OIDC`), client id, secret **cifrato con `APP_KEY`** (cambiare `APP_KEY` = reinserire il secret); redirect URI `{APP_URL}/auth/spid/callback` mostrato in sola lettura. Logout SPID → `end_session_endpoint` del proxy.
 
 Gruppi AD → ruolo (nomi in Admin → Impostazioni, gruppo `ldap`), precedenza in quest'ordine, un solo ruolo, ricalcolato a ogni login:
 
@@ -214,7 +218,9 @@ git tag v1.2.0 && git push origin v1.2.0
 
 CSRF/throttle non auto-bypassati nei Feature test nonostante `APP_ENV=testing` (`app()->runningUnitTests()` risulta `false` qui). Sui POST a rotte `web`: `$this->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class, \Illuminate\Routing\Middleware\ThrottleRequests::class])`.
 
-Causa trovata (v1.2): nel container dev `CACHE_STORE`/`SESSION_DRIVER`/`QUEUE_CONNECTION`/`MAIL_MAILER` arrivano dall'env del compose (redis/smtp) e Laravel legge `$_SERVER` prima di `$_ENV` — un `<env>` senza `force` non li sovrascrive, e i test scrivevano nella cache Redis del dev (test flaky + impostazioni dev inquinate). `phpunit.xml` ora li forza con `<env … force="true"/>` **e** `<server … force="true"/>` (idem `LDAP_HOST` vuoto). Nuova variabile che il compose passa al container e che i test devono controllare → stessa coppia env+server forzata. `APP_ENV` resta non forzato.
+Causa trovata (v1.2): nel container dev `CACHE_STORE`/`SESSION_DRIVER`/`QUEUE_CONNECTION`/`MAIL_MAILER` arrivano dall'env del compose (redis/smtp) e Laravel legge `$_SERVER` prima di `$_ENV` — un `<env>` senza `force` non li sovrascrive, e i test scrivevano nella cache Redis del dev (test flaky + impostazioni dev inquinate). `phpunit.xml` ora li forza con `<env … force="true"/>` **e** `<server … force="true"/>` (idem `LDAP_HOST` vuoto). Nuova variabile che il compose passa al container e che i test devono controllare → stessa coppia env+server forzata.
+
+Test SPID: `tests/Support/FakeOidcProvider` simula pa-sso-proxy con `Http::fake` e chiave RSA vera (discovery, JWKS con/senza `kid`, token solo `client_secret_basic`, userinfo); `configura()` scrive le impostazioni OIDC, `nonce` va impostato dopo `GET /auth/spid` (`session('spid.nonce')`). Test AD: `tests/Support/FakeDirectory`. `APP_ENV` resta non forzato.
 
 ## Deploy Prod (Portainer/Podman rootless)
 

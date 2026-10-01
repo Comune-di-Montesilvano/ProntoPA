@@ -114,7 +114,8 @@ AI opzionale on-premise (Ollama, profilo Docker `ai`), sempre asincrona (job in 
 Spec: [`docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md`](docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md)
 
 - Fase 1 — Dipendenti via Active Directory (ruoli dai gruppi), ditte via email + 2FA email, rimozione wizard ✅
-- Fase 2 — Scuole via SPID/CIE (pa-sso-proxy) + deleghe confermate dalla segreteria, rinnovo annuale 📋
+- Fase 2a — Scuole via SPID/CIE (pa-sso-proxy), completa profilo, verifica email ✅
+- Fase 2b — Deleghe confermate dalla segreteria, rinnovo annuale, visibilità per delega 📋
 - Fase 3 — Cutover: disattivazione segnalatori legacy, fine fallback username locale 📋
 
 ---
