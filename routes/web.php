@@ -25,6 +25,7 @@ use App\Http\Controllers\AiTriageController;
 use App\Http\Controllers\FascicoloPdfController;
 use App\Http\Controllers\SegnalazioneController;
 use App\Http\Controllers\SegnalatoreDashboardController;
+use App\Http\Controllers\SpidAttesaController;
 use App\Http\Controllers\StatisticheController;
 use App\Http\Controllers\TelegramAccountController;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +41,11 @@ Route::get('/account/verify-annual/{user}/{token}', [AnnualAccountVerificationCo
 Route::get('/dashboard', [RoleDashboardController::class, 'index'])
     ->middleware('auth')
     ->name('dashboard');
+
+// Scuole (SPID) senza delega: confinate qui da LimitaAccessoSpid
+Route::get('/scuola/attesa', SpidAttesaController::class)
+    ->middleware('auth')
+    ->name('spid.attesa');
 
 // ── Segnalazioni (tutti gli autenticati) ──────────────────────────────────────
 Route::middleware('auth')->group(function () {
