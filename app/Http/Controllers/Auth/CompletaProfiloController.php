@@ -19,11 +19,35 @@ use Throwable;
  */
 class CompletaProfiloController extends Controller
 {
-    public function show(Request $request): View|RedirectResponse
+    public const MINUTI_VALIDITA = 15;
+
+    /**
+     * Identità SPID appena verificata dal callback, se ancora fresca.
+     *
+     * @return array<string, string|null>|null
+     */
+    private function identitaInSessione(Request $request): ?array
     {
         $dati = $request->session()->get('spid.identita');
 
         if (! is_array($dati)) {
+            return null;
+        }
+
+        if ((int) ($dati['creata_il'] ?? 0) < now()->subMinutes(self::MINUTI_VALIDITA)->getTimestamp()) {
+            $request->session()->forget('spid.identita');
+
+            return null;
+        }
+
+        return $dati;
+    }
+
+    public function show(Request $request): View|RedirectResponse
+    {
+        $dati = $this->identitaInSessione($request);
+
+        if ($dati === null) {
             return redirect()->route('login');
         }
 
@@ -32,9 +56,9 @@ class CompletaProfiloController extends Controller
 
     public function store(Request $request, SpidLoginService $servizio): RedirectResponse
     {
-        $dati = $request->session()->get('spid.identita');
+        $dati = $this->identitaInSessione($request);
 
-        if (! is_array($dati)) {
+        if ($dati === null) {
             return redirect()->route('login');
         }
 

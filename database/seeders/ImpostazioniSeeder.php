@@ -410,14 +410,27 @@ class ImpostazioniSeeder extends Seeder
             ],
         ];
 
+        // Rilanciabile a ogni avvio: aggiunge le chiavi nuove (es. dopo un
+        // aggiornamento) e allinea tipo/gruppo/descrizione, ma non tocca MAI
+        // il valore già configurato dall'admin.
         foreach ($impostazioni as $impostazione) {
-            DB::table('impostazioni')->updateOrInsert(
-                ['chiave' => $impostazione['chiave']],
-                array_merge($impostazione, [
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ])
-            );
+            $esiste = DB::table('impostazioni')->where('chiave', $impostazione['chiave'])->exists();
+
+            if ($esiste) {
+                DB::table('impostazioni')->where('chiave', $impostazione['chiave'])->update([
+                    'tipo'        => $impostazione['tipo'],
+                    'gruppo'      => $impostazione['gruppo'],
+                    'descrizione' => $impostazione['descrizione'],
+                    'updated_at'  => now(),
+                ]);
+
+                continue;
+            }
+
+            DB::table('impostazioni')->insert(array_merge($impostazione, [
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
         }
     }
 }

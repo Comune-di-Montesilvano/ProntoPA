@@ -98,7 +98,9 @@ class SpidController extends Controller
         }
 
         if ($user === null) {
-            $request->session()->put('spid.identita', $identita->toArray());
+            // Scade dopo CompletaProfiloController::MINUTI_VALIDITA: su un PC
+            // condiviso non deve restare reclamabile da chi viene dopo.
+            $request->session()->put('spid.identita', $identita->toArray() + ['creata_il' => now()->getTimestamp()]);
 
             return redirect()->route('spid.completa-profilo');
         }

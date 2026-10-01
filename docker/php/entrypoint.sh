@@ -19,10 +19,14 @@ if [ "$USER_COUNT" = "0" ]; then
     echo "==> Seeding dati di riferimento..."
     php artisan db:seed --class="Database\\Seeders\\TabelleRiferimentoSeeder" --force --no-interaction
     php artisan db:seed --class="Database\\Seeders\\IstitutiPlessiSeeder" --force --no-interaction
-    php artisan db:seed --class="Database\\Seeders\\ImpostazioniSeeder" --force --no-interaction
     php artisan db:seed --class="Database\\Seeders\\RolesAndPermissionsSeeder" --force --no-interaction
     # Nessun admin creato qui: si entra con un utente AD del gruppo PRONTOPA_ADMIN.
 fi
+
+# A ogni avvio: aggiunge le impostazioni introdotte dagli aggiornamenti
+# (es. SPID, gruppi AD) senza toccare i valori già configurati.
+echo "==> Allineamento impostazioni..."
+php artisan db:seed --class="Database\\Seeders\\ImpostazioniSeeder" --force --no-interaction
 
 echo "==> Starting php-fpm..."
 exec php-fpm

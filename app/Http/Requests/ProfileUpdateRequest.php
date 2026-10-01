@@ -25,10 +25,10 @@ class ProfileUpdateRequest extends FormRequest
                 'lowercase',
                 'email',
                 'max:255',
-                // Unica solo tra account locali attivi: può coincidere con
-                // quella di un utente AD (v1.2).
+                // Unica tra ditte e scuole attive (locale+spid): può coincidere
+                // con quella di un utente AD (v1.2).
                 Rule::unique(User::class)
-                    ->where(fn ($q) => $q->where('auth_source', 'locale')->where('attivo', true))
+                    ->where(fn ($q) => $q->whereIn('auth_source', ['locale', 'spid'])->where('attivo', true))
                     ->ignore($this->user()->id),
             ],
         ];

@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Services\Oidc\IdentitaSpid;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * Utenti delle scuole via SPID/CIE: identità = codice fiscale. L'utente
@@ -57,7 +56,8 @@ final class SpidLoginService
                     'codice_fiscale' => $identita->codiceFiscale,
                     'oidc_subject' => $identita->subject,
                     'name' => $identita->nomeCompleto(),
-                    'username' => $this->usernameUnivoco($identita),
+                    // Username: dominio = sAMAccountName, ditta = email, SPID = codice fiscale.
+                    'username' => $identita->codiceFiscale,
                     'email' => mb_strtolower(trim($email)),
                     'email_verified_at' => null,
                     'password' => null,
@@ -75,24 +75,5 @@ final class SpidLoginService
             // Race tra due richieste contemporanee sullo stesso codice fiscale.
             return User::where('codice_fiscale', $identita->codiceFiscale)->firstOrFail();
         }
-    }
-
-    private function usernameUnivoco(IdentitaSpid $identita): string
-    {
-        $base = Str::of($identita->nome.'.'.$identita->cognome)
-            ->lower()->ascii()
-            ->replaceMatches('/[^a-z0-9.]/', '')
-            ->trim('.')
-            ->value() ?: 'utente.scuola';
-
-        $candidato = $base;
-        $suffisso = 1;
-
-        while (User::where('username', $candidato)->exists()) {
-            $suffisso++;
-            $candidato = $base.$suffisso;
-        }
-
-        return $candidato;
     }
 }

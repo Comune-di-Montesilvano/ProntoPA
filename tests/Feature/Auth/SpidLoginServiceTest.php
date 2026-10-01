@@ -46,18 +46,18 @@ class SpidLoginServiceTest extends TestCase
         $this->assertNull($user->email_verified_at);
         $this->assertNull($user->password);
         $this->assertSame('Mario Rossi', $user->name);
-        $this->assertSame('mario.rossi', $user->username);
+        $this->assertSame('RSSMRA80A01G482X', $user->username);
         $this->assertSame(2, (int) $user->id_provenienza);
         $this->assertTrue($user->hasRole('segnalatore'));
     }
 
-    public function test_username_univoco_con_suffisso(): void
+    public function test_username_e_il_codice_fiscale_anche_con_omonimi(): void
     {
         User::factory()->create(['username' => 'mario.rossi']);
 
         $user = $this->service()->creaDaProfilo($this->identita(), 'a@b.it');
 
-        $this->assertSame('mario.rossi2', $user->username);
+        $this->assertSame('RSSMRA80A01G482X', $user->username);
     }
 
     public function test_stesso_cf_con_sub_diverso_ritrova_lo_stesso_utente(): void

@@ -37,6 +37,19 @@ class UtentiEmailUnicaTest extends TestCase
             ->assertSessionHasNoErrors();
     }
 
+    public function test_username_della_ditta_e_la_sua_email(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.utenti.store'), $this->dati('Info@Ditta.it', 'scelto-a-mano'))
+            ->assertSessionHasNoErrors();
+
+        $ditta = User::where('email', 'info@ditta.it')->firstOrFail();
+        $this->assertSame('info@ditta.it', $ditta->username);
+
+        $dati = $this->dati('nuova@ditta.it', 'altro') + ['_method' => 'PUT'];
+        $this->actingAs($this->admin)->put(route('admin.utenti.update', $ditta), $dati)->assertSessionHasNoErrors();
+        $this->assertSame('nuova@ditta.it', $ditta->fresh()->username);
+    }
+
     public function test_ditta_non_puo_usare_email_di_altro_account_locale_attivo(): void
     {
         User::factory()->create(['email' => 'presa@ditta.it']);

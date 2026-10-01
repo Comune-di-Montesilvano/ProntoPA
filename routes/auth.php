@@ -47,22 +47,22 @@ Route::middleware('guest')->group(function () {
         ->middleware('throttle:two-factor');
 
     Route::post('two-factor-challenge/reinvia', [TwoFactorChallengeController::class, 'reinvia'])
-        ->middleware('throttle:1,1')
+        ->middleware('throttle:1,1,2fa-reinvia')
         ->name('two-factor.reinvia');
 
     Route::get('auth/spid', [SpidController::class, 'start'])
-        ->middleware('throttle:20,1')
+        ->middleware('throttle:20,1,spid-start')
         ->name('spid.start');
 
     Route::get('auth/spid/callback', [SpidController::class, 'callback'])
-        ->middleware('throttle:20,1')
+        ->middleware('throttle:20,1,spid-callback')
         ->name('spid.callback');
 
     Route::get('auth/spid/completa-profilo', [CompletaProfiloController::class, 'show'])
         ->name('spid.completa-profilo');
 
     Route::post('auth/spid/completa-profilo', [CompletaProfiloController::class, 'store'])
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:10,1,spid-profilo')
         ->name('spid.completa-profilo.store');
 
     // Simulatore SPID: 404 se OIDC_MOCK è spento, vietato in produzione
@@ -75,11 +75,11 @@ Route::middleware('auth')->group(function () {
         ->name('verification.notice');
 
     Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
-        ->middleware(['signed', 'throttle:6,1'])
+        ->middleware(['signed', 'throttle:6,1,verifica-email'])
         ->name('verification.verify');
 
     Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
-        ->middleware('throttle:6,1')
+        ->middleware('throttle:6,1,verifica-reinvio')
         ->name('verification.send');
 
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])

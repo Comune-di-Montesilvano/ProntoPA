@@ -42,8 +42,22 @@ class UtentiController extends Controller
         return view('admin.utenti.create', compact('profili', 'provenienze', 'imprese'));
     }
 
+    /**
+     * Username: dominio = sAMAccountName, SPID = codice fiscale, ditta =
+     * email. Per le ditte lo username non si sceglie: è l'email.
+     */
+    private function usernameDittaDaEmail(Request $request): void
+    {
+        if ($request->input('ruolo') === 'impresa' && filled($request->input('email'))) {
+            $email = mb_strtolower(trim((string) $request->input('email')));
+            $request->merge(['email' => $email, 'username' => $email]);
+        }
+    }
+
     public function store(Request $request): RedirectResponse
     {
+        $this->usernameDittaDaEmail($request);
+
         $data = $request->validate([
             'name'       => ['required', 'string', 'max:100'],
             'username'   => ['required', 'string', 'max:50', 'unique:users,username'],
@@ -95,6 +109,8 @@ class UtentiController extends Controller
 
     public function update(Request $request, User $utente): RedirectResponse
     {
+        $this->usernameDittaDaEmail($request);
+
         $data = $request->validate([
             'name'       => ['required', 'string', 'max:100'],
             'username'   => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($utente->id)],

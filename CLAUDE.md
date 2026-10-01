@@ -130,6 +130,7 @@ app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  Ch
 **Accesso (v1.2, spec `docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md`)** — campo form `username`, instradato da `LoginRequest`:
 - contiene `@` e non è l'UPN AD (suffisso di `LDAP_USER_DN_TEMPLATE`) → account `locale` per email (ditte) → 2FA (`User::metodoSecondoFattore()`: TOTP se attivo, altrimenti email obbligatoria per ruolo `impresa`)
 - altrimenti (`m.rossi`, `m.rossi@ente.local`, `ENTE\m.rossi`) → AD via `LdapLoginService`; **transitorio fino al cutover (fase 3)**: se AD non riconosce, fallback account `locale` per username (segnalatori legacy)
+- **Username per tipo di account** (regola del committente, non derogabile): dominio = sAMAccountName (`mario.rossi`), SPID = codice fiscale, ditta = email (forzato in `UtentiController` per ruolo `impresa`). I tre spazi non collidono: niente generatori `nome.cognome`.
 - `users.auth_source` = `locale`·`ldap`·`spid`; `ldap_guid` chiave identità AD; `email` NON unique a DB (unicità applicativa solo tra `locale` attivi); reset password solo `locale` attivi
 
 **Scuole via SPID/CIE** (`/auth/spid` → pa-sso-proxy): OIDC Authorization Code + PKCE, solo `client_secret_basic`, id_token verificato via JWKS (senza `kid` ok se JWKS ha una chiave) + claim persona da userinfo (`sub` deve coincidere). Identità = `users.codice_fiscale` (`TINIT-` rimosso), **mai** il `sub`. Primo accesso → "Completa profilo" (utente creato SOLO con l'email) → verifica email (`verification.*`) → `LimitaAccessoSpid` confina gli utenti `spid` a verifica/attesa (2b: deleghe). `state`/`nonce`/`verifier` in sessione Laravel (monouso). Config in Admin → Impostazioni → SPID: issuer (radice, senza `/OIDC`), client id, secret **cifrato con `APP_KEY`** (cambiare `APP_KEY` = reinserire il secret); redirect URI `{APP_URL}/auth/spid/callback` mostrato in sola lettura. Logout SPID → `end_session_endpoint` del proxy.
@@ -226,7 +227,7 @@ Test SPID: `tests/Support/FakeOidcProvider` simula pa-sso-proxy con `Http::fake`
 
 1. `git push tag` → Actions builda GHCR
 2. Portainer stack → `docker-compose.yml`, env vars (APP_KEY, DB_PASSWORD, `LDAP_HOST` `LDAP_BASE_DN` `LDAP_USER_DN_TEMPLATE`…). **Mai `LDAP_HOST=mock`**
-3. L'entrypoint esegue migrate + seed dei dati di riferimento al primo avvio (nessun utente creato)
+3. L'entrypoint esegue migrate + seed dei dati di riferimento al primo avvio (nessun utente creato) e a OGNI avvio `ImpostazioniSeeder`, che aggiunge le chiavi nuove senza mai toccare i valori configurati (nuove impostazioni → basta aggiungerle al seeder)
 4. Crea in AD i gruppi `PRONTOPA_*`, verifica con `php artisan ldap:prova <utente>`, entra con un utente di `PRONTOPA_ADMIN` → Admin → Impostazioni per configurare ente
 
 Rootless: no bind mount, named volumes `mariadb_data` `redis_data` `app_storage` → `/var/www/html/storage`

@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Impostazione;
 use App\Models\Segnalazione;
+use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Notifications\Messages\MailMessage;
 use App\Policies\SegnalazionePolicy;
 use App\Services\Directory\Directory;
 use App\Services\Directory\LdapConfigGuard;
@@ -46,6 +49,15 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Gate::policy(Segnalazione::class, SegnalazionePolicy::class);
+
+        // Prima email che il personale delle scuole riceve dall'ente: in
+        // italiano, altrimenti sembra phishing.
+        VerifyEmail::toMailUsing(fn (object $notifiable, string $url) => (new MailMessage)
+            ->subject('Conferma il tuo indirizzo email')
+            ->line('Hai effettuato il primo accesso a '.Impostazione::get('ente_nome', 'ProntoPA').' con SPID o CIE.')
+            ->line('Conferma questo indirizzo per ricevere gli aggiornamenti delle tue segnalazioni.')
+            ->action('Conferma email', $url)
+            ->line('Se non sei stato tu, ignora questa email.'));
 
         // Unica fonte di verità per la policy password: prima d'ora
         // registrazione e cambio password usavano il default Laravel puro (8 caratteri,
