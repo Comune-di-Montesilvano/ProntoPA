@@ -6,6 +6,7 @@ use LdapRecord\Auth\BindException;
 use LdapRecord\Connection;
 use LdapRecord\LdapRecordException;
 use LdapRecord\Models\Attributes\Guid;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Active Directory reale. Bind con le credenziali dell'utente (nessun
@@ -21,6 +22,13 @@ final class LdapRecordDirectory implements Directory
      * @param  array{host: string, port: int, base_dn: ?string, user_dn_template: string, starttls: bool, tls_skip_verify: bool, timeout: int}  $config
      */
     public function __construct(private readonly array $config) {}
+
+    private ?string $motivo = null;
+
+    public function motivoUltimoRifiuto(): ?string
+    {
+        return $this->motivo;
+    }
 
     /**
      * @return array{host: string, port: int, ssl: bool}
@@ -74,7 +82,11 @@ final class LdapRecordDirectory implements Directory
 
     public function authenticate(string $username, string $password): ?DirectoryIdentity
     {
+        $this->motivo = null;
+
         if ($password === '' || trim($username) === '') {
+            $this->motivo = 'Username o password vuoti.';
+
             return null;
         }
 
@@ -104,6 +116,12 @@ final class LdapRecordDirectory implements Directory
                 $codice = $e->getDetailedError()?->getErrorCode() ?? (int) $e->getCode();
 
                 if (self::credenzialiNonValide($codice)) {
+                    // AD dettaglia il motivo nel messaggio diagnostico (data 52e
+                    // password errata, 525 utente inesistente, 533 disabilitato,
+                    // 701/532 scaduto, 775 bloccato).
+                    $this->motivo = sprintf('Bind rifiutato da AD (codice 49) per "%s": %s',
+                        $bindDn, $e->getDetailedError()?->getDiagnosticMessage() ?: $e->getMessage());
+
                     return null;
                 }
 
@@ -117,6 +135,11 @@ final class LdapRecordDirectory implements Directory
                 ->first();
 
             if (! $entry) {
+                // Password giusta ma ricerca vuota: base DN o template errati.
+                $this->motivo = sprintf('Bind riuscito ma nessun utente con %s=%s sotto "%s": controlla LDAP_BASE_DN e LDAP_USER_DN_TEMPLATE.',
+                    $attributo, $valore, (string) $this->config['base_dn']);
+                Log::warning('LDAP: '.$this->motivo);
+
                 return null;
             }
 

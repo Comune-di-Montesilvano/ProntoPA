@@ -137,7 +137,7 @@ app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  Ch
 
 **Scuole via SPID/CIE** (`/auth/spid` → pa-sso-proxy): OIDC Authorization Code + PKCE, solo `client_secret_basic`, id_token verificato via JWKS (senza `kid` ok se JWKS ha una chiave) + claim persona da userinfo (`sub` deve coincidere). Identità = `users.codice_fiscale` (`TINIT-` rimosso), **mai** il `sub`. Primo accesso → "Completa profilo" (utente creato SOLO con l'email) → verifica email (`verification.*`) → `LimitaAccessoSpid` confina gli utenti `spid` a verifica/attesa (2b: deleghe). `state`/`nonce`/`verifier` in sessione Laravel (monouso). Config in Admin → Impostazioni → SPID: issuer (radice, senza `/OIDC`), client id, secret **cifrato con `APP_KEY`** (cambiare `APP_KEY` = reinserire il secret); redirect URI `{APP_URL}/auth/spid/callback` mostrato in sola lettura. Logout SPID → `end_session_endpoint` del proxy.
 
-Gruppi AD → ruolo (nomi in Admin → Impostazioni, gruppo `ldap`), precedenza in quest'ordine, un solo ruolo, ricalcolato a ogni login:
+Gruppi AD → ruolo (nomi in env `LDAP_GRUPPO_*` → `config('ldap.gruppi')`, NON in Impostazioni: servono al primo login, prima che esista un admin), precedenza in quest'ordine, un solo ruolo, ricalcolato a ogni login:
 
 | Gruppo default | Ruolo | Note |
 |---|---|---|
@@ -148,7 +148,7 @@ Gruppi AD → ruolo (nomi in Admin → Impostazioni, gruppo `ldap`), precedenza 
 | `PRONTOPA_URP` | `segnalatore` | + permesso `segnalazioni.per-conto`, provenienza 3 |
 | `PRONTOPA_SEGNALATORI` | `segnalatore` | provenienza 1 |
 
-Primo login AD: aggancio account legacy `locale` non-ditta con stessa email (se unico). Username AD già usato da altro account → login rifiutato ("contatta l'amministratore"). Diagnosi: `php artisan ldap:prova <username>` (nessuna scrittura DB).
+Primo login AD: aggancio account legacy `locale` non-ditta con stessa email (se unico). Username AD già usato da altro account → login rifiutato ("contatta l'amministratore"). Diagnosi: `php artisan ldap:prova <username>` (nessuna scrittura DB): stampa la config letta e `Directory::motivoUltimoRifiuto()` (bind 49 con messaggio AD data 52e/533/775…, oppure bind ok ma utente non trovato → base DN/template). Il form di login mostra sempre il generico `auth.failed` (`lang/it/auth.php`).
 **Gotcha LdapRecord**: `Guard::attempt()` restituisce `false` per QUALSIASI errore di bind (anche server irraggiungibile) — `LdapRecordDirectory` usa `auth()->bind()` e solo codice 49 = credenziali errate.
 
 ## Workflow Stati

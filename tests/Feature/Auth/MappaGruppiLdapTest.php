@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\Impostazione;
 use App\Services\Auth\MappaGruppiLdap;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -55,13 +54,5 @@ class MappaGruppiLdapTest extends TestCase
     {
         $this->assertNull($this->mappa()->risolvi(['Domain Users', 'VPN']));
         $this->assertNull($this->mappa()->risolvi([]));
-    }
-
-    public function test_nome_gruppo_personalizzato_da_impostazioni(): void
-    {
-        Impostazione::set('ldap_gruppo_gestori', 'MANUTENZIONE_GESTORI');
-
-        $this->assertSame('gestore', $this->mappa()->risolvi(['MANUTENZIONE_GESTORI'])->ruolo);
-        $this->assertNull($this->mappa()->risolvi(['PRONTOPA_GESTORI']));
     }
 }

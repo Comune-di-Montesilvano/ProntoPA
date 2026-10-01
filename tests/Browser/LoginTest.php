@@ -48,7 +48,7 @@ class LoginTest extends DuskTestCase
                 ->type('username', $user->username)
                 ->type('password', 'password-sbagliata')
                 ->press('Accedi')
-                ->waitForText('These credentials do not match our records.')
+                ->waitForText('Credenziali non valide.')
                 ->assertPathIs('/login');
         });
     }
