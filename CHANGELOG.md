@@ -6,6 +6,15 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-01
+
+### Fixed
+- La versione mostrata dall'app (e inviata a Sentry come release) era
+  sempre `latest`: il compose di produzione riscriveva `APP_VERSION` a
+  runtime sopra quella iniettata nel build dal tag git. Ora la versione
+  viene solo dal build; il tag dell'immagine da scaricare si sceglie con
+  `IMAGE_TAG` (`0.7.1`, `0.7` o `latest`)
+
 ## [0.7.0] - 2026-10-01
 
 ### Added
@@ -54,6 +63,7 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
 | Versione | Tema |
 |---|---|
+| v0.7.1 | Fix versione applicativa da build (IMAGE_TAG) |
 | v0.7.0 | Ditte, assistente AI locale, rendicontazione, hardening, accessi con AD (dipendenti), email+2FA (ditte), SPID/CIE (scuole) |
 | v0.6.x | Adozione: form compatto, anti-duplicato, digest, squadre |
 | v0.5.0 | Integrazioni esterne: API REST, webhook outbound |
