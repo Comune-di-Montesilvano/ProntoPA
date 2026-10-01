@@ -1,6 +1,11 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\CompletaProfiloController;
+use App\Http\Controllers\Auth\EmailVerificationNotificationController;
+use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\SpidController;
+use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
@@ -43,9 +48,35 @@ Route::middleware('guest')->group(function () {
     Route::post('two-factor-challenge/reinvia', [TwoFactorChallengeController::class, 'reinvia'])
         ->middleware('throttle:1,1')
         ->name('two-factor.reinvia');
+
+    Route::get('auth/spid', [SpidController::class, 'start'])
+        ->middleware('throttle:20,1')
+        ->name('spid.start');
+
+    Route::get('auth/spid/callback', [SpidController::class, 'callback'])
+        ->middleware('throttle:20,1')
+        ->name('spid.callback');
+
+    Route::get('auth/spid/completa-profilo', [CompletaProfiloController::class, 'show'])
+        ->name('spid.completa-profilo');
+
+    Route::post('auth/spid/completa-profilo', [CompletaProfiloController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('spid.completa-profilo.store');
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('verify-email', EmailVerificationPromptController::class)
+        ->name('verification.notice');
+
+    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('verification.verify');
+
+    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
         ->name('password.confirm');
 

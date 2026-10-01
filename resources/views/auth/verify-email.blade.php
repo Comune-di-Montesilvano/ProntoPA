@@ -1,31 +1,26 @@
-<x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
-    </div>
+<x-auth-semplice titolo="Conferma la tua email" descrizione="Conferma l'indirizzo email per completare l'accesso.">
+    <x-slot:sottotitolo>
+        Ti abbiamo inviato un link a <strong>{{ auth()->user()->email }}</strong>: aprilo per confermare
+        l'indirizzo. Se non lo trovi, controlla lo spam o fattelo rimandare.
+    </x-slot:sottotitolo>
 
     @if (session('status') == 'verification-link-sent')
-        <div class="mb-4 font-medium text-sm text-green-600">
-            {{ __('A new verification link has been sent to the email address you provided during registration.') }}
+        <div role="status" style="background:var(--emerald-100); color:var(--emerald); border-radius:var(--radius-sm); padding:10px 14px; font-size:13px;">
+            Ti abbiamo inviato un nuovo link di conferma.
         </div>
     @endif
 
-    <div class="mt-4 flex items-center justify-between">
-        <form method="POST" action="{{ route('verification.send') }}">
-            @csrf
+    <form method="POST" action="{{ route('verification.send') }}">
+        @csrf
+        <button type="submit" class="pa-btn pa-btn-primary pa-btn-lg" style="width:100%;">Invia di nuovo il link</button>
+    </form>
 
-            <div>
-                <x-primary-button>
-                    {{ __('Resend Verification Email') }}
-                </x-primary-button>
-            </div>
-        </form>
+    <p style="font-size:13px; color:var(--slate-600); margin:0;">
+        Email sbagliata? <a href="{{ route('profile.edit') }}" style="color:var(--ente-primary); font-weight:600;">Modificala nel profilo</a>.
+    </p>
 
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-
-            <button type="submit" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                {{ __('Log Out') }}
-            </button>
-        </form>
-    </div>
-</x-guest-layout>
+    <form method="POST" action="{{ route('logout') }}" style="text-align:center;">
+        @csrf
+        <button type="submit" style="background:none; border:none; cursor:pointer; font-size:13px; color:var(--slate-600); text-decoration:underline;">Esci</button>
+    </form>
+</x-auth-semplice>
