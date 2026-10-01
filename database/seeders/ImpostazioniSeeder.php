@@ -341,16 +341,96 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'antivirus',
                 'descrizione' => 'Scansiona gli allegati caricati con ClamAV (richiede il profilo Docker "security")',
             ],
+
+            // v1.2 — Gruppi Active Directory → ruolo ProntoPA
+            [
+                'chiave'      => 'ldap_gruppo_admin',
+                'valore'      => 'PRONTOPA_ADMIN',
+                'tipo'        => 'text',
+                'gruppo'      => 'ldap',
+                'descrizione' => 'Gruppo AD degli amministratori ProntoPA',
+            ],
+            [
+                'chiave'      => 'ldap_gruppo_supervisori',
+                'valore'      => 'PRONTOPA_SUPERVISORI',
+                'tipo'        => 'text',
+                'gruppo'      => 'ldap',
+                'descrizione' => 'Gruppo AD dei gestori supervisori (vedono tutte le segnalazioni)',
+            ],
+            [
+                'chiave'      => 'ldap_gruppo_gestori',
+                'valore'      => 'PRONTOPA_GESTORI',
+                'tipo'        => 'text',
+                'gruppo'      => 'ldap',
+                'descrizione' => 'Gruppo AD dei gestori (solo segnalazioni assegnate)',
+            ],
+            [
+                'chiave'      => 'ldap_gruppo_operai',
+                'valore'      => 'PRONTOPA_OPERAI',
+                'tipo'        => 'text',
+                'gruppo'      => 'ldap',
+                'descrizione' => 'Gruppo AD degli operai',
+            ],
+            [
+                'chiave'      => 'ldap_gruppo_urp',
+                'valore'      => 'PRONTOPA_URP',
+                'tipo'        => 'text',
+                'gruppo'      => 'ldap',
+                'descrizione' => 'Gruppo AD URP/centralino (segnalano per conto di terzi)',
+            ],
+            [
+                'chiave'      => 'ldap_gruppo_segnalatori',
+                'valore'      => 'PRONTOPA_SEGNALATORI',
+                'tipo'        => 'text',
+                'gruppo'      => 'ldap',
+                'descrizione' => 'Gruppo AD degli uffici interni che segnalano',
+            ],
+
+            // v1.2 — SPID/CIE via pa-sso-proxy (OIDC)
+            [
+                'chiave'      => 'oidc_issuer',
+                'valore'      => null,
+                'tipo'        => 'url',
+                'gruppo'      => 'spid',
+                'descrizione' => 'Issuer di pa-sso-proxy (radice, senza /OIDC finale)',
+            ],
+            [
+                'chiave'      => 'oidc_client_id',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'spid',
+                'descrizione' => 'Client ID registrato su pa-sso-proxy',
+            ],
+            [
+                'chiave'      => 'oidc_client_secret',
+                'valore'      => null,
+                'tipo'        => 'secret',
+                'gruppo'      => 'spid',
+                'descrizione' => 'Client secret (salvato cifrato; lascia vuoto per non modificarlo)',
+            ],
         ];
 
+        // Rilanciabile a ogni avvio: aggiunge le chiavi nuove (es. dopo un
+        // aggiornamento) e allinea tipo/gruppo/descrizione, ma non tocca MAI
+        // il valore già configurato dall'admin.
         foreach ($impostazioni as $impostazione) {
-            DB::table('impostazioni')->updateOrInsert(
-                ['chiave' => $impostazione['chiave']],
-                array_merge($impostazione, [
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ])
-            );
+            $esiste = DB::table('impostazioni')->where('chiave', $impostazione['chiave'])->exists();
+
+            if ($esiste) {
+                DB::table('impostazioni')->where('chiave', $impostazione['chiave'])->update([
+                    'tipo'        => $impostazione['tipo'],
+                    'gruppo'      => $impostazione['gruppo'],
+                    'descrizione' => $impostazione['descrizione'],
+                    'updated_at'  => now(),
+                ]);
+
+                continue;
+            }
+
+            DB::table('impostazioni')->insert(array_merge($impostazione, [
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
         }
     }
 }

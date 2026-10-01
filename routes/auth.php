@@ -1,6 +1,12 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\CompletaProfiloController;
+use App\Http\Controllers\Auth\EmailVerificationNotificationController;
+use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\SpidController;
+use App\Http\Controllers\Auth\SpidMockController;
+use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
@@ -39,9 +45,43 @@ Route::middleware('guest')->group(function () {
 
     Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
         ->middleware('throttle:two-factor');
+
+    Route::post('two-factor-challenge/reinvia', [TwoFactorChallengeController::class, 'reinvia'])
+        ->middleware('throttle:1,1,2fa-reinvia')
+        ->name('two-factor.reinvia');
+
+    Route::get('auth/spid', [SpidController::class, 'start'])
+        ->middleware('throttle:20,1,spid-start')
+        ->name('spid.start');
+
+    Route::get('auth/spid/callback', [SpidController::class, 'callback'])
+        ->middleware('throttle:20,1,spid-callback')
+        ->name('spid.callback');
+
+    Route::get('auth/spid/completa-profilo', [CompletaProfiloController::class, 'show'])
+        ->name('spid.completa-profilo');
+
+    Route::post('auth/spid/completa-profilo', [CompletaProfiloController::class, 'store'])
+        ->middleware('throttle:10,1,spid-profilo')
+        ->name('spid.completa-profilo.store');
+
+    // Simulatore SPID: 404 se OIDC_MOCK è spento, vietato in produzione
+    Route::get('auth/spid/mock', [SpidMockController::class, 'show'])->name('spid.mock');
+    Route::post('auth/spid/mock', [SpidMockController::class, 'store'])->name('spid.mock.store');
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('verify-email', EmailVerificationPromptController::class)
+        ->name('verification.notice');
+
+    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
+        ->middleware(['signed', 'throttle:6,1,verifica-email'])
+        ->name('verification.verify');
+
+    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
+        ->middleware('throttle:6,1,verifica-reinvio')
+        ->name('verification.send');
+
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
         ->name('password.confirm');
 

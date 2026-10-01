@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -24,10 +24,11 @@ class ConfirmablePasswordController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        if (! Auth::guard('web')->validate([
-            'email' => $request->user()->email,
-            'password' => $request->password,
-        ])) {
+        // Verifica sull'utente loggato, non per email: l'email non è più
+        // unica tra account AD e ditte locali (v1.2).
+        $hash = $request->user()->password;
+
+        if ($hash === null || ! Hash::check((string) $request->password, $hash)) {
             throw ValidationException::withMessages([
                 'password' => __('auth.password'),
             ]);

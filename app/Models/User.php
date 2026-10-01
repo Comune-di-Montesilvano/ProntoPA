@@ -18,6 +18,13 @@ class User extends Authenticatable
         'email',
         'password',
         'password_legacy',
+        'auth_source',
+        'ldap_guid',
+        'two_factor_metodo',
+        'codice_fiscale',
+        'oidc_subject',
+        'bloccato_at',
+        'motivo_blocco',
         'id_profilo',
         'id_istituto',
         'amministratore',
@@ -57,6 +64,7 @@ class User extends Authenticatable
             'email_verified_at'       => 'datetime',
             'last_login'              => 'datetime',
             'approved_at'             => 'datetime',
+            'bloccato_at'             => 'datetime',
             'email_confermata_annualmente_at' => 'datetime',
             'prossima_verifica_annuale_at' => 'datetime',
             'annual_verification_sent_at' => 'datetime',
@@ -92,6 +100,43 @@ class User extends Authenticatable
     public function isSupervisore(): bool
     {
         return (bool) $this->supervisore_segnalazioni;
+    }
+
+    public function isLocale(): bool
+    {
+        return ($this->auth_source ?? 'locale') === 'locale';
+    }
+
+    public function isSpid(): bool
+    {
+        return $this->auth_source === 'spid';
+    }
+
+    public function isBloccato(): bool
+    {
+        return $this->bloccato_at !== null;
+    }
+
+    /**
+     * Secondo fattore richiesto al login, solo per account locali (ditte e
+     * legacy): per ldap/spid l'autenticazione forte è di AD/SPID.
+     * TOTP confermato vince; le ditte hanno email come default obbligatorio.
+     */
+    public function metodoSecondoFattore(): ?string
+    {
+        if (! $this->isLocale()) {
+            return null;
+        }
+
+        if ($this->hasEnabledTwoFactorAuthentication()) {
+            return 'totp';
+        }
+
+        if ($this->two_factor_metodo === 'email' || $this->hasRole('impresa')) {
+            return 'email';
+        }
+
+        return null;
     }
 
     // --- Relazioni ---
