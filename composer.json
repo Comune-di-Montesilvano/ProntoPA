@@ -8,7 +8,7 @@
     "require": {
         "php": "^8.3",
         "barryvdh/laravel-dompdf": "^3.0",
-        "directorytree/ldaprecord": "^3",
+        "directorytree/ldaprecord": "^4",
         "firebase/php-jwt": "^6",
         "laravel/breeze": "^2.4",
         "laravel/fortify": "^1.38",
