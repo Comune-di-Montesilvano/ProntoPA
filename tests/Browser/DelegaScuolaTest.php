@@ -64,7 +64,9 @@ class DelegaScuolaTest extends DuskTestCase
                 ->press('Approva')
                 ->waitForText('approvata')
                 ->visit('/segnalazioni/create')
-                ->assertSee('Media Delfico');
+                // la select dei plessi è nascosta finché non si sceglie una tipologia
+                ->assertPathIs('/segnalazioni/create')
+                ->assertSourceHas('Media Delfico');
         });
     }
 }
