@@ -60,7 +60,7 @@ manca ed è sul percorso critico del go-live.
 Spec: [`2026-09-30-v12-identita-accessi-design.md`](docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md) §"Flussi — deleghe".
 
 - [ ] Plan di dettaglio (`docs/superpowers/plans/`)
-- [ ] **Import anagrafe scuole MIUR** (prerequisito: senza `istituti.email`
+- [ ] **Anagrafe scuole MIUR** (prerequisito: senza `istituti.email`
       nessuna delega è richiedibile) — vedi §3.1
 - [ ] Tabelle `deleghe` + `deleghe_storico`, `DelegaService` con le invarianti
 - [ ] Richiesta delega (istituto intero o plessi, 6 controlli anti-abuso)
@@ -71,33 +71,16 @@ Spec: [`2026-09-30-v12-identita-accessi-design.md`](docs/superpowers/specs/2026-
 - [ ] `LimitaAccessoSpid::consentite()` per delega attiva
 - [ ] Test Feature + Dusk (SPID mock → profilo → delega → approvazione → segnalazione)
 
-### 3.1 Import anagrafe scuole MIUR
+### 3.1 Anagrafe scuole MIUR
 
-Sostituisce lo script legacy `scuole.php` (endpoint JSON per Formio, rimosso).
-Fonte: open data MIUR "Anagrafe scuole statali" (`dati.istruzione.it`,
-JSON-LD `@graph`, ~50 MB, ~50k righe, un file per anno scolastico: il nome
-cambia ogni anno, es. `SCUANAGRAFESTAT20252620250901.json`).
+Sostituisce lo script legacy `scuole.php` (rimosso). L'admin sceglie da
+Admin → Anagrafe MIUR quali istituti e sedi esistono in ProntoPA; nome,
+indirizzo ed email dei record selezionati vengono dall'open data MIUR e si
+riallineano quando l'admin scarica il file di un nuovo anno (URL in
+Impostazioni). Nessuna cancellazione automatica. Primo go-live: Comune di
+Montesilvano (infanzia, primarie, medie, comprensivi).
 
-Verificato sul dataset 2025/26, provincia di Pescara: 282 sedi, 50 istituti;
-per **tutte** le 45 sedi direttivo l'email è `<CODICEISTITUTORIFERIMENTO>@istruzione.it`
-(PEC `@pec.istruzione.it`), i plessi riportano quasi sempre l'email
-dell'istituto. 5 istituti (omnicomprensivi, convitti) non hanno una riga
-"sede direttivo": l'email va quindi ricavata dal codice istituto, non dalla
-riga sede. Le superiori (competenza Provincia) sono 35 sedi in 19 istituti.
-
-- Comando `artisan scuole:importa` (non un endpoint web): scarica/legge il
-  file, filtra per provincia e gradi da Impostazioni (Provincia → superiori;
-  un Comune che riusa → infanzia/primaria/primo grado/comprensivi)
-- Mapping: `CODICEISTITUTORIFERIMENTO` → `istituti.codice_meccanografico`
-  (+ denominazione, email, `fonte_dati = miur`); `CODICESCUOLA` →
-  `plessi.codice_meccanografico` (+ denominazione, indirizzo, email)
-- Upsert idempotente per codice meccanografico; mai cancellare: istituti
-  spariti dal dataset → report, disattivazione manuale; istituti `manuale`
-  non toccati
-- URL del file configurabile (o scoperto dal catalogo CKAN), cache locale,
-  `--file=` per import offline; dry-run di default con riepilogo differenze
-- Rilancio annuale a settembre (dimensionamento scolastico: codici che
-  cambiano/si fondono) → riportato nel report, da gestire a mano
+Spec: [`2026-10-08-v080-anagrafe-miur-deleghe-design.md`](docs/superpowers/specs/2026-10-08-v080-anagrafe-miur-deleghe-design.md).
 
 ### 0.9.0 — Cutover (~2 giorni di sviluppo)
 
@@ -129,7 +112,7 @@ Lo sviluppo che manca è di pochi giorni; i tempi del go-live li dettano queste 
 |---|---|---|
 | Gruppi `PRONTOPA_*` in AD popolati | Go-live (già verificato altrove) | Sistemista |
 | Client registrato su `pa-sso-proxy` (issuer, client id/secret) | Smoke SPID, 0.8.0 | Sistemista / gestore proxy |
-| Conferma provincia/gradi da importare dal MIUR | 0.8.0 (`scuole:importa`) | Ufficio tecnico |
+| Selezione istituti/sedi comunali da anagrafe MIUR | 0.8.0 | Admin ProntoPA |
 | Elenco iniziale delegati per scuola (CF + istituto/plessi) | Pre-deleghe al go-live, evita la valanga di richieste il primo giorno | Ufficio tecnico + scuole |
 | Ditte attive con email univoca | Cutover: senza, la ditta non entra | Ufficio tecnico |
 | Tempi di conservazione dati | Retention GDPR | DPO / segretario |
