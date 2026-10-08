@@ -6,11 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Istituto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class OrganizzazioniController extends Controller
 {
+    /** Campi che per un istituto fonte_dati = miur vengono dall'anagrafe MIUR. */
+    public const CAMPI_MIUR = ['descrizione', 'codice_meccanografico', 'email'];
+
     public function index(): View
     {
         $organizzazioni = Istituto::withCount('plessi')
@@ -35,7 +39,7 @@ class OrganizzazioniController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'descrizione'           => ['required', 'string', 'max:50'],
+            'descrizione'           => ['required', 'string', 'max:255'],
             'tipo'                  => ['required', 'string', 'max:50'],
             'tipo_ente'             => ['required', Rule::in(['comune', 'scuola', 'asl', 'provincia', 'regione', 'altro'])],
             'codice_meccanografico' => ['nullable', 'string', 'max:50'],
@@ -70,8 +74,8 @@ class OrganizzazioniController extends Controller
 
     public function update(Request $request, Istituto $organizzazione): RedirectResponse
     {
-        $data = $request->validate([
-            'descrizione'           => ['required', 'string', 'max:50'],
+        $regole = [
+            'descrizione'           => ['required', 'string', 'max:255'],
             'tipo'                  => ['required', 'string', 'max:50'],
             'tipo_ente'             => ['required', Rule::in(['comune', 'scuola', 'asl', 'provincia', 'regione', 'altro'])],
             'codice_meccanografico' => ['nullable', 'string', 'max:50'],
@@ -82,7 +86,14 @@ class OrganizzazioniController extends Controller
             'domini_email_istituzionali' => ['nullable', 'string', 'max:255'],
             'recapiti'              => ['nullable', 'string', 'max:50'],
             'attivo'                => ['nullable', 'boolean'],
-        ]);
+        ];
+
+        // validate() restituisce solo le chiavi validate: i campi MIUR inviati vengono scartati.
+        if ($organizzazione->isMiur()) {
+            $regole = Arr::except($regole, self::CAMPI_MIUR);
+        }
+
+        $data = $request->validate($regole);
 
         $data['attivo'] = (bool) ($data['attivo'] ?? false);
 

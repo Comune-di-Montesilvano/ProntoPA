@@ -11,12 +11,20 @@
         <form method="POST" action="{{ route('admin.organizzazioni.update', $organizzazione->id_istituto) }}" class="p-6 space-y-5">
             @csrf @method('PATCH')
 
+            @php $miur = $organizzazione->isMiur(); @endphp
+            @if($miur)
+                <p class="text-sm bg-blue-50 text-blue-800 rounded-md p-3">
+                    Dati da anagrafe MIUR: nome, codice, indirizzo ed email si aggiornano da
+                    <a href="{{ route('admin.anagrafe-miur.show', $organizzazione->codice_meccanografico) }}" class="underline">Admin → Anagrafe MIUR</a>.
+                </p>
+            @endif
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                     <x-input-label for="descrizione" value="Nome / Descrizione *" />
-                    <x-text-input id="descrizione" name="descrizione" type="text"
+                    <x-text-input id="descrizione" name="descrizione" :readonly="$miur" type="text"
                                   class="mt-1 block w-full"
-                                  :value="old('descrizione', $organizzazione->descrizione)" required maxlength="50" />
+                                  :value="old('descrizione', $organizzazione->descrizione)" required maxlength="255" />
                     <x-input-error :messages="$errors->get('descrizione')" class="mt-1" />
                 </div>
 
@@ -69,7 +77,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                     <x-input-label for="codice_meccanografico" value="Codice meccanografico" />
-                    <x-text-input id="codice_meccanografico" name="codice_meccanografico" type="text"
+                    <x-text-input id="codice_meccanografico" name="codice_meccanografico" :readonly="$miur" type="text"
                                   class="mt-1 block w-full"
                                   :value="old('codice_meccanografico', $organizzazione->codice_meccanografico)" maxlength="50" />
                     <x-input-error :messages="$errors->get('codice_meccanografico')" class="mt-1" />
@@ -86,7 +94,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                     <x-input-label for="email" value="Email" />
-                    <x-text-input id="email" name="email" type="email"
+                    <x-text-input id="email" name="email" :readonly="$miur" type="email"
                                   class="mt-1 block w-full"
                                   :value="old('email', $organizzazione->email)" maxlength="50" />
                     <x-input-error :messages="$errors->get('email')" class="mt-1" />
