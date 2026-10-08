@@ -8,7 +8,9 @@ use App\Models\Istituto;
 use App\Models\Plesso;
 use App\Models\User;
 use App\Notifications\Deleghe\AvvisoDelegheAdmin;
+use App\Notifications\Deleghe\EsitoDelegaNotification;
 use App\Notifications\Deleghe\RichiestaDelegaNotification;
+use Illuminate\Notifications\Notification as BaseNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -183,6 +185,117 @@ class DelegaService
         }
 
         return $inviate;
+    }
+
+    /** @return Collection<int, Delega> */
+    public function daToken(string $token): Collection
+    {
+        return Delega::where('token_hash', hash('sha256', $token))
+            ->with(['user', 'istituto', 'plesso'])
+            ->orderBy('id')
+            ->get();
+    }
+
+    /** @param Collection<int, Delega> $righe */
+    public function approva(Collection $righe, string $via, ?User $da = null, ?string $ip = null, ?string $motivo = null): void
+    {
+        $approvate = DB::transaction(function () use ($righe, $via, $da, $ip, $motivo) {
+            $validaFino = now()->addMonthsNoOverflow($this->regola('deleghe_mesi_validita'));
+            $approvate = collect();
+
+            foreach ($righe as $delega) {
+                $delega = Delega::whereKey($delega->id)->lockForUpdate()->first();
+                if ($delega === null || $delega->stato !== Delega::RICHIESTA) {
+                    continue;
+                }
+                $delega->update([
+                    'stato' => Delega::ATTIVA,
+                    'valida_fino_at' => $validaFino,
+                    'decisa_at' => now(),
+                    'decisa_via' => $via,
+                    'decisa_da' => $da?->id,
+                    'motivo' => $motivo,
+                ]);
+                $delega->registra('approvata', $via, $da, $ip);
+                if ($delega->id_plesso === null) {
+                    $this->assorbi($delega);
+                }
+                $approvate->push($delega);
+            }
+
+            return $approvate;
+        });
+
+        $prima = $approvate->first();
+        if ($prima !== null) {
+            $this->notificaDelegato($prima->user, new EsitoDelegaNotification('approvata', $prima->istituto));
+        }
+    }
+
+    /** @param Collection<int, Delega> $righe */
+    public function rifiuta(Collection $righe, ?string $ip, bool $blocca): void
+    {
+        $rifiutate = DB::transaction(function () use ($righe, $ip, $blocca) {
+            $rifiutate = collect();
+
+            foreach ($righe as $delega) {
+                $delega = Delega::whereKey($delega->id)->lockForUpdate()->first();
+                if ($delega === null || $delega->stato !== Delega::RICHIESTA) {
+                    continue;
+                }
+                $delega->update(['stato' => Delega::RIFIUTATA, 'decisa_at' => now(), 'decisa_via' => 'segreteria']);
+                $delega->registra('rifiutata', 'segreteria', null, $ip);
+                $rifiutate->push($delega);
+            }
+
+            $prima = $rifiutate->first();
+            if ($blocca && $prima?->user !== null) {
+                $prima->user->forceFill([
+                    'bloccato_at' => now(),
+                    'motivo_blocco' => "La segreteria di {$prima->istituto?->descrizione} ha indicato di non conoscere questa persona",
+                ])->save();
+
+                Delega::where('user_id', $prima->user_id)->where('stato', Delega::RICHIESTA)->get()
+                    ->each(function (Delega $d) {
+                        $d->update(['stato' => Delega::RIFIUTATA, 'decisa_at' => now(), 'decisa_via' => 'sistema', 'motivo' => 'richiedente bloccato']);
+                        $d->registra('bloccata', 'sistema');
+                    });
+            }
+
+            return $rifiutate;
+        });
+
+        $prima = $rifiutate->first();
+        if ($prima === null) {
+            return;
+        }
+
+        $this->notificaDelegato($prima->user, new EsitoDelegaNotification('rifiutata', $prima->istituto));
+
+        if ($blocca && $prima->user !== null) {
+            $this->avvisaAdmin('persona bloccata da una segreteria', "La segreteria di {$prima->istituto?->descrizione} ha indicato di non conoscere {$prima->user->name} (codice fiscale {$prima->user->codice_fiscale}): utente bloccato, richieste in attesa chiuse. Lo sblocco si fa da Admin → Deleghe.");
+        }
+    }
+
+    public function notificaDelegato(?User $user, BaseNotification $notifica): void
+    {
+        if ($user !== null && $user->hasVerifiedEmail()) {
+            $user->notify($notifica);
+        }
+    }
+
+    /** Una delega sull'istituto intero rende superflue quelle sui singoli plessi. */
+    private function assorbi(Delega $intera): void
+    {
+        Delega::where('codice_fiscale', $intera->codice_fiscale)
+            ->where('id_istituto', $intera->id_istituto)
+            ->whereNotNull('id_plesso')
+            ->where('stato', Delega::ATTIVA)
+            ->get()
+            ->each(function (Delega $d) {
+                $d->update(['stato' => Delega::REVOCATA, 'decisa_at' => now(), 'decisa_via' => 'sistema', 'motivo' => 'assorbita da delega istituto']);
+                $d->registra('revocata', 'sistema');
+            });
     }
 
     public function avvisaAdmin(string $oggetto, string $testo): void
