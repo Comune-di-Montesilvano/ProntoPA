@@ -1,8 +1,14 @@
 @php
     $prima = $righe->first();
-    $ambito = $righe->contains(fn ($d) => $d->id_plesso === null)
+    $inAttesa = $righe->where('stato', \App\Models\Delega::RICHIESTA);
+    $visibili = $inAttesa->isNotEmpty() ? $inAttesa : $righe;
+    $ambito = $visibili->contains(fn ($d) => $d->id_plesso === null)
         ? "tutto l'istituto"
-        : $righe->map(fn ($d) => $d->plesso?->nome)->implode(', ');
+        : $visibili->map(fn ($d) => $d->plesso?->nome)->implode(', ');
+    // Esito dallo storico: lo stato attuale può essere cambiato dopo (revoca, scadenza).
+    $esito = $righe->contains(fn ($d) => $d->storico->contains('evento', 'approvata'))
+        ? 'approvata'
+        : ($righe->contains('stato', \App\Models\Delega::RIFIUTATA) ? 'rifiutata' : 'annullata');
 @endphp
 <x-guest-layout>
     <h1 class="text-lg font-semibold text-gray-900">Richiesta di delega</h1>
@@ -15,7 +21,7 @@
         <div><dt class="text-gray-500">Per</dt><dd>{{ $ambito }}</dd></div>
     </dl>
 
-    @if($prima->stato === \App\Models\Delega::RICHIESTA)
+    @if($inAttesa->isNotEmpty())
         <p class="mt-4 text-sm text-gray-700">Se questa persona lavora nella vostra scuola ed è autorizzata a segnalare guasti, approvate. Se non la conoscete, rifiutate.</p>
 
         <form method="POST" action="{{ request()->fullUrl() }}" class="mt-6 space-y-4">
@@ -37,8 +43,8 @@
         </form>
     @else
         <p class="mt-6 text-sm text-gray-700">
-            Richiesta già gestita il {{ $prima->decisa_at?->format('d/m/Y') }}:
-            <strong>{{ in_array($prima->stato, [\App\Models\Delega::ATTIVA, \App\Models\Delega::REVOCATA, \App\Models\Delega::SCADUTA], true) && $prima->decisa_via !== 'sistema' ? 'approvata' : $prima->stato }}</strong>.
+            Richiesta già gestita il {{ $righe->max('decisa_at')?->format('d/m/Y') }}:
+            <strong>{{ $esito }}</strong>.
         </p>
     @endif
 </x-guest-layout>

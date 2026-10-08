@@ -115,4 +115,16 @@ class VisibilitaDelegheTest extends TestCase
 
         $this->assertSame([$propria->id_segnalazione], Segnalazione::visibileA($locale)->pluck('id_segnalazione')->map(fn ($i) => (int) $i)->all());
     }
+
+    public function test_utente_bloccato_perde_visibilita_e_sessione(): void
+    {
+        $this->delega($this->user, \App\Models\Istituto::first(), null);
+        $this->user->forceFill(['bloccato_at' => now(), 'motivo_blocco' => 'x'])->save();
+
+        $this->assertSame([], $this->visibili());
+        $this->assertFalse(\Illuminate\Support\Facades\Gate::forUser($this->user)->allows('view', $this->suP1));
+
+        $this->actingAs($this->user)->get(route('segnalazioni.create'))->assertRedirect(route('login'));
+        $this->assertGuest();
+    }
 }

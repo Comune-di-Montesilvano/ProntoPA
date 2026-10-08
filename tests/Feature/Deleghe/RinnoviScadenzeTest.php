@@ -139,4 +139,27 @@ class RinnoviScadenzeTest extends TestCase
             ->expectsOutputToContain('deleghe:scadenze')
             ->expectsOutputToContain('deleghe:rinnovi');
     }
+
+    public function test_rinnovi_escludono_utenti_bloccati(): void
+    {
+        $ist = $this->istitutoConPlessi();
+        $bloccato = $this->utenteSpid();
+        $bloccato->forceFill(['bloccato_at' => now()])->save();
+        $this->delega($bloccato, $ist, null, Delega::ATTIVA, ['valida_fino_at' => now()->addDays(10)]);
+
+        $this->artisan('deleghe:rinnovi');
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_richiesta_in_coda_scade_se_mai_inviata(): void
+    {
+        $ist = $this->istitutoConPlessi(email: null);
+        $delega = $this->delega($this->utenteSpid(), $ist, null, Delega::RICHIESTA, ['richiesta_inviata_at' => null]);
+
+        $this->travel(31)->days();
+        $this->artisan('deleghe:scadenze');
+
+        $this->assertSame(Delega::SCADUTA, $delega->fresh()->stato);
+    }
 }

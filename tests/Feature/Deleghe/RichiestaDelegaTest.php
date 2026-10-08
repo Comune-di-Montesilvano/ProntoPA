@@ -12,6 +12,8 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\Support\DelegheFixture;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class RichiestaDelegaTest extends TestCase
@@ -196,5 +198,27 @@ class RichiestaDelegaTest extends TestCase
         $this->assertNotSame($prima, $riga->token_hash);
         $this->assertStringContainsString('signature=', $url);
         $this->assertSame('reinviata', $riga->storico()->latest('id')->first()->evento);
+    }
+
+    public function test_notifiche_con_link_cifrate_in_coda(): void
+    {
+        $ist = $this->istitutoConPlessi();
+        $user = $this->utenteSpid();
+
+        $this->assertInstanceOf(ShouldBeEncrypted::class, new RichiestaDelegaNotification($user, $ist, [], 'https://x', now()));
+        $this->assertInstanceOf(ShouldBeEncrypted::class, new \App\Notifications\Deleghe\RinnovoDelegheNotification($ist, [], 'https://x', now()));
+        $this->assertInstanceOf(ShouldBeEncrypted::class, new AvvisoDelegheAdmin('x', 'y'));
+    }
+
+    public function test_doppio_invio_concorrente_rifiutato(): void
+    {
+        $ist = $this->istitutoConPlessi();
+        $user = $this->utenteSpid();
+        $lock = Cache::lock("deleghe:richiedi:{$user->id}", 10);
+        $lock->get();
+
+        $this->rifiutata(fn () => $this->service()->richiedi($user, $ist, []), 'già in invio');
+        $this->assertSame(0, Delega::count());
+        $lock->release();
     }
 }

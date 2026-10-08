@@ -177,4 +177,31 @@ class DecisioneSegreteriaTest extends TestCase
 
         $this->post($this->percorso($url), ['azione' => 'boh'])->assertSessionHasErrors('azione');
     }
+
+    public function test_gruppo_parzialmente_revocato_resta_decidibile(): void
+    {
+        $ist = $this->istitutoConPlessi();
+        [$p1, $p2] = $this->idPlessi($ist);
+        $service = app(DelegaService::class);
+        $gruppo = $service->richiedi($this->user, $ist, [$p1, $p2])['gruppo'];
+        $url = $service->invia($gruppo, true);
+        $prima = Delega::where('gruppo_richiesta', $gruppo)->orderBy('id')->first();
+        Notification::fake();
+
+        $service->revoca($prima, 'admin', $this->admin, 'plesso chiuso');
+        Notification::assertNotSentTo($this->user, EsitoDelegaNotification::class); // mai stata attiva
+
+        $this->get($this->percorso($url))->assertOk()->assertSee('Approva')->assertDontSee('approvata');
+        $this->post($this->percorso($url), ['azione' => 'approva'])->assertOk()->assertSee('approvata');
+
+        $this->assertSame(Delega::ATTIVA, Delega::where('gruppo_richiesta', $gruppo)->where('id_plesso', $p2)->sole()->stato);
+    }
+
+    public function test_richiesta_annullata_non_mostra_approvata(): void
+    {
+        [$url, $gruppo] = $this->richiesta();
+        app(DelegaService::class)->revoca(Delega::where('gruppo_richiesta', $gruppo)->sole(), 'utente', $this->user);
+
+        $this->get($this->percorso($url))->assertOk()->assertSee('annullata')->assertDontSee('approvata');
+    }
 }

@@ -6,13 +6,14 @@ use App\Models\Istituto;
 use App\Models\User;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
 
 /** Alla casella istituzionale della segreteria: un solo link, nessun pulsante d'azione nell'email. */
-class RichiestaDelegaNotification extends Notification implements ShouldQueue
+class RichiestaDelegaNotification extends Notification implements ShouldBeEncrypted, ShouldQueue
 {
     use BuildsNotificationMailMessage;
     use Queueable;

@@ -35,7 +35,7 @@ class SegnalazionePolicy
 
         if ($user->hasRole('segnalatore')) {
             if ($user->isSpid()) {
-                return Delega::plessiCopertiDa($user)
+                return ! $user->isBloccato() && Delega::plessiCopertiDa($user)
                     ->where('plessi.id_plesso', $segnalazione->id_plesso)
                     ->exists();
             }

@@ -14,6 +14,7 @@ use App\Notifications\Deleghe\RinnovoDelegheNotification;
 use Illuminate\Notifications\Notification as BaseNotification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
@@ -45,6 +46,25 @@ class DelegaService
      * @return array{gruppo: string, inviata: bool, esclusi: int}
      */
     public function richiedi(User $user, Istituto $istituto, array $idPlessi): array
+    {
+        // Doppio click o due schede: i controlli anti-duplicato non sono atomici.
+        $lock = Cache::lock("deleghe:richiedi:{$user->id}", 10);
+        if (! $lock->get()) {
+            throw new RichiestaDelegaRifiutata('Una richiesta è già in invio: attendi qualche secondo.');
+        }
+
+        try {
+            return $this->registraRichiesta($user, $istituto, $idPlessi);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * @param list<int> $idPlessi
+     * @return array{gruppo: string, inviata: bool, esclusi: int}
+     */
+    private function registraRichiesta(User $user, Istituto $istituto, array $idPlessi): array
     {
         if ($user->isBloccato()) {
             throw new RichiestaDelegaRifiutata("Non puoi richiedere deleghe. Contatta l'ente.");
@@ -193,7 +213,7 @@ class DelegaService
     public function daToken(string $token): Collection
     {
         return Delega::where('token_hash', hash('sha256', $token))
-            ->with(['user', 'istituto', 'plesso'])
+            ->with(['user', 'istituto', 'plesso', 'storico'])
             ->orderBy('id')
             ->get();
     }
@@ -305,6 +325,7 @@ class DelegaService
         if (! in_array($delega->stato, [Delega::ATTIVA, Delega::RICHIESTA], true)) {
             return;
         }
+        $eraAttiva = $delega->stato === Delega::ATTIVA;
 
         $delega->update([
             'stato' => Delega::REVOCATA,
@@ -315,7 +336,8 @@ class DelegaService
         ]);
         $delega->registra('revocata', $via, $da, $ip);
 
-        if ($via !== 'utente') {
+        // Una richiesta mai approvata non si "revoca" agli occhi del richiedente.
+        if ($via !== 'utente' && $eraAttiva) {
             $this->notificaDelegato($delega->user, new EsitoDelegaNotification('revocata', $delega->istituto));
         }
     }
@@ -347,6 +369,7 @@ class DelegaService
 
         $perIstituto = Delega::attive()
             ->whereNotNull('user_id')
+            ->whereHas('user', fn ($q) => $q->whereNull('bloccato_at'))
             ->whereNull('rinnovo_inviato_at')
             ->where('valida_fino_at', '<=', now()->addMonthNoOverflow()->endOfMonth())
             ->with(['user', 'istituto'])
@@ -405,7 +428,13 @@ class DelegaService
             $this->notificaDelegato($delega->user, new EsitoDelegaNotification('scaduta', $delega->istituto));
         }
 
-        $richieste = Delega::where('stato', Delega::RICHIESTA)->where('token_scadenza_at', '<', now())->get();
+        $richieste = Delega::where('stato', Delega::RICHIESTA)
+            ->where(fn ($q) => $q
+                ->where('token_scadenza_at', '<', now())
+                // mai partite (scuola senza email, disattivata): non restano in attesa per sempre
+                ->orWhere(fn ($w) => $w->whereNull('richiesta_inviata_at')
+                    ->where('created_at', '<', now()->subDays($this->regola('deleghe_giorni_scadenza_richiesta')))))
+            ->get();
         foreach ($richieste as $delega) {
             $delega->update(['stato' => Delega::SCADUTA, 'decisa_at' => now(), 'decisa_via' => 'sistema']);
             $delega->registra('scaduta', 'sistema');

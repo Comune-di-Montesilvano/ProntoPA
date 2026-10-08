@@ -35,7 +35,7 @@ class DecisioneDelegaController extends Controller
             'non_conosco' => ['nullable', 'boolean'],
         ]);
 
-        if ($righe->first()->stato === Delega::RICHIESTA) {
+        if ($righe->contains(fn (Delega $d) => $d->stato === Delega::RICHIESTA)) {
             if ($data['azione'] === 'approva') {
                 $this->deleghe->approva($righe, 'segreteria', null, $request->ip());
             } else {

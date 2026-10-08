@@ -6,6 +6,7 @@ use App\Models\Delega;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -22,7 +23,20 @@ class LimitaAccessoSpid
     {
         $user = $request->user();
 
-        if (! $user instanceof User || ! $user->isSpid() || $request->routeIs(...self::SEMPRE)) {
+        if (! $user instanceof User || ! $user->isSpid()) {
+            return $next($request);
+        }
+
+        // Bloccato da una segreteria mentre era collegato: chiude la sessione.
+        if ($user->isBloccato()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->with('status', "Accesso non consentito. Contatta l'ente.");
+        }
+
+        if ($request->routeIs(...self::SEMPRE)) {
             return $next($request);
         }
 

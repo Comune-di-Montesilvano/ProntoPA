@@ -79,7 +79,17 @@ class DelegheScuolaController extends Controller
     {
         abort_unless($delega->user_id === $request->user()->id, 403);
 
-        $this->deleghe->revoca($delega, 'utente', $request->user(), 'rinuncia del delegato');
+        // Una richiesta multi-plesso è un'unica email alla segreteria: si annulla tutta.
+        $righe = $delega->stato === Delega::RICHIESTA
+            ? Delega::where('gruppo_richiesta', $delega->gruppo_richiesta)
+                ->where('user_id', $request->user()->id)
+                ->where('stato', Delega::RICHIESTA)
+                ->get()
+            : collect([$delega]);
+
+        foreach ($righe as $riga) {
+            $this->deleghe->revoca($riga, 'utente', $request->user(), 'rinuncia del delegato');
+        }
 
         return redirect()->route('scuola.deleghe.index')->with('success', 'Delega chiusa.');
     }

@@ -272,6 +272,10 @@ class Segnalazione extends Model
         // Scuole via SPID: tutte le segnalazioni dei plessi coperti dalle
         // deleghe attive, fatte da chiunque (la segnalazione è della scuola).
         if ($user->isSpid()) {
+            if ($user->isBloccato()) {
+                return $query->whereRaw('1 = 0');
+            }
+
             return $query->whereIn('id_plesso', Delega::plessiCopertiDa($user));
         }
 

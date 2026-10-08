@@ -132,4 +132,17 @@ class AreaDelegatoTest extends TestCase
 
         $this->assertSame(0, app(DelegaService::class)->agganciaPredeleghe($this->utenteSpid(verificato: false)));
     }
+
+    public function test_annulla_richiesta_chiude_tutto_il_gruppo(): void
+    {
+        $ist = $this->istitutoConPlessi();
+        [$p1, $p2] = $this->idPlessi($ist);
+        $user = $this->utenteSpid();
+        $gruppo = app(DelegaService::class)->richiedi($user, $ist, [$p1, $p2])['gruppo'];
+        $prima = Delega::where('gruppo_richiesta', $gruppo)->orderBy('id')->first();
+
+        $this->actingAs($user)->post(route('scuola.deleghe.rinuncia', $prima))->assertRedirect();
+
+        $this->assertSame([Delega::REVOCATA, Delega::REVOCATA], Delega::where('gruppo_richiesta', $gruppo)->pluck('stato')->all());
+    }
 }

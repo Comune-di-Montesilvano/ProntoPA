@@ -4,11 +4,12 @@ namespace App\Notifications\Deleghe;
 
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class AvvisoDelegheAdmin extends Notification implements ShouldQueue
+class AvvisoDelegheAdmin extends Notification implements ShouldBeEncrypted, ShouldQueue
 {
     use BuildsNotificationMailMessage;
     use Queueable;
