@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AnagrafeMiurController;
 use App\Http\Controllers\Deleghe\DecisioneDelegaController;
+use App\Http\Controllers\Deleghe\RinnovoDelegheController;
 use App\Http\Controllers\DelegheScuolaController;
 use App\Http\Controllers\Admin\ImpostazioniController;
 use App\Http\Controllers\Admin\AdminDashboardController;
@@ -64,6 +65,8 @@ Route::middleware('auth')->prefix('scuola/deleghe')->name('scuola.deleghe.')->gr
 Route::middleware('throttle:20,1')->group(function () {
     Route::get('deleghe/decidi/{token}', [DecisioneDelegaController::class, 'show'])->name('deleghe.decidi');
     Route::post('deleghe/decidi/{token}', [DecisioneDelegaController::class, 'store'])->name('deleghe.decidi.store');
+    Route::get('deleghe/rinnovo/{token}', [RinnovoDelegheController::class, 'show'])->name('deleghe.rinnovo');
+    Route::post('deleghe/rinnovo/{token}', [RinnovoDelegheController::class, 'store'])->name('deleghe.rinnovo.store');
 });
 
 // ── Segnalazioni (tutti gli autenticati) ──────────────────────────────────────

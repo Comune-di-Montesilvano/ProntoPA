@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\Deleghe\AvvisoDelegheAdmin;
 use App\Notifications\Deleghe\EsitoDelegaNotification;
 use App\Notifications\Deleghe\RichiestaDelegaNotification;
+use App\Notifications\Deleghe\RinnovoDelegheNotification;
 use Illuminate\Notifications\Notification as BaseNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -336,6 +337,98 @@ class DelegaService
         });
 
         return $pre->count();
+    }
+
+    /** Una email per scuola con le deleghe che scadono entro la fine del mese successivo. */
+    public function inviaRinnovi(): int
+    {
+        $inviate = 0;
+
+        $perIstituto = Delega::attive()
+            ->whereNotNull('user_id')
+            ->whereNull('rinnovo_inviato_at')
+            ->where('valida_fino_at', '<=', now()->addMonthNoOverflow()->endOfMonth())
+            ->with(['user', 'istituto'])
+            ->get()
+            ->groupBy('id_istituto');
+
+        foreach ($perIstituto as $righe) {
+            $istituto = $righe->first()->istituto;
+            if ($istituto === null || blank($istituto->email)) {
+                continue;
+            }
+
+            $token = Str::random(64);
+            /** @var \Illuminate\Support\Carbon $scadenza */
+            $scadenza = $righe->max('valida_fino_at');
+
+            Delega::whereIn('id', $righe->pluck('id'))->update([
+                'token_hash' => hash('sha256', $token),
+                'token_scadenza_at' => $scadenza,
+                'rinnovo_inviato_at' => now(),
+                'avviso_inviato_at' => null,
+            ]);
+
+            $url = URL::temporarySignedRoute('deleghe.rinnovo', $scadenza, ['token' => $token]);
+            $persone = $righe->map(fn (Delega $d) => (string) $d->user?->name)->unique()->values()->all();
+
+            Notification::route('mail', (string) $istituto->email)
+                ->notify(new RinnovoDelegheNotification($istituto, $persone, $url, $scadenza));
+            $inviate++;
+        }
+
+        return $inviate;
+    }
+
+    public function confermaRinnovo(Delega $delega, ?string $ip): void
+    {
+        if ($delega->stato !== Delega::ATTIVA || $delega->rinnovo_inviato_at === null) {
+            return;
+        }
+
+        $delega->update([
+            'valida_fino_at' => now()->addMonthsNoOverflow($this->regola('deleghe_mesi_validita')),
+            'rinnovo_inviato_at' => null,
+            'avviso_inviato_at' => null,
+        ]);
+        $delega->registra('rinnovata', 'segreteria', null, $ip);
+    }
+
+    /** @return array{scadute: int, richieste_scadute: int, inviate: int, avvisi: int} */
+    public function scadenze(): array
+    {
+        $scadute = Delega::where('stato', Delega::ATTIVA)->where('valida_fino_at', '<', now())->with(['user', 'istituto'])->get();
+        foreach ($scadute as $delega) {
+            $delega->update(['stato' => Delega::SCADUTA, 'decisa_at' => now(), 'decisa_via' => 'sistema']);
+            $delega->registra('scaduta', 'sistema');
+            $this->notificaDelegato($delega->user, new EsitoDelegaNotification('scaduta', $delega->istituto));
+        }
+
+        $richieste = Delega::where('stato', Delega::RICHIESTA)->where('token_scadenza_at', '<', now())->get();
+        foreach ($richieste as $delega) {
+            $delega->update(['stato' => Delega::SCADUTA, 'decisa_at' => now(), 'decisa_via' => 'sistema']);
+            $delega->registra('scaduta', 'sistema');
+        }
+
+        $inviate = $this->inviaInCoda();
+
+        $daAvvisare = Delega::attive()
+            ->whereNotNull('rinnovo_inviato_at')
+            ->whereNull('avviso_inviato_at')
+            ->where('valida_fino_at', '<=', now()->addDays($this->regola('deleghe_giorni_avviso_delegato')))
+            ->with(['user', 'istituto'])
+            ->get();
+        foreach ($daAvvisare as $delega) {
+            $this->notificaDelegato($delega->user, new EsitoDelegaNotification('in_scadenza', $delega->istituto, $delega->valida_fino_at));
+            $delega->update(['avviso_inviato_at' => now()]);
+        }
+
+        return [
+            'scadute' => $scadute->count(),
+            'richieste_scadute' => $richieste->count(),
+            'inviate' => $inviate,
+            'avvisi' => $daAvvisare->count(),
+        ];
     }
 
     public function avvisaAdmin(string $oggetto, string $testo): void
