@@ -12,6 +12,7 @@ use App\Services\Scuole\SedeNonTrovata;
 use App\Services\Scuole\SincronizzaScuole;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -42,6 +43,7 @@ class AnagrafeMiurController extends Controller
             'url' => $url,
             'nuovoLink' => $stato['url'] !== null && $url !== '' && $url !== $stato['url'],
             'haIndice' => $this->anagrafe->haIndice(),
+            'inCorso' => $this->anagrafe->inCorso(),
             'q' => $q,
             'comune' => $comune,
             'risultati' => $risultati,
@@ -52,17 +54,28 @@ class AnagrafeMiurController extends Controller
 
     public function scarica(): RedirectResponse
     {
-        if ($this->anagrafe->stato()['stato'] === 'in_corso') {
+        // Controllo e impostazione dello stato atomici: un doppio click non
+        // accoda due download.
+        $lock = Cache::lock('anagrafe-miur:scarica', 10);
+        if (! $lock->get()) {
             return back()->with('error', 'Download già in corso.');
         }
 
-        $url = (string) Impostazione::get('miur_anagrafe_url', '');
-        if ($url === '') {
-            return back()->with('error', 'Configura il link in Impostazioni → scuole.');
-        }
+        try {
+            if ($this->anagrafe->inCorso()) {
+                return back()->with('error', 'Download già in corso.');
+            }
 
-        $this->anagrafe->salvaStato(['stato' => 'in_corso', 'messaggio' => null]);
-        ScaricaAnagrafeMiur::dispatch($url);
+            $url = (string) Impostazione::get('miur_anagrafe_url', '');
+            if ($url === '') {
+                return back()->with('error', 'Configura il link in Impostazioni → scuole.');
+            }
+
+            $this->anagrafe->salvaStato(['stato' => 'in_corso', 'messaggio' => null, 'avviato_at' => now()->toIso8601String()]);
+            ScaricaAnagrafeMiur::dispatch($url);
+        } finally {
+            $lock->release();
+        }
 
         return back()->with('success', 'Download avviato: può richiedere qualche minuto. Ricarica la pagina per vedere lo stato.');
     }

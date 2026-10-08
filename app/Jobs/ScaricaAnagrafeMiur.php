@@ -33,7 +33,7 @@ class ScaricaAnagrafeMiur implements ShouldQueue
         // json_decode del file intero: ~10x la dimensione in RAM.
         ini_set('memory_limit', '1G');
 
-        $anagrafe->salvaStato(['stato' => 'in_corso', 'messaggio' => null]);
+        $anagrafe->salvaStato(['stato' => 'in_corso', 'messaggio' => null, 'avviato_at' => now()->toIso8601String()]);
 
         try {
             $risposta = Http::timeout(300)->get($this->url);
@@ -41,7 +41,9 @@ class ScaricaAnagrafeMiur implements ShouldQueue
                 throw new RuntimeException("download non riuscito (HTTP {$risposta->status()})");
             }
 
-            Storage::disk('local')->put(AnagrafeMiur::DOWNLOAD, $risposta->body());
+            if (! Storage::disk('local')->put(AnagrafeMiur::DOWNLOAD, $risposta->body())) {
+                throw new RuntimeException('salvataggio del file scaricato non riuscito (spazio su disco?)');
+            }
             unset($risposta);
 
             $sedi = $anagrafe->indicizza(AnagrafeMiur::DOWNLOAD);
@@ -65,5 +67,18 @@ class ScaricaAnagrafeMiur implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    /**
+     * Timeout del worker, OOM, worker ucciso e tentativi esauriti non passano
+     * dal catch di handle(): senza questo lo stato resterebbe "in_corso".
+     */
+    public function failed(?Throwable $e): void
+    {
+        Storage::disk('local')->delete(AnagrafeMiur::DOWNLOAD);
+        app(AnagrafeMiur::class)->salvaStato([
+            'stato' => 'errore',
+            'messaggio' => $e?->getMessage() ?: 'job interrotto',
+        ]);
     }
 }

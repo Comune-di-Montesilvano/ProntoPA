@@ -15,6 +15,7 @@ use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class AnagrafeMiurAdminTest extends TestCase
@@ -77,7 +78,7 @@ class AnagrafeMiurAdminTest extends TestCase
     public function test_scarica_rifiutato_se_in_corso(): void
     {
         Queue::fake();
-        app(AnagrafeMiur::class)->salvaStato(['stato' => 'in_corso']);
+        app(AnagrafeMiur::class)->salvaStato(['stato' => 'in_corso', 'avviato_at' => now()->toIso8601String()]);
 
         $this->actingAs($this->utente('admin'))
             ->post(route('admin.anagrafe-miur.scarica'))
@@ -157,5 +158,31 @@ class AnagrafeMiurAdminTest extends TestCase
             ->get(route('admin.anagrafe-miur.index'))
             ->assertSee('Non più in anagrafe MIUR')
             ->assertSee('Scuola chiusa');
+    }
+
+    public function test_scarica_consentito_se_in_corso_scaduto(): void
+    {
+        Queue::fake();
+        app(AnagrafeMiur::class)->salvaStato(['stato' => 'in_corso', 'avviato_at' => now()->subMinutes(30)->toIso8601String()]);
+
+        $this->actingAs($this->utente('admin'))
+            ->post(route('admin.anagrafe-miur.scarica'))
+            ->assertSessionHas('success');
+
+        Queue::assertPushed(ScaricaAnagrafeMiur::class);
+    }
+
+    public function test_scarica_doppio_click_rifiutato_dal_lock(): void
+    {
+        Queue::fake();
+        $lock = Cache::lock('anagrafe-miur:scarica', 10);
+        $lock->get();
+
+        $this->actingAs($this->utente('admin'))
+            ->post(route('admin.anagrafe-miur.scarica'))
+            ->assertSessionHas('error');
+
+        Queue::assertNothingPushed();
+        $lock->release();
     }
 }

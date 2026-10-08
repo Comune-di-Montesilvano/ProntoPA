@@ -15,8 +15,10 @@
                 </dl>
             @endif
 
-            @if($stato['stato'] === 'in_corso')
+            @if($inCorso)
                 <p class="text-sm text-blue-700">Download in corso…</p>
+            @elseif($stato['stato'] === 'in_corso')
+                <p class="text-sm text-red-700">Il download precedente non ha risposto per oltre 15 minuti: riprova.</p>
             @elseif($stato['stato'] === 'errore')
                 <p class="text-sm text-red-700">Ultimo download non riuscito: {{ $stato['messaggio'] }}</p>
             @elseif($stato['messaggio'])
@@ -29,7 +31,7 @@
 
             <form method="POST" action="{{ route('admin.anagrafe-miur.scarica') }}">
                 @csrf
-                <button type="submit" @disabled($stato['stato'] === 'in_corso')
+                <button type="submit" @disabled($inCorso)
                         class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 disabled:opacity-50 transition">
                     Scarica
                 </button>

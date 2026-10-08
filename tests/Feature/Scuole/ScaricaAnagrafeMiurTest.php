@@ -97,4 +97,16 @@ class ScaricaAnagrafeMiurTest extends TestCase
         $this->assertStringContainsString('formato del file MIUR', $stato['messaggio']);
         $this->assertFalse(app(AnagrafeMiur::class)->haIndice());
     }
+
+    public function test_failed_job_registra_errore(): void
+    {
+        // worker ucciso / timeout / OOM: Laravel chiama failed(), non il catch
+        app(AnagrafeMiur::class)->salvaStato(['stato' => 'in_corso', 'avviato_at' => now()->toIso8601String()]);
+
+        (new ScaricaAnagrafeMiur(self::URL))->failed(new \RuntimeException('job interrotto dal worker'));
+
+        $stato = app(AnagrafeMiur::class)->stato();
+        $this->assertSame('errore', $stato['stato']);
+        $this->assertSame('job interrotto dal worker', $stato['messaggio']);
+    }
 }

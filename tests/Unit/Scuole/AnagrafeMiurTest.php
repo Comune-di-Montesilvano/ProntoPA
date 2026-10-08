@@ -5,6 +5,8 @@ namespace Tests\Unit\Scuole;
 use App\Services\Scuole\AnagrafeMiur;
 use App\Services\Scuole\FormatoAnagrafeNonValido;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class AnagrafeMiurTest extends TestCase
@@ -125,5 +127,38 @@ class AnagrafeMiurTest extends TestCase
         $this->assertSame('errore', $stato['stato']);
         $this->assertSame('boom', $stato['messaggio']);
         $this->assertSame('https://x', $stato['url']);
+    }
+
+    public function test_scrittura_indice_fallita_non_tocca_indice(): void
+    {
+        $this->anagrafe->indicizza(AnagrafeMiur::GREZZO);
+        $prima = Storage::disk('local')->get(AnagrafeMiur::INDICE);
+
+        // disco pieno: put() del file temporaneo restituisce false ('throw' => false)
+        $reale = Storage::disk('local');
+        $disco = Mockery::mock($reale);
+        $disco->shouldReceive('put')->andReturnUsing(
+            fn ($path, $contenuto) => $path === AnagrafeMiur::INDICE.'.tmp' ? false : $reale->put($path, $contenuto)
+        );
+        Storage::set('local', $disco);
+
+        try {
+            app(AnagrafeMiur::class)->indicizza(AnagrafeMiur::GREZZO);
+            $this->fail('Eccezione attesa');
+        } catch (RuntimeException) {
+        }
+
+        $this->assertSame($prima, $reale->get(AnagrafeMiur::INDICE));
+    }
+
+    public function test_in_corso_scade_dopo_15_minuti(): void
+    {
+        $this->assertFalse($this->anagrafe->inCorso());
+
+        $this->anagrafe->salvaStato(['stato' => 'in_corso', 'avviato_at' => now()->subMinutes(5)->toIso8601String()]);
+        $this->assertTrue($this->anagrafe->inCorso());
+
+        $this->anagrafe->salvaStato(['avviato_at' => now()->subMinutes(20)->toIso8601String()]);
+        $this->assertFalse($this->anagrafe->inCorso());
     }
 }

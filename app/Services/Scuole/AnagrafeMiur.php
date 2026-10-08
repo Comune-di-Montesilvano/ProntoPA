@@ -3,7 +3,9 @@
 namespace App\Services\Scuole;
 
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 /**
  * Anagrafe scuole statali MIUR (open data dati.istruzione.it) ridotta a un
@@ -48,9 +50,16 @@ class AnagrafeMiur
         }
 
         // Scrittura atomica: l'indice in uso resta valido se qualcosa fallisce.
+        // Il disco local ha 'throw' => false: put() fallito restituisce false e
+        // una scrittura troncata (disco pieno) non segnala nulla, da cui il
+        // controllo sulla dimensione.
+        $json = json_encode(array_values($indice), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $tmp = self::INDICE.'.tmp';
-        $this->disco()->put($tmp, json_encode(array_values($indice), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        $this->disco()->delete(self::INDICE);
+        if ($this->disco()->put($tmp, $json) !== true || $this->disco()->size($tmp) !== strlen($json)) {
+            $this->disco()->delete($tmp);
+            throw new RuntimeException("scrittura dell'indice non riuscita (spazio su disco?)");
+        }
+        // rename(): sostituisce l'indice in uso senza mai lasciarlo assente.
         $this->disco()->move($tmp, self::INDICE);
         $this->sedi = $indice;
 
@@ -114,14 +123,27 @@ class AnagrafeMiur
         return $risultati;
     }
 
-    /** @return array{stato: string, messaggio: ?string, url: ?string, scaricato_at: ?string, sedi: ?int} */
+    /**
+     * Download in corso e non abbandonato: un worker ucciso o un OOM non
+     * passano dal catch del job, lo stato resterebbe "in_corso" per sempre.
+     */
+    public function inCorso(): bool
+    {
+        $stato = $this->stato();
+
+        return $stato['stato'] === 'in_corso'
+            && $stato['avviato_at'] !== null
+            && Carbon::parse($stato['avviato_at'])->gt(now()->subMinutes(15));
+    }
+
+    /** @return array{stato: string, messaggio: ?string, url: ?string, scaricato_at: ?string, avviato_at: ?string, sedi: ?int} */
     public function stato(): array
     {
         $salvato = $this->disco()->exists(self::STATO)
             ? (array) json_decode((string) $this->disco()->get(self::STATO), true)
             : [];
 
-        return array_merge(['stato' => 'vuoto', 'messaggio' => null, 'url' => null, 'scaricato_at' => null, 'sedi' => null], $salvato);
+        return array_merge(['stato' => 'vuoto', 'messaggio' => null, 'url' => null, 'scaricato_at' => null, 'avviato_at' => null, 'sedi' => null], $salvato);
     }
 
     /** @param array<string, mixed> $stato */
