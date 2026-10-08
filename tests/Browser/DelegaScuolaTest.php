@@ -37,7 +37,10 @@ class DelegaScuolaTest extends DuskTestCase
         ]);
         $user->assignRole('segnalatore');
 
-        $this->browse(function (Browser $browser) {
+        // Un'unica chiamata a browse(): DuskTestCase cancella i cookie a ogni
+        // chiamata e passa un solo browser. La segreteria apre il link nello
+        // stesso browser (come una DSGA con sessione SPID aperta).
+        $this->browse(function (Browser $browser) use ($user) {
             $browser->visit('/login')
                 ->clickLink('Entra con SPID o CIE')
                 ->waitForText('Simulatore SPID')
@@ -53,19 +56,15 @@ class DelegaScuolaTest extends DuskTestCase
                 ->check('tutto')
                 ->press('INVIA RICHIESTA')
                 ->waitForText('Richiesta inviata');
-        });
 
-        $gruppo = Delega::where('user_id', $user->id)->value('gruppo_richiesta');
-        $link = app(DelegaService::class)->invia($gruppo, true);
+            $gruppo = Delega::where('user_id', $user->id)->value('gruppo_richiesta');
+            $link = app(DelegaService::class)->invia($gruppo, true);
 
-        // la segreteria apre il link da un altro browser, senza login
-        $this->browse(function (Browser $delegato, Browser $segreteria) use ($link) {
-            $segreteria->visit($link)
+            $browser->visit($link)
                 ->waitForText('Richiesta di delega')
                 ->press('Approva')
-                ->waitForText('approvata');
-
-            $delegato->visit('/segnalazioni/create')
+                ->waitForText('approvata')
+                ->visit('/segnalazioni/create')
                 // la select dei plessi è nascosta finché non si sceglie una tipologia
                 ->assertPathIs('/segnalazioni/create')
                 ->assertSourceHas('Media Delfico');
