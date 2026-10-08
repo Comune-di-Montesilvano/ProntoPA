@@ -11,9 +11,17 @@
         <form method="POST" action="{{ route('admin.sedi.update', $sede->id_plesso) }}" class="p-6 space-y-5">
             @csrf @method('PATCH')
 
+            @php $miur = $sede->isMiur(); @endphp
+            @if($miur)
+                <p class="text-sm bg-blue-50 text-blue-800 rounded-md p-3">
+                    Dati da anagrafe MIUR: nome, codice, indirizzo ed email si aggiornano da
+                    <a href="{{ route('admin.anagrafe-miur.index') }}" class="underline">Admin → Anagrafe MIUR</a>.
+                </p>
+            @endif
+
             <div>
                 <x-input-label for="id_istituto" value="Organizzazione *" />
-                <select id="id_istituto" name="id_istituto" required
+                <select id="id_istituto" name="id_istituto" @disabled($miur) @if(! $miur) required @endif
                         class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_istituto') border-red-500 @enderror">
                     <option value="">— Seleziona —</option>
                     @foreach($organizzazioni->groupBy('tipo') as $tipo => $items)
@@ -33,14 +41,14 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                     <x-input-label for="nome" value="Nome sede *" />
-                    <x-text-input id="nome" name="nome" type="text"
+                    <x-text-input id="nome" name="nome" :readonly="$miur" type="text"
                                   class="mt-1 block w-full"
-                                  :value="old('nome', $sede->nome)" required maxlength="50" />
+                                  :value="old('nome', $sede->nome)" required maxlength="255" />
                     <x-input-error :messages="$errors->get('nome')" class="mt-1" />
                 </div>
                 <div>
                     <x-input-label for="codice_meccanografico" value="Codice meccanografico" />
-                    <x-text-input id="codice_meccanografico" name="codice_meccanografico" type="text"
+                    <x-text-input id="codice_meccanografico" name="codice_meccanografico" :readonly="$miur" type="text"
                                   class="mt-1 block w-full"
                                   :value="old('codice_meccanografico', $sede->codice_meccanografico)" maxlength="50" />
                     <x-input-error :messages="$errors->get('codice_meccanografico')" class="mt-1" />
@@ -49,9 +57,9 @@
 
             <div>
                 <x-input-label for="indirizzo" value="Indirizzo" />
-                <x-text-input id="indirizzo" name="indirizzo" type="text"
+                <x-text-input id="indirizzo" name="indirizzo" :readonly="$miur" type="text"
                               class="mt-1 block w-full"
-                              :value="old('indirizzo', $sede->indirizzo)" maxlength="50" />
+                              :value="old('indirizzo', $sede->indirizzo)" maxlength="255" />
                 <x-input-error :messages="$errors->get('indirizzo')" class="mt-1" />
             </div>
 
@@ -65,7 +73,7 @@
                 </div>
                 <div>
                     <x-input-label for="email" value="Email" />
-                    <x-text-input id="email" name="email" type="email"
+                    <x-text-input id="email" name="email" :readonly="$miur" type="email"
                                   class="mt-1 block w-full"
                                   :value="old('email', $sede->email)" maxlength="50" />
                     <x-input-error :messages="$errors->get('email')" class="mt-1" />

@@ -15,7 +15,7 @@
                 <div>
                     <x-input-label for="descrizione" value="Nome / Descrizione *" />
                     <x-text-input id="descrizione" name="descrizione" type="text"
-                                  class="mt-1 block w-full" :value="old('descrizione')" required maxlength="50" />
+                                  class="mt-1 block w-full" :value="old('descrizione')" required maxlength="255" />
                     <x-input-error :messages="$errors->get('descrizione')" class="mt-1" />
                 </div>
 

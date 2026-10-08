@@ -10,6 +10,9 @@ Artisan::command('inspire', function () {
 
 Schedule::command('sla:check')->dailyAt('07:00')->runInBackground();
 
+Schedule::command('deleghe:scadenze')->dailyAt('06:30')->runInBackground();
+Schedule::command('deleghe:rinnovi')->monthlyOn(1, '07:00')->runInBackground();
+
 Schedule::command('digest:invia')
     ->dailyAt((function () {
         try {

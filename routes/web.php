@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\AnagrafeMiurController;
+use App\Http\Controllers\Admin\DelegheController;
+use App\Http\Controllers\Deleghe\DecisioneDelegaController;
+use App\Http\Controllers\Deleghe\RinnovoDelegheController;
+use App\Http\Controllers\DelegheScuolaController;
 use App\Http\Controllers\Admin\ImpostazioniController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\OrganizzazioniController;
@@ -46,6 +51,24 @@ Route::get('/dashboard', [RoleDashboardController::class, 'index'])
 Route::get('/scuola/attesa', SpidAttesaController::class)
     ->middleware('auth')
     ->name('spid.attesa');
+
+// Deleghe dell'utente scuola (SPID): richiesta, elenco, rinuncia
+Route::middleware('auth')->prefix('scuola/deleghe')->name('scuola.deleghe.')->group(function () {
+    Route::get('/', [DelegheScuolaController::class, 'index'])->name('index');
+    Route::get('/richiedi/{istituto}', [DelegheScuolaController::class, 'create'])->name('create');
+    Route::post('/richiedi/{istituto}', [DelegheScuolaController::class, 'store'])
+        ->middleware('throttle:10,1')->name('store');
+    Route::post('/{delega}/rinuncia', [DelegheScuolaController::class, 'rinuncia'])->name('rinuncia');
+});
+
+// Deleghe — pagine della segreteria scolastica: nessun login, link firmato con
+// token monouso. La GET non cambia nulla, decide solo il POST.
+Route::middleware('throttle:20,1')->group(function () {
+    Route::get('deleghe/decidi/{token}', [DecisioneDelegaController::class, 'show'])->name('deleghe.decidi');
+    Route::post('deleghe/decidi/{token}', [DecisioneDelegaController::class, 'store'])->name('deleghe.decidi.store');
+    Route::get('deleghe/rinnovo/{token}', [RinnovoDelegheController::class, 'show'])->name('deleghe.rinnovo');
+    Route::post('deleghe/rinnovo/{token}', [RinnovoDelegheController::class, 'store'])->name('deleghe.rinnovo.store');
+});
 
 // ── Segnalazioni (tutti gli autenticati) ──────────────────────────────────────
 Route::middleware('auth')->group(function () {
@@ -148,6 +171,21 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('sedi', SediController::class)
         ->except(['show'])
         ->parameters(['sedi' => 'sede']);
+
+    Route::get('anagrafe-miur', [AnagrafeMiurController::class, 'index'])->name('anagrafe-miur.index');
+    Route::post('anagrafe-miur/scarica', [AnagrafeMiurController::class, 'scarica'])->name('anagrafe-miur.scarica');
+    Route::get('anagrafe-miur/{codice}', [AnagrafeMiurController::class, 'show'])
+        ->where('codice', '[A-Za-z0-9]{10}')->name('anagrafe-miur.show');
+    Route::post('anagrafe-miur/{codice}', [AnagrafeMiurController::class, 'salva'])
+        ->where('codice', '[A-Za-z0-9]{10}')->name('anagrafe-miur.salva');
+
+    Route::get('deleghe', [DelegheController::class, 'index'])->name('deleghe.index');
+    Route::get('deleghe/predelega', [DelegheController::class, 'create'])->name('deleghe.create');
+    Route::post('deleghe/predelega', [DelegheController::class, 'store'])->name('deleghe.store');
+    Route::post('deleghe/gruppo/{gruppo}/attiva', [DelegheController::class, 'attiva'])->whereUuid('gruppo')->name('deleghe.attiva');
+    Route::post('deleghe/gruppo/{gruppo}/reinvia', [DelegheController::class, 'reinvia'])->whereUuid('gruppo')->name('deleghe.reinvia');
+    Route::post('deleghe/{delega}/revoca', [DelegheController::class, 'revoca'])->name('deleghe.revoca');
+    Route::post('deleghe/sblocca/{utente}', [DelegheController::class, 'sblocca'])->name('deleghe.sblocca');
 
     Route::resource('profili', ProfiliController::class)
         ->except(['show'])

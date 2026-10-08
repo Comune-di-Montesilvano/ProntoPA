@@ -34,7 +34,7 @@
                 <div>
                     <x-input-label for="nome" value="Nome sede *" />
                     <x-text-input id="nome" name="nome" type="text"
-                                  class="mt-1 block w-full" :value="old('nome')" required maxlength="50" />
+                                  class="mt-1 block w-full" :value="old('nome')" required maxlength="255" />
                     <x-input-error :messages="$errors->get('nome')" class="mt-1" />
                 </div>
                 <div>
@@ -48,7 +48,7 @@
             <div>
                 <x-input-label for="indirizzo" value="Indirizzo" />
                 <x-text-input id="indirizzo" name="indirizzo" type="text"
-                              class="mt-1 block w-full" :value="old('indirizzo')" maxlength="50" />
+                              class="mt-1 block w-full" :value="old('indirizzo')" maxlength="255" />
                 <x-input-error :messages="$errors->get('indirizzo')" class="mt-1" />
             </div>
 

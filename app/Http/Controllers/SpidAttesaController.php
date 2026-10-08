@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
+/** Rotta storica (link nelle email 0.7.x): la pagina d'attesa è diventata "Le mie deleghe". */
 class SpidAttesaController extends Controller
 {
-    public function __invoke(): View
+    public function __invoke(): RedirectResponse
     {
-        return view('spid.attesa');
+        return redirect()->route('scuola.deleghe.index');
     }
 }

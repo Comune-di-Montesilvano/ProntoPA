@@ -7,6 +7,7 @@ use App\Models\AllegatoSegnalazione;
 use App\Models\Azione;
 use App\Models\Impostazione;
 use App\Models\NotaSegnalazione;
+use App\Models\Delega;
 use App\Models\Plesso;
 use App\Models\Provenienza;
 use App\Models\Segnalazione;
@@ -31,6 +32,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Illuminate\Validation\Rule;
 
 class SegnalazioneController extends Controller
 {
@@ -64,7 +66,11 @@ class SegnalazioneController extends Controller
         $tipologie   = TipologiaSegnalazione::with('gruppo')->orderBy('descrizione')->get();
         $provenienze = Provenienza::orderBy('descrizione')->get();
 
-        if ($profilo && $profilo->limita_istituto && $profilo->id_istituto) {
+        if ($user->isSpid()) {
+            $plessi = Plesso::with('istituto')
+                            ->whereIn('id_plesso', Delega::plessiCopertiDa($user))
+                            ->orderBy('nome')->get();
+        } elseif ($profilo && $profilo->limita_istituto && $profilo->id_istituto) {
             $plessi = Plesso::with('istituto')
                             ->where('id_istituto', $profilo->id_istituto)
                             ->orderBy('nome')->get();
@@ -87,6 +93,13 @@ class SegnalazioneController extends Controller
         $mimeConsentiti = array_filter(
             array_map('trim', explode(',', Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png')))
         );
+
+        // Scuole via SPID: si segnala solo su un plesso coperto da delega.
+        if ($request->user()->isSpid()) {
+            $request->validate([
+                'id_plesso' => ['required', 'integer', Rule::in(Delega::plessiCopertiDa($request->user())->pluck('id_plesso')->all())],
+            ], ['id_plesso.in' => 'Puoi segnalare solo per i plessi coperti dalle tue deleghe.']);
+        }
 
         $data = $request->validate([
             'id_tipologia_segnalazione' => ['required', 'integer', 'exists:tipologie_segnalazioni,id_tipologia_segnalazione'],

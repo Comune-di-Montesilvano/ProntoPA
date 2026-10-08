@@ -37,6 +37,9 @@ final class SpidLoginService
             'last_login' => now(),
         ])->save();
 
+        // Utente già verificato che rientra: pre-deleghe create dall'admin nel frattempo.
+        app(\App\Services\Deleghe\DelegaService::class)->agganciaPredeleghe($user);
+
         return $user;
     }
 

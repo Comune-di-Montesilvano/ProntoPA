@@ -20,6 +20,7 @@ class VerifyEmailController extends Controller
 
         if ($request->user()->markEmailAsVerified()) {
             event(new Verified($request->user()));
+            app(\App\Services\Deleghe\DelegaService::class)->agganciaPredeleghe($request->user());
         }
 
         return redirect()->intended(route('dashboard', absolute: false).'?verified=1');

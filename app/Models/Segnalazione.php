@@ -269,6 +269,16 @@ class Segnalazione extends Model
             return $query->whereHas('appalto', fn ($q) => $q->where('id_impresa', $user->id_impresa));
         }
 
+        // Scuole via SPID: tutte le segnalazioni dei plessi coperti dalle
+        // deleghe attive, fatte da chiunque (la segnalazione è della scuola).
+        if ($user->isSpid()) {
+            if ($user->isBloccato()) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->whereIn('id_plesso', Delega::plessiCopertiDa($user));
+        }
+
         // Segnalatore scuola: vede tutte le segnalazioni dei plessi del suo istituto
         $profilo = $user->profilo;
         if ($profilo && $profilo->limita_istituto && $profilo->id_istituto) {

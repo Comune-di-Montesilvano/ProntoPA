@@ -7,10 +7,14 @@ use App\Models\Istituto;
 use App\Models\Plesso;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\View\View;
 
 class SediController extends Controller
 {
+    /** Campi che per una sede fonte_dati = miur vengono dall'anagrafe MIUR. */
+    public const CAMPI_MIUR = ['id_istituto', 'nome', 'codice_meccanografico', 'indirizzo', 'email'];
+
     public function index(Request $request): View
     {
         $query = Plesso::with('istituto')->orderBy('id_istituto')->orderBy('nome');
@@ -38,9 +42,9 @@ class SediController extends Controller
     {
         $data = $request->validate([
             'id_istituto'           => ['required', 'integer', 'exists:istituti,id_istituto'],
-            'nome'                  => ['required', 'string', 'max:50'],
+            'nome'                  => ['required', 'string', 'max:255'],
             'codice_meccanografico' => ['nullable', 'string', 'max:50'],
-            'indirizzo'             => ['nullable', 'string', 'max:50'],
+            'indirizzo'             => ['nullable', 'string', 'max:255'],
             'referente'             => ['nullable', 'string', 'max:50'],
             'email'                 => ['nullable', 'email', 'max:50'],
             'recapiti'              => ['nullable', 'string', 'max:50'],
@@ -61,15 +65,22 @@ class SediController extends Controller
 
     public function update(Request $request, Plesso $sede): RedirectResponse
     {
-        $data = $request->validate([
+        $regole = [
             'id_istituto'           => ['required', 'integer', 'exists:istituti,id_istituto'],
-            'nome'                  => ['required', 'string', 'max:50'],
+            'nome'                  => ['required', 'string', 'max:255'],
             'codice_meccanografico' => ['nullable', 'string', 'max:50'],
-            'indirizzo'             => ['nullable', 'string', 'max:50'],
+            'indirizzo'             => ['nullable', 'string', 'max:255'],
             'referente'             => ['nullable', 'string', 'max:50'],
             'email'                 => ['nullable', 'email', 'max:50'],
             'recapiti'              => ['nullable', 'string', 'max:50'],
-        ]);
+        ];
+
+        // validate() restituisce solo le chiavi validate: i campi MIUR inviati vengono scartati.
+        if ($sede->isMiur()) {
+            $regole = Arr::except($regole, self::CAMPI_MIUR);
+        }
+
+        $data = $request->validate($regole);
 
         $sede->update($data);
 

@@ -112,6 +112,11 @@
                     <x-sidebar-link href="{{ route('segnalazioni.create') }}" :active="request()->routeIs('segnalazioni.create')" icon="plus-circle">
                         Nuova segnalazione
                     </x-sidebar-link>
+                    @if($u?->isSpid())
+                        <x-sidebar-link href="{{ route('scuola.deleghe.index') }}" :active="request()->routeIs('scuola.deleghe.*')" icon="user-group">
+                            Le mie deleghe
+                        </x-sidebar-link>
+                    @endif
                 </div>
             @endif
 
@@ -129,6 +134,12 @@
                     </x-sidebar-link>
                     <x-sidebar-link href="{{ route('admin.sedi.index') }}" :active="request()->routeIs('admin.sedi.*')" icon="map-pin">
                         Sedi
+                    </x-sidebar-link>
+                    <x-sidebar-link href="{{ route('admin.anagrafe-miur.index') }}" :active="request()->routeIs('admin.anagrafe-miur.*')" icon="office-building">
+                        Anagrafe MIUR
+                    </x-sidebar-link>
+                    <x-sidebar-link href="{{ route('admin.deleghe.index') }}" :active="request()->routeIs('admin.deleghe.*')" icon="user-group">
+                        Deleghe
                     </x-sidebar-link>
                     <x-sidebar-link href="{{ route('admin.sla.index') }}" :active="request()->routeIs('admin.sla.*')" icon="clock">
                         SLA
@@ -208,6 +219,13 @@
                      style="background:var(--rose-100);color:var(--rose);border:1px solid color-mix(in srgb,var(--rose) 25%,#fff);">
                     <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-5h2v2h-2v-2zm0-8h2v6h-2V5z" clip-rule="evenodd"/></svg>
                     {{ session('error') }}
+                </div>
+            </div>
+        @endif
+        @if(session('warning'))
+            <div class="mx-6 mt-4">
+                <div class="flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm bg-amber-50 text-amber-800 border border-amber-200">
+                    {{ session('warning') }}
                 </div>
             </div>
         @endif

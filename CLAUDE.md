@@ -79,6 +79,8 @@ Brand/mappa/email → **Admin → Impostazioni**.
 | `ente_nome` `ente_logo_url` `ente_colore_primario` `ente_colore_secondario` `ente_sito_url` | brand |
 | `osm_lat` `osm_lng` `osm_zoom` | mappa |
 | `mail_from_address` `mail_from_name` | email |
+| `miur_anagrafe_url` `miur_comune_default` | scuole |
+| `deleghe_max_pendenti` `deleghe_giorni_stop_rifiuto` `deleghe_giorni_scadenza_richiesta` `deleghe_email_giorno_istituto` `deleghe_mesi_validita` `deleghe_giorni_avviso_delegato` | deleghe |
 
 ```php
 $val = Impostazione::get('ente_nome', 'ProntoPA');
@@ -97,13 +99,15 @@ app/Http/Controllers/
   AdesioniSegnalazioniController  AllegatiSegnalazioniController  MagicLinkController
   AiTriageController  PublicHomeController  ProfileController  TelegramAccountController
   Admin/{ImpostazioniController,UtentiController,ProfiliController,ProvenienzaController,
-         SediController,SlaController,SquadreController,OrganizzazioniController,AdminDashboardController}
+         SediController,SlaController,SquadreController,OrganizzazioniController,AdminDashboardController,
+         AnagrafeMiurController,DelegheController}
+  Deleghe/{DecisioneDelegaController,RinnovoDelegheController}  DelegheScuolaController
   Api/{SegnalazioneApiController,TelegramWebhookController}
 app/Models/
   Segnalazione  User  Impresa  Appalto  NotaSegnalazione  AllegatoSegnalazione
   StatoSegnalazione  StoricoStatoSegnalazione  Squadra  AdesioneSegnalazione
   SlaConfigurazione  Specializzazione  TipologiaSegnalazione  Profilo  Azione  ApiLog
-  Istituto  Plesso  Provenienza  GruppoSegnalazione  Impostazione (helper statico+cache)
+  Delega  DelegaStorico  Istituto  Plesso  Provenienza  GruppoSegnalazione  Impostazione (helper statico+cache)
 app/Enums/SegnalazioneStato.php    # fonte di verità sugli stati, vedi sotto
 app/Policies/SegnalazionePolicy.php
 app/Services/
@@ -113,10 +117,12 @@ app/Services/
   TelegramBotService
   Directory/  Directory (interfaccia) · LdapRecordDirectory (AD reale) · MockDirectory · NullDirectory
   Auth/       LdapLoginService · MappaGruppiLdap · NormalizzaUsernameAd · CodiceAccessoEmail (2FA email) · SpidLoginService
+  Deleghe/    DelegaService (richiesta, decisione segreteria, pre-delega, rinnovo, scadenze)
+  Scuole/     AnagrafeMiur (indice open data MIUR su disco local, miur/*.json) · SincronizzaScuole (selezione admin + riallineamento, fonte_dati=miur)
   Oidc/       OidcClient (discovery/PKCE/token/id_token/userinfo) · OidcConfig · ClaimsSpid · IdentitaSpid
-app/Jobs/           CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
+app/Jobs/           ScaricaAnagrafeMiur  CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
 app/Http/Middleware/EnsureUserIsActive.php  LimitaAccessoSpid.php
-app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni  ProvaLdap (ldap:prova)
+app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni  ProvaLdap (ldap:prova)  DelegheScadenze (deleghe:scadenze)  DelegheRinnovi (deleghe:rinnovi)
 ```
 
 ## Ruoli (Spatie)
@@ -135,7 +141,7 @@ app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  Ch
 - **Username per tipo di account** (regola del committente, non derogabile): dominio = sAMAccountName (`mario.rossi`), SPID = codice fiscale, ditta = email (forzato in `UtentiController` per ruolo `impresa`). I tre spazi non collidono: niente generatori `nome.cognome`.
 - `users.auth_source` = `locale`·`ldap`·`spid`; `ldap_guid` chiave identità AD; `email` NON unique a DB (unicità applicativa solo tra `locale` attivi); reset password solo `locale` attivi
 
-**Scuole via SPID/CIE** (`/auth/spid` → pa-sso-proxy): OIDC Authorization Code + PKCE, solo `client_secret_basic`, id_token verificato via JWKS (senza `kid` ok se JWKS ha una chiave) + claim persona da userinfo (`sub` deve coincidere). Identità = `users.codice_fiscale` (`TINIT-` rimosso), **mai** il `sub`. Primo accesso → "Completa profilo" (utente creato SOLO con l'email) → verifica email (`verification.*`) → `LimitaAccessoSpid` confina gli utenti `spid` a verifica/attesa (2b: deleghe). `state`/`nonce`/`verifier` in sessione Laravel (monouso). Config in Admin → Impostazioni → SPID: issuer (radice, senza `/OIDC`), client id, secret **cifrato con `APP_KEY`** (cambiare `APP_KEY` = reinserire il secret); redirect URI `{APP_URL}/auth/spid/callback` mostrato in sola lettura. Logout SPID → `end_session_endpoint` del proxy.
+**Scuole via SPID/CIE** (`/auth/spid` → pa-sso-proxy): OIDC Authorization Code + PKCE, solo `client_secret_basic`, id_token verificato via JWKS (senza `kid` ok se JWKS ha una chiave) + claim persona da userinfo (`sub` deve coincidere). Identità = `users.codice_fiscale` (`TINIT-` rimosso), **mai** il `sub`. Primo accesso → "Completa profilo" (utente creato SOLO con l'email) → verifica email (`verification.*`) → `LimitaAccessoSpid`: senza delega attiva gli utenti `spid` vedono solo verifica email e "Le mie deleghe" (`scuola.deleghe.*`); visibilità segnalazioni = `Delega::plessiCopertiDa()` (scope, policy, form). Deleghe decise dalla segreteria via link firmato senza login (`deleghe/decidi|rinnovo/{token}`, solo hash SHA-256 a DB, firma legata ad `APP_URL`). `state`/`nonce`/`verifier` in sessione Laravel (monouso). Config in Admin → Impostazioni → SPID: issuer (radice, senza `/OIDC`), client id, secret **cifrato con `APP_KEY`** (cambiare `APP_KEY` = reinserire il secret); redirect URI `{APP_URL}/auth/spid/callback` mostrato in sola lettura. Logout SPID → `end_session_endpoint` del proxy.
 
 Gruppi AD → ruolo (nomi in env `LDAP_GRUPPO_*` → `config('ldap.gruppi')`, NON in Impostazioni: servono al primo login, prima che esista un admin), precedenza in quest'ordine, un solo ruolo, ricalcolato a ogni login:
 
@@ -237,6 +243,6 @@ Test SPID: `tests/Support/FakeOidcProvider` simula pa-sso-proxy con `Http::fake`
 
 Rootless: no bind mount, named volumes `mariadb_data` `redis_data` `app_storage` → `/var/www/html/storage`
 
-Servizi `queue` (`queue:work`) e `scheduler` (loop `schedule:run` ogni 60s) obbligatori: senza, webhook/job AI restano in coda per sempre e i comandi schedulati (`sla:check`, `digest:invia`, verifica annuale) non partono mai. Stessa immagine di `php`, `entrypoint: []` (niente migrate/seed duplicato).
+Servizi `queue` (`queue:work`) e `scheduler` (loop `schedule:run` ogni 60s) obbligatori: senza, webhook/job AI restano in coda per sempre e i comandi schedulati (`sla:check`, `digest:invia`, `deleghe:scadenze`, `deleghe:rinnovi`, verifica annuale) non partono mai. Stessa immagine di `php`, `entrypoint: []` (niente migrate/seed duplicato).
 
 Error tracking: `sentry/sentry-laravel` (compatibile Glitchtip self-hosted, stesso protocollo). `SENTRY_LARAVEL_DSN` vuoto in `.env` = disattivato, nessuna configurazione aggiuntiva richiesta. `release`/`environment` derivati da `APP_VERSION`/`APP_ENV`.

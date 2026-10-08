@@ -1,4 +1,10 @@
-# ProntoPA — Roadmap sviluppi
+# ProntoPA — Stato avanzamento
+
+Storico di ciò che è stato fatto. Roadmap, ordine e dipendenze di ciò che
+manca: [`PIANO-SVILUPPO.md`](PIANO-SVILUPPO.md) §3.
+
+I titoli "vX.Y" sotto sono i nomi interni storici dei blocchi di lavoro, **non**
+i tag: tutto è uscito nei tag `0.3`–`0.7.2` (corrispondenza in PIANO-SVILUPPO §2).
 
 ## v0.3 — UX e comunicazioni ✅ COMPLETATO
 
@@ -96,7 +102,7 @@ AI opzionale on-premise (Ollama, profilo Docker `ai`), sempre asincrona (job in 
 ## v1.0 — Riuso e numeri ✅ COMPLETATO
 
 ### Pacchetto riuso
-- Wizard primo avvio (`/setup`, token + OTP via email) ✅
+- Wizard primo avvio (`/setup`, token + OTP via email) ✅ (rimosso in 0.7.0: primo admin da gruppo AD)
 - `publiccode.yml` + `LICENSE` (EUPL-1.2) ✅
 - Comando `artisan demo` per dati realistici ✅
 - Documentazione API OpenAPI (`docs/openapi.yaml`) ✅
@@ -109,26 +115,22 @@ AI opzionale on-premise (Ollama, profilo Docker `ai`), sempre asincrona (job in 
 
 ---
 
-## v1.2 — Identità e accessi 🚧 IN CORSO
-
-Spec: [`docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md`](docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md)
-
-- Fase 1 — Dipendenti via Active Directory (ruoli dai gruppi), ditte via email + 2FA email, rimozione wizard ✅
-- Fase 2a — Scuole via SPID/CIE (pa-sso-proxy), completa profilo, verifica email ✅
-- Fase 2b — Deleghe confermate dalla segreteria, rinnovo annuale, visibilità per delega 📋
-- Fase 3 — Cutover: disattivazione segnalatori legacy, fine fallback username locale 📋
-
----
-
-## v1.1 — Hardening 📋 SPEC (non iniziato)
+## v1.1 — Hardening ✅ (tag 0.6.3)
 
 Spec: [`docs/superpowers/specs/2026-08-17-v11-hardening-design.md`](docs/superpowers/specs/2026-08-17-v11-hardening-design.md)
 
-- Password policy coerente (wizard vs registrazione/cambio password) ✅
-- Dependabot (composer/npm/github-actions) ✅
-- Alert su job falliti in coda ✅
-- 2FA via Fortify (TOTP + recovery codes), opzionale self-service da profilo ✅
-- Scan antimalware upload allegati (ClamAV, profilo Docker `security`) ✅
-- Test E2E (Dusk) sui flow critici: login, creazione segnalazione, cambio stato, wizard setup ✅
-- Retention/cancellazione dati GDPR (richiede decisione ente)
-- Ambiente di staging (richiede infrastruttura)
+- Password policy coerente, Dependabot, alert job falliti, 2FA TOTP, ClamAV allegati, Dusk in CI ✅
+- Retention GDPR → spostata in 0.9.0 (attende decisione ente)
+- Staging → spostato in 1.0.0 (attende infrastruttura)
+
+---
+
+## v1.2 — Identità e accessi 🚧 (tag 0.7.0–0.7.2, prosegue in 0.8.0/0.9.0)
+
+Spec: [`docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md`](docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md)
+
+- Fase 1 — Dipendenti via Active Directory (ruoli dai gruppi), ditte via email + 2FA email, rimozione wizard ✅ (0.7.0)
+- Fase 2a — Scuole via SPID/CIE (pa-sso-proxy), completa profilo, verifica email ✅ (0.7.0)
+- Anagrafe scuole MIUR (prerequisito deleghe) ✅
+- Fase 2b — Deleghe confermate dalla segreteria, rinnovo annuale, visibilità per delega ✅ (0.8.0)
+- Fase 3 — Cutover: disattivazione segnalatori legacy, fine fallback username locale 📋 → **0.9.0**
