@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -29,5 +30,16 @@ class Istituto extends Model
     public function plessi(): HasMany
     {
         return $this->hasMany(Plesso::class, 'id_istituto', 'id_istituto');
+    }
+
+    public function isMiur(): bool
+    {
+        return $this->fonte_dati === 'miur';
+    }
+
+    /** Abbinamento per codice meccanografico, indipendente da maiuscole e spazi. */
+    public function scopeConCodice(Builder $query, string $codice): Builder
+    {
+        return $query->whereRaw('UPPER(TRIM(codice_meccanografico)) = ?', [strtoupper(trim($codice))]);
     }
 }

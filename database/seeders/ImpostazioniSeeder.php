@@ -364,6 +364,20 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'spid',
                 'descrizione' => 'Client secret (salvato cifrato; lascia vuoto per non modificarlo)',
             ],
+            [
+                'chiave'      => 'miur_anagrafe_url',
+                'valore'      => 'https://dati.istruzione.it/opendata/opendata/catalogo/elements1/SCUANAGRAFESTAT20252620250901.json',
+                'tipo'        => 'text',
+                'gruppo'      => 'scuole',
+                'descrizione' => 'Link al file JSON "Anagrafe scuole statali" (dati.istruzione.it). Cambia ogni anno scolastico: aggiornalo e riscarica da Admin → Anagrafe MIUR',
+            ],
+            [
+                'chiave'      => 'miur_comune_default',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'scuole',
+                'descrizione' => 'Comune precompilato nella ricerca dell\'anagrafe MIUR (es. MONTESILVANO). Vuoto = nessun filtro',
+            ],
         ];
 
         // Rilanciabile a ogni avvio: aggiunge le chiavi nuove (es. dopo un
