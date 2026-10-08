@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AnagrafeMiurController;
+use App\Http\Controllers\Admin\DelegheController;
 use App\Http\Controllers\Deleghe\DecisioneDelegaController;
 use App\Http\Controllers\Deleghe\RinnovoDelegheController;
 use App\Http\Controllers\DelegheScuolaController;
@@ -177,6 +178,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         ->where('codice', '[A-Za-z0-9]{10}')->name('anagrafe-miur.show');
     Route::post('anagrafe-miur/{codice}', [AnagrafeMiurController::class, 'salva'])
         ->where('codice', '[A-Za-z0-9]{10}')->name('anagrafe-miur.salva');
+
+    Route::get('deleghe', [DelegheController::class, 'index'])->name('deleghe.index');
+    Route::get('deleghe/predelega', [DelegheController::class, 'create'])->name('deleghe.create');
+    Route::post('deleghe/predelega', [DelegheController::class, 'store'])->name('deleghe.store');
+    Route::post('deleghe/gruppo/{gruppo}/attiva', [DelegheController::class, 'attiva'])->whereUuid('gruppo')->name('deleghe.attiva');
+    Route::post('deleghe/gruppo/{gruppo}/reinvia', [DelegheController::class, 'reinvia'])->whereUuid('gruppo')->name('deleghe.reinvia');
+    Route::post('deleghe/{delega}/revoca', [DelegheController::class, 'revoca'])->name('deleghe.revoca');
+    Route::post('deleghe/sblocca/{utente}', [DelegheController::class, 'sblocca'])->name('deleghe.sblocca');
 
     Route::resource('profili', ProfiliController::class)
         ->except(['show'])

@@ -431,6 +431,53 @@ class DelegaService
         ];
     }
 
+    /**
+     * Delega decisa dall'ente (go-live, casi noti): attiva subito, nessuna
+     * email alla segreteria; agganciata al primo accesso SPID di quel CF.
+     *
+     * @param list<int> $idPlessi vuoto = tutto l'istituto
+     */
+    public function predelega(string $codiceFiscale, Istituto $istituto, array $idPlessi, string $motivo, User $admin): void
+    {
+        $cf = strtoupper(trim($codiceFiscale));
+        $idPlessi = $this->plessiDellIstituto($istituto, $idPlessi);
+        $user = User::where('codice_fiscale', $cf)->where('auth_source', 'spid')->first();
+        $gruppo = (string) Str::uuid();
+        $validaFino = now()->addMonthsNoOverflow($this->regola('deleghe_mesi_validita'));
+
+        DB::transaction(function () use ($cf, $istituto, $idPlessi, $motivo, $admin, $user, $gruppo, $validaFino) {
+            foreach ($idPlessi === [] ? [null] : $idPlessi as $idPlesso) {
+                $delega = Delega::create([
+                    'user_id' => $user?->id,
+                    'codice_fiscale' => $cf,
+                    'id_istituto' => $istituto->id_istituto,
+                    'id_plesso' => $idPlesso,
+                    'gruppo_richiesta' => $gruppo,
+                    'stato' => Delega::ATTIVA,
+                    'decisa_at' => now(),
+                    'decisa_via' => 'admin',
+                    'decisa_da' => $admin->id,
+                    'motivo' => $motivo,
+                    'valida_fino_at' => $validaFino,
+                ]);
+                $delega->registra('predelega', 'admin', $admin);
+                if ($idPlesso === null) {
+                    $this->assorbi($delega);
+                }
+            }
+        });
+    }
+
+    public function attivaDUfficio(string $gruppo, string $motivo, User $admin): void
+    {
+        $this->approva(Delega::where('gruppo_richiesta', $gruppo)->with(['user', 'istituto'])->get(), 'admin', $admin, null, $motivo);
+    }
+
+    public function sblocca(User $user): void
+    {
+        $user->forceFill(['bloccato_at' => null, 'motivo_blocco' => null])->save();
+    }
+
     public function avvisaAdmin(string $oggetto, string $testo): void
     {
         Notification::send(
