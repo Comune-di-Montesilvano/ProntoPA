@@ -6,6 +6,11 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
 ## [Unreleased]
 
+### Changed
+- Dipendenze: `directorytree/ldaprecord` 3 → 4 (opzioni connessione
+  rinominate: `use_tls` = ldaps://, `use_starttls` = STARTTLS),
+  `firebase/php-jwt` 6 → 7, `vite` 8.3.2, `codeql-action/upload-sarif` 4.38.2
+
 ## [0.7.2] - 2026-10-01
 
 ### Changed
