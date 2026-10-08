@@ -1,7 +1,7 @@
 # ProntoPA v1.2 — "Identità e accessi" — Design
 
 **Data**: 2026-09-30
-**Stato**: bozza, da revisionare
+**Stato**: approvata — fasi 1-2 implementate in 0.7.0/0.8.0; modifiche in `2026-10-08-v080-anagrafe-miur-deleghe-design.md`
 **Branch**: `feature/v12-identita-accessi` (da `main` @ `b1a8c79`)
 
 ## Obiettivo

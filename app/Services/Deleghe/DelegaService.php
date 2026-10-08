@@ -12,6 +12,7 @@ use App\Notifications\Deleghe\EsitoDelegaNotification;
 use App\Notifications\Deleghe\RichiestaDelegaNotification;
 use App\Notifications\Deleghe\RinnovoDelegheNotification;
 use Illuminate\Notifications\Notification as BaseNotification;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -73,7 +74,7 @@ class DelegaService
             ->latest('decisa_at')
             ->first();
         if ($rifiuto !== null) {
-            throw new RichiestaDelegaRifiutata('La segreteria ha rifiutato una tua richiesta recente: potrai ripresentarla dal '.$rifiuto->decisa_at?->copy()->addDays($giorniStop)->format('d/m/Y').'.');
+            throw new RichiestaDelegaRifiutata('La segreteria ha rifiutato una tua richiesta recente: potrai ripresentarla dal '.Carbon::parse($rifiuto->decisa_at)->addDays($giorniStop)->format('d/m/Y').'.');
         }
 
         $idPlessi = $this->plessiDellIstituto($istituto, $idPlessi);

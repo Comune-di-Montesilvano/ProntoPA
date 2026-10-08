@@ -4,9 +4,19 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
-## [Unreleased]
+## [0.8.0] - 2026-10-08
 
 ### Added
+- Deleghe scuole: chi entra con SPID/CIE chiede una delega per un istituto
+  (intero o per plessi); la segreteria approva o rifiuta da un link nella
+  casella istituzionale, senza registrarsi. Con una delega attiva si
+  segnala e si vedono le segnalazioni dei plessi coperti, fatte da chiunque
+- Rinnovo annuale confermato dalla segreteria persona per persona
+  (`deleghe:rinnovi`, il 1° del mese) e chiusura automatica di deleghe e
+  richieste scadute (`deleghe:scadenze`, ogni mattina)
+- Admin → Deleghe: elenco con filtri, pre-deleghe per codice fiscale
+  agganciate al primo accesso SPID, attivazione d'ufficio, revoca, reinvio
+  dell'email, sblocco delle persone segnalate dalle segreterie
 - Admin → Anagrafe MIUR: ricerca nell'open data "Anagrafe scuole statali",
   selezione di istituti e sedi da gestire; nome, indirizzo ed email dei
   record selezionati arrivano dal MIUR e si riallineano a ogni nuovo
@@ -14,6 +24,7 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
   automatica: le scuole sparite dal dataset vengono segnalate
 
 ### Changed
+- La pagina d'attesa degli utenti SPID è diventata "Le mie deleghe"
 - Dipendenze: `directorytree/ldaprecord` 3 → 4 (opzioni connessione
   rinominate: `use_tls` = ldaps://, `use_starttls` = STARTTLS),
   `firebase/php-jwt` 6 → 7, `vite` 8.3.2, `codeql-action/upload-sarif` 4.38.2

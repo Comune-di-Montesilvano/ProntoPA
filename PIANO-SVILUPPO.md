@@ -59,17 +59,17 @@ manca ed è sul percorso critico del go-live.
 
 Spec: [`2026-09-30-v12-identita-accessi-design.md`](docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md) §"Flussi — deleghe".
 
-- [ ] Plan di dettaglio (`docs/superpowers/plans/`)
-- [ ] **Anagrafe scuole MIUR** (prerequisito: senza `istituti.email`
+- [x] Plan di dettaglio (`docs/superpowers/plans/`)
+- [x] **Anagrafe scuole MIUR** (prerequisito: senza `istituti.email`
       nessuna delega è richiedibile) — vedi §3.1
-- [ ] Tabelle `deleghe` + `deleghe_storico`, `DelegaService` con le invarianti
-- [ ] Richiesta delega (istituto intero o plessi, 6 controlli anti-abuso)
-- [ ] Email + pagina segreteria senza login (GET innocua, POST approva/rifiuta/blocca)
-- [ ] `deleghe:rinnovi` (mensile, una email per scuola) e `deleghe:scadenze` (giornaliero)
-- [ ] Admin → Deleghe: elenco, pre-delega per CF, attivazione d'ufficio, revoca, reinvio, sblocco
-- [ ] Visibilità: ramo `spid` in `scopeVisibileA`, Policy, form creazione limitato ai plessi coperti
-- [ ] `LimitaAccessoSpid::consentite()` per delega attiva
-- [ ] Test Feature + Dusk (SPID mock → profilo → delega → approvazione → segnalazione)
+- [x] Tabelle `deleghe` + `deleghe_storico`, `DelegaService` con le invarianti
+- [x] Richiesta delega (istituto intero o plessi, 6 controlli anti-abuso)
+- [x] Email + pagina segreteria senza login (GET innocua, POST approva/rifiuta/blocca)
+- [x] `deleghe:rinnovi` (mensile, una email per scuola) e `deleghe:scadenze` (giornaliero)
+- [x] Admin → Deleghe: elenco, pre-delega per CF, attivazione d'ufficio, revoca, reinvio, sblocco
+- [x] Visibilità: ramo `spid` in `scopeVisibileA`, Policy, form creazione limitato ai plessi coperti
+- [x] `LimitaAccessoSpid::consentite()` per delega attiva
+- [x] Test Feature + Dusk (SPID mock → profilo → delega → approvazione → segnalazione)
 
 ### 3.1 Anagrafe scuole MIUR
 
