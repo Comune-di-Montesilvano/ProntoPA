@@ -96,8 +96,9 @@ final class LdapRecordDirectory implements Directory
             'hosts' => [$endpoint['host']],
             'port' => $endpoint['port'],
             'base_dn' => (string) $this->config['base_dn'],
-            'use_ssl' => $endpoint['ssl'],
-            'use_tls' => $this->config['starttls'],
+            // LdapRecord v4: use_tls = ldaps://, use_starttls = upgrade su ldap://
+            'use_tls' => $endpoint['ssl'],
+            'use_starttls' => $this->config['starttls'],
             'timeout' => $this->config['timeout'],
             'follow_referrals' => false,
             'options' => [
