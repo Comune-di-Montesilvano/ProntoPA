@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Delega;
 use App\Models\Segnalazione;
 use App\Models\User;
 
@@ -33,6 +34,12 @@ class SegnalazionePolicy
         }
 
         if ($user->hasRole('segnalatore')) {
+            if ($user->isSpid()) {
+                return Delega::plessiCopertiDa($user)
+                    ->where('plessi.id_plesso', $segnalazione->id_plesso)
+                    ->exists();
+            }
+
             return $segnalazione->id_utente_segnalazione === $user->id;
         }
 
