@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AnagrafeMiurController;
+use App\Http\Controllers\Deleghe\DecisioneDelegaController;
 use App\Http\Controllers\Admin\ImpostazioniController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\OrganizzazioniController;
@@ -47,6 +48,13 @@ Route::get('/dashboard', [RoleDashboardController::class, 'index'])
 Route::get('/scuola/attesa', SpidAttesaController::class)
     ->middleware('auth')
     ->name('spid.attesa');
+
+// Deleghe — pagine della segreteria scolastica: nessun login, link firmato con
+// token monouso. La GET non cambia nulla, decide solo il POST.
+Route::middleware('throttle:20,1')->group(function () {
+    Route::get('deleghe/decidi/{token}', [DecisioneDelegaController::class, 'show'])->name('deleghe.decidi');
+    Route::post('deleghe/decidi/{token}', [DecisioneDelegaController::class, 'store'])->name('deleghe.decidi.store');
+});
 
 // ── Segnalazioni (tutti gli autenticati) ──────────────────────────────────────
 Route::middleware('auth')->group(function () {
