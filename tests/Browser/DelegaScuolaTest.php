@@ -58,12 +58,14 @@ class DelegaScuolaTest extends DuskTestCase
         $gruppo = Delega::where('user_id', $user->id)->value('gruppo_richiesta');
         $link = app(DelegaService::class)->invia($gruppo, true);
 
-        $this->browse(function (Browser $browser) use ($link) {
-            $browser->visit($link)
+        // la segreteria apre il link da un altro browser, senza login
+        $this->browse(function (Browser $delegato, Browser $segreteria) use ($link) {
+            $segreteria->visit($link)
                 ->waitForText('Richiesta di delega')
                 ->press('Approva')
-                ->waitForText('approvata')
-                ->visit('/segnalazioni/create')
+                ->waitForText('approvata');
+
+            $delegato->visit('/segnalazioni/create')
                 // la select dei plessi è nascosta finché non si sceglie una tipologia
                 ->assertPathIs('/segnalazioni/create')
                 ->assertSourceHas('Media Delfico');

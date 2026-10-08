@@ -15,7 +15,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class LimitaAccessoSpid
 {
-    private const SEMPRE = ['verification.*', 'logout', 'profile.edit', 'profile.update'];
+    // deleghe.decidi*/rinnovo*: pagine della segreteria, aperte anche da chi ha
+    // una sessione SPID nello stesso browser (es. la DSGA).
+    private const SEMPRE = ['verification.*', 'logout', 'profile.edit', 'profile.update', 'deleghe.decidi*', 'deleghe.rinnovo*'];
 
     private const SENZA_DELEGA = ['spid.attesa', 'scuola.deleghe.*'];
 

@@ -204,4 +204,16 @@ class DecisioneSegreteriaTest extends TestCase
 
         $this->get($this->percorso($url))->assertOk()->assertSee('annullata')->assertDontSee('approvata');
     }
+
+    public function test_pagina_segreteria_aperta_con_sessione_spid_senza_delega(): void
+    {
+        // es. DSGA con una sessione SPID aperta nello stesso browser
+        [$url, $gruppo] = $this->richiesta();
+        $dsga = $this->utenteSpid('VRDLGU75B02H501K');
+
+        $this->actingAs($dsga)->get($this->percorso($url))->assertOk()->assertSee('Approva');
+        $this->actingAs($dsga)->post($this->percorso($url), ['azione' => 'approva'])->assertOk();
+
+        $this->assertSame(Delega::ATTIVA, Delega::where('gruppo_richiesta', $gruppo)->sole()->stato);
+    }
 }
