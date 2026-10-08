@@ -298,6 +298,46 @@ class DelegaService
             });
     }
 
+    public function revoca(Delega $delega, string $via, ?User $da = null, ?string $motivo = null, ?string $ip = null): void
+    {
+        if (! in_array($delega->stato, [Delega::ATTIVA, Delega::RICHIESTA], true)) {
+            return;
+        }
+
+        $delega->update([
+            'stato' => Delega::REVOCATA,
+            'decisa_at' => now(),
+            'decisa_via' => $via,
+            'decisa_da' => $da?->id,
+            'motivo' => $motivo,
+        ]);
+        $delega->registra('revocata', $via, $da, $ip);
+
+        if ($via !== 'utente') {
+            $this->notificaDelegato($delega->user, new EsitoDelegaNotification('revocata', $delega->istituto));
+        }
+    }
+
+    /** Pre-deleghe admin per questo codice fiscale, dopo la verifica dell'email. */
+    public function agganciaPredeleghe(User $user): int
+    {
+        if (! $user->isSpid() || ! $user->hasVerifiedEmail() || blank($user->codice_fiscale)) {
+            return 0;
+        }
+
+        $pre = Delega::whereNull('user_id')
+            ->where('codice_fiscale', $user->codice_fiscale)
+            ->where('stato', Delega::ATTIVA)
+            ->get();
+
+        $pre->each(function (Delega $d) use ($user) {
+            $d->update(['user_id' => $user->id]);
+            $d->registra('agganciata', 'sistema', $user);
+        });
+
+        return $pre->count();
+    }
+
     public function avvisaAdmin(string $oggetto, string $testo): void
     {
         Notification::send(

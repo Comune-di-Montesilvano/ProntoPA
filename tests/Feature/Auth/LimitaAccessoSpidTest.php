@@ -39,13 +39,13 @@ class LimitaAccessoSpidTest extends TestCase
         $this->actingAs($user)->get(route('verification.notice'))->assertOk();
     }
 
-    public function test_spid_verificato_senza_deleghe_vede_solo_attesa(): void
+    public function test_spid_verificato_senza_deleghe_vede_solo_le_deleghe(): void
     {
         $user = $this->spid(true);
 
-        $this->actingAs($user)->get('/dashboard')->assertRedirect(route('spid.attesa'));
-        $this->actingAs($user)->get(route('segnalatore.dashboard'))->assertRedirect(route('spid.attesa'));
-        $this->actingAs($user)->get(route('spid.attesa'))->assertOk()->assertSee('delega');
+        $this->actingAs($user)->get('/dashboard')->assertRedirect(route('scuola.deleghe.index'));
+        $this->actingAs($user)->get(route('segnalatore.dashboard'))->assertRedirect(route('scuola.deleghe.index'));
+        $this->actingAs($user)->get(route('scuola.deleghe.index'))->assertOk()->assertSee('delega');
     }
 
     public function test_spid_puo_sempre_modificare_profilo_e_uscire(): void

@@ -112,6 +112,11 @@
                     <x-sidebar-link href="{{ route('segnalazioni.create') }}" :active="request()->routeIs('segnalazioni.create')" icon="plus-circle">
                         Nuova segnalazione
                     </x-sidebar-link>
+                    @if($u?->isSpid())
+                        <x-sidebar-link href="{{ route('scuola.deleghe.index') }}" :active="request()->routeIs('scuola.deleghe.*')" icon="user-group">
+                            Le mie deleghe
+                        </x-sidebar-link>
+                    @endif
                 </div>
             @endif
 

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AnagrafeMiurController;
 use App\Http\Controllers\Deleghe\DecisioneDelegaController;
+use App\Http\Controllers\DelegheScuolaController;
 use App\Http\Controllers\Admin\ImpostazioniController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\OrganizzazioniController;
@@ -48,6 +49,15 @@ Route::get('/dashboard', [RoleDashboardController::class, 'index'])
 Route::get('/scuola/attesa', SpidAttesaController::class)
     ->middleware('auth')
     ->name('spid.attesa');
+
+// Deleghe dell'utente scuola (SPID): richiesta, elenco, rinuncia
+Route::middleware('auth')->prefix('scuola/deleghe')->name('scuola.deleghe.')->group(function () {
+    Route::get('/', [DelegheScuolaController::class, 'index'])->name('index');
+    Route::get('/richiedi/{istituto}', [DelegheScuolaController::class, 'create'])->name('create');
+    Route::post('/richiedi/{istituto}', [DelegheScuolaController::class, 'store'])
+        ->middleware('throttle:10,1')->name('store');
+    Route::post('/{delega}/rinuncia', [DelegheScuolaController::class, 'rinuncia'])->name('rinuncia');
+});
 
 // Deleghe — pagine della segreteria scolastica: nessun login, link firmato con
 // token monouso. La GET non cambia nulla, decide solo il POST.
