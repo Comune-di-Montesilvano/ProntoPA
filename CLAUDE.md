@@ -79,6 +79,7 @@ Brand/mappa/email → **Admin → Impostazioni**.
 | `ente_nome` `ente_logo_url` `ente_colore_primario` `ente_colore_secondario` `ente_sito_url` | brand |
 | `osm_lat` `osm_lng` `osm_zoom` | mappa |
 | `mail_from_address` `mail_from_name` | email |
+| `miur_anagrafe_url` `miur_comune_default` | scuole |
 
 ```php
 $val = Impostazione::get('ente_nome', 'ProntoPA');
@@ -97,7 +98,8 @@ app/Http/Controllers/
   AdesioniSegnalazioniController  AllegatiSegnalazioniController  MagicLinkController
   AiTriageController  PublicHomeController  ProfileController  TelegramAccountController
   Admin/{ImpostazioniController,UtentiController,ProfiliController,ProvenienzaController,
-         SediController,SlaController,SquadreController,OrganizzazioniController,AdminDashboardController}
+         SediController,SlaController,SquadreController,OrganizzazioniController,AdminDashboardController,
+         AnagrafeMiurController}
   Api/{SegnalazioneApiController,TelegramWebhookController}
 app/Models/
   Segnalazione  User  Impresa  Appalto  NotaSegnalazione  AllegatoSegnalazione
@@ -113,8 +115,9 @@ app/Services/
   TelegramBotService
   Directory/  Directory (interfaccia) · LdapRecordDirectory (AD reale) · MockDirectory · NullDirectory
   Auth/       LdapLoginService · MappaGruppiLdap · NormalizzaUsernameAd · CodiceAccessoEmail (2FA email) · SpidLoginService
+  Scuole/     AnagrafeMiur (indice open data MIUR su disco local, miur/*.json) · SincronizzaScuole (selezione admin + riallineamento, fonte_dati=miur)
   Oidc/       OidcClient (discovery/PKCE/token/id_token/userinfo) · OidcConfig · ClaimsSpid · IdentitaSpid
-app/Jobs/           CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
+app/Jobs/           ScaricaAnagrafeMiur  CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
 app/Http/Middleware/EnsureUserIsActive.php  LimitaAccessoSpid.php
 app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni  ProvaLdap (ldap:prova)
 ```

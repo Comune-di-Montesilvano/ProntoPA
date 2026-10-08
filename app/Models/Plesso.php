@@ -16,6 +16,7 @@ class Plesso extends Model
         'id_istituto', 'nome', 'codice_meccanografico', 'indirizzo', 'referente', 'email', 'recapiti', 'fonte_dati',
     ];
 
+    /** @return BelongsTo<Istituto, $this> */
     public function istituto(): BelongsTo
     {
         return $this->belongsTo(Istituto::class, 'id_istituto', 'id_istituto');

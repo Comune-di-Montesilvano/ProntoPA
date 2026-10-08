@@ -6,6 +6,13 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
 ## [Unreleased]
 
+### Added
+- Admin → Anagrafe MIUR: ricerca nell'open data "Anagrafe scuole statali",
+  selezione di istituti e sedi da gestire; nome, indirizzo ed email dei
+  record selezionati arrivano dal MIUR e si riallineano a ogni nuovo
+  download (link in Impostazioni → scuole). Nessuna cancellazione
+  automatica: le scuole sparite dal dataset vengono segnalate
+
 ### Changed
 - Dipendenze: `directorytree/ldaprecord` 3 → 4 (opzioni connessione
   rinominate: `use_tls` = ldaps://, `use_starttls` = STARTTLS),

@@ -75,9 +75,9 @@ Impostazioni (gruppo `scuole`, aggiunte a `ImpostazioniSeeder`):
 
 - `miur_anagrafe_url` — default il link 2025/26
 - `miur_comune_default` — filtro comune precompilato nella ricerca (vuoto = nessuno)
-- `miur_anagrafe_scaricato_at` — sola lettura in UI
-- `miur_anagrafe_url_scaricato` — URL del file effettivamente in uso
-- `miur_anagrafe_stato` — `vuoto` · `in_corso` · `ok` · `errore: <motivo>`
+Stato del download (stato, data, URL in uso, numero sedi) in
+`storage/app/private/miur/stato.json` (disco `local`): in `impostazioni`
+sarebbe modificabile dalla pagina Impostazioni.
 
 ## Componenti
 
@@ -97,7 +97,7 @@ Impostazioni (gruppo `scuole`, aggiunte a `ImpostazioniSeeder`):
 - `emailIstituto(string $codice)` — email della riga sede amministrativa;
   in mancanza, l'email più frequente tra le sedi dell'istituto.
 
-L'indice compatto (~5 MB a livello nazionale) evita di decodificare 50 MB a
+L'indice compatto (~15 MB a livello nazionale, ~135 MB di picco RAM per ricerca) evita di decodificare 50 MB a
 ogni ricerca.
 
 ### `App\Services\Scuole\SincronizzaScuole`
@@ -117,9 +117,9 @@ ogni ricerca.
 
 ### `App\Jobs\ScaricaAnagrafeMiur`
 
-Scarica `miur_anagrafe_url` (`Http::timeout(300)->sink()` in
-`storage/app/miur/anagrafe.download.json`), `indicizza`, sostituisce
-l'indice, `riallinea`, aggiorna le impostazioni di stato. `memory_limit`
+Scarica `miur_anagrafe_url` (`Http::timeout(300)->get()`, corpo salvato in
+`miur/anagrafe.download.json` sul disco `local`), `indicizza`, sostituisce
+l'indice, `riallinea`, aggiorna `miur/stato.json`. `memory_limit`
 alzato solo nel job (`ini_set`, 1G). Coda di default, un solo tentativo
 (`$tries = 1`), errore → stato `errore: <motivo>` + `failed_jobs` (già
 monitorato da `jobs:check-failed`).
