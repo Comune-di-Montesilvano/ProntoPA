@@ -47,11 +47,11 @@ class DelegaScuolaTest extends DuskTestCase
                 ->press('Entra (simulato)')
                 ->waitForText('Le mie deleghe')
                 ->type('q', 'Delfico')
-                ->press('Cerca')
+                ->press('CERCA')
                 ->clickLink('IC Delfico')
                 ->waitForText('Media Delfico')
                 ->check('tutto')
-                ->press('Invia richiesta')
+                ->press('INVIA RICHIESTA')
                 ->waitForText('Richiesta inviata');
         });
 
