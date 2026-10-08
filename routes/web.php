@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AnagrafeMiurController;
 use App\Http\Controllers\Admin\ImpostazioniController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\OrganizzazioniController;
@@ -148,6 +149,13 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('sedi', SediController::class)
         ->except(['show'])
         ->parameters(['sedi' => 'sede']);
+
+    Route::get('anagrafe-miur', [AnagrafeMiurController::class, 'index'])->name('anagrafe-miur.index');
+    Route::post('anagrafe-miur/scarica', [AnagrafeMiurController::class, 'scarica'])->name('anagrafe-miur.scarica');
+    Route::get('anagrafe-miur/{codice}', [AnagrafeMiurController::class, 'show'])
+        ->where('codice', '[A-Za-z0-9]{10}')->name('anagrafe-miur.show');
+    Route::post('anagrafe-miur/{codice}', [AnagrafeMiurController::class, 'salva'])
+        ->where('codice', '[A-Za-z0-9]{10}')->name('anagrafe-miur.salva');
 
     Route::resource('profili', ProfiliController::class)
         ->except(['show'])
