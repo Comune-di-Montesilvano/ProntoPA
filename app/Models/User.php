@@ -156,6 +156,12 @@ class User extends Authenticatable
         return $this->belongsTo(Istituto::class, 'id_istituto', 'id_istituto');
     }
 
+    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<Delega, $this> */
+    public function deleghe(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Delega::class);
+    }
+
     public function squadre(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Squadra::class, 'squadra_user', 'user_id', 'id_squadra');

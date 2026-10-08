@@ -378,6 +378,48 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'scuole',
                 'descrizione' => 'Comune precompilato nella ricerca dell\'anagrafe MIUR (es. MONTESILVANO). Vuoto = nessun filtro',
             ],
+            [
+                'chiave'      => 'deleghe_max_pendenti',
+                'valore'      => '3',
+                'tipo'        => 'integer',
+                'gruppo'      => 'deleghe',
+                'descrizione' => 'Richieste di delega in attesa contemporanee per persona',
+            ],
+            [
+                'chiave'      => 'deleghe_giorni_stop_rifiuto',
+                'valore'      => '30',
+                'tipo'        => 'integer',
+                'gruppo'      => 'deleghe',
+                'descrizione' => 'Giorni prima di poter ripresentare una richiesta rifiutata dalla stessa scuola',
+            ],
+            [
+                'chiave'      => 'deleghe_giorni_scadenza_richiesta',
+                'valore'      => '30',
+                'tipo'        => 'integer',
+                'gruppo'      => 'deleghe',
+                'descrizione' => 'Giorni di validità del link inviato alla segreteria',
+            ],
+            [
+                'chiave'      => 'deleghe_email_giorno_istituto',
+                'valore'      => '10',
+                'tipo'        => 'integer',
+                'gruppo'      => 'deleghe',
+                'descrizione' => 'Email di richiesta delega al giorno per scuola (oltre: partono il mattino dopo)',
+            ],
+            [
+                'chiave'      => 'deleghe_mesi_validita',
+                'valore'      => '12',
+                'tipo'        => 'integer',
+                'gruppo'      => 'deleghe',
+                'descrizione' => 'Mesi di validità di una delega prima del rinnovo',
+            ],
+            [
+                'chiave'      => 'deleghe_giorni_avviso_delegato',
+                'valore'      => '7',
+                'tipo'        => 'integer',
+                'gruppo'      => 'deleghe',
+                'descrizione' => 'Giorni prima della scadenza in cui avvisare il delegato se la segreteria non ha confermato',
+            ],
         ];
 
         // Rilanciabile a ogni avvio: aggiunge le chiavi nuove (es. dopo un
