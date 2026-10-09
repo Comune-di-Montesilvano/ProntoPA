@@ -1,4 +1,4 @@
-publiccodeYmlVersion: "0.4"
+publiccodeYmlVersion: "0"
 
 name: ProntoPA
 applicationSuite: ProntoPA
@@ -64,8 +64,16 @@ description:
       - API REST e webhook HMAC per integrarsi col sito istituzionale
         del Comune;
 
-      - wizard di primo avvio: nessuna configurazione da riga di
-        comando per mettere in produzione una nuova istanza.
+      - accessi senza utenze da gestire a mano: dipendenti con Active
+        Directory (ruoli dai gruppi), scuole con SPID/CIE, ditte con
+        email e verifica in due passaggi;
+
+      - deleghe delle scuole confermate dalla segreteria con un link
+        nella casella istituzionale, rinnovo annuale e scadenze
+        automatiche;
+
+      - anagrafe delle scuole dall'open data MIUR: l'amministratore
+        sceglie le sedi, nomi e indirizzi si aggiornano da soli.
 
 
       Multi-ente per brand: logo, colori e testata si configurano da
@@ -82,7 +90,9 @@ description:
       - Dashboard e KPI per gestori, operai e imprese
       - Report mensili, export XLSX, fascicolo PDF
       - API REST e webhook outbound per il portale del Comune
-      - Wizard di primo avvio per l'installazione
+      - Accesso dipendenti con Active Directory e scuole con SPID/CIE
+      - Deleghe scuole confermate dalla segreteria, rinnovo annuale
+      - Anagrafe scuole da open data MIUR
       - Brandizzazione multi-ente da interfaccia amministrativa
 
 legal:
@@ -91,7 +101,7 @@ legal:
 
 organisation:
   name: Comune di Montesilvano
-  uri: "https://www.comune.montesilvano.pe.it"
+  uri: "urn:x-italian-pa:c_f646"
 
 maintenance:
   type: internal
