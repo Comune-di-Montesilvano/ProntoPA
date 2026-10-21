@@ -157,6 +157,34 @@ class ArchivioBackupTest extends TestCase
         $this->assertFileDoesNotExist($this->base.'/fuori.txt');
     }
 
+    public function test_estrai_e_ricifra_rifiutano_voce_corrotta(): void
+    {
+        file_put_contents($this->base.'/storage/public/allegati/a.bin', random_bytes(200000));
+        $zip = $this->crea();
+
+        // Corrompe byte a metà archivio (cade nei dati dell'allegato).
+        $dati = (string) file_get_contents($zip);
+        $meta = (int) (strlen($dati) / 2);
+        $dati = substr_replace($dati, strrev(substr($dati, $meta, 64)), $meta, 64);
+        file_put_contents($zip, $dati);
+
+        $a = new ArchivioBackup;
+        try {
+            $a->estrai($zip, 'segreta-123', $this->base.'/out');
+            $this->fail('Attesa BackupNonLeggibile');
+        } catch (BackupNonLeggibile $e) {
+            $this->assertStringNotContainsString('passphrase', $e->getMessage());
+        }
+
+        $prima = hash_file('sha256', $zip);
+        try {
+            $a->ricifra($zip, 'segreta-123', 'nuova');
+            $this->fail('Attesa BackupNonLeggibile');
+        } catch (BackupNonLeggibile) {
+        }
+        $this->assertSame($prima, hash_file('sha256', $zip));
+    }
+
     public function test_ricifra(): void
     {
         $zip = $this->crea('vecchia-pass');

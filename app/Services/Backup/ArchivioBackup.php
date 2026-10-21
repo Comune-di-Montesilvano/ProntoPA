@@ -87,8 +87,15 @@ class ArchivioBackup
                 $righe = 0;
                 $ultimo = "\n";
                 while (! feof($stream)) {
-                    $blocco = fread($stream, $this->blocco());
-                    if ($blocco === false || $blocco === '') {
+                    try {
+                        $blocco = fread($stream, $this->blocco());
+                    } catch (\ErrorException) {
+                        $blocco = false;
+                    }
+                    if ($blocco === false) {
+                        throw new BackupNonLeggibile("Voce $nome corrotta o incompleta nell'archivio.");
+                    }
+                    if ($blocco === '') {
                         break;
                     }
                     hash_update($ctx, $blocco);
@@ -137,9 +144,22 @@ class ArchivioBackup
                     mkdir(dirname($percorso), 0775, true);
                 }
                 $out = fopen($percorso, 'wb');
-                stream_copy_to_stream($stream, $out);
+                if ($out === false) {
+                    fclose($stream);
+                    throw new BackupNonLeggibile("Impossibile scrivere $nome durante l'estrazione.");
+                }
+                try {
+                    $copiati = stream_copy_to_stream($stream, $out);
+                } catch (\ErrorException) {
+                    $copiati = false; // il warning di libzip (CRC/AES) è promosso a eccezione dal framework
+                }
                 fclose($out);
                 fclose($stream);
+
+                // Un errore a metà lettura (voce corrotta, autenticazione AES finale) non deve lasciare file troncati.
+                if ($copiati === false || $copiati !== ($za->statIndex($i)['size'] ?? -1)) {
+                    throw new BackupNonLeggibile("Voce $nome corrotta o incompleta nell'archivio.");
+                }
             }
         } finally {
             $za->close();
@@ -156,6 +176,8 @@ class ArchivioBackup
         $nuovo = $zip.'.nuovo';
 
         try {
+            // Mai ricifrare un archivio corrotto: si perderebbe l'unica copia buona.
+            $this->verifica($zip, $da);
             $this->estrai($zip, $da, $tmp);
 
             $voci = [];

@@ -3,6 +3,7 @@
 namespace App\Services\Backup;
 
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -70,6 +71,10 @@ class SegretiCifrati
 
             if (isset($s['chiave'])) {
                 DB::table($s['tabella'])->where('chiave', $s['chiave'])->update([$s['colonna'] => $cifrato]);
+                // Aggira gli eventi del model: la cache di Impostazione terrebbe il cifrato della vecchia APP_KEY.
+                if ($s['tabella'] === 'impostazioni') {
+                    Cache::forget("impostazione:{$s['chiave']}");
+                }
             } else {
                 DB::table($s['tabella'])->where('id', $s['id'])->update([$s['colonna'] => $cifrato]);
             }

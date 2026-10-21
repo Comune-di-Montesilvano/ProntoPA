@@ -26,8 +26,10 @@ class SegretiCifratiTest extends TestCase
         app()->forgetInstance('encrypter');
         Crypt::clearResolvedInstance('encrypter');
 
+        Impostazione::get('oidc_client_secret'); // scalda la cache col cifrato della vecchia chiave
         (new SegretiCifrati)->applica($segreti);
 
+        $this->assertSame('segreto-oidc', Crypt::decryptString((string) Impostazione::get('oidc_client_secret')));
         $this->assertSame('segreto-oidc', Crypt::decryptString((string) Impostazione::find('oidc_client_secret')->valore));
         $this->assertSame('ABC', decrypt($user->fresh()->getRawOriginal('two_factor_secret')));
     }
