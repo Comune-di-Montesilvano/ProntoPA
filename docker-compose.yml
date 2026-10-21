@@ -124,6 +124,23 @@ services:
       - prontoPA
     restart: unless-stopped
 
+  # Worker dedicato ai job lunghi (backup/ripristino): retry_after e timeout
+  # alti, un solo tentativo, cosi non blocca ne ripete i job brevi.
+  queue-lunghi:
+    image: ghcr.io/comune-di-montesilvano/pronto-pa:${IMAGE_TAG:-latest}
+    entrypoint: []
+    command: php artisan queue:work redis-lunghi --queue=lunghi --tries=1 --timeout=7200 --sleep=3 --max-time=3600
+    volumes: *php-volumes
+    environment: *php-env
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - prontoPA
+    restart: unless-stopped
+
   # Trigger dello scheduler Laravel (sla:check, digest:invia, verifica
   # annuale account): senza questo container i comandi schedulati non
   # partono mai — Laravel richiede una chiamata esterna a schedule:run

@@ -215,4 +215,40 @@ class BackupServiceTest extends TestCase
         $this->assertFalse($cat->inAllarme($info->creatoIl->addHours(35)));
         $this->assertTrue($cat->inAllarme($info->creatoIl->addHours(37)));
     }
+
+    public function test_job_va_sulla_coda_lunga(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+        config(['backup.connessione_coda' => 'redis-lunghi']);
+
+        \App\Jobs\CreaBackup::dispatch('manuale');
+
+        \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\CreaBackup::class, fn ($j) => $j->connection === 'redis-lunghi' && $j->queue === 'lunghi');
+    }
+
+    public function test_errore_nella_retention_non_fa_fallire_il_backup(): void
+    {
+        $this->app->bind(\App\Services\Backup\Retention::class, fn () => new class extends \App\Services\Backup\Retention
+        {
+            public function daEliminare(\Illuminate\Support\Collection $backup, CarbonImmutable $ora): array
+            {
+                throw new \RuntimeException('retention rotta');
+            }
+        });
+
+        $info = app(BackupService::class)->crea('manuale');
+
+        $this->assertTrue($info->verificato);
+        $this->assertSame([$info->nome], $this->zips());
+    }
+
+    public function test_sidecar_spazzatura_ignorato(): void
+    {
+        $info = app(BackupService::class)->crea('manuale');
+        file_put_contents($this->base.'/backups/prontopa-junk.zip.json', '{"nome":"prontopa-junk.zip"}');
+        file_put_contents($this->base.'/backups/prontopa-bad.zip.json', 'non json');
+        file_put_contents($this->base.'/backups/prontopa-altro.zip.json', json_encode(['nome' => '../x.zip', 'tipo' => 'manuale', 'creato_il' => '2026-01-01T00:00:00+00:00']));
+
+        $this->assertSame([$info->nome], app(CatalogoBackup::class)->elenco()->pluck('nome')->all());
+    }
 }

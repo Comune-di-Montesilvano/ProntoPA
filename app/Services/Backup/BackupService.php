@@ -85,7 +85,12 @@ class BackupService
         }
 
         if (in_array($tipo, ['notturno', 'manuale'], true)) {
-            $this->applicaRetention();
+            // Il backup e gia riuscito: un errore di pulizia non deve farlo risultare fallito.
+            try {
+                $this->applicaRetention();
+            } catch (Throwable $e) {
+                report($e);
+            }
         }
 
         return $info;

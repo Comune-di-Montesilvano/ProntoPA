@@ -4,6 +4,7 @@ namespace App\Services\Backup;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /** Elenco dei backup su disco: sidecar JSON accanto a ogni zip. */
 class CatalogoBackup
@@ -22,11 +23,19 @@ class CatalogoBackup
         $per = [];
 
         foreach (glob($cartella.'/prontopa-*.json') ?: [] as $file) {
-            $dati = json_decode((string) file_get_contents($file), true);
-            if (! is_array($dati) || ! isset($dati['nome'], $dati['tipo'], $dati['creato_il'])) {
+            try {
+                $dati = json_decode((string) file_get_contents($file), true);
+                if (! is_array($dati) || ! isset($dati['nome'], $dati['tipo'], $dati['creato_il'])
+                    || $dati['nome'].'.json' !== basename($file)) {
+                    throw new \InvalidArgumentException('campi mancanti o nome non corrispondente');
+                }
+                $this->percorso((string) $dati['nome']);
+                $info = BackupInfo::fromArray($dati);
+            } catch (\Throwable $e) {
+                Log::warning('Sidecar di backup ignorato: '.basename($file).' ('.$e->getMessage().')');
+
                 continue;
             }
-            $info = BackupInfo::fromArray($dati);
             $zip = $cartella.'/'.$info->nome;
             $esiste = is_file($zip);
             // Senza zip il backup non esiste (fallito, o file rimosso a mano).

@@ -72,6 +72,17 @@ return [
             'after_commit' => false,
         ],
 
+        // Job lunghi (backup, ripristino): retry_after sopra il timeout del job,
+        // altrimenti verrebbe riconsegnato mentre e ancora in esecuzione.
+        'redis-lunghi' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'lunghi',
+            'retry_after' => 7300,
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
     ],
 
     /*

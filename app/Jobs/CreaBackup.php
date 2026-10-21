@@ -20,7 +20,10 @@ class CreaBackup implements ShouldQueue
 
     public int $timeout = 3600;
 
-    public function __construct(public readonly string $tipo = 'manuale') {}
+    public function __construct(public readonly string $tipo = 'manuale')
+    {
+        $this->onConnection((string) config('backup.connessione_coda'))->onQueue('lunghi');
+    }
 
     public function handle(BackupService $backup): void
     {

@@ -44,6 +44,18 @@ services:
       - ./backups:/var/www/html/backups
     restart: "no"
 
+  queue-lunghi:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    image: pronto-pa-dev:local
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+      - ./public/storage:/var/www/html/public/storage
+      - ./backups:/var/www/html/backups
+    restart: "no"
+
   scheduler:
     build:
       context: .

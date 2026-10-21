@@ -22,6 +22,9 @@ return [
         ['tabella' => 'users', 'colonna' => 'two_factor_recovery_codes'],
     ],
 
+    // Connessione coda per i job lunghi (backup/ripristino).
+    'connessione_coda' => env('BACKUP_QUEUE_CONNECTION', 'redis-lunghi'),
+
     // Ore senza backup riuscito oltre le quali scatta l'allarme.
     'ore_allarme' => 36,
 
