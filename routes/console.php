@@ -10,6 +10,8 @@ Artisan::command('inspire', function () {
 
 Schedule::command('sla:check')->dailyAt('07:00')->runInBackground();
 
+Schedule::command('backup:crea --tipo=notturno')->dailyAt('02:00')->withoutOverlapping()->runInBackground();
+
 Schedule::command('deleghe:scadenze')->dailyAt('06:30')->runInBackground();
 Schedule::command('deleghe:rinnovi')->monthlyOn(1, '07:00')->runInBackground();
 

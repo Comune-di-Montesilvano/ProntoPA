@@ -8,6 +8,9 @@ return [
     // Passphrase AES-256 dello ZIP. Vuota = backup disattivato.
     'passphrase' => env('BACKUP_PASSPHRASE') ?: null,
 
+    // Radice dei file da archiviare (allegati). Configurabile solo per i test.
+    'storage_root' => storage_path('app'),
+
     // Volatili/derivate; migrations è nel manifest (migrazioniApplicate), nel dump confliggerebbe.
     'tabelle_escluse' => ['migrations', 'cache', 'cache_locks', 'sessions', 'jobs', 'job_batches'],
 
