@@ -82,7 +82,7 @@ jobs:
       # Cache scope separati per target (definiti in docker-bake.hcl).
 
       - name: Build & push (bake)
-        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7
+        uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7
         with:
           files: |
             ./docker-bake.hcl
@@ -124,14 +124,14 @@ jobs:
           exit-code: "0"
 
       - name: Upload Trivy results (app) to Security tab
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
         if: always()
         with:
           sarif_file: trivy-app.sarif
           category: trivy-app
 
       - name: Upload Trivy results (web) to Security tab
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
         if: always()
         with:
           sarif_file: trivy-web.sarif
