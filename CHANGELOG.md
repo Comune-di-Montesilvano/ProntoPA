@@ -4,6 +4,23 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.1] - 2026-10-21
+
+### Fixed
+- Login con Active Directory in errore (500) sulle installazioni nate con
+  una versione precedente: ruoli e permessi introdotti dagli aggiornamenti
+  (es. `segnalazioni.per-conto`) non venivano mai creati, perché il seed
+  girava solo al primo avvio. Ora a ogni avvio il container allinea dati di
+  riferimento, ruoli/permessi e impostazioni, senza toccare valori già
+  configurati né i ruoli degli utenti. Nessun intervento manuale richiesto
+- Le password non compaiono più negli stacktrace di `laravel.log` e Sentry
+  quando un login va in errore
+- Avvio del container con una password del database contenente apici o `$`
+
+### Changed
+- L'avvio non riassegna più i ruoli agli utenti in base ai vecchi flag
+  `amministratore`/`gestore_segnalazioni`
+
 ## [0.8.0] - 2026-10-08
 
 ### Added

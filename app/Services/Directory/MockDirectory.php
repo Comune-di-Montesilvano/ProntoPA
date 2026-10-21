@@ -19,7 +19,7 @@ final class MockDirectory implements Directory
         'mock.nessungruppo' => null,
     ];
 
-    public function authenticate(string $username, string $password): ?DirectoryIdentity
+    public function authenticate(string $username, #[\SensitiveParameter] string $password): ?DirectoryIdentity
     {
         $username = mb_strtolower(trim($username));
 

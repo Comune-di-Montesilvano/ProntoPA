@@ -11,7 +11,7 @@ interface Directory
      *
      * @throws DirectoryNonDisponibile directory configurata ma non raggiungibile
      */
-    public function authenticate(string $username, string $password): ?DirectoryIdentity;
+    public function authenticate(string $username, #[\SensitiveParameter] string $password): ?DirectoryIdentity;
 
     /**
      * Perché l'ultimo authenticate() ha restituito null, per la diagnosi

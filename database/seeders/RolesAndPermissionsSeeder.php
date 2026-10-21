@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -28,23 +27,7 @@ class RolesAndPermissionsSeeder extends Seeder
         Role::findByName('admin')->givePermissionTo($perConto);
         Role::findByName('gestore')->givePermissionTo($perConto);
 
-        // Assegna ruoli Spatie agli utenti esistenti in base ai campi boolean legacy
-        User::where('amministratore', true)->each(function (User $user) {
-            $user->syncRoles(['admin']);
-        });
-
-        User::where('amministratore', false)
-            ->where('gestore_segnalazioni', true)
-            ->each(function (User $user) {
-                $user->syncRoles(['gestore']);
-            });
-
-        // Gli utenti senza nessun flag boolean sono segnalatori
-        User::where('amministratore', false)
-            ->where('gestore_segnalazioni', false)
-            ->whereDoesntHave('roles')
-            ->each(function (User $user) {
-                $user->syncRoles(['segnalatore']);
-            });
+        // Gira a ogni avvio (AllineamentoSeeder): mai toccare i ruoli degli
+        // utenti, li decidono il login AD (dai gruppi) e l'admin.
     }
 }

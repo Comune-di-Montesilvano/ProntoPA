@@ -86,7 +86,7 @@ class LoginRequest extends FormRequest
     /**
      * @throws ValidationException
      */
-    private function tentaDipendente(string $username, string $password): ?User
+    private function tentaDipendente(string $username, #[\SensitiveParameter] string $password): ?User
     {
         try {
             $user = app(LdapLoginService::class)->login($username, $password);
@@ -108,7 +108,7 @@ class LoginRequest extends FormRequest
      * Solo account locali: un utente ldap/spid non entra mai con password,
      * anche se ha la stessa email di una ditta.
      */
-    private function tentaLocale(string $campo, string $valore, string $password): ?User
+    private function tentaLocale(string $campo, string $valore, #[\SensitiveParameter] string $password): ?User
     {
         $user = User::where('auth_source', 'locale')
             ->when(

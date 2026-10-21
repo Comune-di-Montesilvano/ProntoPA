@@ -182,7 +182,9 @@ Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella 
 
 Migrations `database/migrations/` (27 file, naming datato `YYYY_MM_DD_......`), schema base da `legacy/export.sql`, evoluto per release additiva (v0.5→v1.0). Non fare affidamento sui nomi legacy `000000..000005`, ormai storici.
 
-Seeders (`DatabaseSeeder`): `TabelleRiferimentoSeeder` · `IstitutiPlessiSeeder` (vuoto by design, no dati demo in prod — usa `artisan demo`) · `ImpostazioniSeeder` · `RolesAndPermissionsSeeder` · `AdminUserSeeder` (dev/CI, marca `setup_completato`)
+Seeders (`DatabaseSeeder`): `AllineamentoSeeder` (= `TabelleRiferimentoSeeder` · `RolesAndPermissionsSeeder` · `ImpostazioniSeeder`, gira a ogni avvio) · `IstitutiPlessiSeeder` (vuoto by design, no dati demo in prod — usa `artisan demo`) · `AdminUserSeeder` (dev/CI, marca `setup_completato`). **Tutto ciò che sta in `AllineamentoSeeder` deve essere idempotente e non toccare mai dati configurati né ruoli degli utenti** (bug 0.8.1: permesso `segnalazioni.per-conto` mai arrivato in prod perché il seed ruoli girava solo con `users` vuota → 500 a ogni login AD). Nuovo ruolo/permesso/riga di riferimento → basta aggiungerlo al seeder, arriva al prossimo avvio. Mai far fare all'admin interventi da console.
+
+Parametri password: sempre `#[\SensitiveParameter]` (con backslash, siamo in un namespace) — altrimenti gli stacktrace in `laravel.log`/Sentry li scrivono in chiaro. Coperto da `tests/Unit/PasswordNonNeiLogTest.php`: nuovo metodo con password → aggiungilo lì.
 
 Import prod: `docker compose exec -T mariadb mariadb -u segnalazioni -p segnalazioni < legacy/export.sql`
 
@@ -238,7 +240,7 @@ Test SPID: `tests/Support/FakeOidcProvider` simula pa-sso-proxy con `Http::fake`
 
 1. `git push tag` → Actions builda GHCR
 2. Portainer stack → `docker-compose.yml`, env vars (APP_KEY, DB_PASSWORD, `LDAP_HOST` `LDAP_BASE_DN` `LDAP_USER_DN_TEMPLATE`…). **Mai `LDAP_HOST=mock`**
-3. L'entrypoint esegue migrate + seed dei dati di riferimento al primo avvio (nessun utente creato) e a OGNI avvio `ImpostazioniSeeder`, che aggiunge le chiavi nuove senza mai toccare i valori configurati (nuove impostazioni → basta aggiungerle al seeder)
+3. L'entrypoint a OGNI avvio esegue migrate + `AllineamentoSeeder` (dati di riferimento, ruoli/permessi, impostazioni nuove; mai valori configurati né ruoli utenti; nessun utente creato)
 4. Crea in AD i gruppi `PRONTOPA_*`, verifica con `php artisan ldap:prova <utente>`, entra con un utente di `PRONTOPA_ADMIN` → Admin → Impostazioni per configurare ente
 
 Rootless: no bind mount, named volumes `mariadb_data` `redis_data` `app_storage` → `/var/www/html/storage`
