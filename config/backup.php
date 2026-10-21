@@ -8,8 +8,8 @@ return [
     // Passphrase AES-256 dello ZIP. Vuota = backup disattivato.
     'passphrase' => env('BACKUP_PASSPHRASE') ?: null,
 
-    // Tabelle volatili/derivate, non incluse nel dump.
-    'tabelle_escluse' => ['sessions', 'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs'],
+    // Volatili/derivate; migrations è nel manifest (migrazioniApplicate), nel dump confliggerebbe.
+    'tabelle_escluse' => ['migrations', 'cache', 'cache_locks', 'sessions', 'jobs', 'job_batches'],
 
     // Colonne cifrate con APP_KEY: nel dump vengono decifrate e ricifrate
     // al ripristino con la APP_KEY del nuovo ambiente.
