@@ -9,10 +9,8 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            TabelleRiferimentoSeeder::class,
+            AllineamentoSeeder::class,
             IstitutiPlessiSeeder::class,
-            ImpostazioniSeeder::class,
-            RolesAndPermissionsSeeder::class,
         ]);
 
         // Nessun utente creato qui: i dipendenti (admin compreso) entrano da

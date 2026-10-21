@@ -80,7 +80,7 @@ final class LdapRecordDirectory implements Directory
         };
     }
 
-    public function authenticate(string $username, string $password): ?DirectoryIdentity
+    public function authenticate(string $username, #[\SensitiveParameter] string $password): ?DirectoryIdentity
     {
         $this->motivo = null;
 

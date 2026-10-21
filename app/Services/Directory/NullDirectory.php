@@ -8,7 +8,7 @@ namespace App\Services\Directory;
  */
 final class NullDirectory implements Directory
 {
-    public function authenticate(string $username, string $password): ?DirectoryIdentity
+    public function authenticate(string $username, #[\SensitiveParameter] string $password): ?DirectoryIdentity
     {
         return null;
     }

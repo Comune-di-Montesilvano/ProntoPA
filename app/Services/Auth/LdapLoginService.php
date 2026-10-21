@@ -25,7 +25,7 @@ final class LdapLoginService
      * @throws AccessoLdapNegato
      * @throws \App\Services\Directory\DirectoryNonDisponibile
      */
-    public function login(string $username, string $password): ?User
+    public function login(string $username, #[\SensitiveParameter] string $password): ?User
     {
         // Su AD un bind con password vuota è un bind anonimo che "riesce".
         if ($password === '') {
