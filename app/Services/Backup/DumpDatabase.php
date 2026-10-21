@@ -20,26 +20,19 @@ class DumpDatabase
     {
         $conteggi = [];
 
-        foreach ($this->tabelle() as $tabella) {
-            $fh = fopen("$dir/$tabella.jsonl", 'wb');
-            if ($fh === false) {
-                throw new RuntimeException("Impossibile scrivere il dump di {$tabella}.");
+        // Un'unica lettura coerente: scritture concorrenti non devono saltare/duplicare
+        // righe né rompere le FK tra tabelle. In REPEATABLE READ la vista si fissa alla prima lettura.
+        $conn = DB::connection();
+        if (in_array($conn->getDriverName(), ['mysql', 'mariadb'], true)) {
+            $conn->statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+        }
+        $conn->beginTransaction();
+        try {
+            foreach ($this->tabelle() as $tabella) {
+                $conteggi[$tabella] = $this->esportaTabella($tabella, "$dir/$tabella.jsonl");
             }
-
-            $n = 0;
-            try {
-                $query = DB::table($tabella);
-                foreach ($this->colonneOrdine($tabella) as $col) {
-                    $query->orderBy($col);
-                }
-                foreach ($query->lazy(1000) as $riga) {
-                    fwrite($fh, json_encode($riga, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)."\n");
-                    $n++;
-                }
-            } finally {
-                fclose($fh);
-            }
-            $conteggi[$tabella] = $n;
+        } finally {
+            $conn->rollBack();
         }
 
         return $conteggi;
@@ -97,6 +90,38 @@ class DumpDatabase
     public function migrazioniApplicate(): array
     {
         return DB::table('migrations')->orderBy('id')->pluck('migration')->all();
+    }
+
+    private function esportaTabella(string $tabella, string $file): int
+    {
+        $fh = fopen($file, 'wb');
+        if ($fh === false) {
+            throw new RuntimeException("Impossibile scrivere il dump di {$tabella}.");
+        }
+
+        $n = 0;
+        try {
+            $colonne = $this->colonneOrdine($tabella);
+            if ($colonne === ['id']) {
+                // Paginazione per chiave: niente scansioni OFFSET O(n²).
+                $righe = DB::table($tabella)->lazyById(1000);
+            } else {
+                $query = DB::table($tabella);
+                foreach ($colonne as $col) {
+                    $query->orderBy($col);
+                }
+                $righe = $query->lazy(1000);
+            }
+            foreach ($righe as $riga) {
+                fwrite($fh, json_encode($riga, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)."
+");
+                $n++;
+            }
+        } finally {
+            fclose($fh);
+        }
+
+        return $n;
     }
 
     private function contaRighe(string $file): int
