@@ -49,6 +49,7 @@ WORKDIR /var/www/html
 
 # Non-root user per sicurezza
 RUN addgroup -g 1000 -S www && adduser -u 1000 -S www -G www
+RUN mkdir -p backups && chown www:www backups
 USER www
 
 EXPOSE 9000

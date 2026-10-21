@@ -26,6 +26,7 @@ services:
       - ./:/var/www/html
       - ./storage:/var/www/html/storage
       - ./public/storage:/var/www/html/public/storage
+      - ./backups:/var/www/html/backups
       - ./docker/php/opcache-dev.ini:/usr/local/etc/php/conf.d/opcache.ini:ro
     restart: "no"
 
@@ -40,6 +41,7 @@ services:
       - ./:/var/www/html
       - ./storage:/var/www/html/storage
       - ./public/storage:/var/www/html/public/storage
+      - ./backups:/var/www/html/backups
     restart: "no"
 
   scheduler:
@@ -51,6 +53,7 @@ services:
       - ./:/var/www/html
       - ./storage:/var/www/html/storage
       - ./public/storage:/var/www/html/public/storage
+      - ./backups:/var/www/html/backups
     restart: "no"
 
   mariadb:

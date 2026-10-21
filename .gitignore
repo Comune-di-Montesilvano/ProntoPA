@@ -26,3 +26,4 @@ yarn-error.log
 /.zed
 .serena/
 .claude.local.md
+/backups/
