@@ -58,6 +58,8 @@ class RipristinoService
             $sconosciute === [],
             $sconosciute,
             $vuota,
+            // "Vuota" è una stima (0 segnalazioni, ≤1 utente): con la passphrase non si rischia.
+            $this->passphraseLocale() !== null || ! $vuota,
             hash_equals(substr(hash('sha256', (string) config('app.key')), 0, 12), (string) ($manifest['app_key_impronta'] ?? '')),
             rtrim((string) ($manifest['app_url'] ?? ''), '/') === rtrim((string) config('app.url'), '/'),
             $bloccante,
@@ -111,7 +113,7 @@ class RipristinoService
                 $this->giu();
                 // Dopo il down: il pre-ripristino deve contenere anche le ultime scritture.
                 $pre = null;
-                if (! $this->installazioneVuota()) {
+                if ($anteprima->preRipristino) {
                     $this->fase($token, 'pre-ripristino');
                     $pre = $this->backup->creaSenzaLock('pre-ripristino')->nome;
                     StatoRipristino::preRipristino($token, $pre);

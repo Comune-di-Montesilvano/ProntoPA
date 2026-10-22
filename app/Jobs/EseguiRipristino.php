@@ -20,6 +20,9 @@ class EseguiRipristino implements ShouldBeEncrypted, ShouldQueue
     use InteractsWithQueue;
     use Queueable;
 
+    /** Fasi in cui DB e allegati non sono ancora stati toccati. */
+    private const FASI_PRIMA_DEI_DATI = ['in coda', 'verifica', 'estrazione', 'manutenzione', 'pre-ripristino'];
+
     public int $tries = 1;
 
     public int $timeout = 7200;
@@ -60,13 +63,16 @@ class EseguiRipristino implements ShouldBeEncrypted, ShouldQueue
 
         try {
             $stato = StatoRipristino::leggi($this->token);
-            if (($stato['esito'] ?? null) === null) {
+            $motivo = $e?->getMessage() ?? 'processo terminato';
+            if (($stato['esito'] ?? null) === null && in_array($stato['fase'] ?? null, self::FASI_PRIMA_DEI_DATI, true)) {
+                StatoRipristino::fine($this->token, false,
+                    "Ripristino interrotto prima di sostituire i dati ($motivo): nessun dato modificato. Puoi riprovare.");
+            } elseif (($stato['esito'] ?? null) === null) {
                 $cosa = isset($stato['pre_ripristino'])
                     ? 'Ripristina il backup '.$stato['pre_ripristino'].'.'
                     : "Usa l'ultimo backup pre-ripristino in elenco.";
                 StatoRipristino::fine($this->token, false,
-                    'Ripristino interrotto a metà ('.($e?->getMessage() ?? 'processo terminato').'): '
-                    ."il database può essere incoerente. $cosa");
+                    "Ripristino interrotto a metà ($motivo): il database può essere incoerente. $cosa");
             }
         } catch (Throwable $s) {
             report($s);

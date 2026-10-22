@@ -48,9 +48,9 @@
                 <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Cosa succede</h2>
                 <ul class="list-disc pl-5 text-sm text-gray-700 space-y-1">
                     <li>Il database e gli allegati attuali vengono <strong>sostituiti</strong> da quelli del backup.</li>
-                    @unless($anteprima->installazioneVuota)
+                    @if($anteprima->preRipristino)
                         <li>Prima di procedere viene salvato un backup "pre-ripristino" dello stato attuale; se il ripristino fallisce si torna indietro in automatico.</li>
-                    @endunless
+                    @endif
                     <li>L'applicazione resta in manutenzione fino al termine.</li>
                     <li>Tutti gli utenti vengono disconnessi e devono accedere di nuovo.</li>
                 </ul>

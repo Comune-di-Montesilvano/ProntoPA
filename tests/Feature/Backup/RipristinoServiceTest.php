@@ -109,7 +109,7 @@ class RipristinoServiceTest extends TestCase
         $zip = $this->base.'/backups/'.$info->nome;
         $manifest = (new ArchivioBackup)->manifest($zip, 'test-pass');
 
-        // Installazione nuova: solo l'admin entrato via AD, passphrase locale non ancora impostata.
+        // Installazione nuova: solo l'admin entrato via AD, passphrase locale già impostata.
         Artisan::call('migrate:fresh', ['--force' => true]);
         $this->allinea();
         User::factory()->create();
@@ -118,10 +118,10 @@ class RipristinoServiceTest extends TestCase
         file_put_contents($this->base.'/app/public/vecchio.txt', 'da rimuovere');
         file_put_contents($this->base.'/app/radice.txt', 'da rimuovere');
         file_put_contents($this->base.'/app/quarantena/x', 'virus');
-        config(['backup.passphrase' => null]);
 
         $anteprima = $this->servizio()->anteprima($zip, 'test-pass');
         $this->assertTrue($anteprima->installazioneVuota);
+        $this->assertTrue($anteprima->preRipristino);
         $this->assertTrue($anteprima->compatibile);
         $this->assertNull($anteprima->bloccante);
         $this->assertTrue($anteprima->stessaAppKey);
@@ -154,9 +154,33 @@ class RipristinoServiceTest extends TestCase
         $this->assertFileDoesNotExist($this->base.'/app/public/vecchio.txt');
         $this->assertFileDoesNotExist($this->base.'/app/radice.txt');
         $this->assertFileExists($this->base.'/app/quarantena/x');
-        $this->assertSame([], $this->zips('pre-ripristino'));
+        // Con la passphrase locale il pre-ripristino si fa sempre: "vuota" è solo una stima.
+        $this->assertCount(1, $this->zips('pre-ripristino'));
         $this->assertSame([], glob($this->base.'/backups/tmp/*') ?: []);
         $this->assertFalse(app()->isDownForMaintenance());
+    }
+
+    public function test_ripristino_su_installazione_vuota_senza_passphrase_locale(): void
+    {
+        $this->allinea();
+        Segnalazione::factory()->count(2)->create();
+        $zip = $this->base.'/backups/'.app(BackupService::class)->crea('manuale')->nome;
+
+        Artisan::call('migrate:fresh', ['--force' => true]);
+        $this->allinea();
+        config(['backup.passphrase' => null]);
+
+        $anteprima = $this->servizio()->anteprima($zip, 'test-pass');
+        $this->assertTrue($anteprima->installazioneVuota);
+        $this->assertFalse($anteprima->preRipristino);
+        $this->assertNull($anteprima->bloccante);
+
+        $token = StatoRipristino::nuovoToken();
+        $this->servizio()->esegui($zip, 'test-pass', $token);
+
+        $this->assertTrue(StatoRipristino::leggi($token)['esito'], (string) StatoRipristino::leggi($token)['messaggio']);
+        $this->assertSame(2, Segnalazione::count());
+        $this->assertSame([], $this->zips('pre-ripristino'));
     }
 
     public function test_rifiuta_migrazioni_sconosciute(): void
@@ -297,11 +321,26 @@ class RipristinoServiceTest extends TestCase
         $this->assertFalse(app()->isDownForMaintenance());
         $this->assertDirectoryDoesNotExist($this->base.'/backups/tmp/ripristino-'.$token);
 
-        // Senza pre-ripristino noto: rimanda all'elenco.
+        // Dati già toccati ma pre-ripristino ignoto: rimanda all'elenco.
         $altro = StatoRipristino::nuovoToken();
-        StatoRipristino::fase($altro, 'estrazione');
+        StatoRipristino::fase($altro, 'allegati');
         (new EseguiRipristino($this->base.'/backups/x.zip', 'test-pass', $altro))->failed(null);
         $this->assertStringContainsString('ultimo backup pre-ripristino in elenco', StatoRipristino::leggi($altro)['messaggio']);
+    }
+
+    public function test_job_fallito_prima_di_toccare_i_dati_lo_dice(): void
+    {
+        foreach (['in coda', 'verifica', 'estrazione', 'manutenzione', 'pre-ripristino'] as $fase) {
+            $token = StatoRipristino::nuovoToken();
+            StatoRipristino::fase($token, $fase);
+            (new EseguiRipristino($this->base.'/backups/x.zip', 'test-pass', $token))
+                ->failed(new \RuntimeException('Worker terminato'));
+
+            $stato = StatoRipristino::leggi($token);
+            $this->assertFalse($stato['esito']);
+            $this->assertStringContainsString('nessun dato modificato', $stato['messaggio'], $fase);
+            $this->assertStringNotContainsString('incoerente', $stato['messaggio'], $fase);
+        }
     }
 
     public function test_fallimento_su_installazione_vuota_reinizializza(): void
@@ -311,6 +350,8 @@ class RipristinoServiceTest extends TestCase
         $zip = $this->base.'/backups/'.app(BackupService::class)->crea('manuale')->nome;
         Artisan::call('migrate:fresh', ['--force' => true]);
         $this->allinea();
+        // Senza passphrase locale niente pre-ripristino: l'unico ritorno è il DB vuoto.
+        config(['backup.passphrase' => null]);
 
         $this->app->instance(DumpDatabase::class, new class extends DumpDatabase
         {

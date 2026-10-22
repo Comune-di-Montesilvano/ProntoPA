@@ -14,6 +14,8 @@ final readonly class Anteprima
         public bool $compatibile,
         public array $migrazioniSconosciute,
         public bool $installazioneVuota,
+        /** Si salva lo stato attuale prima di procedere (sempre, se c'è la passphrase locale). */
+        public bool $preRipristino,
         public bool $stessaAppKey,
         public bool $stessoAppUrl,
         public ?string $bloccante,
