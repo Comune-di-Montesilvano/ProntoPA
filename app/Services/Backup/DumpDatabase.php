@@ -81,7 +81,8 @@ class DumpDatabase
     public function tabelle(): array
     {
         return array_values(array_diff(
-            Schema::getTableListing(schemaQualified: false),
+            // Solo lo schema corrente: altrimenti include i database visibili all'utente DB (es. legacy).
+            Schema::getTableListing(Schema::getCurrentSchemaListing(), schemaQualified: false),
             config('backup.tabelle_escluse'),
         ));
     }

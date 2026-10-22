@@ -82,7 +82,7 @@ class RipristinoService
             report($e);
             [$esito, $messaggio] = [false, self::NIENTE_TOCCATO.$e->getMessage()];
         } finally {
-            // Cache::flush() a fine ripristino ha già rimosso il lock: release() diventa un no-op.
+            // Il lock Redis sta sulla lock_connection (DB 0): sopravvive a Cache::flush(), il rilascio è reale.
             try {
                 $lock->release();
             } catch (Throwable) {
@@ -114,6 +114,7 @@ class RipristinoService
                 if (! $this->installazioneVuota()) {
                     $this->fase($token, 'pre-ripristino');
                     $pre = $this->backup->creaSenzaLock('pre-ripristino')->nome;
+                    StatoRipristino::preRipristino($token, $pre);
                 }
 
                 return $this->sostituisciConRollback($estratto, $token, basename($zip), $pre);

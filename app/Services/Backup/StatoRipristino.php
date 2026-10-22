@@ -26,7 +26,14 @@ class StatoRipristino
         self::scrivi($token, ['fase' => $esito ? 'completato' : 'fallito', 'esito' => $esito, 'messaggio' => $messaggio]);
     }
 
-    /** @return array{fase:string,esito:?bool,messaggio:string,aggiornato_il:string}|null */
+    /** Se il processo muore a metà, il job sa quale backup indicare per tornare indietro. */
+    public static function preRipristino(string $token, string $nome): void
+    {
+        $dati = self::leggi($token) ?? ['fase' => 'pre-ripristino', 'esito' => null, 'messaggio' => ''];
+        self::scrivi($token, ['pre_ripristino' => $nome] + $dati);
+    }
+
+    /** @return array{fase:string,esito:?bool,messaggio:string,aggiornato_il:string,pre_ripristino?:string}|null */
     public static function leggi(string $token): ?array
     {
         $file = self::file($token);
@@ -38,10 +45,14 @@ class StatoRipristino
         return is_array($dati) ? $dati : null;
     }
 
-    /** @param array{fase:string,esito:?bool,messaggio:string} $dati */
+    /** @param array{fase:string,esito:?bool,messaggio:string,pre_ripristino?:string} $dati */
     private static function scrivi(string $token, array $dati): void
     {
         $file = self::file($token);
+        $prima = self::leggi($token);
+        if (isset($prima['pre_ripristino']) && ! isset($dati['pre_ripristino'])) {
+            $dati['pre_ripristino'] = $prima['pre_ripristino'];
+        }
         if (! is_dir(dirname($file))) {
             mkdir(dirname($file), 0775, true);
         }

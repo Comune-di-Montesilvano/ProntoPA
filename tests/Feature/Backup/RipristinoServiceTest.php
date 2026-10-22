@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Backup;
 
+use App\Jobs\EseguiRipristino;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Models\User;
@@ -10,6 +11,7 @@ use App\Services\Backup\BackupNonLeggibile;
 use App\Services\Backup\BackupService;
 use App\Services\Backup\DumpDatabase;
 use App\Services\Backup\RipristinoService;
+use App\Services\Backup\SegretiCifrati;
 use App\Services\Backup\StatoRipristino;
 use Database\Seeders\AllineamentoSeeder;
 use Illuminate\Foundation\Events\MaintenanceModeDisabled;
@@ -235,22 +237,25 @@ class RipristinoServiceTest extends TestCase
     {
         $this->allinea();
         Impostazione::set('ente_nome', 'Comune A');
+        file_put_contents($this->base.'/app/public/solo-backup.txt', 'di A');
         $zip = $this->base.'/backups/'.app(BackupService::class)->crea('manuale')->nome;
 
         Impostazione::set('ente_nome', 'Comune B');
         Segnalazione::factory()->count(2)->create();
+        unlink($this->base.'/app/public/solo-backup.txt');
         file_put_contents($this->base.'/app/public/b.txt', 'di B');
 
-        $this->app->instance(DumpDatabase::class, new class extends DumpDatabase
+        // Fallisce DOPO la sostituzione degli allegati: il rollback deve rimettere anche quelli.
+        $this->app->instance(SegretiCifrati::class, new class extends SegretiCifrati
         {
             public int $chiamate = 0;
 
-            public function importa(string $dir, array $conteggi): void
+            public function applica(array $segreti): void
             {
                 if ($this->chiamate++ === 0) {
-                    throw new \RuntimeException('Import simulato fallito');
+                    throw new \RuntimeException('Ricifratura simulata fallita');
                 }
-                parent::importa($dir, $conteggi);
+                parent::applica($segreti);
             }
         });
 
@@ -261,13 +266,42 @@ class RipristinoServiceTest extends TestCase
         $pre = $this->zips('pre-ripristino');
         $this->assertCount(1, $pre);
         $this->assertFalse($stato['esito']);
+        $this->assertStringContainsString('Ricifratura simulata fallita', $stato['messaggio']);
         $this->assertStringContainsString($pre[0], $stato['messaggio']);
         $this->assertStringContainsString('ripristinato automaticamente', $stato['messaggio']);
+        $this->assertSame($pre[0], $stato['pre_ripristino']);
         $this->assertSame('Comune B', Impostazione::get('ente_nome'));
         $this->assertSame(2, Segnalazione::count());
         $this->assertSame('di B', file_get_contents($this->base.'/app/public/b.txt'));
+        $this->assertFileDoesNotExist($this->base.'/app/public/solo-backup.txt');
         $this->assertFalse(app()->isDownForMaintenance());
         $this->assertSame([], glob($this->base.'/backups/tmp/*') ?: []);
+    }
+
+    public function test_job_fallito_riporta_su_e_indica_il_pre_ripristino(): void
+    {
+        $token = StatoRipristino::nuovoToken();
+        StatoRipristino::fase($token, 'database');
+        StatoRipristino::preRipristino($token, 'prontopa-20261022-010000-dev-pre-ripristino.zip');
+        mkdir($this->base.'/backups/tmp/ripristino-'.$token.'/db', 0777, true);
+        Artisan::call('down');
+        $this->assertTrue(app()->isDownForMaintenance());
+
+        (new EseguiRipristino($this->base.'/backups/x.zip', 'test-pass', $token))
+            ->failed(new \RuntimeException('Worker terminato'));
+
+        $stato = StatoRipristino::leggi($token);
+        $this->assertFalse($stato['esito']);
+        $this->assertStringContainsString('prontopa-20261022-010000-dev-pre-ripristino.zip', $stato['messaggio']);
+        $this->assertStringContainsString('incoerente', $stato['messaggio']);
+        $this->assertFalse(app()->isDownForMaintenance());
+        $this->assertDirectoryDoesNotExist($this->base.'/backups/tmp/ripristino-'.$token);
+
+        // Senza pre-ripristino noto: rimanda all'elenco.
+        $altro = StatoRipristino::nuovoToken();
+        StatoRipristino::fase($altro, 'estrazione');
+        (new EseguiRipristino($this->base.'/backups/x.zip', 'test-pass', $altro))->failed(null);
+        $this->assertStringContainsString('ultimo backup pre-ripristino in elenco', StatoRipristino::leggi($altro)['messaggio']);
     }
 
     public function test_fallimento_su_installazione_vuota_reinizializza(): void
@@ -355,6 +389,18 @@ class RipristinoServiceTest extends TestCase
         $this->assertFalse($stato['esito']);
         $this->assertStringContainsString('in corso', $stato['messaggio']);
         $this->assertSame(2, Segnalazione::count());
+    }
+
+    public function test_tabelle_di_altri_schemi_ignorate(): void
+    {
+        // In dev (e dove l'utente DB vede altri database, es. 'legacy' per l'import)
+        // getTableListing() elenca anche le tabelle degli altri schemi.
+        DB::statement("ATTACH DATABASE ':memory:' AS legacy");
+        DB::statement('CREATE TABLE legacy.utenti (nome TEXT)');
+
+        $tabelle = app(DumpDatabase::class)->tabelle();
+        $this->assertContains('users', $tabelle);
+        $this->assertNotContains('utenti', $tabelle);
     }
 
     public function test_token_stato_validato(): void
