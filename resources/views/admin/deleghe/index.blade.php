@@ -29,6 +29,21 @@
             </div>
         @endif
 
+        @if($inAttesaVerifica->isNotEmpty())
+            <div class="bg-white shadow-sm rounded-xl p-4 text-sm">
+                <strong>In attesa di verifica email</strong>
+                <p class="text-xs text-gray-500">Entrati con SPID e profilo completato, ma non hanno ancora confermato l'email: finché non lo fanno non possono chiedere deleghe.</p>
+                <ul class="mt-2 space-y-1">
+                    @foreach($inAttesaVerifica as $attesa)
+                        <li class="flex items-center justify-between gap-3">
+                            <span>{{ $attesa->name }} · {{ $attesa->codice_fiscale }} · {{ $attesa->email }} <span class="text-xs text-gray-500">dal {{ $attesa->created_at?->format('d/m/Y H:i') }}</span></span>
+                            <form method="POST" action="{{ route('admin.deleghe.reinvia-verifica', $attesa) }}">@csrf<button class="text-xs text-blue-700 hover:underline whitespace-nowrap">Reinvia email di verifica</button></form>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <form method="GET" class="bg-white shadow-sm rounded-xl p-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
             <select name="stato" class="border-gray-300 rounded-md text-sm">
                 <option value="">Tutti gli stati</option>

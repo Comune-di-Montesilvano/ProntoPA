@@ -8,6 +8,7 @@ use App\Notifications\Deleghe\EsitoDelegaNotification;
 use App\Notifications\Deleghe\RichiestaDelegaNotification;
 use App\Services\Deleghe\DelegaService;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
@@ -137,6 +138,22 @@ class AdminDelegheTest extends TestCase
 
         Notification::assertSentOnDemand(RichiestaDelegaNotification::class, fn ($n, $c, $notifiable) => $notifiable->routes['mail'] === 'nuova@istruzione.it');
         $this->assertSame('nuova@istruzione.it', Delega::where('gruppo_richiesta', $gruppo)->sole()->email_destinatario);
+    }
+
+    public function test_elenca_spid_in_attesa_di_verifica_e_reinvia(): void
+    {
+        $attesa = $this->utenteSpid('VRDLGU75B02H501K', verificato: false);
+        $this->utenteSpid();
+
+        $this->actingAs($this->admin)->get(route('admin.deleghe.index'))
+            ->assertSee('In attesa di verifica email')
+            ->assertSee('VRDLGU75B02H501K')
+            ->assertDontSee('RSSMRA80A01G482X');
+
+        $this->actingAs($this->admin)->post(route('admin.deleghe.reinvia-verifica', $attesa))->assertSessionHas('success');
+        Notification::assertSentTo($attesa, VerifyEmail::class);
+
+        $this->actingAs($this->admin)->post(route('admin.deleghe.reinvia-verifica', $this->admin))->assertNotFound();
     }
 
     public function test_sblocca(): void
