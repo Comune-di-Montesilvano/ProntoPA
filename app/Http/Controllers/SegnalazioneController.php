@@ -94,24 +94,33 @@ class SegnalazioneController extends Controller
             array_map('trim', explode(',', Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png')))
         );
 
-        // Scuole via SPID: si segnala solo su un plesso coperto da delega.
+        if (! $request->user()->puoScegliereProvenienza()) {
+            $request->merge(['id_provenienza' => $request->user()->id_provenienza]);
+        }
+
+        $scuola = $request->user()->segnalaComeScuola();
+        if ($scuola) {
+            $request->merge(['latitudine' => null, 'longitudine' => null]);
+        }
+        $obbligatorioScuola = $scuola ? 'required' : 'nullable';
+
+        $regolePlesso = [$obbligatorioScuola, 'integer', 'exists:plessi,id_plesso'];
         if ($request->user()->isSpid()) {
-            $request->validate([
-                'id_plesso' => ['required', 'integer', Rule::in(Delega::plessiCopertiDa($request->user())->pluck('id_plesso')->all())],
-            ], ['id_plesso.in' => 'Puoi segnalare solo per i plessi coperti dalle tue deleghe.']);
+            // Scuole via SPID: si segnala solo su un plesso coperto da delega.
+            $regolePlesso = ['required', 'integer', Rule::in(Delega::plessiCopertiDa($request->user())->pluck('id_plesso')->all())];
         }
 
         $data = $request->validate([
             'id_tipologia_segnalazione' => ['required', 'integer', 'exists:tipologie_segnalazioni,id_tipologia_segnalazione'],
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
-            'id_plesso'                 => ['nullable', 'integer', 'exists:plessi,id_plesso'],
+            'id_plesso'                 => $regolePlesso,
             'id_provenienza'            => ['required', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
             'latitudine'                => ['nullable', 'numeric'],
             'longitudine'               => ['nullable', 'numeric'],
             'segnalazione_urgente'      => ['nullable', 'boolean'],
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
-            'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
-            'ubicazione_tipo'           => ['nullable', 'integer', 'between:0,4'],
+            'id_specializzazione'       => [$scuola && Specializzazione::exists() ? 'required' : 'nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
+            'ubicazione_tipo'           => $scuola ? ['required', 'integer', 'between:1,4'] : ['nullable', 'integer', 'between:0,4'],
             'allegati'                  => ['nullable', 'array', 'max:' . $maxPerRequest],
             'allegati.*'                => [
                 'file',
@@ -122,6 +131,12 @@ class SegnalazioneController extends Controller
             'telefono_per_conto'        => ['nullable', 'string', 'max:50'],
             'email_per_conto'           => ['nullable', 'email', 'max:255'],
             'salva_e_nuova'             => ['nullable', 'boolean'],
+        ], [
+            'id_plesso.required'           => 'Scegli il plesso.',
+            'id_plesso.in'                 => 'Puoi segnalare solo per i plessi coperti dalle tue deleghe.',
+            'id_specializzazione.required' => 'Scegli il tipo di intervento richiesto.',
+            'ubicazione_tipo.required'     => 'Indica dove si trova il problema.',
+            'ubicazione_tipo.between'      => 'Indica dove si trova il problema.',
         ]);
 
         $user = auth()->user();

@@ -78,8 +78,11 @@
                 </div>
 
                 {{-- Provenienza --}}
-                @php $provenienza_sel = old('id_provenienza', $provenienza_default); @endphp
-                @if($provenienza_default && auth()->user()->profilo?->limita_istituto)
+                @php
+                    $provenienza_sel = old('id_provenienza', $provenienza_default);
+                    $scuola = auth()->user()->segnalaComeScuola();
+                @endphp
+                @if(! auth()->user()->puoScegliereProvenienza() || ($provenienza_default && auth()->user()->profilo?->limita_istituto))
                     <input type="hidden" name="id_provenienza" value="{{ $provenienza_default }}">
                     <div>
                         <x-input-label value="Provenienza" />
@@ -107,10 +110,10 @@
 
                 {{-- Plesso --}}
                 <div>
-                    <x-input-label for="id_plesso" value="Plesso / Sede" />
-                    <select id="id_plesso" name="id_plesso"
-                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">— Nessuno —</option>
+                    <x-input-label for="id_plesso" :value="$scuola ? 'Plesso / Sede *' : 'Plesso / Sede'" />
+                    <select id="id_plesso" name="id_plesso" @required($scuola)
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_plesso') border-red-500 @enderror">
+                        <option value="">{{ $scuola ? '— Seleziona —' : '— Nessuno —' }}</option>
                         @foreach($plessi->groupBy(fn($p) => $p->istituto?->descrizione ?? 'Altro') as $istituto => $items)
                             <optgroup label="{{ $istituto }}">
                                 @foreach($items as $p)
@@ -163,20 +166,23 @@
                 </div>
 
                 {{-- Più dettagli (progressive disclosure) --}}
-                <div x-data="{ dettagli: {{ $errors->any() ? 'true' : 'false' }} }" class="mt-6">
+                {{-- Per le scuole i dettagli sono obbligatori e sempre visibili --}}
+                <div x-data="{ dettagli: {{ $scuola || $errors->any() ? 'true' : 'false' }} }" class="mt-6">
+                    @unless($scuola)
                     <button type="button" @click="dettagli = !dettagli"
                             class="flex items-center gap-2 text-sm font-medium text-blue-700">
                         <span x-text="dettagli ? '▾' : '▸'"></span> Più dettagli
                     </button>
-                    <div x-show="dettagli" class="mt-4 space-y-6">
+                    @endunless
+                    <div x-show="dettagli" class="{{ $scuola ? '' : 'mt-4 ' }}space-y-6">
 
                         {{-- Specializzazione --}}
                         @if($specializzazioni->isNotEmpty())
                         <div>
-                            <x-input-label for="id_specializzazione" value="Tipo di intervento richiesto" />
-                            <select id="id_specializzazione" name="id_specializzazione"
-                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                <option value="">— Generico / Non specificato —</option>
+                            <x-input-label for="id_specializzazione" :value="$scuola ? 'Tipo di intervento richiesto *' : 'Tipo di intervento richiesto'" />
+                            <select id="id_specializzazione" name="id_specializzazione" @required($scuola)
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_specializzazione') border-red-500 @enderror">
+                                <option value="">{{ $scuola ? '— Seleziona —' : '— Generico / Non specificato —' }}</option>
                                 @foreach($specializzazioni as $sp)
                                     <option value="{{ $sp->id_specializzazione }}"
                                         {{ old('id_specializzazione') == $sp->id_specializzazione ? 'selected' : '' }}>
@@ -190,12 +196,12 @@
 
                         {{-- Ubicazione --}}
                         <div>
-                            <x-input-label value="Dove si trova il problema" />
+                            <x-input-label :value="$scuola ? 'Dove si trova il problema *' : 'Dove si trova il problema'" />
                             <div class="mt-2 flex flex-wrap gap-2">
-                                @foreach([0 => 'Non specificato', 1 => 'Interno edificio', 2 => 'Esterno', 3 => 'Impianto', 4 => 'Area verde'] as $val => $label)
+                                @foreach(($scuola ? [] : [0 => 'Non specificato']) + [1 => 'Interno edificio', 2 => 'Esterno', 3 => 'Impianto', 4 => 'Area verde'] as $val => $label)
                                     <label class="inline-flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="ubicazione_tipo" value="{{ $val }}"
-                                               {{ old('ubicazione_tipo', 0) == $val ? 'checked' : '' }}
+                                        <input type="radio" name="ubicazione_tipo" value="{{ $val }}" @required($scuola)
+                                               {{ (string) old('ubicazione_tipo', $scuola ? '' : '0') === (string) $val ? 'checked' : '' }}
                                                class="text-blue-600 focus:ring-blue-500">
                                         <span class="text-sm text-gray-700">{{ $label }}</span>
                                     </label>
@@ -240,7 +246,8 @@
                 <input type="hidden" name="latitudine" id="latitudine" value="{{ old('latitudine', '0') }}">
                 <input type="hidden" name="longitudine" id="longitudine" value="{{ old('longitudine', '0') }}">
 
-                <div>
+                {{-- Scuole: la posizione è il plesso, niente mappa --}}
+                <div @class(['hidden' => $scuola])>
                     <x-input-label value="Posizione (opzionale)" />
                     <p class="text-xs text-gray-400 mb-2">Clicca sulla mappa per indicare la posizione del problema.</p>
                     <div id="mappa-inserimento" class="h-52 w-full rounded-lg border border-gray-300 overflow-hidden"></div>

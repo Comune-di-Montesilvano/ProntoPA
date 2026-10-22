@@ -112,6 +112,19 @@ class User extends Authenticatable
         return $this->auth_source === 'spid';
     }
 
+    /** Scuola (SPID o segnalatore "Direzioni didattiche"): plesso e dettagli obbligatori, niente mappa. */
+    public function segnalaComeScuola(): bool
+    {
+        return $this->isSpid()
+            || ($this->hasRole('segnalatore') && (int) $this->id_provenienza === \App\Services\Auth\SpidLoginService::PROVENIENZA_SCUOLE);
+    }
+
+    /** I segnalatori segnalano sempre con la propria provenienza; gestori e admin la scelgono. */
+    public function puoScegliereProvenienza(): bool
+    {
+        return blank($this->id_provenienza) || (! $this->isSpid() && ! $this->hasRole('segnalatore'));
+    }
+
     public function isBloccato(): bool
     {
         return $this->bloccato_at !== null;
