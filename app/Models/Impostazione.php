@@ -53,7 +53,7 @@ class Impostazione extends Model
      */
     public static function ripristinoId(): ?string
     {
-        $valore = Cache::rememberForever('impostazione:ripristino_id', fn () => static::find('ripristino_id')?->valore ?? '');
+        $valore = Cache::rememberForever('impostazione:ripristino_id', fn () => static::query()->where('chiave', 'ripristino_id')->value('valore') ?? '');
 
         return $valore === '' || $valore === null ? null : (string) $valore;
     }
