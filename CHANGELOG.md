@@ -4,6 +4,18 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.7] - 2026-10-22
+
+### Fixed
+- `app:import-legacy` pronto per il go-live:
+  - stati mappati secondo la tabella reale del vecchio programma (prima 3151
+    segnalazioni completate risultavano "assegnate a operatore");
+  - istituti e plessi già presenti (es. da anagrafe MIUR) riusati per codice
+    meccanografico invece di essere sovrascritti con gli id legacy;
+  - utenti legacy importati disattivati e senza ruoli (accesso e ruolo da AD o
+    SPID); utenti già presenti con lo stesso username riusati;
+  - rifiuta di partire se esistono già segnalazioni.
+
 ## [0.8.6] - 2026-10-22
 
 ### Changed
