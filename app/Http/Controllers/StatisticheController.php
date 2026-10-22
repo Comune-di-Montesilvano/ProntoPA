@@ -150,8 +150,9 @@ class StatisticheController extends Controller
         }
         $trendTotali = $trendSettimanale->pluck('totale')->toArray();
 
-        // KPI tempi medi permanenza per stato (PHP collection, compat SQLite)
-        $kpiTransizioni = Cache::remember('statistiche.kpi_transizioni', now()->addHours(2), function () {
+        // KPI tempi medi permanenza per stato (PHP collection, compat SQLite).
+        // In cache solo array: con serializable_classes=false una Collection torna incompleta.
+        $kpiTransizioni = collect(Cache::remember('statistiche.kpi_transizioni.v2', now()->addHours(2), function () {
             $storicoAll = StoricoStatoSegnalazione::query()
                 ->orderBy('id_segnalazione')
                 ->orderBy('data_registrazione')
@@ -184,8 +185,9 @@ class StatisticheController extends Controller
                     ];
                 })
                 ->sortBy('id_stato')
-                ->values();
-        });
+                ->values()
+                ->all();
+        }));
 
         return view('statistiche.index', compact(
             'kpi',

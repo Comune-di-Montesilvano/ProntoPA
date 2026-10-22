@@ -4,6 +4,12 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.9] - 2026-10-22
+
+### Fixed
+- Statistiche in errore (500) dal secondo accesso: i tempi medi per stato
+  erano salvati in cache come oggetto, che con Redis tornava illeggibile.
+
 ## [0.8.8] - 2026-10-22
 
 ### Fixed
