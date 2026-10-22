@@ -9,8 +9,7 @@ use Illuminate\Support\Facades\Hash;
 class ImportLegacy extends Command
 {
     protected $signature = 'app:import-legacy
-                            {--truncate : Svuota le tabelle di destinazione prima di importare}
-                            {--skip-reference : Salta le tabelle di riferimento (istituti, plessi, profili, appalti, imprese)}';
+                            {--truncate : Svuota le tabelle di destinazione prima di importare}';
 
     protected $description = 'Importa i dati dal database legacy nel nuovo schema';
 
@@ -32,13 +31,18 @@ class ImportLegacy extends Command
             $this->truncateTables();
         }
 
-        if (! $this->option('skip-reference')) {
-            $this->importIstituti();
-            $this->importPlessi();
-            $this->importProfili();
-            $this->importImprese();
-            $this->importAppalti();
+        // Import una tantum: gli id delle segnalazioni legacy restano quelli noti agli utenti.
+        if (DB::table('segnalazioni')->exists()) {
+            $this->error('Ci sono già segnalazioni: l\'import va fatto su un\'installazione senza segnalazioni (o con --truncate).');
+
+            return 1;
         }
+
+        $this->importIstituti();
+        $this->importPlessi();
+        $this->importProfili();
+        $this->importImprese();
+        $this->importAppalti();
 
         $this->importUtenti();
         $this->importSegnalazioni();
@@ -88,44 +92,86 @@ class ImportLegacy extends Command
 
     // ─── Reference tables ────────────────────────────────────────────────────────
 
+    /** id_istituto legacy → id nuovo */
+    private array $istitutoMap = [];
+
+    /** id_plesso legacy → id nuovo */
+    private array $plessoMap = [];
+
+    /**
+     * Istituti già presenti (es. selezionati dall'anagrafe MIUR) si riusano per
+     * codice meccanografico: mai sovrascritti, mai id legacy forzati.
+     */
     private function importIstituti(): void
     {
         $this->info('Importazione istituti...');
         $rows = $this->legacy()->table('istituti')->get();
+        $riusati = 0;
         foreach ($rows as $r) {
-            DB::table('istituti')->updateOrInsert(
-                ['id_istituto' => $r->id_istituto],
-                [
-                    'descrizione'           => $r->descrizione,
-                    'codice_meccanografico' => $r->codice_meccanografico,
-                    'dirigente'             => $r->dirigente,
-                    'email'                 => $r->email,
-                    'recapiti'              => $r->recapiti,
-                ]
-            );
+            $codice = strtoupper(trim((string) $r->codice_meccanografico));
+            $esistente = $codice === '' ? null
+                : DB::table('istituti')->whereRaw('UPPER(codice_meccanografico) = ?', [$codice])->value('id_istituto');
+
+            if ($esistente) {
+                $this->istitutoMap[$r->id_istituto] = (int) $esistente;
+                $riusati++;
+                continue;
+            }
+
+            $this->istitutoMap[$r->id_istituto] = (int) DB::table('istituti')->insertGetId([
+                'descrizione'           => $r->descrizione,
+                'codice_meccanografico' => $codice,
+                'dirigente'             => $r->dirigente,
+                'email'                 => $r->email,
+                'recapiti'              => $r->recapiti,
+            ]);
         }
-        $this->line("  {$rows->count()} istituti.");
+        $this->line("  {$rows->count()} istituti ({$riusati} già presenti, riusati).");
     }
 
+    /**
+     * Plesso riusato solo se il codice è univoco sia nel legacy sia
+     * nell'istituto di destinazione; altrimenti (succursali, palestre,
+     * segreterie con codice condiviso) si crea un plesso nuovo col nome legacy.
+     */
     private function importPlessi(): void
     {
         $this->info('Importazione plessi...');
         $rows = $this->legacy()->table('plessi')->get();
+        $codiciLegacy = $rows->countBy(fn ($r) => strtoupper(trim((string) $r->codice_meccanografico)));
+        $riusati = 0;
         foreach ($rows as $r) {
-            DB::table('plessi')->updateOrInsert(
-                ['id_plesso' => $r->id_plesso],
-                [
-                    'id_istituto'           => $r->id_istituto,
-                    'nome'                  => $r->nome,
-                    'codice_meccanografico' => $r->codice_meccanografico,
-                    'indirizzo'             => $r->indirizzo,
-                    'referente'             => $r->referente,
-                    'email'                 => $r->email,
-                    'recapiti'              => $r->recapiti,
-                ]
-            );
+            $idIstituto = $this->istitutoMap[$r->id_istituto] ?? null;
+            if ($idIstituto === null) {
+                $this->warn("  Plesso legacy {$r->id_plesso} senza istituto valido: saltato.");
+                continue;
+            }
+
+            $codice = strtoupper(trim((string) $r->codice_meccanografico));
+            $esistente = null;
+            if ($codice !== '' && $codiciLegacy[$codice] === 1) {
+                $trovati = DB::table('plessi')->where('id_istituto', $idIstituto)
+                    ->whereRaw('UPPER(codice_meccanografico) = ?', [$codice])->pluck('id_plesso');
+                $esistente = $trovati->count() === 1 ? $trovati->first() : null;
+            }
+
+            if ($esistente) {
+                $this->plessoMap[$r->id_plesso] = (int) $esistente;
+                $riusati++;
+                continue;
+            }
+
+            $this->plessoMap[$r->id_plesso] = (int) DB::table('plessi')->insertGetId([
+                'id_istituto'           => $idIstituto,
+                'nome'                  => trim((string) $r->nome),
+                'codice_meccanografico' => $codice,
+                'indirizzo'             => $r->indirizzo,
+                'referente'             => $r->referente,
+                'email'                 => $r->email,
+                'recapiti'              => $r->recapiti,
+            ]);
         }
-        $this->line("  {$rows->count()} plessi.");
+        $this->line("  {$rows->count()} plessi ({$riusati} già presenti, riusati).");
     }
 
     private function importProfili(): void
@@ -138,7 +184,7 @@ class ImportLegacy extends Command
                 [
                     'descrizione'    => $r->descrizione,
                     'limita_istituto' => (bool) $r->limita_istituto,
-                    'id_istituto'    => $r->id_istituto ?: null,
+                    'id_istituto'    => $this->istitutoMap[$r->id_istituto] ?? null,
                 ]
             );
         }
@@ -192,18 +238,20 @@ class ImportLegacy extends Command
     {
         $this->info('Importazione utenti...');
 
-        // Get Spatie role IDs
-        $roles = DB::table('roles')->pluck('id', 'name');
-
         $rows = $this->legacy()->table('utenti')->get();
         $bar  = $this->output->createProgressBar($rows->count());
         $bar->start();
 
         $usedEmails = DB::table('users')->pluck('email')->flip()->toArray();
+        $riusati = 0;
 
         foreach ($rows as $u) {
-            // Determine role
-            $ruolo = $this->determineRole($u);
+            // Utente già in ProntoPA (es. login AD già fatto): si riusa, mai duplicato.
+            if (DB::table('users')->whereRaw('LOWER(username) = ?', [mb_strtolower($u->username)])->exists()) {
+                $riusati++;
+                $bar->advance();
+                continue;
+            }
 
             // Generate unique email: prefer legacy email, fallback to username@legacy.local
             // If already taken (duplicate legacy emails), append username suffix
@@ -220,31 +268,25 @@ class ImportLegacy extends Command
             }
             $usedEmails[$email] = true;
 
-            $userId = DB::table('users')->insertGetId([
+            // Solo autori dello storico: disattivati e senza ruoli né flag. Accesso e
+            // ruolo arrivano da AD (aggancio per email al primo login) o SPID.
+            DB::table('users')->insert([
                 'name'                      => $u->nome_esteso ?? $u->username,
                 'username'                  => $u->username,
                 'email'                     => $email,
-                'password'                  => Hash::make(str()->random(20)), // unusable password
-                'password_legacy'           => $u->pwd,
+                'password'                  => Hash::make(str()->random(40)),
+                'password_legacy'           => null,
                 'id_profilo'                => $u->id_profilo ?: null,
                 'id_provenienza'            => $u->id_provenienza ?: null,
-                'amministratore'            => (bool) $u->amministratore,
-                'gestore_segnalazioni'      => (bool) $u->gestore_segnalazioni,
-                'supervisore_segnalazioni'  => (bool) $u->supervisore_segnalazioni,
+                'amministratore'            => false,
+                'gestore_segnalazioni'      => false,
+                'supervisore_segnalazioni'  => false,
+                'attivo'                    => false,
                 'last_login'                => $u->last_login,
                 'email_verified_at'         => now(),
                 'created_at'                => now(),
                 'updated_at'                => now(),
             ]);
-
-            // Assign Spatie role
-            if (isset($roles[$ruolo])) {
-                DB::table('model_has_roles')->insertOrIgnore([
-                    'role_id'    => $roles[$ruolo],
-                    'model_type' => 'App\\Models\\User',
-                    'model_id'   => $userId,
-                ]);
-            }
 
             $this->importedUsers++;
             $bar->advance();
@@ -252,20 +294,7 @@ class ImportLegacy extends Command
 
         $bar->finish();
         $this->newLine();
-        $this->line("  {$this->importedUsers} utenti importati.");
-    }
-
-    private function determineRole(object $u): string
-    {
-        if ($u->amministratore) {
-            return 'admin';
-        }
-        if ($u->gestore_segnalazioni) {
-            return 'gestore';
-        }
-        // Check if the profilo is a school (limita_istituto)
-        // We can't easily cross-reference here, so mark as segnalatore if has id_profilo
-        return 'segnalatore';
+        $this->line("  {$this->importedUsers} utenti importati (disattivati), {$riusati} già presenti riusati.");
     }
 
     // ─── Segnalazioni ────────────────────────────────────────────────────────────
@@ -284,7 +313,7 @@ class ImportLegacy extends Command
 
         foreach ($rows as $s) {
             // Map zero values to null
-            $idPlesso   = $s->id_plesso   > 0 ? $s->id_plesso   : null;
+            $idPlesso   = $s->id_plesso   > 0 ? ($this->plessoMap[$s->id_plesso] ?? null) : null;
             $idAppalto  = $s->id_appalto  > 0 ? $s->id_appalto  : null;
             $idOperatore = $s->id_operatore_assegnato > 0
                 ? ($userMap[$s->id_operatore_assegnato] ?? null)
@@ -402,19 +431,22 @@ class ImportLegacy extends Command
 
     private function mapStato(int $legacyId): int
     {
+        // Numerazione reale di db_stato_segnalazioni nel legacy (Montesilvano).
         return match($legacyId) {
-            1  => 1,  // Attesa esame   → NUOVA
-            2  => 2,  // In carico      → IN_CARICO
-            3  => 3,  // In gestione    → ASSEGNATA_OPERATORE
-            4  => 5,  // Val.economica  → PREVENTIVO_IN_ATTESA
-            5  => 4,  // Ass.impresa    → ASSEGNATA_IMPRESA
-            6  => 3,  // Acc.tecnico    → ASSEGNATA_OPERATORE
-            7  => 7,  // Prop.chiusura  → COMPLETATA
-            8  => 7,  // Completata     → COMPLETATA
-            9  => 9,  // Annullata      → ANNULLATA
-            10 => 10, // Archiviata     → ARCHIVIATA
-            11 => 5,  // Stimata        → PREVENTIVO_IN_ATTESA
-            12 => 4,  // In appalto     → ASSEGNATA_IMPRESA
+            1  => 1,  // In attesa di esame         → NUOVA
+            2  => 2,  // In carico                  → IN_CARICO
+            3  => 7,  // Completata                 → COMPLETATA
+            4  => 9,  // Annullata                  → ANNULLATA
+            5  => 10, // Archiviata                 → ARCHIVIATA
+            6  => 2,  // Valutazione fattibilità    → IN_CARICO
+            7  => 4,  // Assegnata ad impresa       → ASSEGNATA_IMPRESA
+            8  => 3,  // Assegnato squadra tecnica  → ASSEGNATA_OPERATORE
+            9  => 5,  // In approvazione preventivo → PREVENTIVO_IN_ATTESA
+            10 => 4,  // Attesa collaudo            → ASSEGNATA_IMPRESA
+            11 => 4,  // Preventivo accettato       → ASSEGNATA_IMPRESA
+            12 => 6,  // Sospesa                    → SOSPESA
+            13 => 6,  // Attesa pareri tecnico-fin. → SOSPESA
+            14 => 2,  // In corso sopralluogo       → IN_CARICO
             default => 1,
         };
     }
