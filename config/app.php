@@ -17,6 +17,11 @@ return [
 
     'version' => env('APP_VERSION', 'dev'),
 
+    // Dal build Docker (release.yml): release | auto (rebuild settimanale di latest) | dev
+    'build_type' => env('APP_BUILD_TYPE', 'dev'),
+    'build_date' => env('APP_BUILD_DATE'),
+    'commit' => env('APP_COMMIT'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

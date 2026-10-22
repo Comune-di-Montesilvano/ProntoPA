@@ -2,6 +2,9 @@ name: Build & Publish Docker Images
 
 # dev branch  → build sempre, tag immagine: "dev"
 # tag v*.*.* → build + tag semver + "latest"
+# lunedì 04:30 UTC → rebuild di main con immagini base e patch Alpine fresche: pubblica
+#   `latest-YYYYMMDD` e promuove `latest` solo se Trivy passa. I tag X.Y.Z / X.Y restano
+#   quelli del rilascio. Saltato se negli ultimi 7 giorni è già uscito un tag.
 
 on:
   push:
@@ -9,11 +12,20 @@ on:
       - dev
     tags:
       - "v*.*.*"
+  schedule:
+    - cron: "30 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      rebuild_latest:
+        description: "Rebuild di latest (come lo schedule settimanale, senza skip)"
+        type: boolean
+        default: false
 
 env:
   IMAGE_APP: ghcr.io/comune-di-montesilvano/pronto-pa
   IMAGE_WEB: ghcr.io/comune-di-montesilvano/pronto-pa-web
 
+# Mai cancel-in-progress: un push a ghcr interrotto a metà può lasciare un manifest incompleto.
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -27,24 +39,72 @@ jobs:
       contents: read
       packages: write
       security-events: write
+      actions: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Storia + tag: il rebuild settimanale ricava l'ultimo tag vX.Y.Z.
+          fetch-depth: 0
 
       - name: Compute build config
         id: vars
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          REBUILD_LATEST: ${{ inputs.rebuild_latest }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
         run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=dev" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          auto=false
+          skip=false
+          if [[ "$EVENT_NAME" == "schedule" || "$REBUILD_LATEST" == "true" ]]; then
+            auto=true
           fi
+          # Solo lo schedule salta: un tag pubblicato negli ultimi 7 giorni ha già rinfrescato
+          # latest. Le run push sui tag hanno headBranch = nome del tag (vX.Y.Z), quelle su dev no.
+          if [[ "$EVENT_NAME" == "schedule" ]]; then
+            since=$(date -u -d '7 days ago' +%F)
+            recent=$(gh run list -R "$REPO" --workflow release.yml --event push \
+              --status success --created ">=$since" --json headBranch \
+              -q '[.[] | select(.headBranch | startswith("v"))] | length')
+            if [[ "$recent" -gt 0 ]]; then
+              echo "::notice::Tag pubblicato negli ultimi 7 giorni: rebuild settimanale saltato."
+              skip=true
+            fi
+          fi
+          if [[ "$auto" == "true" ]]; then
+            # main coincide con l'ultimo rilascio (bump nella stessa PR), salvo commit solo test/CI.
+            version=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo "${GITHUB_SHA::7}")
+            build_type=auto
+          elif [[ "$REF_TYPE" == "tag" ]]; then
+            version="$REF_NAME"
+            build_type=release
+          else
+            version=dev
+            build_type=dev
+          fi
+          {
+            echo "version=$version"
+            echo "build_type=$build_type"
+            echo "auto=$auto"
+            echo "skip=$skip"
+            echo "auto_tag=latest-$(date -u +%Y%m%d)"
+            echo "build_date=$(date -u +%F)"
+            # Settimana ISO: invalida il layer `apk upgrade`, altrimenti la cache GHA lo
+            # congela e le patch Alpine non entrano mai.
+            echo "apk_refresh=$(date -u +%G-W%V)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
+        if: steps.vars.outputs.skip != 'true'
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - name: Log in to GHCR
+        if: steps.vars.outputs.skip != 'true'
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
@@ -54,34 +114,39 @@ jobs:
       # ── Metadata per entrambe le immagini ───────────────────────────────────
 
       - name: Docker metadata (app)
+        if: steps.vars.outputs.skip != 'true'
         id: meta-app
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
           images: ${{ env.IMAGE_APP }}
           bake-target: app
           tags: |
-            type=ref,event=branch
+            type=ref,event=branch,enable=${{ steps.vars.outputs.auto != 'true' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
+            type=raw,value=${{ steps.vars.outputs.auto_tag }},enable=${{ steps.vars.outputs.auto == 'true' }}
 
       - name: Docker metadata (web)
+        if: steps.vars.outputs.skip != 'true'
         id: meta-web
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
           images: ${{ env.IMAGE_WEB }}
           bake-target: web
           tags: |
-            type=ref,event=branch
+            type=ref,event=branch,enable=${{ steps.vars.outputs.auto != 'true' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
+            type=raw,value=${{ steps.vars.outputs.auto_tag }},enable=${{ steps.vars.outputs.auto == 'true' }}
 
       # ── Build & push entrambe le immagini in parallelo (bake) ───────────────
       # Builder stage gira una sola volta; app e web buildate in parallelo.
       # Cache scope separati per target (definiti in docker-bake.hcl).
 
       - name: Build & push (bake)
+        if: steps.vars.outputs.skip != 'true'
         uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7
         with:
           files: |
@@ -92,47 +157,68 @@ jobs:
             cwd://${{ steps.meta-web.outputs.bake-file-labels }}
           push: true
           set: |
-            app.args.APP_VERSION=${{ steps.vars.outputs.version }}
-            web.args.APP_VERSION=${{ steps.vars.outputs.version }}
+            *.args.APP_VERSION=${{ steps.vars.outputs.version }}
+            *.args.APP_BUILD_TYPE=${{ steps.vars.outputs.build_type }}
+            *.args.APP_BUILD_DATE=${{ steps.vars.outputs.build_date }}
+            *.args.APP_COMMIT=${{ github.sha }}
+            *.args.APK_REFRESH=${{ steps.vars.outputs.apk_refresh }}
         env:
           PLATFORMS: linux/amd64
 
-      # ── Scan immagini pubblicate — report-only, risultati su tab Security ──
-      # Non blocca il push (già avvenuto): coglie CVE note per triage,
+      # ── Scan immagini pubblicate, risultati su tab Security ─────────────────
+      # Tag/dev: report-only (push già avvenuto), coglie CVE note per triage,
       # coerente col pattern trivy-fs bloccante già in tests.yml a monte.
+      # Rebuild settimanale: bloccante, `latest` viene promosso solo se passa.
+      # Versione Trivy pinnata: trivy-version-check.yml apre una issue quando ne esce una nuova.
 
       - name: Trivy scan (app image)
+        if: steps.vars.outputs.skip != 'true'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          version: latest # il binario Trivy pinnato di default da questa release dell'action (0.69.1) non installa
-          image-ref: ${{ env.IMAGE_APP }}:${{ steps.meta-app.outputs.version }}
+          version: v0.75.0
+          image-ref: ${{ env.IMAGE_APP }}:${{ steps.vars.outputs.auto == 'true' && steps.vars.outputs.auto_tag || steps.meta-app.outputs.version }}
           format: sarif
           output: trivy-app.sarif
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-          exit-code: "0"
+          limit-severities-for-sarif: true
+          exit-code: ${{ steps.vars.outputs.auto == 'true' && '1' || '0' }}
 
       - name: Trivy scan (web image)
+        if: steps.vars.outputs.skip != 'true'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          version: latest # il binario Trivy pinnato di default da questa release dell'action (0.69.1) non installa
-          image-ref: ${{ env.IMAGE_WEB }}:${{ steps.meta-web.outputs.version }}
+          version: v0.75.0
+          image-ref: ${{ env.IMAGE_WEB }}:${{ steps.vars.outputs.auto == 'true' && steps.vars.outputs.auto_tag || steps.meta-web.outputs.version }}
           format: sarif
           output: trivy-web.sarif
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-          exit-code: "0"
+          limit-severities-for-sarif: true
+          exit-code: ${{ steps.vars.outputs.auto == 'true' && '1' || '0' }}
+
+      # Rebuild settimanale: `latest` punta alle nuove immagini solo DOPO che Trivy le ha
+      # passate entrambe (se uno scan fallisce il job si ferma e latest resta il precedente).
+      - name: Promuovi latest
+        if: steps.vars.outputs.auto == 'true' && steps.vars.outputs.skip != 'true'
+        env:
+          AUTO_TAG: ${{ steps.vars.outputs.auto_tag }}
+        run: |
+          set -euo pipefail
+          for image in "$IMAGE_APP" "$IMAGE_WEB"; do
+            docker buildx imagetools create -t "$image:latest" "$image:$AUTO_TAG"
+          done
 
       - name: Upload Trivy results (app) to Security tab
         uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
-        if: always()
+        if: always() && steps.vars.outputs.skip != 'true' && hashFiles('trivy-app.sarif') != ''
         with:
           sarif_file: trivy-app.sarif
           category: trivy-app
 
       - name: Upload Trivy results (web) to Security tab
         uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
-        if: always()
+        if: always() && steps.vars.outputs.skip != 'true' && hashFiles('trivy-web.sarif') != ''
         with:
           sarif_file: trivy-web.sarif
           category: trivy-web

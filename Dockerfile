@@ -73,11 +73,14 @@ RUN composer run-script post-autoload-dump \
 ############################################
 FROM php:8.4-fpm-alpine AS app
 
-ARG APP_VERSION=dev
-ENV APP_VERSION=${APP_VERSION}
+# Settimana ISO dal workflow: cambia una volta a settimana e invalida il layer,
+# così il rebuild settimanale applica le patch Alpine anche con la cache GHA.
+ARG APK_REFRESH=none
 
 # Runtime libs identici a php-extensions Layer 1
-RUN apk add --no-cache \
+RUN echo "apk refresh ${APK_REFRESH}" \
+    && apk upgrade --no-cache \
+    && apk add --no-cache \
     libpng libjpeg-turbo libwebp freetype libzip oniguruma icu-libs libldap
 
 # Copia solo extensions compilate dallo stage dedicato
@@ -97,6 +100,17 @@ RUN mkdir -p backups \
     && chown -R www:www storage bootstrap/cache backups \
     && chmod +x /usr/local/bin/entrypoint.sh
 
+# Metadati build (Sentry: tag build_type/commit/build_date). In fondo: cambiano a ogni
+# build e non devono invalidare i layer sopra.
+ARG APP_VERSION=dev
+ARG APP_BUILD_TYPE=dev
+ARG APP_BUILD_DATE=
+ARG APP_COMMIT=
+ENV APP_VERSION=${APP_VERSION} \
+    APP_BUILD_TYPE=${APP_BUILD_TYPE} \
+    APP_BUILD_DATE=${APP_BUILD_DATE} \
+    APP_COMMIT=${APP_COMMIT}
+
 USER www
 
 EXPOSE 9000
@@ -108,6 +122,9 @@ CMD ["php-fpm"]
 # Target: web
 ############################################
 FROM nginx:1.27-alpine AS web
+
+ARG APK_REFRESH=none
+RUN echo "apk refresh ${APK_REFRESH}" && apk upgrade --no-cache
 
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY --link --from=builder /var/www/html/public /var/www/html/public

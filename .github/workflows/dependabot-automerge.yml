@@ -1,0 +1,122 @@
+name: Dependabot auto-merge
+# Minor/patch di dependabot: auto-merge (squash) appena i required check sono verdi.
+# Major: nessuna azione, la PR resta aperta come promemoria per l'upgrade manuale.
+# Eccezione: immagini php/mariadb/redis (es. php 8.4 -> 8.5) — dependabot le classifica
+# minor ma sono upgrade di runtime/dati, restano manuali come le major.
+#
+# Token GitHub App (secret BOT_CLIENT_ID / BOT_PRIVATE_KEY) invece di GITHUB_TOKEN:
+# merge e update-branch fatti con GITHUB_TOKEN non triggerano altri workflow, quindi la CI
+# non girerebbe sul branch aggiornato e la PR resterebbe bloccata dalla branch protection
+# (strict: branch aggiornato con main). Sul trigger pull_request di dependabot sono
+# visibili solo i secret Dependabot: i due secret vanno salvati sia come Actions che come
+# Dependabot secret. Senza secret il workflow non fa nulla (notice), le PR restano manuali.
+# Permessi App (repo): Contents RW, Pull requests RW, Workflows RW (le PR github-actions
+# toccano .github/workflows/), Metadata R.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  # Dopo ogni merge su main le altre PR auto-merge restano "behind": le si aggiorna qui.
+  # Il push generato dal merge col token App triggera questo evento (con GITHUB_TOKEN no).
+  push:
+    branches: [main]
+  # Fallback se un evento push si perde.
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || 'sweep' }}
+  cancel-in-progress: false
+
+jobs:
+  enable-automerge:
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decidi
+        id: decide
+        env:
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          ECOSYSTEM: ${{ steps.meta.outputs.package-ecosystem }}
+          DEPS: ${{ steps.meta.outputs.dependency-names }}
+          HAS_APP: ${{ secrets.BOT_CLIENT_ID != '' && secrets.BOT_PRIVATE_KEY != '' }}
+        run: |
+          merge=true
+          if [[ "$UPDATE_TYPE" == "version-update:semver-major" ]]; then
+            merge=false
+          elif [[ "$ECOSYSTEM" == docker* ]] && grep -Eq '(^|[ ,/])(php|mariadb|redis)([ ,:]|$)' <<<"$DEPS"; then
+            merge=false
+          fi
+          if [[ "$merge" == "true" && "$HAS_APP" != "true" ]]; then
+            echo "::notice::Secret BOT_CLIENT_ID/BOT_PRIVATE_KEY assenti: auto-merge non attivato."
+            merge=false
+          elif [[ "$merge" != "true" ]]; then
+            echo "::notice::Nessun auto-merge (${UPDATE_TYPE}, ${DEPS}) - PR lasciata aperta per revisione manuale."
+          fi
+          echo "merge=$merge" >> "$GITHUB_OUTPUT"
+
+      - name: Token GitHub App
+        id: app
+        if: steps.decide.outputs.merge == 'true'
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.BOT_CLIENT_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Abilita auto-merge
+        if: steps.decide.outputs.merge == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
+
+  update-behind:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verifica secret App
+        id: check
+        env:
+          HAS_APP: ${{ secrets.BOT_CLIENT_ID != '' && secrets.BOT_PRIVATE_KEY != '' }}
+        run: |
+          echo "ok=$HAS_APP" >> "$GITHUB_OUTPUT"
+          [[ "$HAS_APP" == "true" ]] || echo "::notice::Secret BOT_CLIENT_ID/BOT_PRIVATE_KEY assenti: niente da aggiornare."
+
+      - name: Token GitHub App
+        id: app
+        if: steps.check.outputs.ok == 'true'
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.BOT_CLIENT_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      # Una PR alla volta (la più vecchia): aggiornarle tutte insieme farebbe ripartire N CI
+      # in parallelo e dopo il primo merge le altre tornerebbero comunque behind. Il merge di
+      # questa genera un push su main, che rilancia questo job per la successiva.
+      - name: Aggiorna la prima PR dependabot behind con auto-merge attivo
+        if: steps.check.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          n=$(gh pr list -R "$REPO" --author 'app/dependabot' --state open \
+            --json number,autoMergeRequest,mergeStateStatus \
+            -q '[.[] | select(.autoMergeRequest != null and .mergeStateStatus == "BEHIND")] | sort_by(.number) | .[0].number // empty')
+          if [ -z "$n" ]; then
+            echo "Nessuna PR dependabot behind."
+            exit 0
+          fi
+          echo "Aggiorno PR #$n con main"
+          gh api -X PUT "repos/$REPO/pulls/$n/update-branch" >/dev/null
