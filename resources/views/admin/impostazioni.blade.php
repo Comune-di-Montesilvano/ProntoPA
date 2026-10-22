@@ -110,6 +110,17 @@
                                 </div>
                             @endforeach
 
+                            @if($gruppo === 'pubblicazione')
+                                <div class="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                                    <p>La regola scatta ai cambi di stato. Per le segnalazioni già presenti (es. importate) applicala ora, dopo aver salvato.</p>
+                                    <button type="submit" form="pubblica-esistenti"
+                                            onclick="return confirm('Pubblicare ora tutte le segnalazioni che rispettano la regola salvata?')"
+                                            class="mt-2 inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-100">
+                                        Applica alle segnalazioni esistenti
+                                    </button>
+                                </div>
+                            @endif
+
                             @if($gruppo === 'spid')
                                 @php($problemiSpid = app(\App\Services\Oidc\OidcConfig::class)->problemi())
                                 @if($problemiSpid === [])
@@ -142,5 +153,6 @@
                     </button>
                 </div>
         </form>
+        <form id="pubblica-esistenti" method="POST" action="{{ route('admin.impostazioni.pubblica-esistenti') }}">@csrf</form>
     </div>
 </x-app-layout>

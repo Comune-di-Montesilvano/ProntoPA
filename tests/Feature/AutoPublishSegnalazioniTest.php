@@ -64,6 +64,44 @@ class AutoPublishSegnalazioniTest extends TestCase
         $this->assertSame(0, Segnalazione::where('flag_pubblicata', true)->count());
     }
 
+    public function test_admin_applica_regola_alle_segnalazioni_esistenti(): void
+    {
+        $this->seed(\Database\Seeders\ImpostazioniSeeder::class);
+        Impostazione::set('publication_enabled', true);
+        Impostazione::set('publication_auto_state_id', 7);
+        // Come l'import legacy: tutte riservate e non pubblicate.
+        Segnalazione::factory(2)->create(['id_stato_segnalazione' => 7, 'flag_pubblicata' => false, 'flag_riservata' => true]);
+        Segnalazione::factory()->create(['id_stato_segnalazione' => 2, 'flag_pubblicata' => false, 'flag_riservata' => true]);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)->get(route('admin.impostazioni.index'))
+            ->assertSee('Applica alle segnalazioni esistenti');
+        $this->actingAs($admin)->post(route('admin.impostazioni.pubblica-esistenti'))
+            ->assertSessionHas('success', 'Regola applicata: 2 segnalazioni pubblicate.');
+
+        $this->assertSame(2, Segnalazione::pubbliche()->count());
+    }
+
+    public function test_applica_regola_rifiutata_se_disattivata(): void
+    {
+        Impostazione::set('publication_enabled', false);
+        Segnalazione::factory()->create(['id_stato_segnalazione' => 7, 'flag_pubblicata' => false]);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)->post(route('admin.impostazioni.pubblica-esistenti'))->assertSessionHas('error');
+        $this->assertSame(0, Segnalazione::where('flag_pubblicata', true)->count());
+    }
+
+    public function test_solo_admin_applica_regola(): void
+    {
+        $gestore = User::factory()->create();
+        $gestore->assignRole('gestore');
+
+        $this->actingAs($gestore)->post(route('admin.impostazioni.pubblica-esistenti'))->assertForbidden();
+    }
+
     public function test_toggle_riservata_from_gestione_dashboard(): void
     {
         $admin = User::factory()->create([

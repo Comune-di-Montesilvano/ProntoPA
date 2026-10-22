@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Impostazione;
 use App\Models\StatoSegnalazione;
 use App\Services\Oidc\OidcConfig;
+use App\Services\PubblicazioneAutomatica;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -58,5 +59,16 @@ class ImpostazioniController extends Controller
         }
 
         return back()->with('success', 'Impostazioni salvate.');
+    }
+
+    public function pubblicaEsistenti(PubblicazioneAutomatica $pubblicazione): RedirectResponse
+    {
+        $count = $pubblicazione->applicaAEsistenti();
+
+        if ($count === null) {
+            return back()->with('error', 'Pubblicazione automatica non attiva: impostala su "Sì", scegli lo stato e salva.');
+        }
+
+        return back()->with('success', "Regola applicata: {$count} segnalazioni pubblicate.");
     }
 }

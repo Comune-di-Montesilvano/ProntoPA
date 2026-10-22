@@ -151,6 +151,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     Route::get('/impostazioni', [ImpostazioniController::class, 'index'])->name('impostazioni.index');
     Route::patch('/impostazioni', [ImpostazioniController::class, 'update'])->name('impostazioni.update');
+    Route::post('/impostazioni/pubblica-esistenti', [ImpostazioniController::class, 'pubblicaEsistenti'])->name('impostazioni.pubblica-esistenti');
 
     Route::patch('utenti/{utente}/attivo', [UtentiController::class, 'toggleAttivo'])
         ->name('utenti.toggle-attivo');
