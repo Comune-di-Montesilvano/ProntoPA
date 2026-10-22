@@ -4,6 +4,12 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.3] - 2026-10-22
+
+### Fixed
+- Footer e pagina di login mostravano la versione con la "v" doppia
+  (`vv0.8.2`): `APP_VERSION` contiene già la "v" del tag.
+
 ## [0.8.2] - 2026-10-22
 
 ### Added
