@@ -97,4 +97,28 @@
             </div>
         </form>
     </div>
+
+    @if($altreSedi->isNotEmpty())
+        <div class="bg-white shadow-sm rounded-xl mt-6 p-6 space-y-3">
+            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Unisci in un'altra sede</h3>
+            <p class="text-sm text-gray-600">
+                Per i doppioni (es. sede del vecchio programma accanto a quella MIUR): le
+                {{ $storico['segnalazioni'] }} segnalazioni e {{ $storico['deleghe'] }} deleghe di questa sede passano
+                alla sede scelta, poi questa viene eliminata. Non si può annullare.
+            </p>
+            <form method="POST" action="{{ route('admin.sedi.unisci', $sede->id_plesso) }}" class="flex flex-col sm:flex-row gap-3"
+                  onsubmit="return confirm(@js('Spostare storico e deleghe ed eliminare "'.$sede->nome.'"?'))">
+                @csrf
+                <select name="id_destinazione" required aria-label="Sede di destinazione"
+                        class="flex-1 border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">— Sede di destinazione —</option>
+                    @foreach($altreSedi as $altra)
+                        <option value="{{ $altra->id_plesso }}">{{ $altra->etichetta() }}</option>
+                    @endforeach
+                </select>
+                <button class="inline-flex justify-center items-center px-4 py-2 bg-amber-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-amber-700">Unisci</button>
+            </form>
+            <x-input-error :messages="$errors->get('id_destinazione')" class="mt-1" />
+        </div>
+    @endif
 </x-app-layout>

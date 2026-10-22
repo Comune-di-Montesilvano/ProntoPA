@@ -114,12 +114,12 @@
                     <select id="id_plesso" name="id_plesso" @required($scuola)
                             class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_plesso') border-red-500 @enderror">
                         <option value="">{{ $scuola ? '— Seleziona —' : '— Nessuno —' }}</option>
-                        @foreach($plessi->groupBy(fn($p) => $p->istituto?->descrizione ?? 'Altro') as $istituto => $items)
+                        @foreach($plessi->groupBy(fn($p) => $p->istituto ? trim($p->istituto->descrizione.' · '.$p->istituto->codice_meccanografico, ' ·') : 'Altro') as $istituto => $items)
                             <optgroup label="{{ $istituto }}">
                                 @foreach($items as $p)
                                     <option value="{{ $p->id_plesso }}"
                                         {{ old('id_plesso') == $p->id_plesso ? 'selected' : '' }}>
-                                        {{ $p->nome }}
+                                        {{ $p->etichetta() }}
                                     </option>
                                 @endforeach
                             </optgroup>
@@ -306,8 +306,7 @@
     </div>
 
     @push('head')
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <link rel="stylesheet" href="{{ asset('build/vendor/leaflet/leaflet.css') }}?v={{ config('app.version') }}" />
     @endpush
     @push('scripts')
         <script>
@@ -356,7 +355,7 @@
             form.submit();
         }
         </script>
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="{{ asset('build/vendor/leaflet/leaflet.js') }}?v={{ config('app.version') }}"></script>
         <script>
             const defaultLat  = {{ \App\Models\Impostazione::get('osm_lat', 42.5098) }};
             const defaultLng  = {{ \App\Models\Impostazione::get('osm_lng', 14.1443) }};

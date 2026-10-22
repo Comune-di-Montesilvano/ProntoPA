@@ -33,3 +33,4 @@ yarn-error.log
 /.tmp-*
 # Dump SQL in root (es. export dal vecchio programma)
 /*.sql
+.playwright-mcp/

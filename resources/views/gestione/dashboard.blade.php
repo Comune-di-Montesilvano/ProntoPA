@@ -199,7 +199,7 @@
                             <th class="px-3 py-3 text-left">Tipologia</th>
                             <th class="px-3 py-3 text-left">Descrizione</th>
                             <th class="px-3 py-3 text-left">Data</th>
-                            <th class="px-3 py-3 text-left">Provenienza</th>
+                            <th class="px-3 py-3 text-left">Sede</th>
                             <th class="px-3 py-3 text-left">Operatore</th>
                             <th class="px-3 py-3 text-left">Stato</th>
                             <th class="px-3 py-3 text-left">Visibilita</th>
@@ -237,13 +237,19 @@
                                         <span class="ml-1 text-red-500 font-bold text-xs" title="Urgente">!</span>
                                     @endif
                                 </td>
-                                <td class="px-3 py-3 text-gray-600 max-w-[120px] truncate">{{ $s->tipologia?->descrizione ?? '—' }}</td>
+                                <td class="px-3 py-3 text-gray-600 max-w-[160px] truncate whitespace-nowrap"><i class="{{ $s->tipologia?->icona ?? 'fas fa-circle' }} w-4 mr-1.5 text-center text-blue-600" aria-hidden="true"></i>{{ $s->tipologia?->descrizione ?? '—' }}</td>
                                 <td class="px-3 py-3 text-gray-800 max-w-xs truncate font-medium">
                                     {{ $s->titolo_generato ?? Str::limit($s->testo_segnalazione, 70) }}
                                     @if($s->titolo_generato)<span class="ml-1 text-purple-400 text-xs">AI</span>@endif
                                 </td>
                                 <td class="px-3 py-3 text-gray-400 whitespace-nowrap text-xs">{{ $s->data_segnalazione?->format('d/m/Y') }}</td>
-                                <td class="px-3 py-3 text-gray-500 text-xs">{{ $s->provenienza?->descrizione ?? '—' }}</td>
+                                <td class="px-3 py-3 text-xs max-w-[180px]">
+                                    @if($s->plesso)
+                                        <span class="text-gray-700" title="{{ $s->plesso->dettagli() }}">{{ $s->plesso->nome }}</span>
+                                    @else
+                                        <span class="text-gray-400">{{ $s->provenienza?->descrizione ?? '—' }}</span>
+                                    @endif
+                                </td>
                                 <td class="px-3 py-3 text-gray-500 text-xs">{{ $s->operatore?->name ?? '—' }}</td>
                                 <td class="px-3 py-3">
                                     <span class="{{ $s->statoEnum()->badgeClass() }} inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">

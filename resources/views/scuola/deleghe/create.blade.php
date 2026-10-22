@@ -13,7 +13,7 @@
                 @foreach($plessi as $plesso)
                     <label class="flex items-center gap-2 text-sm text-gray-700">
                         <input type="checkbox" name="plessi[]" value="{{ $plesso->id_plesso }}" class="rounded border-gray-300">
-                        {{ $plesso->nome }} <span class="text-xs text-gray-400">{{ $plesso->indirizzo }}</span>
+                        {{ $plesso->nome }} <span class="text-xs text-gray-400">{{ $plesso->dettagli() }}</span>
                     </label>
                 @endforeach
             </fieldset>

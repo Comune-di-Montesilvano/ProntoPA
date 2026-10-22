@@ -25,7 +25,7 @@
                     @foreach($ist->plessi as $plesso)
                         <label class="flex items-center gap-2 text-sm">
                             <input type="checkbox" name="plessi[]" value="{{ $plesso->id_plesso }}" x-bind:disabled="istituto !== '{{ $ist->id_istituto }}'" class="rounded border-gray-300">
-                            {{ $plesso->nome }}
+                            {{ $plesso->nome }} <span class="text-xs text-gray-400">{{ $plesso->dettagli() }}</span>
                         </label>
                     @endforeach
                 </fieldset>

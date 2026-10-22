@@ -173,6 +173,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('sedi', SediController::class)
         ->except(['show'])
         ->parameters(['sedi' => 'sede']);
+    Route::post('sedi/{sede}/unisci', [SediController::class, 'unisci'])->name('sedi.unisci');
 
     Route::get('backup', [BackupController::class, 'index'])->name('backup.index');
     Route::post('backup', [BackupController::class, 'crea'])->name('backup.crea');

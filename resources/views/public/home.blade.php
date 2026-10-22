@@ -163,7 +163,7 @@
     </div>
 
     @push('scripts')
-        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+        <script src="{{ asset('build/vendor/chart.umd.min.js') }}?v={{ config('app.version') }}"></script>
         <script>
             const palette = [
                 '#0B3A8C','#1B5BD8','#E07A1F','#1F7A5A','#6B4FB0',

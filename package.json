@@ -16,5 +16,10 @@
         "postcss": "^8.5.30",
         "tailwindcss": "^4.1.7",
         "vite": "^8.3.4"
+    },
+    "dependencies": {
+        "@fortawesome/fontawesome-free": "^6.7.2",
+        "chart.js": "^4.5.1",
+        "leaflet": "^1.9.4"
     }
 }
