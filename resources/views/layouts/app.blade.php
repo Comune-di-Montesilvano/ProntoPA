@@ -176,7 +176,7 @@
                     <button type="submit" style="font-size:12px;color:var(--slate-500);background:none;border:none;cursor:pointer;" class="hover:underline">Esci</button>
                 </form>
             </div>
-            <div class="mt-1 px-1" style="font-size:10px;color:var(--slate-400);font-family:var(--font-mono);">v{{ config('app.version', 'dev') }}</div>
+            <div class="mt-1 px-1" style="font-size:10px;color:var(--slate-400);font-family:var(--font-mono);">{{ config('app.version', 'dev') }}</div>
         </div>
     </aside>
 
