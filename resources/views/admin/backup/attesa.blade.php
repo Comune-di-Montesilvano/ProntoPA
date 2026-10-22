@@ -30,9 +30,10 @@
                 init() { this.controlla(); this.timer = setInterval(() => this.controlla(), 3000); },
                 async controlla() {
                     try {
-                        const r = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                        const r = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store', redirect: 'manual' });
                         if (!r.ok) { this.offline = true; return; }
-                        const d = await r.json();
+                        const d = await r.json().catch(() => null);
+                        if (!d) { this.offline = true; return; }
                         this.offline = false;
                         this.fase = d.fase; this.messaggio = d.messaggio ?? ''; this.preRipristino = d.pre_ripristino ?? '';
                         if (d.esito !== null && d.esito !== undefined) { this.esito = d.esito; clearInterval(this.timer); }

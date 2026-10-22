@@ -99,6 +99,7 @@ class BackupService
     /** @return list<string> nomi eliminati */
     public function applicaRetention(): array
     {
+        $this->catalogo->eliminaUploadScaduti();
         $eliminati = $this->retention->daEliminare($this->catalogo->elenco(), CarbonImmutable::now());
         foreach ($eliminati as $nome) {
             try {

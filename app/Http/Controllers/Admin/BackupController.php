@@ -83,6 +83,8 @@ class BackupController extends Controller
             return $this->errore($v->errors()->first());
         }
 
+        $this->catalogo->eliminaUploadScaduti();
+
         $id = (string) $request->input('upload_id');
         $indice = (int) $request->input('indice');
         $totale = (int) $request->input('totale');
@@ -92,6 +94,9 @@ class BackupController extends Controller
 
         if ($indice >= $totale) {
             return $this->errore('Indice del blocco non valido.');
+        }
+        if ($indice === 0 && $totale * $max > (int) config('backup.max_upload_mb') * 1048576) {
+            return $this->errore('File troppo grande: il limite è '.(int) config('backup.max_upload_mb').' MB.');
         }
         $dimensione = (int) $file->getSize();
         if ($dimensione > $max || $dimensione === 0 || (! $ultimo && $dimensione !== $max)) {
@@ -159,35 +164,45 @@ class BackupController extends Controller
         return $this->vistaAnteprima($nome, $percorso, $dati['passphrase']);
     }
 
-    public function ripristina(Request $request, string $nome): RedirectResponse
+    public function ripristina(Request $request, string $nome): RedirectResponse|View
     {
         $percorso = $this->percorso($nome);
         abort_unless(is_file($percorso), 404);
-        $dati = $request->validate([
+        $v = Validator::make($request->all(), [
             'conferma' => ['required', 'in:RIPRISTINA'],
             'passphrase' => ['nullable', 'string', 'max:500'],
         ], ['conferma.in' => 'Per confermare scrivi esattamente RIPRISTINA, in maiuscolo.']);
 
-        $passphrase = ($dati['passphrase'] ?? '') !== '' ? $dati['passphrase'] : $this->passphraseLocale();
+        // Errori: si ripresenta l'anteprima (niente redirect, niente old input) così la
+        // passphrase digitata non finisce in sessione e l'utente non perde lo stato.
+        $form = (string) $request->input('passphrase', '');
+        $formOpt = $form !== '' ? $form : null;
+        if ($v->fails()) {
+            return $this->vistaAnteprima($nome, $percorso, $formOpt)->withErrors($v);
+        }
+
+        $passphrase = $formOpt ?? $this->passphraseLocale();
         if ($passphrase === null) {
-            return back()->withErrors(['conferma' => 'Serve la passphrase del backup.']);
+            return $this->vistaAnteprima($nome, $percorso, null)->withErrors(['conferma' => 'Serve la passphrase del backup.']);
         }
 
         // Ricontrollo lato server: la pagina di anteprima può essere vecchia.
         try {
             $anteprima = $this->ripristino->anteprima($percorso, $passphrase);
         } catch (BackupNonLeggibile $e) {
-            return back()->withErrors(['conferma' => $e->getMessage()]);
+            return $this->vistaAnteprima($nome, $percorso, $formOpt)->withErrors(['conferma' => $e->getMessage()]);
         }
         if ($anteprima->bloccante !== null) {
-            return back()->withErrors(['conferma' => $anteprima->bloccante]);
+            return $this->vistaAnteprima($nome, $percorso, $formOpt)->withErrors(['conferma' => $anteprima->bloccante]);
         }
 
         $token = StatoRipristino::nuovoToken();
         StatoRipristino::fase($token, 'in coda', 'Ripristino accodato.');
         EseguiRipristino::dispatch($percorso, $passphrase, $token);
 
-        return redirect()->route('admin.backup.attesa', $token);
+        // Pagina direttamente dalla POST: con un redirect il worker potrebbe mettere l'app in
+        // manutenzione prima della GET (503) e il token andrebbe perso.
+        return view('admin.backup.attesa', ['token' => $token]);
     }
 
     public function attesa(string $token): View
@@ -201,7 +216,7 @@ class BackupController extends Controller
         return view('admin.backup.attesa', ['token' => $token]);
     }
 
-    /** Fuori da auth e manutenzione: durante il ripristino sessioni e DB sono in corso di sostituzione. */
+    /** Fuori dal gruppo web (vedi bootstrap/app.php): legge solo il file di stato, mai il DB. */
     public function stato(string $token): JsonResponse
     {
         try {

@@ -89,6 +89,16 @@ class CatalogoBackup
         @unlink($zip.'.json');
     }
 
+    /** Parti di upload abbandonate (browser chiuso a metà): le toglie dopo 24 ore. */
+    public function eliminaUploadScaduti(): void
+    {
+        foreach (glob($this->cartella().'/tmp/upload-*.part') ?: [] as $parte) {
+            if (@filemtime($parte) < time() - 86400) {
+                @unlink($parte);
+            }
+        }
+    }
+
     public function ultimo(): ?BackupInfo
     {
         return $this->elenco()->first();

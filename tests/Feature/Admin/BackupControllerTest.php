@@ -251,7 +251,7 @@ class BackupControllerTest extends TestCase
         $info = $this->backupReale();
         $this->actingAs($this->utente('admin'))
             ->post(route('admin.backup.ripristina', $info->nome), ['conferma' => 'ripristina'])
-            ->assertSessionHasErrors('conferma');
+            ->assertOk()->assertSee('scrivi esattamente RIPRISTINA');
         Queue::assertNotPushed(EseguiRipristino::class);
     }
 
@@ -263,8 +263,61 @@ class BackupControllerTest extends TestCase
             ->post(route('admin.backup.ripristina', $info->nome), ['conferma' => 'RIPRISTINA']);
         Queue::assertPushed(EseguiRipristino::class, fn (EseguiRipristino $j) => $j->zip === $this->base.'/backups/'.$info->nome);
         $token = Queue::pushed(EseguiRipristino::class)->first()->token;
-        $r->assertRedirect(route('admin.backup.attesa', $token));
+        // Niente redirect: il worker potrebbe mettere in manutenzione prima della GET.
+        $r->assertOk()->assertSee($token, false);
         $this->assertSame('in coda', StatoRipristino::leggi($token)['fase']);
+    }
+
+    public function test_conferma_errata_non_flasha_la_passphrase(): void
+    {
+        Queue::fake();
+        $info = $this->backupReale();
+        app(ArchivioBackup::class)->ricifra($this->base.'/backups/'.$info->nome, 'test-pass', 'altra-pass');
+
+        $this->actingAs($this->utente('admin'))
+            ->post(route('admin.backup.ripristina', $info->nome), ['conferma' => 'no', 'passphrase' => 'altra-pass'])
+            ->assertOk()->assertSee('RIPRISTINA');
+        $this->assertNull(session()->getOldInput('passphrase'));
+        Queue::assertNotPushed(EseguiRipristino::class);
+    }
+
+    public function test_stato_e_stateless_anche_se_ripristino_id_cambia(): void
+    {
+        $token = StatoRipristino::nuovoToken();
+        StatoRipristino::fase($token, 'import', 'x');
+        $this->actingAs($this->utente('admin'));
+        \App\Models\Impostazione::set('ripristino_id', (string) Str::uuid());
+
+        $this->getJson('/ripristino/stato/'.$token)->assertOk()->assertJsonPath('fase', 'import');
+    }
+
+    public function test_upload_troppo_grande_rifiutato_al_primo_blocco(): void
+    {
+        config(['backup.max_upload_mb' => 1, 'backup.dimensione_blocco' => 1024]);
+        $this->actingAs($this->utente('admin'));
+        $this->postJson(route('admin.backup.carica'), [
+            'upload_id' => (string) Str::uuid(), 'indice' => 0, 'totale' => 5000,
+            'blocco' => UploadedFile::fake()->createWithContent('b', str_repeat('a', 1024)),
+        ])->assertStatus(422)->assertSee('troppo grande');
+    }
+
+    public function test_upload_scaduti_rimossi(): void
+    {
+        mkdir($this->base.'/backups/tmp', 0777, true);
+        $vecchia = $this->base.'/backups/tmp/upload-'.Str::uuid().'.part';
+        $recente = $this->base.'/backups/tmp/upload-'.Str::uuid().'.part';
+        file_put_contents($vecchia, 'x');
+        file_put_contents($recente, 'x');
+        touch($vecchia, time() - 25 * 3600);
+
+        $this->actingAs($this->utente('admin'));
+        $this->postJson(route('admin.backup.carica'), [
+            'upload_id' => (string) Str::uuid(), 'indice' => 0, 'totale' => 2,
+            'blocco' => UploadedFile::fake()->createWithContent('b', str_repeat('a', 1024)),
+        ])->assertOk();
+
+        $this->assertFileDoesNotExist($vecchia);
+        $this->assertFileExists($recente);
     }
 
     public function test_anteprima_mostra_riepilogo(): void

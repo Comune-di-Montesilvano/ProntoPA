@@ -32,6 +32,9 @@ return [
     'giorni_tutti' => 7,
     'giorni_settimanali' => 30,
 
+    // Dimensione massima di un backup caricato da UI (MB).
+    'max_upload_mb' => (int) env('BACKUP_MAX_UPLOAD_MB', 10240),
+
     // Dimensione blocco di lettura/scrittura (byte).
     'dimensione_blocco' => 5 * 1024 * 1024,
 ];

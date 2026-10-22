@@ -252,8 +252,3 @@ Route::middleware('signed')->group(function () {
 });
 
 require __DIR__.'/auth.php';
-
-// -- Esito ripristino (polling senza login: durante il ripristino l'app e in manutenzione) --
-Route::get('ripristino/stato/{token}', [BackupController::class, 'stato'])
-    ->middleware('throttle:60,1')
-    ->name('ripristino.stato');
