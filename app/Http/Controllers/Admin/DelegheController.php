@@ -43,6 +43,9 @@ class DelegheController extends Controller
                 ->where(fn ($q) => $q->whereNull('email')->orWhere('email', ''))
                 ->orderBy('descrizione')->get(),
             'bloccati' => User::where('auth_source', 'spid')->whereNotNull('bloccato_at')->orderBy('name')->get(),
+            // profilo completato ma email mai confermata: non possono ancora chiedere deleghe
+            'inAttesaVerifica' => User::where('auth_source', 'spid')->whereNull('email_verified_at')
+                ->whereNull('bloccato_at')->oldest()->get(),
         ]);
     }
 
@@ -110,5 +113,13 @@ class DelegheController extends Controller
         $this->deleghe->sblocca($utente);
 
         return back()->with('success', "{$utente->name} sbloccato.");
+    }
+
+    public function reinviaVerifica(User $utente): RedirectResponse
+    {
+        abort_unless($utente->isSpid() && ! $utente->hasVerifiedEmail(), 404);
+        $utente->sendEmailVerificationNotification();
+
+        return back()->with('success', "Email di verifica reinviata a {$utente->email}.");
     }
 }

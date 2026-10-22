@@ -199,6 +199,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('deleghe/gruppo/{gruppo}/reinvia', [DelegheController::class, 'reinvia'])->whereUuid('gruppo')->name('deleghe.reinvia');
     Route::post('deleghe/{delega}/revoca', [DelegheController::class, 'revoca'])->name('deleghe.revoca');
     Route::post('deleghe/sblocca/{utente}', [DelegheController::class, 'sblocca'])->name('deleghe.sblocca');
+    Route::post('deleghe/verifica/{utente}', [DelegheController::class, 'reinviaVerifica'])
+        ->middleware('throttle:6,1')->name('deleghe.reinvia-verifica');
 
     Route::resource('profili', ProfiliController::class)
         ->except(['show'])

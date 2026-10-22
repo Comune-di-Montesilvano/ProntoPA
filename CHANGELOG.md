@@ -4,6 +4,13 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.18] - 2026-10-22
+
+### Added
+- Admin → Deleghe: riquadro "In attesa di verifica email" con le persone entrate con
+  SPID che hanno completato il profilo ma non confermato l'email (non possono ancora
+  chiedere deleghe), e pulsante "Reinvia email di verifica".
+
 ## [0.8.17] - 2026-10-22
 
 ### Added
