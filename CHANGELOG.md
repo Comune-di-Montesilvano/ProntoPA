@@ -8,17 +8,20 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
 ### Added
 - Backup e ripristino: Admin → Backup per creare, scaricare, eliminare,
-  caricare (a blocchi da 5 MB) e ripristinare un backup, con conferma
-  digitando `RIPRISTINA` e pagina d'attesa. Il backup (database e file
+  caricare (a blocchi da 5 MB, verifica del file in background) e
+  ripristinare un backup, con conferma digitando `RIPRISTINA` e pagina
+  d'attesa. La pagina mostra il backup in corso e si aggiorna da sola. Il backup (database e file
   allegati) è un archivio ZIP cifrato AES-256 con la passphrase
   `BACKUP_PASSPHRASE`; i segreti (es. SPID) vengono ricifrati con la chiave
   dell'installazione di destinazione, quindi si può migrare da dev a prod
 - Backup notturno alle 02:00 con conservazione automatica (ultimo, 7 giorni,
-  uno per settimana fino a 30 giorni). Allarme in dashboard admin se
-  l'ultimo è fallito o più vecchio di 36 ore; in caso di errore notifica a
+  uno per settimana fino a 30 giorni). Allarme in dashboard admin e nella
+  pagina Backup se l'ultimo è fallito o più vecchio di 36 ore; in caso di errore notifica a
   Sentry e via email agli amministratori
 - Ripristino sicuro: verifica prima di toccare i dati, copia
-  "pre-ripristino" automatica e rollback automatico in caso di errore. A
+  "pre-ripristino" automatica (sempre, se è impostata `BACKUP_PASSPHRASE`)
+  e rollback automatico in caso di errore. I file temporanei restano
+  leggibili solo dal processo e vengono ripuliti se un job si interrompe. A
   fine ripristino tutte le sessioni vengono chiuse
 - Comandi `backup:crea`, `backup:ripristina`, `backup:pulisci`
 - Nuovo servizio `queue-lunghi` (worker dedicato a backup e ripristini):
