@@ -41,6 +41,29 @@ final class OidcConfig
 
     public function configurato(): bool
     {
-        return $this->issuer() !== '' && $this->clientId() !== '' && $this->clientSecret() !== '';
+        return $this->problemi() === [];
+    }
+
+    /**
+     * Cosa manca perché il tasto SPID compaia al login, in chiaro per l'admin.
+     *
+     * @return list<string>
+     */
+    public function problemi(): array
+    {
+        $problemi = [];
+        if ($this->issuer() === '') {
+            $problemi[] = 'Issuer mancante.';
+        }
+        if ($this->clientId() === '') {
+            $problemi[] = 'Client ID mancante.';
+        }
+        if ((string) Impostazione::get('oidc_client_secret', '') === '') {
+            $problemi[] = 'Client secret mancante.';
+        } elseif ($this->clientSecret() === '') {
+            $problemi[] = 'Client secret non leggibile (salvato con un\'altra APP_KEY): reinseriscilo.';
+        }
+
+        return $problemi;
     }
 }

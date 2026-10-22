@@ -111,6 +111,21 @@
                             @endforeach
 
                             @if($gruppo === 'spid')
+                                @php($problemiSpid = app(\App\Services\Oidc\OidcConfig::class)->problemi())
+                                @if($problemiSpid === [])
+                                    <p class="rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+                                        Attivo: il tasto "Entra con SPID o CIE" compare nella pagina di login.
+                                    </p>
+                                @else
+                                    <div class="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                        <p class="font-medium">Non attivo: il tasto SPID non compare al login.</p>
+                                        <ul class="mt-1 list-disc pl-5">
+                                            @foreach($problemiSpid as $problema)
+                                                <li>{{ $problema }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                @endif
                                 <div>
                                     <p class="block text-sm font-medium text-gray-700 mb-1">Redirect URI da registrare su pa-sso-proxy</p>
                                     <code class="block w-full rounded bg-gray-50 border border-gray-200 px-3 py-2 text-sm select-all">{{ $oidcRedirectUri }}</code>
