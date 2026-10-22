@@ -4,6 +4,22 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.13] - 2026-10-22
+
+### Added
+- Rebuild settimanale delle immagini (lunedì 04:30 UTC): `latest` si aggiorna con
+  immagini base e patch Alpine fresche solo se la scansione Trivy passa;
+  `latest-YYYYMMDD` resta come storico. Saltato se nella settimana è uscito un rilascio.
+- Dependabot su tutte le dipendenze (composer, npm, GitHub Actions, immagini Docker,
+  servizi del compose): minor e patch raggruppate e integrate da sole a CI verde,
+  major e salti di php/mariadb/redis lasciati in PR per revisione manuale.
+- Semgrep (SAST) su PR e settimanale; avviso automatico quando esce una nuova
+  versione di Trivy.
+- Errori su Sentry con tag `build_type`, `commit` e `build_date`.
+
+### Changed
+- Versione di Trivy fissata nei workflow invece di `latest`.
+
 ## [0.8.12] - 2026-10-22
 
 ### Fixed

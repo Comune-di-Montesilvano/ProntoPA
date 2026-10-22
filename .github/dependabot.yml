@@ -1,4 +1,8 @@
 version: 2
+# Ogni ecosistema: cooldown (attende N giorni dalla pubblicazione prima di proporre
+# l'update — mitiga release appena pubblicate compromesse, più margine sui major) e
+# minor+patch in una sola PR per ecosistema, mergiata da sola a CI verde
+# (dependabot-automerge.yml). Le major restano PR singole, aperte come promemoria.
 updates:
   - package-ecosystem: composer
     directory: "/"
@@ -8,6 +12,9 @@ updates:
     cooldown:
       default-days: 7
       semver-major-days: 14
+    groups:
+      minor-patch:
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: npm
     directory: "/"
@@ -17,6 +24,9 @@ updates:
     cooldown:
       default-days: 7
       semver-major-days: 14
+    groups:
+      minor-patch:
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: github-actions
     directory: "/"
@@ -24,4 +34,31 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
-      semver-major-days: 14
+    groups:
+      minor-patch:
+        update-types: ["minor", "patch"]
+
+  # Immagini base FROM: Dockerfile prod (php/composer/nginx) e dev (docker/php).
+  # Salti di php (8.4 → 8.5) li classifica minor ma sono upgrade di runtime:
+  # l'auto-merge li esclude, restano manuali.
+  - package-ecosystem: docker
+    directories: ["/", "/docker/php"]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-patch:
+        update-types: ["minor", "patch"]
+
+  # Servizi dello stack (mariadb, redis): proposti ma mai auto-mergiati, sono dati.
+  # ollama/clamav seguono tag mobili (latest/stable), niente da proporre.
+  - package-ecosystem: docker-compose
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    ignore:
+      - dependency-name: "ollama/ollama"
+      - dependency-name: "clamav/clamav"

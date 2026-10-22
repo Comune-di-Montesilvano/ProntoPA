@@ -222,13 +222,17 @@ Webhook outbound: HTTP POST HMAC-firmato al cambio stato → Admin → Impostazi
 
 Tag `v*.*.*` → `.github/workflows/release.yml` → build **amd64 only** (arm64 droppato, niente QEMU) → push GHCR `:X.Y.Z`+`:X.Y`+`:latest` (**senza `v`**; `APP_VERSION=vX.Y.Z` cotta nell'immagine).
 
+**Rebuild settimanale** (lunedì 04:30 UTC, o dispatch `rebuild_latest`): rebuild di `main` con base/patch Alpine fresche (`APK_REFRESH` = settimana ISO invalida il layer `apk upgrade`) → push `:latest-YYYYMMDD` → Trivy **bloccante** → solo se passa `latest` promosso. `:X.Y.Z`/`:X.Y` mai toccati; saltato se nella settimana è uscito un tag. `APP_VERSION` = ultimo tag, `APP_BUILD_TYPE=auto` (tag Sentry `build_type`/`commit`/`build_date`). Le patch arrivano in prod solo con `IMAGE_TAG=latest` (default).
+
 **Rilascio**: bump `publiccode.yml` `softwareVersion` + CHANGELOG `## [X.Y.Z] - data` **nella stessa PR della modifica** (preferenza committente, niente PR di rilascio separata) → `main` protetto: PR squash con CI verde (`test`+`dusk`+`publiccode.yml validation`) → `git switch main && git pull` → `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z` → `gh run watch <id> --exit-status` sul workflow release.
 
 ```bash
 git tag v1.2.0 && git push origin v1.2.0
 ```
 
-**Dependabot**: PR con conflitto `composer.lock`/`package-lock.json` (tipico se ne mergi più di una in sequenza) → commenta `@dependabot rebase`, aspetta, ricontrolla `gh pr checks`. Se lento/bloccato, applicare il bump a mano (`composer require pkg:^X` o `npm install pkg@X`) è più veloce che aspettare — poi chiudi la PR come superata (`gh pr close N --comment "..." --delete-branch`).
+**Dependabot**: composer, npm, actions, docker (Dockerfile prod+dev), docker-compose; minor+patch raggruppate (`minor-patch`) → `dependabot-automerge.yml` abilita auto-merge squash a CI verde e aggiorna le PR behind una alla volta. Major e immagini php/mariadb/redis: manuali. Serve GitHub App con secret `BOT_CLIENT_ID`/`BOT_PRIVATE_KEY` salvati **sia Actions sia Dependabot** (permessi Contents/PR/Workflows RW); senza secret il workflow non fa nulla. Altri workflow: `semgrep.yml` (PR diff-aware bloccante, scan completo settimanale), `trivy-version-check.yml` (issue quando esce un Trivy più nuovo di `v0.75.0` pinnato in tests/release).
+
+PR dependabot con conflitto `composer.lock`/`package-lock.json` (tipico se ne mergi più di una in sequenza) → commenta `@dependabot rebase`, aspetta, ricontrolla `gh pr checks`. Se lento/bloccato, applicare il bump a mano (`composer require pkg:^X` o `npm install pkg@X`) è più veloce che aspettare — poi chiudi la PR come superata (`gh pr close N --comment "..." --delete-branch`).
 **Tante PR Dependabot insieme** → un'unica PR: cherry-pick dei commit actions/npm (file distinti, niente conflitti); per composer rigenera il lock con `composer update <pkg...> -w --with symfony/<x>:^7.4 ... --with guzzlehttp/guzzle:^7 --no-install` su `php:8.4-cli` (l'immagine `composer:2` è PHP 8.5) per non tirare major non richiesti. `Closes #N` nel body NON chiude le PR: chiuderle con `gh pr close N --comment "Consolidata in #M" --delete-branch`.
 **Gotcha peer-dep**: `vite` e `laravel-vite-plugin` sono accoppiati (`laravel-vite-plugin` fissa la major di vite richiesta) — dependabot le propone come PR separate ma vanno bumpate insieme o falliscono con `ERESOLVE`.
 

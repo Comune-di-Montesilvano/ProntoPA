@@ -1,0 +1,63 @@
+name: Semgrep
+
+# SAST: PR diff-aware e bloccante (solo finding nuovi rispetto alla base),
+# push/schedule scan completo report-only su tab Security.
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: "0 5 * * 1" # lunedì 05:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Run Semgrep (diff-aware, bloccante) · pull_request
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          semgrep scan \
+            --config p/php \
+            --config p/owasp-top-ten \
+            --config p/security-audit \
+            --config p/secrets \
+            --baseline-commit "$BASE_SHA" \
+            --sarif --output=semgrep.sarif \
+            --error
+
+      - name: Run Semgrep (scan completo, report-only) · push/schedule
+        if: github.event_name != 'pull_request'
+        run: |
+          semgrep scan \
+            --config p/php \
+            --config p/owasp-top-ten \
+            --config p/security-audit \
+            --config p/secrets \
+            --sarif --output=semgrep.sarif
+
+      - name: Upload SARIF to GH Security tab
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
+        if: always() && hashFiles('semgrep.sarif') != ''
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep

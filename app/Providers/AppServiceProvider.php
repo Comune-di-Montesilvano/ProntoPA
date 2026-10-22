@@ -56,6 +56,13 @@ class AppServiceProvider extends ServiceProvider
             Log::warning($avviso);
         }
 
+        // Il rebuild settimanale ha la stessa release del tag: i tag distinguono le immagini.
+        \Sentry\configureScope(fn (\Sentry\State\Scope $scope) => $scope->setTags(array_filter([
+            'build_type' => (string) config('app.build_type'),
+            'build_date' => (string) config('app.build_date'),
+            'commit'     => substr((string) config('app.commit'), 0, 7),
+        ])));
+
         Gate::policy(Segnalazione::class, SegnalazionePolicy::class);
 
         // Prima email che il personale delle scuole riceve dall'ente: in
