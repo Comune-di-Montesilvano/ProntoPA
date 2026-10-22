@@ -93,7 +93,8 @@ RUN addgroup -g 1000 -S www && adduser -u 1000 -S www -G www
 WORKDIR /var/www/html
 COPY --link --from=builder /var/www/html .
 
-RUN chown -R www:www storage bootstrap/cache \
+RUN mkdir -p backups \
+    && chown -R www:www storage bootstrap/cache backups \
     && chmod +x /usr/local/bin/entrypoint.sh
 
 USER www

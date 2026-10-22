@@ -2,6 +2,10 @@
     <x-slot name="header">Amministrazione</x-slot>
 
     <div class="space-y-6">
+        @if($backupInAllarme ?? false)
+            <x-backup-allarme />
+        @endif
+
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <div class="bg-white shadow-sm rounded-lg p-5 border-l-4 border-green-500">
                 <div class="text-xs font-semibold uppercase tracking-widest text-gray-500">Utenti attivi</div>

@@ -15,7 +15,8 @@ class ImpostazioniController extends Controller
 {
     public function index(): View
     {
-        $impostazioni = Impostazione::orderBy('gruppo')->orderBy('chiave')->get()
+        $impostazioni = Impostazione::whereNotIn('chiave', Impostazione::CHIAVI_INTERNE)
+            ->orderBy('gruppo')->orderBy('chiave')->get()
             ->groupBy('gruppo');
 
         $statiSegnalazioni = StatoSegnalazione::orderBy('id_stato')->get();
@@ -33,6 +34,10 @@ class ImpostazioniController extends Controller
         ]);
 
         foreach ($data['impostazioni'] as $chiave => $valore) {
+            if (in_array($chiave, Impostazione::CHIAVI_INTERNE, true)) {
+                continue;
+            }
+
             // Cast specifici per certi campi
             if ($chiave === 'publication_auto_state_id' && $valore !== '' && $valore !== null) {
                 $valore = (int) $valore;

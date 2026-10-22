@@ -24,7 +24,9 @@ x-php-env: &php-env
   DB_PORT: 3306
   DB_DATABASE: ${DB_DATABASE:-segnalazioni}
   DB_USERNAME: ${DB_USERNAME:-segnalazioni}
-  DB_PASSWORD: ${DB_PASSWORD}
+  DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD obbligatoria}
+  BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
+  BACKUP_MAX_UPLOAD_MB: ${BACKUP_MAX_UPLOAD_MB:-10240}
   CACHE_STORE: redis
   SESSION_DRIVER: redis
   QUEUE_CONNECTION: redis
@@ -73,6 +75,7 @@ x-php-env: &php-env
 x-php-volumes: &php-volumes
   - app_storage:/var/www/html/storage
   - uploads:/var/www/html/storage/app/public
+  - backups:/var/www/html/backups
 
 services:
 
@@ -122,6 +125,25 @@ services:
       - prontoPA
     restart: unless-stopped
 
+  # Worker dedicato ai job lunghi (backup/ripristino): retry_after e timeout
+  # alti, un solo tentativo, cosi non blocca ne ripete i job brevi.
+  # --force: lavora anche in manutenzione, altrimenti un ripristino ucciso a
+  # meta (OOM) non verrebbe mai ripreso e failed() non riporterebbe su l'app.
+  queue-lunghi:
+    image: ghcr.io/comune-di-montesilvano/pronto-pa:${IMAGE_TAG:-latest}
+    entrypoint: []
+    command: php artisan queue:work redis-lunghi --queue=lunghi --force --tries=1 --timeout=7200 --sleep=3 --max-time=3600
+    volumes: *php-volumes
+    environment: *php-env
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - prontoPA
+    restart: unless-stopped
+
   # Trigger dello scheduler Laravel (sla:check, digest:invia, verifica
   # annuale account): senza questo container i comandi schedulati non
   # partono mai — Laravel richiede una chiamata esterna a schedule:run
@@ -141,13 +163,15 @@ services:
       - prontoPA
     restart: unless-stopped
 
+  # Le password MariaDB valgono solo alla creazione del volume mariadb_data:
+  # su volume esistente sono ignorate (la password si cambia dal DB, non qui).
   mariadb:
     image: mariadb:11.4
     environment:
-      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-}
       MARIADB_DATABASE: ${DB_DATABASE:-segnalazioni}
       MARIADB_USER: ${DB_USERNAME:-segnalazioni}
-      MARIADB_PASSWORD: ${DB_PASSWORD:-segnalazioni_secret}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD obbligatoria}
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
@@ -196,6 +220,7 @@ volumes:
   redis_data:
   app_storage:
   uploads:
+  backups:
   nginx_ssl:
   ollama_data:
   clamav_data:

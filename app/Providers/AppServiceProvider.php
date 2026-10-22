@@ -13,6 +13,8 @@ use App\Services\Directory\LdapRecordDirectory;
 use App\Services\Directory\MockDirectory;
 use App\Services\Directory\NullDirectory;
 use App\Services\Oidc\OidcMockGuard;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
@@ -35,6 +37,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Un solo punto per tutti i metodi di accesso (AD, locale, SPID, magic link):
+        // la sessione ricorda a quale ripristino appartiene (InvalidaSessioniDopoRipristino).
+        Event::listen(Login::class, function (): void {
+            session()->put('ripristino_id', Impostazione::ripristinoId());
+        });
+
         LdapConfigGuard::verifica((string) $this->app->environment(), config('ldap.host'));
         OidcMockGuard::verifica((string) $this->app->environment(), (bool) config('oidc.mock'));
 

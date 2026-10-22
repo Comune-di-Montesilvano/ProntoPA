@@ -15,6 +15,7 @@ storage/framework/sessions/*
 storage/framework/views/*
 
 legacy
+backups
 modules
 
 docker/mariadb/init/*.sql

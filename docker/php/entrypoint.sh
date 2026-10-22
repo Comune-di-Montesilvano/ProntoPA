@@ -4,7 +4,23 @@ set -e
 # Credenziali lette da getenv() e non interpolate nel codice PHP: una
 # password con apici o "$" romperebbe lo script.
 echo "==> Waiting for database..."
-until php -r "new PDO('mysql:host='.getenv('DB_HOST').';port='.getenv('DB_PORT').';dbname='.getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD'));" 2>/dev/null; do
+# Il messaggio PDO non contiene la password. Dopo ~30 s (e poi ogni 30 s) lo
+# stampa: altrimenti un DB irraggiungibile o una password errata restano muti.
+tentativi=0
+while true; do
+    errore=$(php -r "try { new PDO('mysql:host='.getenv('DB_HOST').';port='.getenv('DB_PORT').';dbname='.getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD')); } catch (Throwable \$e) { fwrite(STDERR, \$e->getMessage()); exit(1); }" 2>&1) && break
+    tentativi=$((tentativi + 1))
+    if [ "$tentativi" -ge 15 ] && [ $(( (tentativi - 15) % 15 )) -eq 0 ]; then
+        echo "==> DB non raggiungibile: $errore"
+        case "$errore" in
+            *"Access denied"*)
+                echo "==> DB_PASSWORD diversa da quella con cui è stato creato il volume mariadb_data (vale solo alla prima creazione)"
+                ;;
+            *"Connection refused"*|*"getaddrinfo"*|*"Unknown MySQL server host"*)
+                echo "==> mariadb non risponde: controlla i log del servizio mariadb (su volume nuovo serve DB_ROOT_PASSWORD)"
+                ;;
+        esac
+    fi
     sleep 2
 done
 echo "==> Database ready."

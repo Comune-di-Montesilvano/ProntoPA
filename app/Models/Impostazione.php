@@ -12,6 +12,9 @@ class Impostazione extends Model
     protected $keyType    = 'string';
     public    $incrementing = false;
 
+    /** Stato interno dell'applicazione: mai mostrato né modificabile da Admin → Impostazioni. */
+    public const CHIAVI_INTERNE = ['ripristino_id'];
+
     protected $fillable = [
         'chiave',
         'valore',
@@ -41,6 +44,18 @@ class Impostazione extends Model
             ['valore' => $valore]
         );
         Cache::forget("impostazione:{$chiave}");
+    }
+
+    /**
+     * Letta a ogni richiesta autenticata (InvalidaSessioniDopoRipristino): anche
+     * l'assenza va in cache (''), altrimenti get() rifarebbe la query ogni volta.
+     * Stessa chiave di cache di get(): set() e saved la invalidano.
+     */
+    public static function ripristinoId(): ?string
+    {
+        $valore = Cache::rememberForever('impostazione:ripristino_id', fn () => static::query()->where('chiave', 'ripristino_id')->value('valore') ?? '');
+
+        return $valore === '' || $valore === null ? null : (string) $valore;
     }
 
     /**
