@@ -168,7 +168,7 @@ services:
   # Le password MariaDB valgono solo alla creazione del volume mariadb_data:
   # su volume esistente sono ignorate (la password si cambia dal DB, non qui).
   mariadb:
-    image: mariadb:11.4
+    image: mariadb:11.7
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-}
       MARIADB_DATABASE: ${DB_DATABASE:-segnalazioni}
