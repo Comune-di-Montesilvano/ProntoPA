@@ -51,6 +51,8 @@ class DelegaScuolaTest extends DuskTestCase
                 ->waitForText('Le mie deleghe')
                 ->type('q', 'Delfico')
                 ->press('CERCA')
+                // la ricerca ricarica la pagina: il codice compare solo nei risultati
+                ->waitForText('PEIC82600C')
                 ->clickLink('IC Delfico')
                 ->waitForText('Media Delfico')
                 ->check('tutto')
