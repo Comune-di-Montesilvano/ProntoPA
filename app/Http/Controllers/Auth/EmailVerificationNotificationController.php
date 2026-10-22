@@ -17,6 +17,11 @@ class EmailVerificationNotificationController extends Controller
             return redirect()->intended(route('dashboard', absolute: false));
         }
 
+        // Il link appena inviato può impiegare qualche secondo ad arrivare: niente reinvii a raffica.
+        if ($request->user()->attesaReinvioVerifica() > 0) {
+            return back();
+        }
+
         $request->user()->sendEmailVerificationNotification();
 
         return back()->with('status', 'verification-link-sent');

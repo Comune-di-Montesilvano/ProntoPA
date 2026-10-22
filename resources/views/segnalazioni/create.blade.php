@@ -61,15 +61,15 @@
 
                     @foreach($tipologie->groupBy(fn($t) => $t->gruppo?->descrizione ?? 'Altro') as $gruppo => $items)
                         <p class="mt-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-widest">{{ $gruppo }}</p>
-                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                        <div class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2">
                             @foreach($items as $t)
                                 <button type="button"
                                         @click="tipologiaId = {{ $t->id_tipologia_segnalazione }}"
                                         :class="tipologiaId == {{ $t->id_tipologia_segnalazione }}
                                             ? 'border-blue-500 bg-blue-50 text-blue-700'
                                             : 'border-gray-200 bg-white text-gray-500 hover:border-blue-300 hover:text-blue-600'"
-                                        class="flex flex-col items-center gap-2 p-4 border-2 rounded-xl transition cursor-pointer select-none">
-                                    <i class="{{ $t->icona ?? 'fas fa-circle' }} text-3xl"></i>
+                                        class="flex flex-col items-center gap-1.5 px-2 py-3 border-2 rounded-lg transition cursor-pointer select-none">
+                                    <i class="{{ $t->icona ?? 'fas fa-circle' }} text-lg"></i>
                                     <span class="text-xs font-semibold uppercase text-center leading-tight">{{ $t->descrizione }}</span>
                                 </button>
                             @endforeach
@@ -176,13 +176,13 @@
                     @endunless
                     <div x-show="dettagli" class="{{ $scuola ? '' : 'mt-4 ' }}space-y-6">
 
-                        {{-- Specializzazione --}}
-                        @if($specializzazioni->isNotEmpty())
+                        {{-- Specializzazione: solo per chi smista (gestori/admin); per i segnalatori basta la tipologia --}}
+                        @if($specializzazioni->isNotEmpty() && auth()->user()->puoScegliereProvenienza())
                         <div>
-                            <x-input-label for="id_specializzazione" :value="$scuola ? 'Tipo di intervento richiesto *' : 'Tipo di intervento richiesto'" />
-                            <select id="id_specializzazione" name="id_specializzazione" @required($scuola)
+                            <x-input-label for="id_specializzazione" value="Tipo di intervento richiesto" />
+                            <select id="id_specializzazione" name="id_specializzazione"
                                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_specializzazione') border-red-500 @enderror">
-                                <option value="">{{ $scuola ? '— Seleziona —' : '— Generico / Non specificato —' }}</option>
+                                <option value="">— Generico / Non specificato —</option>
                                 @foreach($specializzazioni as $sp)
                                     <option value="{{ $sp->id_specializzazione }}"
                                         {{ old('id_specializzazione') == $sp->id_specializzazione ? 'selected' : '' }}>
