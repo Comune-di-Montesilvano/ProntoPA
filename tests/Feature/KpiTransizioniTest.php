@@ -52,4 +52,21 @@ class KpiTransizioniTest extends TestCase
         $this->assertNotNull($stato1);
         $this->assertEqualsWithDelta(6.0, $stato1['ore_medie'], 0.5);
     }
+
+    public function test_statistiche_dalla_cache_serializzata(): void
+    {
+        // Come Redis in prod: valori serializzati e serializable_classes=false.
+        config(['cache.stores.array.serialize' => true]);
+        \Illuminate\Support\Facades\Cache::forgetDriver('array');
+        $gestore = User::factory()->create(['gestore_segnalazioni' => true]);
+        $gestore->assignRole('gestore');
+        $s = Segnalazione::factory()->create();
+        \Illuminate\Support\Facades\DB::table('stati_segnalazioni')->insert([
+            ['id_segnalazione' => $s->id_segnalazione, 'id_stato_segnalazione' => 1, 'id_utente' => $gestore->id, 'data_registrazione' => Carbon::now()->subHours(2)],
+            ['id_segnalazione' => $s->id_segnalazione, 'id_stato_segnalazione' => 2, 'id_utente' => $gestore->id, 'data_registrazione' => Carbon::now()],
+        ]);
+
+        $this->actingAs($gestore)->get(route('statistiche.index'))->assertOk();
+        $this->actingAs($gestore)->get(route('statistiche.index'))->assertOk();
+    }
 }
