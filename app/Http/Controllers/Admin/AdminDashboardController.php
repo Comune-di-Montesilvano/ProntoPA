@@ -9,11 +9,13 @@ use App\Models\Impresa;
 use App\Models\Plesso;
 use App\Models\SlaConfigurazione;
 use App\Models\User;
+use App\Services\Backup\CatalogoBackup;
+use Carbon\CarbonImmutable;
 use Illuminate\View\View;
 
 class AdminDashboardController extends Controller
 {
-    public function index(): View
+    public function index(CatalogoBackup $backup): View
     {
         $conteggi = [
             'utenti_attivi' => User::where('attivo', true)->where('approval_status', 'approved')->count(),
@@ -32,6 +34,8 @@ class AdminDashboardController extends Controller
             ->limit(8)
             ->get();
 
-        return view('admin.dashboard', compact('conteggi', 'utentiPendenti'));
+        $backupInAllarme = $backup->inAllarme(CarbonImmutable::now());
+
+        return view('admin.dashboard', compact('conteggi', 'utentiPendenti', 'backupInAllarme'));
     }
 }

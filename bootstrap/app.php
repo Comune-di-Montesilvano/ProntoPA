@@ -24,7 +24,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
 
+        // Durante il ripristino il polling dell'esito deve restare raggiungibile.
+        $middleware->preventRequestsDuringMaintenance(except: ['ripristino/stato/*']);
+
         $middleware->web(append: [
+            \App\Http\Middleware\InvalidaSessioniDopoRipristino::class,
             \App\Http\Middleware\EnsureUserIsActive::class,
             \App\Http\Middleware\LimitaAccessoSpid::class,
         ]);

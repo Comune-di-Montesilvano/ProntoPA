@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AnagrafeMiurController;
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\DelegheController;
 use App\Http\Controllers\Deleghe\DecisioneDelegaController;
 use App\Http\Controllers\Deleghe\RinnovoDelegheController;
@@ -172,6 +173,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         ->except(['show'])
         ->parameters(['sedi' => 'sede']);
 
+    Route::get('backup', [BackupController::class, 'index'])->name('backup.index');
+    Route::post('backup', [BackupController::class, 'crea'])->name('backup.crea');
+    Route::post('backup/carica', [BackupController::class, 'carica'])->name('backup.carica');
+    Route::get('backup/ripristino/{token}', [BackupController::class, 'attesa'])->name('backup.attesa');
+    Route::get('backup/{nome}/scarica', [BackupController::class, 'scarica'])->name('backup.scarica');
+    Route::delete('backup/{nome}', [BackupController::class, 'elimina'])->name('backup.elimina');
+    Route::get('backup/{nome}/ripristina', [BackupController::class, 'anteprima'])->name('backup.anteprima');
+    Route::post('backup/{nome}/anteprima', [BackupController::class, 'anteprimaConPassphrase'])->name('backup.anteprima-passphrase');
+    Route::post('backup/{nome}/ripristina', [BackupController::class, 'ripristina'])->name('backup.ripristina');
+
     Route::get('anagrafe-miur', [AnagrafeMiurController::class, 'index'])->name('anagrafe-miur.index');
     Route::post('anagrafe-miur/scarica', [AnagrafeMiurController::class, 'scarica'])->name('anagrafe-miur.scarica');
     Route::get('anagrafe-miur/{codice}', [AnagrafeMiurController::class, 'show'])
@@ -241,3 +252,8 @@ Route::middleware('signed')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// -- Esito ripristino (polling senza login: durante il ripristino l'app e in manutenzione) --
+Route::get('ripristino/stato/{token}', [BackupController::class, 'stato'])
+    ->middleware('throttle:60,1')
+    ->name('ripristino.stato');

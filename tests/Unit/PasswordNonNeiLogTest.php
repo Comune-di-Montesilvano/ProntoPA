@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Jobs\EseguiRipristino;
 use App\Services\Auth\LdapLoginService;
@@ -42,6 +43,7 @@ class PasswordNonNeiLogTest extends TestCase
             'ArchivioBackup::ricifra (a)' => [ArchivioBackup::class, 'ricifra', 'a'],
             'RipristinoService::anteprima' => [RipristinoService::class, 'anteprima', 'passphrase'],
             'RipristinoService::esegui' => [RipristinoService::class, 'esegui', 'passphrase'],
+            'BackupController::completaCaricamento' => [BackupController::class, 'completaCaricamento', 'passphraseForm'],
             'EseguiRipristino::__construct' => [EseguiRipristino::class, '__construct', 'passphrase'],
         ];
     }

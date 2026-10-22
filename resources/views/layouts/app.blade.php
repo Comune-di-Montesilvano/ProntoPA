@@ -138,6 +138,9 @@
                     <x-sidebar-link href="{{ route('admin.anagrafe-miur.index') }}" :active="request()->routeIs('admin.anagrafe-miur.*')" icon="office-building">
                         Anagrafe MIUR
                     </x-sidebar-link>
+                    <x-sidebar-link href="{{ route('admin.backup.index') }}" :active="request()->routeIs('admin.backup.*')" icon="archive">
+                        Backup
+                    </x-sidebar-link>
                     <x-sidebar-link href="{{ route('admin.deleghe.index') }}" :active="request()->routeIs('admin.deleghe.*')" icon="user-group">
                         Deleghe
                     </x-sidebar-link>

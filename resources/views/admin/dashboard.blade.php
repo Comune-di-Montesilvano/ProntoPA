@@ -2,6 +2,14 @@
     <x-slot name="header">Amministrazione</x-slot>
 
     <div class="space-y-6">
+        @if($backupInAllarme ?? false)
+            <div class="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800" role="alert">
+                <strong>Backup non aggiornato.</strong>
+                Nessun backup riuscito nelle ultime {{ config('backup.ore_allarme') }} ore.
+                <a href="{{ route('admin.backup.index') }}" class="font-semibold underline">Apri la pagina Backup</a>
+            </div>
+        @endif
+
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <div class="bg-white shadow-sm rounded-lg p-5 border-l-4 border-green-500">
                 <div class="text-xs font-semibold uppercase tracking-widest text-gray-500">Utenti attivi</div>

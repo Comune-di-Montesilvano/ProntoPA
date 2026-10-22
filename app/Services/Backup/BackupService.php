@@ -120,7 +120,13 @@ class BackupService
 
     private function versione(): string
     {
-        return preg_replace('/[^A-Za-z0-9.]/', '_', (string) config('app.version')) ?: 'dev';
+        return self::versionePerNomeFile((string) config('app.version'));
+    }
+
+    /** Versione utilizzabile nel nome file (anche per i backup caricati, che portano la versione del manifest). */
+    public static function versionePerNomeFile(string $versione): string
+    {
+        return preg_replace('/[^A-Za-z0-9.]/', '_', $versione) ?: 'dev';
     }
 
     /**
