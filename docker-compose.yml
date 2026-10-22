@@ -189,7 +189,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7.2-alpine
+    image: redis:8.0-alpine
     volumes:
       - redis_data:/data
     networks:
