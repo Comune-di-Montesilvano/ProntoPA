@@ -19,7 +19,7 @@ class InvalidaSessioniDopoRipristino
     public function handle(Request $request, Closure $next): Response
     {
         if (Auth::check()) {
-            $corrente = Impostazione::get('ripristino_id');
+            $corrente = Impostazione::ripristinoId();
             $sessione = $request->session()->get('ripristino_id');
 
             // Installazioni mai ripristinate: né impostazione né sessione, nessun effetto.

@@ -114,8 +114,7 @@ class DumpDatabase
                 $righe = $query->lazy(1000);
             }
             foreach ($righe as $riga) {
-                fwrite($fh, json_encode($riga, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)."
-");
+                fwrite($fh, json_encode($riga, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)."\n");
                 $n++;
             }
         } finally {

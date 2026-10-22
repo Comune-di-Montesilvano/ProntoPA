@@ -56,4 +56,42 @@ class InvalidaSessioniTest extends TestCase
 
         $this->assertSame($id, session('ripristino_id'));
     }
+
+    public function test_senza_ripristino_nessuna_query_per_richiesta(): void
+    {
+        $this->actingAs($this->admin());
+        $this->get(route('admin.dashboard'))->assertOk();
+
+        $letture = 0;
+        \Illuminate\Support\Facades\DB::listen(function ($q) use (&$letture) {
+            if (str_contains($q->sql, 'impostazioni') && in_array('ripristino_id', $q->bindings, true)) {
+                $letture++;
+            }
+        });
+        $this->get(route('admin.dashboard'))->assertOk();
+        $this->get(route('admin.dashboard'))->assertOk();
+
+        $this->assertSame(0, $letture);
+        $this->assertAuthenticated();
+
+        // Il valore in cache segue Impostazione::set: il ripristino continua a chiudere le sessioni.
+        Impostazione::set('ripristino_id', (string) Str::uuid());
+        $this->get(route('admin.dashboard'))->assertRedirect(route('login'));
+    }
+
+    public function test_ripristino_id_non_compare_ne_si_modifica_dalle_impostazioni(): void
+    {
+        Impostazione::set('ripristino_id', $id = (string) Str::uuid());
+        $this->actingAs($this->admin())->withSession(['ripristino_id' => $id]);
+        $this->withoutMiddleware([
+            \Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class,
+            \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        ]);
+
+        $this->get(route('admin.impostazioni.index'))->assertOk()->assertDontSee($id)->assertDontSee('ripristino_id');
+        $this->patch(route('admin.impostazioni.update'), ['impostazioni' => ['ripristino_id' => 'manomesso', 'ente_nome' => 'X']]);
+
+        $this->assertSame($id, Impostazione::query()->find('ripristino_id')?->valore);
+        $this->assertSame('X', Impostazione::get('ente_nome'));
+    }
 }

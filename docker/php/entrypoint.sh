@@ -16,6 +16,9 @@ while true; do
             *"Access denied"*)
                 echo "==> DB_PASSWORD diversa da quella con cui è stato creato il volume mariadb_data (vale solo alla prima creazione)"
                 ;;
+            *"Connection refused"*|*"getaddrinfo"*|*"Unknown MySQL server host"*)
+                echo "==> mariadb non risponde: controlla i log del servizio mariadb (su volume nuovo serve DB_ROOT_PASSWORD)"
+                ;;
         esac
     fi
     sleep 2

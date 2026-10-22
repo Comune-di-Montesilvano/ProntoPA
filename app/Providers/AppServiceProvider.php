@@ -40,7 +40,7 @@ class AppServiceProvider extends ServiceProvider
         // Un solo punto per tutti i metodi di accesso (AD, locale, SPID, magic link):
         // la sessione ricorda a quale ripristino appartiene (InvalidaSessioniDopoRipristino).
         Event::listen(Login::class, function (): void {
-            session()->put('ripristino_id', Impostazione::get('ripristino_id'));
+            session()->put('ripristino_id', Impostazione::ripristinoId());
         });
 
         LdapConfigGuard::verifica((string) $this->app->environment(), config('ldap.host'));
