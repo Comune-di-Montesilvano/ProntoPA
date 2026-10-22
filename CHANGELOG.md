@@ -4,6 +4,13 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.8] - 2026-10-22
+
+### Fixed
+- Caricamento di un backup da Admin → Backup rifiutato con errore 413 dietro
+  un reverse proxy con limite di 1 MB per richiesta (default nginx): i blocchi
+  passano da 5 MB a 512 KB.
+
 ## [0.8.7] - 2026-10-22
 
 ### Fixed

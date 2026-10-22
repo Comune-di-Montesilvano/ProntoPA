@@ -285,7 +285,7 @@ class ArchivioBackup
 
     private function blocco(): int
     {
-        return max(8192, (int) config('backup.dimensione_blocco', 5 * 1024 * 1024));
+        return max(8192, (int) config('backup.dimensione_blocco', 512 * 1024));
     }
 
     private function rimuoviDir(string $dir): void
