@@ -60,7 +60,7 @@
     {{-- ── Sidebar ─────────────────────────────────────────────────────────── --}}
     <aside class="fixed inset-y-0 left-0 z-30 flex flex-col bg-white border-r
                   transform transition-transform duration-200 ease-in-out
-                  lg:static lg:translate-x-0 -translate-x-full"
+                  lg:sticky lg:top-0 lg:h-screen lg:shrink-0 lg:translate-x-0 -translate-x-full"
            style="width:220px; border-color: var(--slate-200);"
            :class="{ 'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen }"
            x-cloak>
