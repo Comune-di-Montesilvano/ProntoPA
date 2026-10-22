@@ -62,6 +62,6 @@ updates:
     ignore:
       - dependency-name: "ollama/ollama"
       - dependency-name: "clamav/clamav"
-      # Solo LTS (11.4 → 11.8 → 12.3): le rolling 12.0–12.2 hanno supporto breve.
+      # Dependabot non distingue LTS da rolling (proporrebbe 12.2, 13.0…):
+      # le nuove LTS le segnala mariadb-lts-check.yml con una issue.
       - dependency-name: "mariadb"
-        versions: [">= 12.0, < 12.3"]
