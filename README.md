@@ -42,7 +42,7 @@ nessuna modifica al codice richiesta per adattarlo al proprio ente.
 | Framework | Laravel 13 |
 | PHP | 8.4 (PHP-FPM) |
 | Web Server | Nginx 1.27 |
-| Database | MariaDB 11.4 |
+| Database | MariaDB 12.3 LTS |
 | Cache/Sessioni | Redis |
 | Frontend | Blade + Tailwind CSS 4 + Alpine.js |
 | Container | Docker + docker-compose |
