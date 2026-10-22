@@ -306,4 +306,89 @@ class BackupServiceTest extends TestCase
 
         $this->assertSame(0700, $dump->permessi);
     }
+
+    public function test_marcatore_in_corso_durante_il_backup(): void
+    {
+        $cat = app(CatalogoBackup::class);
+        $dump = new class extends DumpDatabase
+        {
+            /** @var array<string,mixed>|null */
+            public ?array $marcatore = null;
+
+            public function esporta(string $dir): array
+            {
+                $this->marcatore = app(CatalogoBackup::class)->inCorso();
+
+                return parent::esporta($dir);
+            }
+        };
+        $this->app->instance(DumpDatabase::class, $dump);
+
+        app(BackupService::class)->crea('notturno');
+
+        $this->assertSame('notturno', $dump->marcatore['tipo'] ?? null);
+        $this->assertSame('in corso', $dump->marcatore['fase'] ?? null);
+        $this->assertNull($cat->inCorso());
+    }
+
+    public function test_marcatore_rimosso_anche_se_il_backup_fallisce(): void
+    {
+        $this->app->bind(DumpDatabase::class, fn () => new class extends DumpDatabase
+        {
+            public function esporta(string $dir): array
+            {
+                throw new \RuntimeException('disco pieno');
+            }
+        });
+
+        try {
+            app(BackupService::class)->crea('manuale');
+        } catch (\RuntimeException) {
+        }
+
+        $this->assertNull(app(CatalogoBackup::class)->inCorso());
+    }
+
+    public function test_marcatore_vecchio_ignorato_e_ripulito(): void
+    {
+        $cat = app(CatalogoBackup::class);
+        $cat->segnaInCorso('manuale', 'in coda');
+        $file = $this->base.'/backups/stato/'.CatalogoBackup::MARCATORE;
+        $this->assertFileExists($file);
+        touch($file, time() - 4 * 3600);
+
+        $this->assertNull($cat->inCorso());
+        $cat->pulisciTemporanei();
+        $this->assertFileDoesNotExist($file);
+    }
+
+    public function test_job_che_trova_lock_occupato_toglie_solo_il_proprio_marcatore(): void
+    {
+        $cat = app(CatalogoBackup::class);
+        $lock = Cache::lock('backup', 10);
+        $this->assertTrue($lock->get());
+        try {
+            $cat->segnaInCorso('manuale', 'in coda');
+            app()->call([new \App\Jobs\CreaBackup('manuale'), 'handle']);
+            $this->assertNull($cat->inCorso());
+
+            // Il marcatore di un backup già partito appartiene a quello.
+            $cat->segnaInCorso('notturno', 'in corso');
+            app()->call([new \App\Jobs\CreaBackup('manuale'), 'handle']);
+            $this->assertSame('notturno', $cat->inCorso()['tipo'] ?? null);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    public function test_allarme_ignora_i_caricati(): void
+    {
+        $cat = app(CatalogoBackup::class);
+        $ora = CarbonImmutable::now();
+        $nome = 'prontopa-'.$ora->format('Ymd-His').'-dev-caricato.zip';
+        file_put_contents($this->base.'/backups/'.$nome, 'x');
+        $cat->salvaInfo(new \App\Services\Backup\BackupInfo($nome, 'caricato', $ora, 'dev', 1, true, null, null));
+
+        $this->assertTrue($cat->inAllarme($ora));
+    }
 }

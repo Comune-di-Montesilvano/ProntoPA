@@ -147,6 +147,42 @@ class BackupControllerTest extends TestCase
         $this->actingAs($this->utente('admin'))->post(route('admin.backup.crea'))
             ->assertRedirect(route('admin.backup.index'));
         Queue::assertPushed(CreaBackup::class, fn (CreaBackup $j) => $j->tipo === 'manuale');
+        $this->assertSame('in coda', app(CatalogoBackup::class)->inCorso()['fase'] ?? null);
+    }
+
+    public function test_backup_ora_senza_passphrase_rifiutato(): void
+    {
+        Queue::fake();
+        config(['backup.passphrase' => null]);
+        $this->actingAs($this->utente('admin'))->post(route('admin.backup.crea'))
+            ->assertRedirect(route('admin.backup.index'))->assertSessionHas('errore');
+        Queue::assertNotPushed(CreaBackup::class);
+    }
+
+    public function test_index_mostra_backup_in_corso_e_blocca_backup_ora(): void
+    {
+        Queue::fake();
+        app(CatalogoBackup::class)->segnaInCorso('notturno', 'in corso');
+        $admin = $this->utente('admin');
+
+        $this->actingAs($admin)->get(route('admin.backup.index'))
+            ->assertOk()->assertSee('Backup notturno in corso dal')->assertSee('location.reload', false);
+        $this->post(route('admin.backup.crea'))->assertSessionHas('errore');
+        Queue::assertNotPushed(CreaBackup::class);
+
+        app(CatalogoBackup::class)->fineInCorso();
+        $this->get(route('admin.backup.index'))->assertOk()->assertDontSee('in corso dal');
+    }
+
+    public function test_pagina_backup_allarme_36_ore(): void
+    {
+        $quando = CarbonImmutable::now()->subHours(37);
+        $nome = 'prontopa-'.$quando->format('Ymd-His').'-dev-notturno.zip';
+        file_put_contents($this->base.'/backups/'.$nome, 'x');
+        app(CatalogoBackup::class)->salvaInfo(new BackupInfo($nome, 'notturno', $quando, 'dev', 1, true, null, 1));
+
+        $this->actingAs($this->utente('admin'))->get(route('admin.backup.index'))
+            ->assertOk()->assertSee('Backup non aggiornato');
     }
 
     public function test_index_elenca_backup(): void

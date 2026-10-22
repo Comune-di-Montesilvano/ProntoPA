@@ -3,11 +3,7 @@
 
     <div class="space-y-6">
         @if($backupInAllarme ?? false)
-            <div class="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800" role="alert">
-                <strong>Backup non aggiornato.</strong>
-                Nessun backup riuscito nelle ultime {{ config('backup.ore_allarme') }} ore.
-                <a href="{{ route('admin.backup.index') }}" class="font-semibold underline">Apri la pagina Backup</a>
-            </div>
+            <x-backup-allarme />
         @endif
 
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Services\Backup\BackupInCorso;
 use App\Services\Backup\BackupService;
+use App\Services\Backup\CatalogoBackup;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -25,13 +26,17 @@ class CreaBackup implements ShouldQueue
         $this->onConnection((string) config('backup.connessione_coda'))->onQueue('lunghi');
     }
 
-    public function handle(BackupService $backup): void
+    public function handle(BackupService $backup, CatalogoBackup $catalogo): void
     {
         try {
             $backup->crea($this->tipo);
         } catch (BackupInCorso) {
-            // La UI già impedisce il doppio avvio: nessun errore da mostrare.
-            Log::info('CreaBackup: un altro backup è in corso, salto.');
+            // Occupato da un ripristino o da un altro backup: se il marcatore è ancora
+            // "in coda" è quello scritto per questo job (un backup avviato lo porta a "in corso").
+            if (($catalogo->inCorso()['fase'] ?? null) === 'in coda') {
+                $catalogo->fineInCorso();
+            }
+            Log::info('CreaBackup: un altro backup o ripristino è in corso, salto.');
         }
     }
 }

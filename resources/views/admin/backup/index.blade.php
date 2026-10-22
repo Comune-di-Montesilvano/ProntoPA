@@ -9,6 +9,10 @@
             <div class="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{{ session('errore') }}</div>
         @endif
 
+        @if($inAllarme && ! $passphraseMancante)
+            <x-backup-allarme :link="false" />
+        @endif
+
         @if($passphraseMancante)
             <div class="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900" role="alert">
                 <strong>Backup disattivato.</strong> Imposta BACKUP_PASSPHRASE nella stack: senza, i backup notturni
@@ -19,9 +23,17 @@
         <div class="bg-white shadow-sm rounded-xl p-6 space-y-3">
             <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Nuovo backup</h2>
             <p class="text-sm text-gray-600">Database e allegati in un unico file cifrato. Il backup notturno gira in automatico; qui puoi lanciarne uno subito.</p>
+            @if($inCorso)
+                {{-- Si ricarica da sola finché il backup non termina, ma mai durante un caricamento. --}}
+                <p class="text-sm text-blue-700" x-data
+                   x-init="setInterval(() => { if (!window.caricamentoBackupInCorso) location.reload() }, 10000)">
+                    Backup {{ $inCorso['tipo'] }} in corso dal {{ \Carbon\CarbonImmutable::parse($inCorso['dal'])->format('d/m/Y H:i') }}
+                    ({{ $inCorso['fase'] }}): la pagina si aggiorna da sola.
+                </p>
+            @endif
             <form method="POST" action="{{ route('admin.backup.crea') }}">
                 @csrf
-                <button type="submit" @disabled($passphraseMancante)
+                <button type="submit" @disabled($passphraseMancante || $inCorso)
                         class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 disabled:opacity-50 transition">
                     Backup ora
                 </button>
@@ -116,7 +128,7 @@
                     const totale = Math.max(1, Math.ceil(file.size / cfg.blocco));
                     const id = crypto.randomUUID();
                     const token = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
-                    this.inCorso = true; this.errore = false; this.messaggio = ''; this.percentuale = 0;
+                    this.inCorso = window.caricamentoBackupInCorso = true; this.errore = false; this.messaggio = ''; this.percentuale = 0;
                     try {
                         for (let i = 0; i < totale; i++) {
                             const dati = new FormData();
@@ -144,7 +156,7 @@
                     } catch (e) {
                         this.errore = true; this.messaggio = e.message;
                     } finally {
-                        this.inCorso = false; this.passphrase = '';
+                        this.inCorso = window.caricamentoBackupInCorso = false; this.passphrase = '';
                     }
                 },
                 // La verifica gira in coda: si interroga lo stesso endpoint di stato del ripristino.

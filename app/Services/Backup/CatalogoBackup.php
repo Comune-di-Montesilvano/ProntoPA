@@ -131,14 +131,51 @@ class CatalogoBackup
         }
     }
 
+    /** Marcatore per la pagina Backup: scritto all'accodamento e all'avvio, tolto alla fine. */
+    public function segnaInCorso(string $tipo, string $fase): void
+    {
+        $file = $this->cartella().'/stato/'.self::MARCATORE;
+        File::ensureDirectoryExists(dirname($file));
+        $tmp = $file.'.'.bin2hex(random_bytes(4)).'.tmp';
+        file_put_contents($tmp, json_encode(
+            ['tipo' => $tipo, 'fase' => $fase, 'dal' => CarbonImmutable::now()->toIso8601String()],
+            JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
+        ));
+        rename($tmp, $file);
+    }
+
+    /**
+     * Un marcatore più vecchio di ORE_TEMPORANEI è di un processo morto (o di un job mai
+     * partito): ignorato, così "Backup ora" non resta bloccato.
+     *
+     * @return array{tipo:string,fase:string,dal:string}|null
+     */
+    public function inCorso(): ?array
+    {
+        $file = $this->cartella().'/stato/'.self::MARCATORE;
+        clearstatcache(true, $file);
+        if (! is_file($file) || (int) @filemtime($file) < time() - self::ORE_TEMPORANEI * 3600) {
+            return null;
+        }
+        $dati = json_decode((string) @file_get_contents($file), true);
+
+        return is_array($dati) && isset($dati['tipo'], $dati['fase'], $dati['dal']) ? $dati : null;
+    }
+
+    public function fineInCorso(): void
+    {
+        @unlink($this->cartella().'/stato/'.self::MARCATORE);
+    }
+
     public function ultimo(): ?BackupInfo
     {
         return $this->elenco()->first();
     }
 
+    /** I caricati non contano: sono copie di altre installazioni, non backup di questa. */
     public function inAllarme(CarbonImmutable $ora): bool
     {
-        $ultimo = $this->ultimo();
+        $ultimo = $this->elenco()->first(fn (BackupInfo $b) => $b->tipo !== 'caricato');
 
         return $ultimo === null
             || ! $ultimo->verificato

@@ -12,6 +12,7 @@ use App\Services\Backup\BackupProtetto;
 use App\Services\Backup\CatalogoBackup;
 use App\Services\Backup\RipristinoService;
 use App\Services\Backup\StatoRipristino;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,12 +34,22 @@ class BackupController extends Controller
         return view('admin.backup.index', [
             'backups' => $this->catalogo->elenco(),
             'passphraseMancante' => $this->passphraseLocale() === null,
+            'inAllarme' => $this->catalogo->inAllarme(CarbonImmutable::now()),
+            'inCorso' => $this->catalogo->inCorso(),
             'dimensioneBlocco' => $this->dimensioneBlocco(),
         ]);
     }
 
     public function crea(): RedirectResponse
     {
+        if ($this->passphraseLocale() === null) {
+            return redirect()->route('admin.backup.index')->with('errore', 'Imposta BACKUP_PASSPHRASE nella stack: senza, il backup è disattivato.');
+        }
+        if ($this->catalogo->inCorso() !== null) {
+            return redirect()->route('admin.backup.index')->with('errore', 'Un backup è già in corso: attendi che termini.');
+        }
+
+        $this->catalogo->segnaInCorso('manuale', 'in coda');
         CreaBackup::dispatch('manuale');
 
         return redirect()->route('admin.backup.index')->with('status', 'Backup accodato: comparirà nell\'elenco appena terminato.');

@@ -34,8 +34,11 @@ class BackupService
         }
 
         try {
+            $this->marcatore(fn () => $this->catalogo->segnaInCorso($tipo, 'in corso'));
+
             return $this->creaSenzaLock($tipo);
         } finally {
+            $this->marcatore(fn () => $this->catalogo->fineInCorso());
             $lock->release();
         }
     }
@@ -144,6 +147,16 @@ class BackupService
         }
 
         return $eliminati;
+    }
+
+    /** Il marcatore serve solo alla UI: un suo errore non deve impedire né far fallire il backup. */
+    private function marcatore(callable $azione): void
+    {
+        try {
+            $azione();
+        } catch (Throwable $e) {
+            report($e);
+        }
     }
 
     private function validaTipo(string $tipo): void
