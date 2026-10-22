@@ -182,7 +182,7 @@ Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella 
 
 ## Backup e ripristino (v0.8.2)
 
-Spec: `docs/superpowers/specs/2026-10-21-backup-ripristino-design.md`. Admin → Backup: Backup ora, Scarica, Elimina, Carica a blocchi da 5 MB (l'ultimo blocco accoda `CompletaCaricamento` su `lunghi`: verifica+ricifratura fuori dalla richiesta, la pagina interroga lo stesso `ripristino/stato/{token}`), Ripristina (conferma digitando `RIPRISTINA`, pagina d'attesa che interroga `ripristino/stato/{token}`).
+Spec: `docs/superpowers/specs/2026-10-21-backup-ripristino-design.md`. Admin → Backup: Backup ora, Scarica, Elimina, Carica a blocchi da 512 KB (sotto il limite 1 MB dei reverse proxy) (l'ultimo blocco accoda `CompletaCaricamento` su `lunghi`: verifica+ricifratura fuori dalla richiesta, la pagina interroga lo stesso `ripristino/stato/{token}`), Ripristina (conferma digitando `RIPRISTINA`, pagina d'attesa che interroga `ripristino/stato/{token}`).
 
 - **Formato**: dump logico in PHP (una tabella = un JSONL, snapshot coerente su MariaDB) + `storage` → ZIP AES-256 (apribile con 7-Zip data la passphrase; **nomi e dimensioni dei file NON sono cifrati**). Accanto a ogni zip un sidecar `<nome>.json`. Volume `backups` → `/var/www/html/backups` (dev: bind mount `./backups`; su host Linux `mkdir backups` prima del primo `up`, altrimenti nasce root).
 - **`segreti.json`** (secret SPID ecc.) è ricifrato con l'`APP_KEY` di destinazione. Compatibilità giudicata dalle migrations del manifest, non dalla versione.

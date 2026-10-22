@@ -35,6 +35,7 @@ return [
     // Dimensione massima di un backup caricato da UI (MB).
     'max_upload_mb' => (int) env('BACKUP_MAX_UPLOAD_MB', 10240),
 
-    // Dimensione blocco di lettura/scrittura (byte).
-    'dimensione_blocco' => 5 * 1024 * 1024,
+    // Dimensione blocco di lettura/scrittura e di caricamento da UI (byte): sotto
+    // il limite di 1 MB dei reverse proxy (nginx client_max_body_size di default).
+    'dimensione_blocco' => 512 * 1024,
 ];
