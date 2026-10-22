@@ -4,7 +4,7 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
-## [0.9.0] - 2026-10-22
+## [0.8.2] - 2026-10-22
 
 ### Added
 - Backup e ripristino: Admin → Backup per creare, scaricare, eliminare,
