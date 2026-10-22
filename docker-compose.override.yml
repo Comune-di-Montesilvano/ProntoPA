@@ -9,7 +9,7 @@
 services:
 
   nginx:
-    image: nginx:1.27-alpine
+    image: nginx:1.29-alpine
     volumes:
       - ./:/var/www/html
       - ./public/storage:/var/www/html/public/storage
