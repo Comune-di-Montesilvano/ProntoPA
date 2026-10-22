@@ -97,6 +97,39 @@ class BackupService
         return $info;
     }
 
+    /**
+     * Registra come `caricato` un archivio arrivato da fuori: verificato con la passphrase
+     * del file, ricifrato con quella locale se diversa, spostato nel catalogo.
+     */
+    public function registraCaricato(string $file, #[\SensitiveParameter] string $passphraseFile): BackupInfo
+    {
+        $locale = config('backup.passphrase');
+        if (! is_string($locale) || $locale === '') {
+            throw new BackupNonConfigurato('Imposta BACKUP_PASSPHRASE nella stack prima di caricare un backup: senza, il file non si potrebbe riaprire.');
+        }
+        $da = $passphraseFile !== '' ? $passphraseFile : $locale;
+
+        $this->archivio->verifica($file, $da);
+        if ($da !== $locale) {
+            $this->archivio->ricifra($file, $da, $locale);
+        }
+        $manifest = $this->archivio->manifest($file, $locale);
+
+        $creato = CarbonImmutable::parse((string) ($manifest['creato_il'] ?? 'now'));
+        $versione = self::versionePerNomeFile((string) ($manifest['versione'] ?? ''));
+        $nome = sprintf('prontopa-%s-%s-caricato.zip', $creato->format('Ymd-His'), $versione);
+        $destinazione = $this->catalogo->percorso($nome);
+        if (file_exists($destinazione)) {
+            throw new \InvalidArgumentException("Esiste già un backup caricato con questo nome ($nome).");
+        }
+
+        rename($file, $destinazione);
+        $info = new BackupInfo($nome, 'caricato', $creato, $versione, (int) filesize($destinazione), true, null, null);
+        $this->catalogo->salvaInfo($info);
+
+        return $info;
+    }
+
     /** @return list<string> nomi eliminati */
     public function applicaRetention(): array
     {

@@ -130,7 +130,7 @@ class RipristinoService
      * @param  array{dir:string,manifest:array<string,mixed>,segreti:list<array<string,mixed>>}  $estratto
      * @return array{bool,string}
      */
-    private function sostituisciConRollback(array $estratto, string $token, string $nome, ?string $pre): array
+    private function sostituisciConRollback(#[\SensitiveParameter] array $estratto, string $token, string $nome, ?string $pre): array
     {
         try {
             $this->sostituisci($estratto, $token);
@@ -186,7 +186,7 @@ class RipristinoService
     }
 
     /** @param array{dir:string,manifest:array<string,mixed>,segreti:list<array<string,mixed>>} $estratto */
-    private function sostituisci(array $estratto, string $token): void
+    private function sostituisci(#[\SensitiveParameter] array $estratto, string $token): void
     {
         $this->fase($token, 'database');
         Schema::dropAllTables();

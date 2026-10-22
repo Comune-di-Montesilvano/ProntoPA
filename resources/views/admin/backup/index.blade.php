@@ -82,7 +82,7 @@
         </div>
 
         <div class="bg-white shadow-sm rounded-xl p-6 space-y-3"
-             x-data="caricaBackup({ url: @js(route('admin.backup.carica')), blocco: @js($dimensioneBlocco), indice: @js(route('admin.backup.index')) })">
+             x-data="caricaBackup({ url: @js(route('admin.backup.carica')), stato: @js(url('ripristino/stato')), blocco: @js($dimensioneBlocco), indice: @js(route('admin.backup.index')) })">
             <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Carica un backup</h2>
             <p class="text-sm text-gray-600">Per ripristinare un file scaricato da un'altra installazione (o dopo un disastro). Se è cifrato con una passphrase diversa da quella di questa installazione, indicala: il file verrà ricifrato con quella locale.</p>
             <div class="flex flex-wrap items-end gap-3">
@@ -133,7 +133,11 @@
                             if (!r.ok) throw new Error(esito.errore ?? esito.message ?? 'Caricamento non riuscito.');
                             this.percentuale = Math.round(((i + 1) / totale) * 100);
                             if (i === totale - 1) {
-                                this.messaggio = 'Backup caricato e verificato: ' + esito.nome;
+                                this.passphrase = '';
+                                this.messaggio = 'File ricevuto: verifica in corso, può richiedere alcuni minuti…';
+                                const fine = await this.attendi(esito.token);
+                                if (!fine.esito) throw new Error(fine.messaggio || 'Caricamento non riuscito.');
+                                this.messaggio = fine.messaggio;
                                 setTimeout(() => window.location.href = cfg.indice, 1200);
                             }
                         }
@@ -141,6 +145,17 @@
                         this.errore = true; this.messaggio = e.message;
                     } finally {
                         this.inCorso = false; this.passphrase = '';
+                    }
+                },
+                // La verifica gira in coda: si interroga lo stesso endpoint di stato del ripristino.
+                async attendi(token) {
+                    for (;;) {
+                        await new Promise((ok) => setTimeout(ok, 2000));
+                        try {
+                            const r = await fetch(cfg.stato + '/' + token, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                            const d = r.ok ? await r.json().catch(() => null) : null;
+                            if (d && d.esito !== null && d.esito !== undefined) return d;
+                        } catch (e) { /* rete instabile: riprova */ }
                     }
                 },
             }));

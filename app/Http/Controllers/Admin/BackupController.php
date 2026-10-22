@@ -3,32 +3,28 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\CompletaCaricamento;
 use App\Jobs\CreaBackup;
 use App\Jobs\EseguiRipristino;
 use App\Services\Backup\Anteprima;
-use App\Services\Backup\ArchivioBackup;
-use App\Services\Backup\BackupInfo;
 use App\Services\Backup\BackupNonLeggibile;
 use App\Services\Backup\BackupProtetto;
-use App\Services\Backup\BackupService;
 use App\Services\Backup\CatalogoBackup;
 use App\Services\Backup\RipristinoService;
 use App\Services\Backup\StatoRipristino;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Throwable;
 
 class BackupController extends Controller
 {
     public function __construct(
         private readonly CatalogoBackup $catalogo,
-        private readonly ArchivioBackup $archivio,
         private readonly RipristinoService $ripristino,
     ) {}
 
@@ -69,7 +65,10 @@ class BackupController extends Controller
         return redirect()->route('admin.backup.index')->with('status', "Backup $nome eliminato.");
     }
 
-    /** Un blocco per richiesta: i file di backup superano i limiti di upload di nginx/PHP. */
+    /**
+     * Un blocco per richiesta: i file di backup superano i limiti di upload di nginx/PHP.
+     * L'ultimo blocco accoda la verifica (CompletaCaricamento) e risponde col token di stato.
+     */
     public function carica(Request $request): JsonResponse
     {
         $v = Validator::make($request->all(), [
@@ -83,45 +82,56 @@ class BackupController extends Controller
             return $this->errore($v->errors()->first());
         }
 
-        $this->catalogo->pulisciTemporanei();
-
         $id = (string) $request->input('upload_id');
         $indice = (int) $request->input('indice');
         $totale = (int) $request->input('totale');
         $file = $request->file('blocco');
         $max = $this->dimensioneBlocco();
         $ultimo = $indice === $totale - 1;
+        $parte = $this->catalogo->cartella().'/tmp/upload-'.$id.'.part';
+        // Totale e proprietario fissati al primo blocco: i successivi devono combaciare.
+        $meta = $this->catalogo->cartella().'/tmp/upload-'.$id.'.meta';
+        $proprietario = ['totale' => $totale, 'utente' => (int) $request->user()?->getAuthIdentifier()];
 
         if ($indice >= $totale) {
             return $this->errore('Indice del blocco non valido.');
         }
-        if ($indice === 0 && $totale * $max > (int) config('backup.max_upload_mb') * 1048576) {
-            return $this->errore('File troppo grande: il limite è '.(int) config('backup.max_upload_mb').' MB.');
+        if ($indice === 0) {
+            $this->catalogo->pulisciTemporanei();
+            if ($this->passphraseLocale() === null) {
+                return $this->errore('Imposta BACKUP_PASSPHRASE nella stack prima di caricare un backup: senza, il file non si potrebbe riaprire.');
+            }
+            if ($totale * $max > (int) config('backup.max_upload_mb') * 1048576) {
+                return $this->errore('File troppo grande: il limite è '.(int) config('backup.max_upload_mb').' MB.');
+            }
+        } elseif (! is_file($meta) || json_decode((string) file_get_contents($meta), true) !== $proprietario) {
+            return $this->errore('Caricamento non riconosciuto: riavvialo.');
         }
+
         $dimensione = (int) $file->getSize();
         if ($dimensione > $max || $dimensione === 0 || (! $ultimo && $dimensione !== $max)) {
-            @unlink($this->catalogo->cartella().'/tmp/upload-'.$id.'.part');
+            @unlink($parte);
+            @unlink($meta);
 
             return $this->errore('Dimensione del blocco non valida.');
         }
 
-        $parte = $this->catalogo->cartella().'/tmp/upload-'.$id.'.part';
         clearstatcache(true, $parte);
         $ricevuto = is_file($parte) ? (int) filesize($parte) : 0;
         // Ogni blocco precedente è esattamente $max byte: l'indice atteso è determinato dalla dimensione.
         if ($ricevuto !== $indice * $max) {
             @unlink($parte);
+            @unlink($meta);
 
             return $this->errore('Blocco fuori sequenza: riavvia il caricamento.');
         }
 
-        if (! is_dir(dirname($parte))) {
-            mkdir(dirname($parte), 0775, true);
-        }
+        File::ensureDirectoryExists(dirname($parte), 0700);
         $in = fopen($file->getRealPath(), 'rb');
         $out = fopen($parte, 'ab');
         if ($in === false || $out === false || stream_copy_to_stream($in, $out) !== $dimensione) {
             @unlink($parte);
+            @unlink($meta);
 
             return $this->errore('Scrittura del blocco non riuscita (spazio su disco?).');
         }
@@ -129,22 +139,21 @@ class BackupController extends Controller
         fclose($out);
 
         if (! $ultimo) {
+            // Anche toccato a ogni blocco: per la pulizia per età conta l'ultimo arrivato.
+            file_put_contents($meta, json_encode($proprietario, JSON_THROW_ON_ERROR));
+
             return response()->json(['ok' => true]);
         }
 
-        try {
-            $nome = $this->completaCaricamento($parte, (string) $request->input('passphrase', ''));
-        } catch (BackupNonLeggibile|InvalidArgumentException $e) {
-            return $this->errore($e->getMessage());
-        } catch (Throwable $e) {
-            report($e);
+        // Fuori dal nome upload-*: un blocco ripetuto non può più toccare il file in verifica.
+        @unlink($meta);
+        $token = StatoRipristino::nuovoToken();
+        $daVerificare = $this->catalogo->cartella().'/tmp/caricato-'.$token.'.zip';
+        rename($parte, $daVerificare);
+        StatoRipristino::fase($token, 'in coda', 'Verifica accodata.');
+        CompletaCaricamento::dispatch($daVerificare, (string) $request->input('passphrase', ''), $token);
 
-            return $this->errore('Caricamento non riuscito: '.$e->getMessage());
-        } finally {
-            @unlink($parte);
-        }
-
-        return response()->json(['nome' => $nome]);
+        return response()->json(['token' => $token]);
     }
 
     public function anteprima(string $nome): View
@@ -187,6 +196,7 @@ class BackupController extends Controller
         }
 
         // Ricontrollo lato server: la pagina di anteprima può essere vecchia.
+        set_time_limit(0);
         try {
             $anteprima = $this->ripristino->anteprima($percorso, $passphrase);
         } catch (BackupNonLeggibile $e) {
@@ -229,8 +239,10 @@ class BackupController extends Controller
         return response()->json($stato);
     }
 
-    private function vistaAnteprima(string $nome, string $percorso, ?string $passphraseForm): View
+    private function vistaAnteprima(string $nome, string $percorso, #[\SensitiveParameter] ?string $passphraseForm): View
     {
+        // La verifica legge l'archivio intero: su backup grandi supera max_execution_time.
+        set_time_limit(0);
         $passphrase = $passphraseForm ?? $this->passphraseLocale();
         $anteprima = null;
         $errore = null;
@@ -260,37 +272,6 @@ class BackupController extends Controller
     private function totaleRighe(Anteprima $a): int
     {
         return (int) array_sum(array_map('intval', (array) ($a->manifest['conteggi'] ?? [])));
-    }
-
-    /** @return string nome del file caricato */
-    private function completaCaricamento(string $parte, #[\SensitiveParameter] string $passphraseForm): string
-    {
-        $locale = $this->passphraseLocale();
-        if ($locale === null) {
-            throw new InvalidArgumentException('Imposta BACKUP_PASSPHRASE nella stack prima di caricare un backup: senza, il file non si potrebbe riaprire.');
-        }
-        $da = $passphraseForm !== '' ? $passphraseForm : $locale;
-
-        $this->archivio->verifica($parte, $da);
-        if ($da !== $locale) {
-            $this->archivio->ricifra($parte, $da, $locale);
-        }
-        $manifest = $this->archivio->manifest($parte, $locale);
-
-        $creato = CarbonImmutable::parse((string) ($manifest['creato_il'] ?? 'now'));
-        $versione = BackupService::versionePerNomeFile((string) ($manifest['versione'] ?? ''));
-        $nome = sprintf('prontopa-%s-%s-caricato.zip', $creato->format('Ymd-His'), $versione);
-        $destinazione = $this->catalogo->percorso($nome);
-        if (file_exists($destinazione)) {
-            throw new InvalidArgumentException("Esiste già un backup caricato con questo nome ($nome).");
-        }
-
-        rename($parte, $destinazione);
-        $this->catalogo->salvaInfo(new BackupInfo(
-            $nome, 'caricato', $creato, $versione, (int) filesize($destinazione), true, null, null,
-        ));
-
-        return $nome;
     }
 
     private function percorso(string $nome): string

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Jobs\CompletaCaricamento;
 use App\Jobs\CreaBackup;
 use App\Jobs\EseguiRipristino;
 use App\Models\User;
@@ -12,6 +13,7 @@ use App\Services\Backup\BackupService;
 use App\Services\Backup\CatalogoBackup;
 use App\Services\Backup\StatoRipristino;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\ThrottleRequests;
@@ -93,9 +95,34 @@ class BackupControllerTest extends TestCase
                 'blocco' => UploadedFile::fake()->createWithContent('b', $dati),
                 'passphrase' => $passphrase,
             ]);
+            if (! $r->isOk()) {
+                break;
+            }
         }
 
         return $r;
+    }
+
+    /**
+     * Esito del completamento (job sync nei test) per la risposta dell'ultimo blocco.
+     *
+     * @return array<string,mixed>
+     */
+    private function esitoCaricamento(TestResponse $r): array
+    {
+        $r->assertOk()->assertJsonStructure(['token']);
+        $stato = StatoRipristino::leggi((string) $r->json('token'));
+        $this->assertNotNull($stato);
+
+        return $stato;
+    }
+
+    private function caricato(): BackupInfo
+    {
+        $voce = app(CatalogoBackup::class)->elenco()->firstWhere('tipo', 'caricato');
+        $this->assertNotNull($voce);
+
+        return $voce;
     }
 
     public function test_solo_admin(): void
@@ -172,16 +199,31 @@ class BackupControllerTest extends TestCase
         $blocchi = $this->blocchiDi($this->backupReale());
 
         $this->actingAs($this->utente('admin'));
-        $r = $this->inviaBlocchi($blocchi);
+        $stato = $this->esitoCaricamento($this->inviaBlocchi($blocchi));
 
-        $r->assertOk()->assertJsonStructure(['nome']);
-        $nome = $r->json('nome');
-        $this->assertStringEndsWith('-caricato.zip', $nome);
-        $voce = app(CatalogoBackup::class)->elenco()->firstWhere('nome', $nome);
-        $this->assertNotNull($voce);
+        $this->assertTrue($stato['esito'], $stato['messaggio']);
+        $voce = $this->caricato();
+        $this->assertStringEndsWith('-caricato.zip', $voce->nome);
+        $this->assertStringContainsString($voce->nome, $stato['messaggio']);
         $this->assertTrue($voce->verificato);
-        $this->assertSame('caricato', $voce->tipo);
-        $this->assertSame([], glob($this->base.'/backups/tmp/upload-*.part') ?: []);
+        $this->assertSame([], glob($this->base.'/backups/tmp/*') ?: []);
+    }
+
+    public function test_upload_completato_da_job_cifrato_sulla_coda_lunga(): void
+    {
+        $blocchi = $this->blocchiDi($this->backupReale());
+        Queue::fake();
+        config(['backup.connessione_coda' => 'redis-lunghi']);
+
+        $this->actingAs($this->utente('admin'));
+        $r = $this->inviaBlocchi($blocchi, 'una-passphrase');
+
+        $r->assertOk()->assertJsonStructure(['token']);
+        Queue::assertPushed(CompletaCaricamento::class, fn (CompletaCaricamento $j) => $j->connection === 'redis-lunghi'
+            && $j->queue === 'lunghi' && $j->token === $r->json('token') && $j->timeout === 7200 && $j->tries === 1);
+        $this->assertInstanceOf(ShouldBeEncrypted::class, Queue::pushed(CompletaCaricamento::class)->first());
+        $this->assertSame('in coda', StatoRipristino::leggi($r->json('token'))['fase']);
+        $this->assertSame([], glob($this->base.'/backups/tmp/upload-*') ?: []);
     }
 
     public function test_upload_passphrase_diversa_ricifrato(): void
@@ -189,16 +231,30 @@ class BackupControllerTest extends TestCase
         $blocchi = $this->blocchiDi($this->backupReale(), 'test-pass', 'altra-pass');
 
         $this->actingAs($this->utente('admin'));
-        $r = $this->inviaBlocchi($blocchi, 'altra-pass');
+        $stato = $this->esitoCaricamento($this->inviaBlocchi($blocchi, 'altra-pass'));
 
-        $r->assertOk();
-        $nuovo = $this->base.'/backups/'.$r->json('nome');
+        $this->assertTrue($stato['esito'], $stato['messaggio']);
+        $nuovo = $this->base.'/backups/'.$this->caricato()->nome;
         app(ArchivioBackup::class)->verifica($nuovo, 'test-pass');
+        $this->assertSame([], glob($this->base.'/backups/tmp/*') ?: []);
         $this->expectException(BackupNonLeggibile::class);
         app(ArchivioBackup::class)->verifica($nuovo, 'altra-pass');
     }
 
-    public function test_upload_senza_passphrase_locale_rifiutato(): void
+    public function test_upload_gia_presente_fallisce_e_pulisce(): void
+    {
+        $blocchi = $this->blocchiDi($this->backupReale());
+        $this->actingAs($this->utente('admin'));
+        $this->assertTrue($this->esitoCaricamento($this->inviaBlocchi($blocchi))['esito']);
+
+        $stato = $this->esitoCaricamento($this->inviaBlocchi($blocchi));
+
+        $this->assertFalse($stato['esito']);
+        $this->assertStringContainsString('Esiste già', $stato['messaggio']);
+        $this->assertSame([], glob($this->base.'/backups/tmp/*') ?: []);
+    }
+
+    public function test_upload_senza_passphrase_locale_rifiutato_al_primo_blocco(): void
     {
         $blocchi = $this->blocchiDi($this->backupReale());
         config(['backup.passphrase' => null]);
@@ -208,7 +264,20 @@ class BackupControllerTest extends TestCase
 
         $r->assertStatus(422)->assertSee('BACKUP_PASSPHRASE');
         $this->assertSame([], glob($this->base.'/backups/*.zip') ?: []);
-        $this->assertSame([], glob($this->base.'/backups/tmp/upload-*.part') ?: []);
+        $this->assertSame([], glob($this->base.'/backups/tmp/upload-*') ?: []);
+    }
+
+    public function test_upload_blocchi_successivi_legati_al_primo(): void
+    {
+        $admin = $this->utente('admin');
+        $altro = $this->utente('admin');
+        $id = (string) Str::uuid();
+        $blocco = fn () => UploadedFile::fake()->createWithContent('b', str_repeat('a', 1024));
+
+        $this->actingAs($admin)->postJson(route('admin.backup.carica'), ['upload_id' => $id, 'indice' => 0, 'totale' => 3, 'blocco' => $blocco()])->assertOk();
+        $this->postJson(route('admin.backup.carica'), ['upload_id' => $id, 'indice' => 1, 'totale' => 2, 'blocco' => $blocco()])->assertStatus(422);
+        $this->actingAs($altro)->postJson(route('admin.backup.carica'), ['upload_id' => $id, 'indice' => 1, 'totale' => 3, 'blocco' => $blocco()])->assertStatus(422);
+        $this->actingAs($admin)->postJson(route('admin.backup.carica'), ['upload_id' => $id, 'indice' => 1, 'totale' => 3, 'blocco' => $blocco()])->assertOk();
     }
 
     public function test_upload_blocco_fuori_ordine_rifiutato(): void
@@ -240,9 +309,12 @@ class BackupControllerTest extends TestCase
     public function test_upload_file_non_backup_rifiutato_e_pulito(): void
     {
         $this->actingAs($this->utente('admin'));
-        $r = $this->inviaBlocchi(['non sono uno zip']);
-        $r->assertStatus(422)->assertJsonStructure(['errore']);
-        $this->assertSame([], glob($this->base.'/backups/tmp/upload-*.part') ?: []);
+        $stato = $this->esitoCaricamento($this->inviaBlocchi(['non sono uno zip']));
+
+        $this->assertFalse($stato['esito']);
+        $this->assertNotSame('', $stato['messaggio']);
+        $this->assertSame([], glob($this->base.'/backups/tmp/*') ?: []);
+        $this->assertSame([], glob($this->base.'/backups/*.zip') ?: []);
     }
 
     public function test_ripristino_richiede_conferma(): void

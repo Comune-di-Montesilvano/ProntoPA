@@ -64,7 +64,7 @@ class SegretiCifrati
     }
 
     /** @param list<array<string,mixed>> $segreti */
-    public function applica(array $segreti): void
+    public function applica(#[\SensitiveParameter] array $segreti): void
     {
         foreach ($segreti as $s) {
             $cifrato = Crypt::encryptString((string) $s['valore']);

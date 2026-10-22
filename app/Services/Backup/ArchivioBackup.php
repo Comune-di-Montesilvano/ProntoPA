@@ -24,7 +24,7 @@ class ArchivioBackup
         array $manifest,
         string $dirDb,
         string $dirStorage,
-        array $segreti,
+        #[\SensitiveParameter] array $segreti,
     ): void {
         $segretiJson = json_encode($segreti, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
@@ -205,7 +205,13 @@ class ArchivioBackup
     }
 
     /** @param array<string,string> $voci nome nell'archivio => percorso su disco */
-    private function scriviVoci(string $zip, #[\SensitiveParameter] string $passphrase, string $manifestJson, string $segretiJson, array $voci): void
+    private function scriviVoci(
+        string $zip,
+        #[\SensitiveParameter] string $passphrase,
+        string $manifestJson,
+        #[\SensitiveParameter] string $segretiJson,
+        array $voci,
+    ): void
     {
         if (is_file($zip)) {
             unlink($zip);
