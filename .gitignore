@@ -10,8 +10,9 @@
 /storage/pail
 /vendor
 .env
-.env.backup
-.env.production
+# Ogni variante locale di .env (backup, prove): contiene segreti
+.env.*
+!.env.example
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
@@ -27,3 +28,8 @@ yarn-error.log
 .serena/
 .claude.local.md
 /backups/
+.superpowers/
+# Script e dati temporanei di sessione (es. estrazioni AD, allineamenti una tantum)
+/.tmp-*
+# Dump SQL in root (es. export dal vecchio programma)
+/*.sql
