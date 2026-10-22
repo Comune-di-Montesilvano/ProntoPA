@@ -66,6 +66,7 @@ PEC_HOST=mbox.cert.legalmail.it  PEC_USERNAME=  PEC_PASSWORD=
 WEBHOOK_CITTADINI_URL=  WEBHOOK_CITTADINI_SECRET=
 LDAP_HOST=mock  LDAP_BASE_DN=  LDAP_USER_DN_TEMPLATE=%s@ente.local  # mock vietato in prod (app non parte)
 OIDC_MOCK=true  # simulatore SPID dev (/auth/spid/mock), vietato in prod
+BACKUP_PASSPHRASE=  # passphrase AES-256 dei backup, uguale tra dev e prod per migrare
 ```
 
 Nuova env var → anche nel blocco `x-php-env` di `docker-compose.yml` (niente passthrough automatico).
@@ -186,7 +187,7 @@ Spec: `docs/superpowers/specs/2026-10-21-backup-ripristino-design.md`. Admin →
 - **Formato**: dump logico in PHP (una tabella = un JSONL, snapshot coerente su MariaDB) + `storage` → ZIP AES-256 (apribile con 7-Zip data la passphrase; **nomi e dimensioni dei file NON sono cifrati**). Accanto a ogni zip un sidecar `<nome>.json`. Volume `backups` → `/var/www/html/backups` (dev: bind mount `./backups`; su host Linux `mkdir backups` prima del primo `up`, altrimenti nasce root).
 - **`segreti.json`** (secret SPID ecc.) è ricifrato con l'`APP_KEY` di destinazione. Compatibilità giudicata dalle migrations del manifest, non dalla versione.
 - **Ripristino** (job su coda `lunghi`): verifica+estrae TUTTO prima di toccare qualcosa → maintenance → backup `pre-ripristino` (saltato su installazione vuota: 0 segnalazioni e ≤1 utente) → drop tabelle → migrations del manifest → import → storage → `migrate` → `AllineamentoSeeder` → segreti → `ripristino_id` (invalida tutte le sessioni) → `up`. Errore → rollback automatico dal `pre-ripristino`.
-- **Env** (anche in `x-php-env`): `BACKUP_PASSPHRASE` (senza, nessun backup; dev e prod devono averla uguale per migrare, oppure si digita quella del file in upload/ripristino) · `BACKUP_MAX_UPLOAD_MB` (10240) · `BACKUP_QUEUE_CONNECTION` (`redis-lunghi`, non toccare).
+- **Env** (`BACKUP_PASSPHRASE` e `BACKUP_MAX_UPLOAD_MB` anche in `x-php-env`): `BACKUP_PASSPHRASE` (senza, nessun backup; dev e prod devono averla uguale per migrare, oppure si digita quella del file in upload/ripristino) · `BACKUP_MAX_UPLOAD_MB` (10240) · `BACKUP_QUEUE_CONNECTION` è solo un default interno di config (`redis-lunghi`, `sync` forzato in phpunit): non passata dal compose, non impostarla in prod.
 - **Notturno 02:00**, retention: sempre l'ultimo; tutti quelli degli ultimi 7 giorni; il più recente per settimana ISO fino a 30 giorni; l'ultimo `pre-ripristino` resta finché non c'è un notturno successivo verificato. Allarme in dashboard admin se l'ultimo è fallito o più vecchio di 36 h; fallimento → Sentry + email agli admin attivi.
 - **Comandi**: `backup:crea --tipo=` · `backup:ripristina {file} --passphrase=` · `backup:pulisci` (dev/CI, in prod non serve).
 - **Gotcha**: il worker `queue-lunghi` (`--force`, `retry_after` 7300) è obbligatorio: senza, backup/ripristini da UI restano in coda per sempre. `--force` serve a recuperare un ripristino interrotto da un worker ucciso (l'app torna su).

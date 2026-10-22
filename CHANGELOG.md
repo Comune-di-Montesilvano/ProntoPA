@@ -30,8 +30,8 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
   `DB_ROOT_PASSWORD` serve solo alla prima creazione del volume del database
 - Le password del database valgono solo alla creazione del volume
   `mariadb_data` (procedura di reset documentata in CLAUDE.md)
-- Nuove variabili `BACKUP_PASSPHRASE`, `BACKUP_MAX_UPLOAD_MB`,
-  `BACKUP_QUEUE_CONNECTION` (vedi `.env.example`)
+- Nuove variabili `BACKUP_PASSPHRASE` e `BACKUP_MAX_UPLOAD_MB` (vedi
+  `.env.example`)
 
 ### Fixed
 - Se il database rifiuta l'accesso, l'avvio del container mostra dopo circa
