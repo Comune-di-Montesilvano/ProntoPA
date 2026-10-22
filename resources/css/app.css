@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Icone tipologie servite da ProntoPA (bundle Vite), niente CDN. */
+@import "@fortawesome/fontawesome-free/css/all.min.css";
 @plugin "@tailwindcss/forms";
 @config "../../tailwind.config.js";
 

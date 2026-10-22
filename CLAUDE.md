@@ -258,6 +258,8 @@ PR dependabot con conflitto `composer.lock`/`package-lock.json` (tipico se ne me
 - Controller: Resource Controllers, autorizzazione via Policy (no ruoli nel controller)
 - Models: Eloquent+relazioni esplicite, `scopeVisibileA(User $user)`, cast date+bool
 - Views: layout `layouts/app.blade.php`, componenti `components/`, sezioni `gestione/ segnalatore/ imprese/ admin/`
+- **Niente CDN** per asset: Font Awesome importato in `resources/css/app.css`; Leaflet e Chart.js (globali `L`/`Chart` usati da script inline) copiati UMD da `node_modules` in `public/build/vendor/` dal plugin in `vite.config.js` → `asset('build/vendor/...')`. Nuova libreria = npm + stesso schema, mai `<script src="https://...">` (la CSP in `docker/nginx/default.conf` li blocca).
+- Plesso nelle select: `Plesso::etichetta()` / `dettagli()` (ordine scuola da codice, codice, indirizzo). Sedi con storico non si eliminano: `admin.sedi.unisci`.
 - Email: Laravel Notifications → Mailpit dev, SMTP/PEC prod
 
 ## Test

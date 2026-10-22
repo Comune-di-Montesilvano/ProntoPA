@@ -75,7 +75,8 @@
             @endif
             <div style="width:1px; height:28px; background: var(--slate-200); flex-shrink:0;"></div>
             <div class="flex-1 min-w-0" style="line-height:1.15;">
-                <div class="truncate" style="font-size:13px; font-weight:700; color: var(--ink);">{{ $enteNome }}</div>
+                {{-- Nome intero su due righe: "Comune di Montesil…" non identifica l'ente. --}}
+                <div class="line-clamp-2 break-words" title="{{ $enteNome }}" style="font-size:13px; font-weight:700; color: var(--ink);">{{ $enteNome }}</div>
                 <div style="font-size:11px; color: var(--slate-500);">ProntoPA</div>
             </div>
         </div>

@@ -38,7 +38,7 @@
     </div>
 
     @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="{{ asset('build/vendor/chart.umd.min.js') }}?v={{ config('app.version') }}"></script>
     <script>
         new Chart(document.getElementById('grafico-mesi'), {
             type: 'bar',

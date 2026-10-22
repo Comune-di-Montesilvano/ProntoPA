@@ -58,13 +58,17 @@
                             <td class="px-3 py-2">{{ $delega->user?->name ?? 'non ancora entrato' }}<br><span class="text-xs text-gray-500">{{ $delega->codice_fiscale }}</span></td>
                             <td class="px-3 py-2">{{ $delega->istituto?->descrizione }}</td>
                             <td class="px-3 py-2">{{ $delega->descrizioneAmbito() }}</td>
-                            <td class="px-3 py-2">{{ $delega->stato }}@if($delega->stato === 'richiesta' && ! $delega->richiesta_inviata_at) <span class="text-xs text-amber-700">(in coda)</span>@endif</td>
+                            <td class="px-3 py-2">{{ $delega->stato }}@if($delega->stato === 'richiesta' && ! $delega->richiesta_inviata_at) <span class="text-xs text-amber-700">(in coda)</span>@endif
+                                @if($delega->motivo)
+                                    <br><span class="text-xs text-gray-500">{{ $delega->decisa_via ? $delega->decisa_via.': ' : '' }}{{ $delega->motivo }}</span>
+                                @endif
+                            </td>
                             <td class="px-3 py-2">{{ $delega->valida_fino_at?->format('d/m/Y') ?? '—' }}</td>
                             <td class="px-3 py-2 text-right space-y-1">
                                 @if($delega->stato === 'richiesta')
                                     <form method="POST" action="{{ route('admin.deleghe.attiva', $delega->gruppo_richiesta) }}" class="flex gap-1 justify-end">
                                         @csrf
-                                        <input name="motivo" required placeholder="Motivo" class="border-gray-300 rounded text-xs w-32">
+                                        <input name="motivo" required placeholder="Motivo attivazione" aria-label="Motivo dell'attivazione d'ufficio" class="border-gray-300 rounded text-xs w-36">
                                         <button class="text-xs text-green-700 hover:underline">Attiva</button>
                                     </form>
                                     <form method="POST" action="{{ route('admin.deleghe.reinvia', $delega->gruppo_richiesta) }}">@csrf<button class="text-xs text-blue-700 hover:underline">Reinvia email</button></form>
@@ -72,7 +76,7 @@
                                 @if(in_array($delega->stato, ['attiva', 'richiesta'], true))
                                     <form method="POST" action="{{ route('admin.deleghe.revoca', $delega) }}" class="flex gap-1 justify-end">
                                         @csrf
-                                        <input name="motivo" required placeholder="Motivo" class="border-gray-300 rounded text-xs w-32">
+                                        <input name="motivo" required placeholder="Motivo revoca" aria-label="Motivo della revoca" class="border-gray-300 rounded text-xs w-36">
                                         <button class="text-xs text-red-700 hover:underline">Revoca</button>
                                     </form>
                                 @endif

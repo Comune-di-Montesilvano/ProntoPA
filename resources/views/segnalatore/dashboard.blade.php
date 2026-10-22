@@ -24,6 +24,7 @@
                                 <tr>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">#</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipologia</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sede</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segnalazione</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stato</th>
@@ -34,7 +35,8 @@
                                 @foreach($segnalazioni as $s)
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-4 py-3 text-gray-400 font-mono">{{ $s->id_segnalazione }}</td>
-                                        <td class="px-4 py-3 text-gray-700">{{ $s->tipologia?->descrizione ?? '—' }}</td>
+                                        <td class="px-4 py-3 text-gray-700 whitespace-nowrap"><i class="{{ $s->tipologia?->icona ?? 'fas fa-circle' }} w-4 mr-1.5 text-center text-blue-600" aria-hidden="true"></i>{{ $s->tipologia?->descrizione ?? '—' }}</td>
+                                        <td class="px-4 py-3 text-gray-700" title="{{ $s->plesso?->dettagli() }}">{{ $s->plesso?->nome ?? '—' }}</td>
                                         <td class="px-4 py-3 text-gray-900 max-w-xs truncate">
                                             {{ Str::limit($s->testo_segnalazione, 80) }}
                                         </td>

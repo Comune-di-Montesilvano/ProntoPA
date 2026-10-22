@@ -9,7 +9,7 @@ use Tests\TestCase;
 
 class ProfileTest extends TestCase
 {
-    use RefreshDatabase;
+    use \Tests\Support\DelegheFixture, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -27,6 +27,28 @@ class ProfileTest extends TestCase
             ->get('/profile');
 
         $response->assertOk();
+    }
+
+    public function test_account_locale_vede_password_e_2fa(): void
+    {
+        $this->actingAs(User::factory()->create())->get('/profile')
+            ->assertSee('Update Password')
+            ->assertSee('Autenticazione a due fattori');
+    }
+
+    public function test_account_spid_e_ad_non_vedono_password_e_2fa(): void
+    {
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+        $spid = $this->utenteSpid();
+        $this->delega($spid, $this->istitutoConPlessi(), null, \App\Models\Delega::ATTIVA);
+        $ldap = User::factory()->create(['auth_source' => 'ldap']);
+
+        foreach ([$spid, $ldap] as $user) {
+            $this->actingAs($user)->get('/profile')
+                ->assertOk()
+                ->assertDontSee('Update Password')
+                ->assertDontSee('Autenticazione a due fattori');
+        }
     }
 
     public function test_profile_information_can_be_updated(): void

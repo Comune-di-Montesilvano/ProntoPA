@@ -4,6 +4,30 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.17] - 2026-10-22
+
+### Added
+- Admin → Sedi: "Unisci in un'altra sede" per i doppioni (es. plesso del vecchio
+  programma accanto a quello MIUR): segnalazioni e deleghe passano alla sede scelta,
+  poi la sede vecchia viene eliminata.
+- Colonna Sede in "Le mie segnalazioni" e in Gestione (al posto di Provenienza, che
+  resta come filtro); icona della tipologia nelle liste.
+- Select e liste dei plessi con ordine di scuola, codice meccanografico e indirizzo
+  (apertura segnalazione, deleghe, sedi); istituto con codice nei gruppi.
+- Elenco deleghe admin: motivo e chi ha deciso; caselle "Motivo attivazione" e
+  "Motivo revoca" distinguibili.
+
+### Changed
+- Profilo: password e 2FA solo per gli account locali (SPID/CIE e AD si autenticano altrove).
+- Nome dell'ente nella barra laterale su due righe invece che troncato.
+- Redis 7.2 → 8.0 (cache, sessioni e code; i dati esistenti vengono riletti all'avvio).
+- Font Awesome, Leaflet e Chart.js serviti da ProntoPA (npm + build), niente più CDN
+  esterni; CSP ristretta di conseguenza.
+
+### Fixed
+- Eliminare una sede con segnalazioni le lasciava senza sede (nessun vincolo a DB) e
+  con deleghe dava errore: ora l'eliminazione è rifiutata e propone l'unione.
+
 ## [0.8.16] - 2026-10-22
 
 ### Changed

@@ -48,7 +48,7 @@ class SegnalazioneController extends Controller
     {
         $user = auth()->user();
         $segnalazioni = Segnalazione::visibileA($user)
-            ->with(['stato', 'tipologia', 'provenienza'])
+            ->with(['stato', 'tipologia', 'provenienza', 'plesso'])
             ->aperte()
             ->orderByDesc('data_segnalazione')
             ->paginate(20);

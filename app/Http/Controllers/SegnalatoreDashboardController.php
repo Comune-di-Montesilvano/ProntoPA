@@ -12,7 +12,7 @@ class SegnalatoreDashboardController extends Controller
         $user = auth()->user();
 
         $segnalazioni = Segnalazione::visibileA($user)
-            ->with(['stato', 'tipologia'])
+            ->with(['stato', 'tipologia', 'plesso'])
             ->orderByDesc('data_segnalazione')
             ->paginate(20);
 

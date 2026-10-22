@@ -60,6 +60,16 @@ class AdminDelegheTest extends TestCase
             ->assertDontSee('RSSMRA80A01G482X');
     }
 
+    public function test_elenco_mostra_motivo_e_distingue_campi_azione(): void
+    {
+        $ist = $this->istitutoConPlessi();
+        $this->delega($this->utenteSpid(), $ist, null, Delega::ATTIVA)->update(['motivo' => 'Delega di prova', 'decisa_via' => 'admin']);
+
+        $this->actingAs($this->admin)->get(route('admin.deleghe.index'))
+            ->assertSee('admin: Delega di prova')
+            ->assertSee('placeholder="Motivo revoca"', false);
+    }
+
     public function test_pre_delega_senza_utente_poi_agganciata(): void
     {
         $ist = $this->istitutoConPlessi();

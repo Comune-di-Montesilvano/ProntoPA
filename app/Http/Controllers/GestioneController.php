@@ -32,7 +32,7 @@ class GestioneController extends Controller
         $idSpecializzazione = $request->get('id_specializzazione');
 
         $base = Segnalazione::visibileA($user)
-            ->with(['tipologia', 'operatore', 'provenienza']);
+            ->with(['tipologia', 'operatore', 'provenienza', 'plesso']);
 
         // Applica filtri ricerca
         if ($q !== '') {
