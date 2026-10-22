@@ -4,6 +4,17 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.6] - 2026-10-22
+
+### Changed
+- Nuova segnalazione: i segnalatori (scuole SPID, interni, URP) segnalano
+  sempre con la propria provenienza, mostrata in sola lettura; gestori e admin
+  continuano a sceglierla.
+- Per le scuole (SPID o provenienza "Direzioni didattiche") il plesso è
+  obbligatorio, la mappa non compare (la posizione è il plesso) e i dettagli
+  sono sempre visibili e obbligatori: tipo di intervento e dove si trova il
+  problema. Gli allegati restano facoltativi.
+
 ## [0.8.5] - 2026-10-22
 
 ### Added
