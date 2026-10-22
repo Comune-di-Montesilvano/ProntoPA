@@ -20,6 +20,7 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 ### Changed
 - Profilo: password e 2FA solo per gli account locali (SPID/CIE e AD si autenticano altrove).
 - Nome dell'ente nella barra laterale su due righe invece che troncato.
+- Redis 7.2 → 8.0 (cache, sessioni e code; i dati esistenti vengono riletti all'avvio).
 - Font Awesome, Leaflet e Chart.js serviti da ProntoPA (npm + build), niente più CDN
   esterni; CSP ristretta di conseguenza.
 
