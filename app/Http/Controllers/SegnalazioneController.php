@@ -119,7 +119,7 @@ class SegnalazioneController extends Controller
             'longitudine'               => ['nullable', 'numeric'],
             'segnalazione_urgente'      => ['nullable', 'boolean'],
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
-            'id_specializzazione'       => [$scuola && Specializzazione::exists() ? 'required' : 'nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
+            'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
             'ubicazione_tipo'           => $scuola ? ['required', 'integer', 'between:1,4'] : ['nullable', 'integer', 'between:0,4'],
             'allegati'                  => ['nullable', 'array', 'max:' . $maxPerRequest],
             'allegati.*'                => [
@@ -134,7 +134,6 @@ class SegnalazioneController extends Controller
         ], [
             'id_plesso.required'           => 'Scegli il plesso.',
             'id_plesso.in'                 => 'Puoi segnalare solo per i plessi coperti dalle tue deleghe.',
-            'id_specializzazione.required' => 'Scegli il tipo di intervento richiesto.',
             'ubicazione_tipo.required'     => 'Indica dove si trova il problema.',
             'ubicazione_tipo.between'      => 'Indica dove si trova il problema.',
         ]);

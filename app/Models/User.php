@@ -112,6 +112,23 @@ class User extends Authenticatable
         return $this->auth_source === 'spid';
     }
 
+    /** Secondi minimi tra due invii del link di conferma email. */
+    public const ATTESA_REINVIO_VERIFICA = 60;
+
+    public function sendEmailVerificationNotification(): void
+    {
+        parent::sendEmailVerificationNotification();
+        \Illuminate\Support\Facades\Cache::put('verifica-email-inviata:'.$this->id, now()->timestamp, self::ATTESA_REINVIO_VERIFICA);
+    }
+
+    /** Secondi che mancano prima di poter chiedere un nuovo link di conferma (0 = subito). */
+    public function attesaReinvioVerifica(): int
+    {
+        $inviata = (int) \Illuminate\Support\Facades\Cache::get('verifica-email-inviata:'.$this->id, 0);
+
+        return max(0, $inviata + self::ATTESA_REINVIO_VERIFICA - now()->timestamp);
+    }
+
     /** Scuola (SPID o segnalatore "Direzioni didattiche"): plesso e dettagli obbligatori, niente mappa. */
     public function segnalaComeScuola(): bool
     {

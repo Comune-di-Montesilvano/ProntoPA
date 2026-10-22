@@ -10,9 +10,15 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('verification.send') }}">
+    <form method="POST" action="{{ route('verification.send') }}"
+          x-data="{ attesa: {{ auth()->user()->attesaReinvioVerifica() }} }"
+          x-init="const t = setInterval(() => { if (attesa > 0) attesa--; else clearInterval(t) }, 1000)">
         @csrf
-        <button type="submit" class="pa-btn pa-btn-primary pa-btn-lg" style="width:100%;">Invia di nuovo il link</button>
+        <button type="submit" class="pa-btn pa-btn-primary pa-btn-lg" style="width:100%;"
+                :disabled="attesa > 0" :style="attesa > 0 ? { opacity: '.5', cursor: 'not-allowed' } : {}">
+            <span x-show="attesa > 0" @style(['display:none' => auth()->user()->attesaReinvioVerifica() === 0])>Puoi chiedere un nuovo link tra <span x-text="attesa">{{ auth()->user()->attesaReinvioVerifica() }}</span> s</span>
+            <span x-show="attesa === 0" @style(['display:none' => auth()->user()->attesaReinvioVerifica() > 0])>Invia di nuovo il link</span>
+        </button>
     </form>
 
     <p style="font-size:13px; color:var(--slate-600); margin:0;">

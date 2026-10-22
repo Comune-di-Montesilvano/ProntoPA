@@ -45,14 +45,14 @@ class FormSegnalazioneScuolaTest extends TestCase
         ], $extra);
     }
 
-    public function test_form_scuola_senza_scelta_provenienza_ne_mappa_con_dettagli_obbligatori(): void
+    public function test_form_scuola_senza_provenienza_mappa_ne_tipo_intervento(): void
     {
         $this->actingAs($this->scuola)->get(route('segnalazioni.create'))
             ->assertOk()
             ->assertDontSee('name="id_provenienza" class', false)
             ->assertSee('<input type="hidden" name="id_provenienza" value="2">', false)
             ->assertSee('Plesso / Sede *')
-            ->assertSee('Tipo di intervento richiesto *')
+            ->assertDontSee('Tipo di intervento richiesto')
             ->assertSee('Dove si trova il problema *')
             ->assertDontSee('Non specificato')
             ->assertDontSee('Più dettagli');
@@ -69,12 +69,12 @@ class FormSegnalazioneScuolaTest extends TestCase
         $this->assertSame(0.0, (float) $s->latitudine);
     }
 
-    public function test_scuola_deve_indicare_plesso_e_dettagli_ma_non_allegati(): void
+    public function test_scuola_deve_indicare_plesso_e_ubicazione_ma_non_allegati(): void
     {
         $this->actingAs($this->scuola)->post(route('segnalazioni.store'), $this->dati([
             'id_plesso' => null, 'id_specializzazione' => null, 'ubicazione_tipo' => 0,
-        ]))->assertSessionHasErrors(['id_plesso', 'id_specializzazione', 'ubicazione_tipo'])
-            ->assertSessionDoesntHaveErrors('allegati');
+        ]))->assertSessionHasErrors(['id_plesso', 'ubicazione_tipo'])
+            ->assertSessionDoesntHaveErrors(['allegati', 'id_specializzazione']);
     }
 
     public function test_segnalatore_interno_non_sceglie_provenienza_ma_dettagli_facoltativi(): void

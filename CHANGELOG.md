@@ -4,6 +4,19 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.11] - 2026-10-22
+
+### Changed
+- Email in italiano e con l'identità dell'ente: intestazione con logo e nome
+  (Admin → Impostazioni → brand), pulsante nel colore dell'ente, saluti
+  "Cordiali saluti" firmati dall'ente; spariti "Hello!", "Regards" e gli altri
+  testi inglesi.
+- Conferma email: il pulsante "Invia di nuovo il link" si attiva solo un
+  minuto dopo l'ultimo invio, con conto alla rovescia.
+- Nuova segnalazione: segnalatori (scuole, URP, interni) non scelgono più il
+  "Tipo di intervento richiesto", basta la tipologia; resta facoltativo per
+  gestori e admin. Icone delle tipologie più piccole.
+
 ## [0.8.10] - 2026-10-22
 
 ### Added
