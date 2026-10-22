@@ -4,6 +4,14 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.10] - 2026-10-22
+
+### Added
+- Admin → Impostazioni → Pubblicazione automatica: pulsante "Applica alle
+  segnalazioni esistenti". La regola scattava solo ai cambi di stato, quindi
+  le segnalazioni importate o precedenti restavano fuori dalla dashboard
+  pubblica.
+
 ## [0.8.9] - 2026-10-22
 
 ### Fixed
