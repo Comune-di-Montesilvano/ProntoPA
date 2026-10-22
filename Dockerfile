@@ -121,7 +121,7 @@ CMD ["php-fpm"]
 # Stage 3: Nginx + compiled static assets
 # Target: web
 ############################################
-FROM nginx:1.27-alpine AS web
+FROM nginx:1.29-alpine AS web
 
 ARG APK_REFRESH=none
 RUN echo "apk refresh ${APK_REFRESH}" && apk upgrade --no-cache
