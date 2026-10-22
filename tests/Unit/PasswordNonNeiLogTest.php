@@ -3,8 +3,10 @@
 namespace Tests\Unit;
 
 use App\Http\Requests\Auth\LoginRequest;
+use App\Jobs\EseguiRipristino;
 use App\Services\Auth\LdapLoginService;
 use App\Services\Backup\ArchivioBackup;
+use App\Services\Backup\RipristinoService;
 use App\Services\Directory\Directory;
 use App\Services\Directory\LdapRecordDirectory;
 use App\Services\Directory\MockDirectory;
@@ -38,6 +40,9 @@ class PasswordNonNeiLogTest extends TestCase
             'ArchivioBackup::estrai' => [ArchivioBackup::class, 'estrai', 'passphrase'],
             'ArchivioBackup::ricifra (da)' => [ArchivioBackup::class, 'ricifra', 'da'],
             'ArchivioBackup::ricifra (a)' => [ArchivioBackup::class, 'ricifra', 'a'],
+            'RipristinoService::anteprima' => [RipristinoService::class, 'anteprima', 'passphrase'],
+            'RipristinoService::esegui' => [RipristinoService::class, 'esegui', 'passphrase'],
+            'EseguiRipristino::__construct' => [EseguiRipristino::class, '__construct', 'passphrase'],
         ];
     }
 
