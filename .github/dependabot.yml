@@ -62,3 +62,6 @@ updates:
     ignore:
       - dependency-name: "ollama/ollama"
       - dependency-name: "clamav/clamav"
+      # Solo LTS (11.4 → 11.8 → 12.3): le rolling 12.0–12.2 hanno supporto breve.
+      - dependency-name: "mariadb"
+        versions: [">= 12.0, < 12.3"]
