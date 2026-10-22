@@ -4,6 +4,40 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.0] - 2026-10-22
+
+### Added
+- Backup e ripristino: Admin → Backup per creare, scaricare, eliminare,
+  caricare (a blocchi da 5 MB) e ripristinare un backup, con conferma
+  digitando `RIPRISTINA` e pagina d'attesa. Il backup (database e file
+  allegati) è un archivio ZIP cifrato AES-256 con la passphrase
+  `BACKUP_PASSPHRASE`; i segreti (es. SPID) vengono ricifrati con la chiave
+  dell'installazione di destinazione, quindi si può migrare da dev a prod
+- Backup notturno alle 02:00 con conservazione automatica (ultimo, 7 giorni,
+  uno per settimana fino a 30 giorni). Allarme in dashboard admin se
+  l'ultimo è fallito o più vecchio di 36 ore; in caso di errore notifica a
+  Sentry e via email agli amministratori
+- Ripristino sicuro: verifica prima di toccare i dati, copia
+  "pre-ripristino" automatica e rollback automatico in caso di errore. A
+  fine ripristino tutte le sessioni vengono chiuse
+- Comandi `backup:crea`, `backup:ripristina`, `backup:pulisci`
+- Nuovo servizio `queue-lunghi` (worker dedicato a backup e ripristini):
+  compare con "Update the stack" ed è obbligatorio come `queue` e `scheduler`
+
+### Changed
+- `DB_PASSWORD` è obbligatoria e uguale per `php` e `mariadb`: eliminati i
+  valori predefiniti `segnalazioni_secret` e `root_secret`.
+  `DB_ROOT_PASSWORD` serve solo alla prima creazione del volume del database
+- Le password del database valgono solo alla creazione del volume
+  `mariadb_data` (procedura di reset documentata in CLAUDE.md)
+- Nuove variabili `BACKUP_PASSPHRASE`, `BACKUP_MAX_UPLOAD_MB`,
+  `BACKUP_QUEUE_CONNECTION` (vedi `.env.example`)
+
+### Fixed
+- Se il database rifiuta l'accesso, l'avvio del container mostra dopo circa
+  30 secondi l'errore reale (con suggerimento "Access denied") invece di
+  restare in attesa senza messaggi
+
 ## [0.8.1] - 2026-10-21
 
 ### Fixed

@@ -100,7 +100,7 @@ app/Http/Controllers/
   AiTriageController  PublicHomeController  ProfileController  TelegramAccountController
   Admin/{ImpostazioniController,UtentiController,ProfiliController,ProvenienzaController,
          SediController,SlaController,SquadreController,OrganizzazioniController,AdminDashboardController,
-         AnagrafeMiurController,DelegheController}
+         AnagrafeMiurController,DelegheController,BackupController}
   Deleghe/{DecisioneDelegaController,RinnovoDelegheController}  DelegheScuolaController
   Api/{SegnalazioneApiController,TelegramWebhookController}
 app/Models/
@@ -115,14 +115,15 @@ app/Services/
   DedupService     # anti-duplicato: simili per tipologia/plesso/vicinanza + embeddings
   OllamaService    # LLM locale opzionale (titolo auto, triage suggerito, embeddings)
   TelegramBotService
+  Backup/     dump logico JSONL · archivio ZIP AES-256 · BackupService (crea/retention) · RipristinoService (con rollback)
   Directory/  Directory (interfaccia) · LdapRecordDirectory (AD reale) · MockDirectory · NullDirectory
   Auth/       LdapLoginService · MappaGruppiLdap · NormalizzaUsernameAd · CodiceAccessoEmail (2FA email) · SpidLoginService
   Deleghe/    DelegaService (richiesta, decisione segreteria, pre-delega, rinnovo, scadenze)
   Scuole/     AnagrafeMiur (indice open data MIUR su disco local, miur/*.json) · SincronizzaScuole (selezione admin + riallineamento, fonte_dati=miur)
   Oidc/       OidcClient (discovery/PKCE/token/id_token/userinfo) · OidcConfig · ClaimsSpid · IdentitaSpid
-app/Jobs/           ScaricaAnagrafeMiur  CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
+app/Jobs/           ScaricaAnagrafeMiur  EseguiBackup  EseguiRipristino  CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
 app/Http/Middleware/EnsureUserIsActive.php  LimitaAccessoSpid.php
-app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni  ProvaLdap (ldap:prova)  DelegheScadenze (deleghe:scadenze)  DelegheRinnovi (deleghe:rinnovi)
+app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni  ProvaLdap (ldap:prova)  DelegheScadenze (deleghe:scadenze)  DelegheRinnovi (deleghe:rinnovi)  backup:crea · backup:ripristina · backup:pulisci
 ```
 
 ## Ruoli (Spatie)
@@ -177,6 +178,18 @@ Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella 
 - **Nessun wizard/admin da `.env`** (rimossi in v1.2): il primo admin è chi sta nel gruppo AD `PRONTOPA_ADMIN`
 - **2FA** (TOTP + recovery codes, oppure codice via email per le ditte: 6 cifre, 10 min, 5 tentativi, cache `2fa-email:{id}`): Fortify usato solo come libreria (`Fortify::ignoreRoutes()` in `App\Providers\FortifyServiceProvider::register()`) — login/registrazione/reset restano ai controller custom in `routes/auth.php`, zero rotte Fortify attive. **Va registrato a mano in `bootstrap/providers.php`** (non auto-discovered come le altre integrazioni Laravel). Self-service da profilo, dietro `password.confirm`.
 - **Scan antimalware allegati** (opzionale, profilo Docker `security` + `Impostazione::get('antivirus_enabled')`): `ClamAvService` parla INSTREAM via socket raw a `clamav/clamav:stable` (no dipendenza composer), job `ScansionaAllegato` dispatchato da un unico hook su `AllegatoSegnalazione::booted()` (created event) — copre tutti i path di upload senza doverli aggiornare uno per uno. Infetto → spostato (non cancellato) su disco `quarantena`, mai servito dalla route di download. Degrada in silenzio se disattivato/clamd irraggiungibile.
+
+## Backup e ripristino (v0.9)
+
+Spec: `docs/superpowers/specs/2026-10-21-backup-ripristino-design.md`. Admin → Backup: Backup ora, Scarica, Elimina, Carica a blocchi da 5 MB, Ripristina (conferma digitando `RIPRISTINA`, pagina d'attesa che interroga `ripristino/stato/{token}`).
+
+- **Formato**: dump logico in PHP (una tabella = un JSONL, snapshot coerente su MariaDB) + `storage` → ZIP AES-256 (apribile con 7-Zip data la passphrase; **nomi e dimensioni dei file NON sono cifrati**). Accanto a ogni zip un sidecar `<nome>.json`. Volume `backups` → `/var/www/html/backups` (dev: bind mount `./backups`; su host Linux `mkdir backups` prima del primo `up`, altrimenti nasce root).
+- **`segreti.json`** (secret SPID ecc.) è ricifrato con l'`APP_KEY` di destinazione. Compatibilità giudicata dalle migrations del manifest, non dalla versione.
+- **Ripristino** (job su coda `lunghi`): verifica+estrae TUTTO prima di toccare qualcosa → maintenance → backup `pre-ripristino` (saltato su installazione vuota: 0 segnalazioni e ≤1 utente) → drop tabelle → migrations del manifest → import → storage → `migrate` → `AllineamentoSeeder` → segreti → `ripristino_id` (invalida tutte le sessioni) → `up`. Errore → rollback automatico dal `pre-ripristino`.
+- **Env** (anche in `x-php-env`): `BACKUP_PASSPHRASE` (senza, nessun backup; dev e prod devono averla uguale per migrare, oppure si digita quella del file in upload/ripristino) · `BACKUP_MAX_UPLOAD_MB` (10240) · `BACKUP_QUEUE_CONNECTION` (`redis-lunghi`, non toccare).
+- **Notturno 02:00**, retention: sempre l'ultimo; tutti quelli degli ultimi 7 giorni; il più recente per settimana ISO fino a 30 giorni; l'ultimo `pre-ripristino` resta finché non c'è un notturno successivo verificato. Allarme in dashboard admin se l'ultimo è fallito o più vecchio di 36 h; fallimento → Sentry + email agli admin attivi.
+- **Comandi**: `backup:crea --tipo=` · `backup:ripristina {file} --passphrase=` · `backup:pulisci` (dev/CI, in prod non serve).
+- **Gotcha**: il worker `queue-lunghi` (`--force`, `retry_after` 7300) è obbligatorio: senza, backup/ripristini da UI restano in coda per sempre. `--force` serve a recuperare un ripristino interrotto da un worker ucciso (l'app torna su).
 
 ## Database
 
@@ -257,6 +270,10 @@ Test SPID: `tests/Support/FakeOidcProvider` simula pa-sso-proxy con `Http::fake`
 
 Rootless: no bind mount, named volumes `mariadb_data` `redis_data` `app_storage` → `/var/www/html/storage`
 
-Servizi `queue` (`queue:work`) e `scheduler` (loop `schedule:run` ogni 60s) obbligatori: senza, webhook/job AI restano in coda per sempre e i comandi schedulati (`sla:check`, `digest:invia`, `deleghe:scadenze`, `deleghe:rinnovi`, verifica annuale) non partono mai. Stessa immagine di `php`, `entrypoint: []` (niente migrate/seed duplicato).
+Servizi `queue` (`queue:work`), `queue-lunghi` (connessione `redis-lunghi`, coda `lunghi`: backup e ripristini) e `scheduler` (loop `schedule:run` ogni 60s) obbligatori: senza, webhook/job AI/backup restano in coda per sempre e i comandi schedulati (`sla:check`, `digest:invia`, `deleghe:scadenze`, `deleghe:rinnovi`, verifica annuale, backup notturno) non partono mai. Stessa immagine di `php`, `entrypoint: []` (niente migrate/seed duplicato). `queue-lunghi` compare da solo con "Update the stack" (lo stack si legge da GitHub), nessun passo manuale.
+
+**Password MariaDB** (v0.9): `DB_PASSWORD` obbligatoria (`:?`, stesso valore per `php` e `mariadb`), nessun default `segnalazioni_secret`/`root_secret`. Le password valgono SOLO alla creazione del volume `mariadb_data`: cambiarle nello stack dopo non ha effetto. `DB_ROOT_PASSWORD` è ignorata su volume esistente ma su un volume NUOVO mariadb non si inizializza senza → nuove installazioni: impostarla. Se il DB rifiuta l'accesso l'entrypoint, dopo ~30 s, stampa l'errore PDO reale con suggerimento "Access denied".
+**Reset password DB senza shell host** (emergenza, non operatività ordinaria): ferma `mariadb` dello stack → da Portainer crea un container temporaneo `mariadb:11.4` con command `--skip-grant-tables` sullo stesso volume `mariadb_data` → dalla sua console Portainer: `FLUSH PRIVILEGES; ALTER USER 'segnalazioni'@'%' IDENTIFIED BY '<nuova>';` → rimuovi il container temporaneo → imposta la stessa `<nuova>` in `DB_PASSWORD` e riavvia lo stack.
+**Disaster recovery**: ripristina su stack nuovo con stessa `APP_KEY`, `APP_URL`, `BACKUP_PASSPHRASE`. Con `APP_KEY`/`APP_URL` diversi i link firmati già inviati (magic-link ditte, deleghe, verifica annuale) smettono di funzionare e le impostazioni legate all'host (es. `ente_logo_url`) vanno ricontrollate; il secret SPID è ricifrato in automatico.
 
 Error tracking: `sentry/sentry-laravel` (compatibile Glitchtip self-hosted, stesso protocollo). `SENTRY_LARAVEL_DSN` vuoto in `.env` = disattivato, nessuna configurazione aggiuntiva richiesta. `release`/`environment` derivati da `APP_VERSION`/`APP_ENV`.
