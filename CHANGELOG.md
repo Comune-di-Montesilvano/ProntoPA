@@ -4,6 +4,13 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.16] - 2026-10-22
+
+### Changed
+- MariaDB 11.4 → 12.3 LTS (supporto fino a giugno 2029). Al primo avvio con la nuova
+  immagine `MARIADB_AUTO_UPGRADE` aggiorna da solo le tabelle di sistema. L'upgrade non
+  si può annullare: fare "Backup ora" prima di aggiornare lo stack.
+
 ## [0.8.15] - 2026-10-22
 
 ### Added

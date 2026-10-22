@@ -9,7 +9,7 @@ Open-source manutenzione PA. Scuole/comuni/URP segnalano guasti, gestori assegna
 
 ## Stack
 
-Laravel 13 · PHP 8.4-FPM · Nginx · MariaDB 11.4 · Redis · Blade+Tailwind4+Alpine.js · Chart.js · Leaflet+OSM · Breeze+Spatie Permission v6 · Sanctum · Docker+compose · GHCR · GitHub Actions
+Laravel 13 · PHP 8.4-FPM · Nginx · MariaDB 12.3 LTS · Redis · Blade+Tailwind4+Alpine.js · Chart.js · Leaflet+OSM · Breeze+Spatie Permission v6 · Sanctum · Docker+compose · GHCR · GitHub Actions
 
 ## Setup Dev
 
@@ -280,7 +280,7 @@ Rootless: no bind mount, named volumes `mariadb_data` `redis_data` `app_storage`
 Servizi `queue` (`queue:work`), `queue-lunghi` (connessione `redis-lunghi`, coda `lunghi`: backup e ripristini) e `scheduler` (loop `schedule:run` ogni 60s) obbligatori: senza, webhook/job AI/backup restano in coda per sempre e i comandi schedulati (`sla:check`, `digest:invia`, `deleghe:scadenze`, `deleghe:rinnovi`, verifica annuale, backup notturno) non partono mai. Stessa immagine di `php`, `entrypoint: []` (niente migrate/seed duplicato). `queue-lunghi` compare da solo con "Update the stack" (lo stack si legge da GitHub), nessun passo manuale.
 
 **Password MariaDB** (v0.8.2): `DB_PASSWORD` obbligatoria (`:?`, stesso valore per `php` e `mariadb`), nessun default `segnalazioni_secret`/`root_secret`. Le password valgono SOLO alla creazione del volume `mariadb_data`: cambiarle nello stack dopo non ha effetto. `DB_ROOT_PASSWORD` è ignorata su volume esistente ma su un volume NUOVO mariadb non si inizializza senza → nuove installazioni: impostarla. Se il DB rifiuta l'accesso l'entrypoint, dopo ~30 s, stampa l'errore PDO reale con suggerimento "Access denied".
-**Reset password DB senza shell host** (emergenza, non operatività ordinaria): ferma `mariadb` dello stack → da Portainer crea un container temporaneo `mariadb:11.4` con command `--skip-grant-tables` sullo stesso volume `mariadb_data` → dalla sua console Portainer: `FLUSH PRIVILEGES; ALTER USER 'segnalazioni'@'%' IDENTIFIED BY '<nuova>';` → rimuovi il container temporaneo → imposta la stessa `<nuova>` in `DB_PASSWORD` e riavvia lo stack.
+**Reset password DB senza shell host** (emergenza, non operatività ordinaria): ferma `mariadb` dello stack → da Portainer crea un container temporaneo `mariadb:12.3` (stessa versione dello stack) con command `--skip-grant-tables` sullo stesso volume `mariadb_data` → dalla sua console Portainer: `FLUSH PRIVILEGES; ALTER USER 'segnalazioni'@'%' IDENTIFIED BY '<nuova>';` → rimuovi il container temporaneo → imposta la stessa `<nuova>` in `DB_PASSWORD` e riavvia lo stack.
 **Disaster recovery**: ripristina su stack nuovo con stessa `APP_KEY`, `APP_URL`, `BACKUP_PASSPHRASE`. Con `APP_KEY`/`APP_URL` diversi i link firmati già inviati (magic-link ditte, deleghe, verifica annuale) smettono di funzionare e le impostazioni legate all'host (es. `ente_logo_url`) vanno ricontrollate; il secret SPID è ricifrato in automatico.
 
 Error tracking: `sentry/sentry-laravel` (compatibile Glitchtip self-hosted, stesso protocollo). `SENTRY_LARAVEL_DSN` vuoto in `.env` = disattivato, nessuna configurazione aggiuntiva richiesta. `release`/`environment` derivati da `APP_VERSION`/`APP_ENV`.
