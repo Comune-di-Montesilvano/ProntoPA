@@ -4,6 +4,13 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.4] - 2026-10-22
+
+### Fixed
+- Logo dell'ente non visualizzato se ospitato su un altro dominio (es. sito
+  istituzionale): la Content Security Policy ora ammette immagini da
+  qualsiasi origine `https:`. Script e frame esterni restano bloccati.
+
 ## [0.8.3] - 2026-10-22
 
 ### Fixed
