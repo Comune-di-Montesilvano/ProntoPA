@@ -4,6 +4,18 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.15] - 2026-10-22
+
+### Added
+- Controllo settimanale delle LTS di MariaDB: apre una issue quando esce una LTS più
+  nuova di quella dello stack (Dependabot non distingue LTS da rolling, su mariadb è
+  disattivato).
+- `MARIADB_AUTO_UPGRADE` nel compose: al cambio di versione MariaDB aggiorna da sé le
+  tabelle di sistema (con backup), senza console.
+
+### Changed
+- Immagine web su nginx 1.29.
+
 ## [0.8.14] - 2026-10-22
 
 ### Security

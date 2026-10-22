@@ -1,0 +1,64 @@
+name: MariaDB LTS check
+# Dependabot non distingue LTS da rolling (proporrebbe 12.2, 13.0…), quindi mariadb è
+# ignorato in dependabot.yml e le nuove LTS le segnala questo job: legge l'API ufficiale
+# MariaDB e apre una issue quando esiste una LTS stabile più nuova di quella del compose.
+# L'upgrade resta manuale (backup prima): è il database di produzione.
+on:
+  schedule:
+    - cron: "15 6 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: mariadb-lts-check
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Confronta LTS in uso con ultima LTS
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          current=$(grep -oE 'image: mariadb:[0-9]+\.[0-9]+' docker-compose.yml | head -1 | cut -d: -f3)
+          if [ -z "$current" ]; then
+            echo "::error::Versione mariadb non trovata in docker-compose.yml"
+            exit 1
+          fi
+
+          latest=$(curl -fsSL --retry 3 https://downloads.mariadb.org/rest-api/mariadb/ \
+            | jq -r '[.major_releases[] | select(.release_status == "Stable" and .release_support_type == "Long Term Support")]
+                     | max_by(.release_id | split(".") | map(tonumber)) | "\(.release_id)\t\(.release_eol_date)"')
+          lts=$(cut -f1 <<<"$latest")
+          eol=$(cut -f2 <<<"$latest")
+          echo "In uso: $current — ultima LTS: $lts (EOL $eol)"
+
+          if [ "$(printf '%s\n%s\n' "$current" "$lts" | sort -V | tail -1)" = "$current" ]; then
+            echo "MariaDB già sull'ultima LTS."
+            exit 0
+          fi
+
+          existing=$(gh issue list --state open --search "in:title \"Aggiornare MariaDB a $lts\"" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "Issue già aperta: #$existing"
+            exit 0
+          fi
+          gh issue create --title "Aggiornare MariaDB a $lts LTS (in uso $current)" --body "$(cat <<EOF
+          Disponibile MariaDB **$lts** LTS (supporto fino al $eol). In uso nello stack: **$current**.
+
+          Passi:
+          1. Backup da Admin → Backup ("Backup ora") e verifica che sia andato a buon fine.
+          2. \`docker-compose.yml\`: \`image: mariadb:$lts\`, PR con CI verde.
+          3. In prod "Update the stack": al primo avvio mariadb aggiorna le tabelle di sistema
+             (\`MARIADB_AUTO_UPGRADE\`); controllare i log del container.
+
+          Release notes: https://mariadb.com/kb/en/release-notes-mariadb-${lts//./-}-series/
+
+          _Issue aperta da \`mariadb-lts-check.yml\`._
+          EOF
+          )"
