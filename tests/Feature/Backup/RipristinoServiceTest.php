@@ -429,4 +429,28 @@ class RipristinoServiceTest extends TestCase
             ->assertExitCode(0);
         $this->assertSame('Comune A', Impostazione::get('ente_nome'));
     }
+    public function test_estrazione_in_cartella_solo_proprietario(): void
+    {
+        $this->allinea();
+        $zip = $this->base.'/backups/'.app(BackupService::class)->crea('manuale')->nome;
+        $archivio = new class extends ArchivioBackup
+        {
+            /** @var list<int> */
+            public array $permessi = [];
+
+            public function estrai(string $zip, #[\SensitiveParameter] string $passphrase, string $dest): void
+            {
+                $this->permessi[] = fileperms($dest) & 0777;
+                parent::estrai($zip, $passphrase, $dest);
+            }
+        };
+        $this->app->instance(ArchivioBackup::class, $archivio);
+
+        $token = StatoRipristino::nuovoToken();
+        $this->servizio()->esegui($zip, 'test-pass', $token);
+
+        $this->assertTrue(StatoRipristino::leggi($token)['esito'], (string) StatoRipristino::leggi($token)['messaggio']);
+        $this->assertNotEmpty($archivio->permessi);
+        $this->assertSame([0700], array_values(array_unique($archivio->permessi)));
+    }
 }

@@ -83,7 +83,7 @@ class BackupController extends Controller
             return $this->errore($v->errors()->first());
         }
 
-        $this->catalogo->eliminaUploadScaduti();
+        $this->catalogo->pulisciTemporanei();
 
         $id = (string) $request->input('upload_id');
         $indice = (int) $request->input('indice');

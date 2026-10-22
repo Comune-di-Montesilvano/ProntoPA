@@ -4,12 +4,18 @@ namespace App\Services\Backup;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
 /** Elenco dei backup su disco: sidecar JSON accanto a ogni zip. */
 class CatalogoBackup
 {
     public const TIPI = ['notturno', 'manuale', 'pre-ripristino', 'caricato'];
+
+    public const ORE_TEMPORANEI = 3;
+
+    /** Marcatore del backup in corso, in stato/ (vedi inCorso()). */
+    public const MARCATORE = 'backup-in-corso.json';
 
     public function cartella(): string
     {
@@ -89,12 +95,38 @@ class CatalogoBackup
         @unlink($zip.'.json');
     }
 
-    /** Parti di upload abbandonate (browser chiuso a metà): le toglie dopo 24 ore. */
-    public function eliminaUploadScaduti(): void
+    /** Cartella di lavoro sotto tmp/, leggibile solo dal proprietario: può contenere dati in chiaro. */
+    public function temporanea(string $nome): string
     {
-        foreach (glob($this->cartella().'/tmp/upload-*.part') ?: [] as $parte) {
-            if (@filemtime($parte) < time() - 86400) {
-                @unlink($parte);
+        $dir = $this->cartella().'/tmp/'.$nome;
+        File::ensureDirectoryExists($dir, 0700);
+        chmod($dir, 0700);
+
+        return $dir;
+    }
+
+    /**
+     * Toglie i resti di processi interrotti (dump, estrazioni, ricifrature, upload
+     * abbandonati) e gli stati vecchi. Solo per età, senza guardare il lock: prenderlo
+     * qui potrebbe far rinunciare un backup notturno concorrente, e oltre ORE_TEMPORANEI
+     * (più di ogni timeout dei job e TTL dei lock) nessun processo vivo li usa più.
+     */
+    public function pulisciTemporanei(): void
+    {
+        $limite = time() - self::ORE_TEMPORANEI * 3600;
+        $tmp = $this->cartella().'/tmp';
+        foreach (is_dir($tmp) ? (scandir($tmp) ?: []) : [] as $nome) {
+            $voce = $tmp.'/'.$nome;
+            if ($nome === '.' || $nome === '..' || (int) @filemtime($voce) >= $limite) {
+                continue;
+            }
+            is_dir($voce) && ! is_link($voce) ? File::deleteDirectory($voce) : @unlink($voce);
+        }
+
+        foreach (glob($this->cartella().'/stato/*') ?: [] as $file) {
+            $eta = str_ends_with($file, '.json') && basename($file) !== self::MARCATORE ? 30 * 86400 : self::ORE_TEMPORANEI * 3600;
+            if ((int) @filemtime($file) < time() - $eta) {
+                @unlink($file);
             }
         }
     }

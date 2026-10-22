@@ -171,8 +171,10 @@ class ArchivioBackup
         #[\SensitiveParameter] string $da,
         #[\SensitiveParameter] string $a,
     ): void {
-        $tmp = dirname($zip).'/.ricifra-'.uniqid('', true);
-        mkdir($tmp, 0775, true);
+        // Accanto allo zip: per gli upload è tmp/ del volume, ripulita da CatalogoBackup::pulisciTemporanei().
+        $tmp = dirname($zip).'/.ricifra-'.bin2hex(random_bytes(8));
+        mkdir($tmp, 0700, true);
+        chmod($tmp, 0700);
         $nuovo = $zip.'.nuovo';
 
         try {

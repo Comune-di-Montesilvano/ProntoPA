@@ -251,4 +251,59 @@ class BackupServiceTest extends TestCase
 
         $this->assertSame([$info->nome], app(CatalogoBackup::class)->elenco()->pluck('nome')->all());
     }
+    public function test_temporanei_vecchi_rimossi_recenti_tenuti(): void
+    {
+        $tmp = $this->base.'/backups/tmp';
+        $stato = $this->base.'/backups/stato';
+        mkdir($tmp.'/abc123/db', 0777, true);
+        file_put_contents($tmp.'/abc123/db/users.jsonl', '{"id":1}');
+        mkdir($tmp.'/.ricifra-vecchia', 0777, true);
+        file_put_contents($tmp.'/.ricifra-vecchia/segreti.json', '[]');
+        mkdir($tmp.'/ripristino-'.str_repeat('a', 40).'/db', 0777, true);
+        file_put_contents($tmp.'/upload-vecchio.part', 'x');
+        file_put_contents($tmp.'/upload-vecchio.part.nuovo', 'x');
+        mkdir($tmp.'/fresca', 0777, true);
+        file_put_contents($tmp.'/upload-fresco.part', 'y');
+        mkdir($stato, 0777, true);
+        file_put_contents($stato.'/vecchio.json', '{}');
+        file_put_contents($stato.'/recente.json', '{}');
+        touch($stato.'/vecchio.json', time() - 31 * 86400);
+        touch($stato.'/recente.json', time() - 29 * 86400);
+
+        $vecchi = ['abc123', '.ricifra-vecchia', 'ripristino-'.str_repeat('a', 40), 'upload-vecchio.part', 'upload-vecchio.part.nuovo'];
+        foreach ($vecchi as $v) {
+            touch($tmp.'/'.$v, time() - 4 * 3600);
+        }
+        touch($tmp.'/fresca', time() - 2 * 3600);
+
+        app(BackupService::class)->applicaRetention();
+
+        foreach ($vecchi as $v) {
+            $this->assertFileDoesNotExist($tmp.'/'.$v, $v);
+        }
+        $this->assertDirectoryExists($tmp.'/fresca');
+        $this->assertFileExists($tmp.'/upload-fresco.part');
+        $this->assertFileDoesNotExist($stato.'/vecchio.json');
+        $this->assertFileExists($stato.'/recente.json');
+    }
+
+    public function test_cartella_temporanea_del_backup_solo_proprietario(): void
+    {
+        $dump = new class extends DumpDatabase
+        {
+            public ?int $permessi = null;
+
+            public function esporta(string $dir): array
+            {
+                $this->permessi = fileperms(dirname($dir)) & 0777;
+
+                return parent::esporta($dir);
+            }
+        };
+        $this->app->instance(DumpDatabase::class, $dump);
+
+        app(BackupService::class)->crea('manuale');
+
+        $this->assertSame(0700, $dump->permessi);
+    }
 }

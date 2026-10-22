@@ -56,6 +56,7 @@ class BackupService
         $tmp = $cartella.'/tmp/'.bin2hex(random_bytes(8));
 
         try {
+            $this->catalogo->temporanea(basename($tmp));
             File::ensureDirectoryExists($tmp.'/db');
             $conteggi = $this->dump->esporta($tmp.'/db');
 
@@ -99,7 +100,7 @@ class BackupService
     /** @return list<string> nomi eliminati */
     public function applicaRetention(): array
     {
-        $this->catalogo->eliminaUploadScaduti();
+        $this->catalogo->pulisciTemporanei();
         $eliminati = $this->retention->daEliminare($this->catalogo->elenco(), CarbonImmutable::now());
         foreach ($eliminati as $nome) {
             try {

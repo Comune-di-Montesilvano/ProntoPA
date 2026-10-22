@@ -247,7 +247,7 @@ class RipristinoService
     private function estraiVerificato(string $zip, #[\SensitiveParameter] string $passphrase, string $tmp, array $manifest): array
     {
         File::deleteDirectory($tmp);
-        File::ensureDirectoryExists($tmp);
+        $this->catalogo->temporanea(basename($tmp));
         $this->archivio->estrai($zip, $passphrase, $tmp);
 
         // Fa fede ciò che è stato estratto: il file potrebbe essere cambiato dopo la verifica.

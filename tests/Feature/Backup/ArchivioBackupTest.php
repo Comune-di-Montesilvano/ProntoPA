@@ -193,7 +193,26 @@ class ArchivioBackupTest extends TestCase
         $a = new ArchivioBackup;
         $a->verifica($zip, 'nuova-pass');
         $this->assertSame([], glob($this->base.'/.ricifra-*') ?: []);
+        $this->assertSame([], glob($this->base.'/*.nuovo') ?: []);
         $this->expectException(BackupNonLeggibile::class);
         $a->manifest($zip, 'vecchia-pass');
+    }
+    public function test_ricifra_estrae_in_cartella_solo_proprietario(): void
+    {
+        $zip = $this->crea('vecchia-pass');
+        $a = new class extends ArchivioBackup
+        {
+            public ?int $permessi = null;
+
+            public function estrai(string $zip, #[\SensitiveParameter] string $passphrase, string $dest): void
+            {
+                $this->permessi = fileperms($dest) & 0777;
+                parent::estrai($zip, $passphrase, $dest);
+            }
+        };
+
+        $a->ricifra($zip, 'vecchia-pass', 'nuova-pass');
+
+        $this->assertSame(0700, $a->permessi);
     }
 }
