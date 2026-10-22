@@ -15,6 +15,9 @@ final class FakeDirectory implements Directory
 
     public ?string $motivo = null;
 
+    /** Bind tentati: ognuno con password errata conterebbe verso il blocco account di AD. */
+    public int $bind = 0;
+
     public function motivoUltimoRifiuto(): ?string
     {
         return $this->motivo;
@@ -44,6 +47,8 @@ final class FakeDirectory implements Directory
 
     public function authenticate(string $username, string $password): ?DirectoryIdentity
     {
+        $this->bind++;
+
         if ($this->nonDisponibile) {
             throw new DirectoryNonDisponibile('Directory di test non disponibile');
         }

@@ -71,6 +71,60 @@ class LoginRateLimitTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_blocco_account_dura_quindici_minuti(): void
+    {
+        $this->dir->aggiungi('giusta', FakeDirectory::identita('m.rossi', ['PRONTOPA_GESTORI']));
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->post('/login', ['username' => 'm.rossi', 'password' => 'sbagliata']);
+        }
+
+        $this->travel(2)->minutes();
+        $this->post('/login', ['username' => 'm.rossi', 'password' => 'giusta'])
+            ->assertSessionHasErrors('username');
+        $this->assertGuest();
+
+        $this->travel(14)->minutes();
+        $this->post('/login', ['username' => 'm.rossi', 'password' => 'giusta']);
+        $this->assertAuthenticated();
+    }
+
+    public function test_limite_account_vale_da_ip_diversi(): void
+    {
+        $this->dir->aggiungi('giusta', FakeDirectory::identita('m.rossi', ['PRONTOPA_GESTORI']));
+
+        for ($i = 1; $i <= 5; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => "10.0.0.{$i}"])
+                ->post('/login', ['username' => 'm.rossi', 'password' => 'sbagliata']);
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.99'])
+            ->post('/login', ['username' => 'm.rossi', 'password' => 'giusta']);
+
+        $this->assertGuest();
+        $this->assertSame(5, $this->dir->bind, 'bloccato prima del bind AD');
+    }
+
+    public function test_bloccato_non_interroga_ad_e_scrive_nel_log(): void
+    {
+        \Illuminate\Support\Facades\Log::spy();
+        $this->freezeTime();
+        $this->dir->aggiungi('giusta', FakeDirectory::identita('m.rossi', ['PRONTOPA_GESTORI']));
+        config(['auth.login.max_tentativi_account' => 3]);
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->post('/login', ['username' => 'm.rossi', 'password' => 'sbagliata']);
+        }
+
+        $this->post('/login', ['username' => 'm.rossi', 'password' => 'giusta'])
+            ->assertSessionHasErrors(['username' => trans('auth.throttle', ['seconds' => 900, 'minutes' => 15])]);
+        $this->assertSame(3, $this->dir->bind);
+
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('warning')
+            ->withArgs(fn ($msg, $ctx) => str_contains($msg, 'Login bloccato') && $ctx['username'] === 'm.rossi' && $ctx['chiave'] === 'account')
+            ->once();
+    }
+
     public function test_limite_per_ip_su_username_diversi(): void
     {
         $this->dir->aggiungi('giusta', FakeDirectory::identita('ultimo', ['PRONTOPA_GESTORI']));

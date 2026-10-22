@@ -112,4 +112,17 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    | Blocco dopo tentativi falliti (LoginRequest). Il limite per account vale da
+    | qualunque IP e scatta PRIMA del bind AD: va tenuto sotto la soglia di
+    | blocco account di AD, così un attacco via ProntoPA non blocca l'utente
+    | sul dominio (PC, posta). Durata ≥ finestra di reset del contatore AD.
+    */
+    'login' => [
+        'max_tentativi_account' => (int) env('LOGIN_MAX_TENTATIVI', 5),
+        'blocco_account_minuti' => (int) env('LOGIN_BLOCCO_MINUTI', 15),
+        'max_tentativi_ip' => 20,
+        'blocco_ip_minuti' => 60,
+    ],
+
 ];

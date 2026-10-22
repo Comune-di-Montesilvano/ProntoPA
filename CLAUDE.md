@@ -157,6 +157,7 @@ Gruppi AD → ruolo (nomi in env `LDAP_GRUPPO_*` → `config('ldap.gruppi')`, NO
 | `PRONTOPA_SEGNALATORI` | `segnalatore` | provenienza 1 |
 
 Primo login AD: aggancio account legacy `locale` non-ditta con stessa email (se unico). Username AD già usato da altro account → login rifiutato ("contatta l'amministratore"). Diagnosi: `php artisan ldap:prova <username>` (nessuna scrittura DB): stampa la config letta e `Directory::motivoUltimoRifiuto()` (bind 49 con messaggio AD data 52e/533/775…, oppure bind ok ma utente non trovato → base DN/template). Il form di login mostra sempre il generico `auth.failed` (`lang/it/auth.php`).
+**Blocco tentativi** (`LoginRequest`, `config('auth.login')`): chiave account = identità normalizzata **senza IP** (`LOGIN_MAX_TENTATIVI`=5 in `LOGIN_BLOCCO_MINUTI`=15, da tenere sotto soglia/finestra di lockout AD), chiave IP 20/60 min. Il controllo precede il bind AD; ogni blocco → `Log::warning`. IP reale da `trustProxies('*')` = solo il peer diretto (reverse proxy) è fidato.
 **Gotcha LdapRecord**: `Guard::attempt()` restituisce `false` per QUALSIASI errore di bind (anche server irraggiungibile) — `LdapRecordDirectory` usa `auth()->bind()` e solo codice 49 = credenziali errate.
 
 ## Workflow Stati
