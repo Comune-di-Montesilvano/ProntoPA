@@ -54,6 +54,33 @@ class ImpostazioniOidcTest extends TestCase
             ->assertSee('https://prontopa.ente.it/auth/spid/callback');
     }
 
+    public function test_pagina_indica_cosa_manca_per_attivare_spid(): void
+    {
+        $this->salva(['oidc_client_id' => 'prontopa', 'oidc_client_secret' => 'segreto-123']);
+
+        $this->actingAs($this->admin)->get(route('admin.impostazioni.index'))
+            ->assertSee('Non attivo')
+            ->assertSee('Issuer mancante.');
+
+        $this->salva(['oidc_issuer' => 'https://login.ente.it']);
+
+        $this->actingAs($this->admin)->get(route('admin.impostazioni.index'))
+            ->assertSee('Attivo: il tasto')
+            ->assertDontSee('Issuer mancante.');
+    }
+
+    public function test_secret_cifrato_con_altra_app_key_segnalato(): void
+    {
+        $this->salva(['oidc_issuer' => 'https://login.ente.it', 'oidc_client_id' => 'prontopa']);
+        Impostazione::set('oidc_client_secret', 'non-decifrabile');
+
+        $this->assertSame(
+            ['Client secret non leggibile (salvato con un\'altra APP_KEY): reinseriscilo.'],
+            app(OidcConfig::class)->problemi(),
+        );
+        $this->assertFalse(app(OidcConfig::class)->configurato());
+    }
+
     public function test_secret_vuoto_lascia_quello_esistente(): void
     {
         $this->salva(['oidc_client_secret' => 'primo']);

@@ -4,6 +4,13 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.5] - 2026-10-22
+
+### Added
+- Admin → Impostazioni → SPID/CIE mostra se l'accesso SPID è attivo e, se
+  no, cosa manca (issuer, client ID, secret mancante o salvato con un'altra
+  `APP_KEY`): prima il tasto al login spariva senza spiegazioni.
+
 ## [0.8.4] - 2026-10-22
 
 ### Fixed
