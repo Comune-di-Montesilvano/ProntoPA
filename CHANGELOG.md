@@ -4,6 +4,15 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.14] - 2026-10-22
+
+### Security
+- Login: dopo 5 password errate l'account resta bloccato 15 minuti da qualunque IP
+  (prima: 1 minuto e solo per lo stesso IP). Il blocco scatta prima di interrogare
+  Active Directory, così un attacco via ProntoPA non fa bloccare l'utente sul dominio.
+  Limite per IP portato a 20 errori/ora. Soglia e durata configurabili
+  (`LOGIN_MAX_TENTATIVI`, `LOGIN_BLOCCO_MINUTI`); ogni blocco finisce nel log.
+
 ## [0.8.13] - 2026-10-22
 
 ### Added

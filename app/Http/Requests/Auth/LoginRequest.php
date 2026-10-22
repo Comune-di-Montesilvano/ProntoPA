@@ -13,14 +13,13 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
-    private const MAX_FALLIMENTI_PER_IP = 20;
-
     public function authorize(): bool
     {
         return true;
@@ -160,9 +159,11 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
+        $limiti = config('auth.login');
+
         $chiave = match (true) {
-            RateLimiter::tooManyAttempts($this->throttleKey(), 5) => $this->throttleKey(),
-            RateLimiter::tooManyAttempts($this->throttleKeyIp(), self::MAX_FALLIMENTI_PER_IP) => $this->throttleKeyIp(),
+            RateLimiter::tooManyAttempts($this->throttleKey(), $limiti['max_tentativi_account']) => $this->throttleKey(),
+            RateLimiter::tooManyAttempts($this->throttleKeyIp(), $limiti['max_tentativi_ip']) => $this->throttleKeyIp(),
             default => null,
         };
 
@@ -171,6 +172,11 @@ class LoginRequest extends FormRequest
         }
 
         event(new Lockout($this));
+        Log::warning('Login bloccato per troppi tentativi falliti', [
+            'chiave' => $chiave === $this->throttleKeyIp() ? 'ip' : 'account',
+            'username' => $this->identitaLogin()[1],
+            'ip' => $this->ip(),
+        ]);
 
         $seconds = RateLimiter::availableIn($chiave);
 
@@ -185,13 +191,14 @@ class LoginRequest extends FormRequest
     /**
      * Chiave sull'identità reale, non sulla stringa digitata: "a\m.rossi",
      * "b\m.rossi" e "m.rossi@ente.local" sono la stessa persona per AD e
-     * devono condividere lo stesso budget di tentativi.
+     * devono condividere lo stesso budget di tentativi. Senza IP: un attacco
+     * distribuito su tanti IP non deve arrivare a bloccare l'account su AD.
      */
     public function throttleKey(): string
     {
         [$canale, $identita] = $this->identitaLogin();
 
-        return $canale.':'.mb_strtolower($identita).'|'.$this->ip();
+        return 'login-account|'.$canale.':'.mb_strtolower($identita);
     }
 
     /** Limite trasversale agli username, contro tentativi su tanti account dallo stesso IP. */
@@ -220,8 +227,9 @@ class LoginRequest extends FormRequest
      */
     private function fallito(string $messaggio): never
     {
-        RateLimiter::hit($this->throttleKey());
-        RateLimiter::hit($this->throttleKeyIp());
+        $limiti = config('auth.login');
+        RateLimiter::hit($this->throttleKey(), $limiti['blocco_account_minuti'] * 60);
+        RateLimiter::hit($this->throttleKeyIp(), $limiti['blocco_ip_minuti'] * 60);
 
         throw ValidationException::withMessages(['username' => $messaggio]);
     }
