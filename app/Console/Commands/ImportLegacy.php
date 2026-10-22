@@ -13,6 +13,8 @@ class ImportLegacy extends Command
 
     protected $description = 'Importa i dati dal database legacy nel nuovo schema';
 
+    private const PREFISSO_USERNAME = 'legacy.';
+
     private int $importedUsers   = 0;
     private int $importedSeg     = 0;
     private int $importedNote    = 0;
@@ -272,7 +274,8 @@ class ImportLegacy extends Command
             // ruolo arrivano da AD (aggancio per email al primo login) o SPID.
             DB::table('users')->insert([
                 'name'                      => $u->nome_esteso ?? $u->username,
-                'username'                  => $u->username,
+                // Prefisso: lo username AD omonimo non deve trovarlo occupato.
+                'username'                  => self::PREFISSO_USERNAME.$u->username,
                 'email'                     => $email,
                 'password'                  => Hash::make(str()->random(40)),
                 'password_legacy'           => null,
@@ -473,12 +476,15 @@ class ImportLegacy extends Command
         $newUsers = DB::table('users')
             ->select('id', 'username')
             ->get()
-            ->keyBy('username');
+            ->keyBy(fn ($u) => mb_strtolower($u->username));
 
+        // Utente già presente (stesso username) oppure importato col prefisso.
         $map = [];
         foreach ($legacyUsers as $legacyId => $u) {
-            if (isset($newUsers[$u->username])) {
-                $map[$legacyId] = $newUsers[$u->username]->id;
+            $username = mb_strtolower($u->username);
+            $nuovo = $newUsers[$username] ?? $newUsers[self::PREFISSO_USERNAME.$username] ?? null;
+            if ($nuovo !== null) {
+                $map[$legacyId] = $nuovo->id;
             }
         }
 
