@@ -4,6 +4,39 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.19] - 2026-10-23
+
+> **Nota operativa.** All'aggiornamento tutti gli account locali (email/password) vengono
+> disattivati, non eliminati. Le ditte entrano solo con SPID/CIE: per ogni ditta, dalla
+> scheda Imprese, aggiungi il codice fiscale della persona che la gestirà (usa la ditta già
+> presente, così vede anche le segnalazioni dei vecchi appalti). I segnalatori senza dominio
+> si ricollegano con SPID/CIE e la delega scuola, come per le scuole.
+
+### Added
+- Favicon ProntoPA.
+- Logo dell'ente anche come file caricato (Admin → Impostazioni), affiancato al logo
+  ProntoPA in login, pagine e email.
+- Loghi nelle email incorporati nel messaggio (niente immagini esterne).
+- Pagina `/accesso` per scuole e ditte (SPID/CIE), separata da `/login` per il personale
+  del comune (solo credenziali di dominio). In home entrambi gli accessi.
+- Deleghe ditta: un operatore delega il codice fiscale di una persona a una ditta; al primo
+  accesso SPID/CIE la persona gestisce le segnalazioni della ditta, anche dei vecchi appalti.
+  Revoca dalla scheda impresa.
+- Disattivazione/riattivazione ditta: revoca tutte le deleghe e blocca le email.
+
+### Changed
+- Email di assegnazione alla ditta: alle persone delegate e all'email aziendale (una sola
+  se coincidono), con link alla pagina di accesso SPID.
+- Admin → Utenti: niente creazione di account locali; il ruolo delle persone delle ditte
+  si gestisce dalle deleghe.
+- Una ditta con persone delegate non si elimina: si disattiva.
+
+### Removed
+- Registrazione, password dimenticata, cambio password.
+- Magic-link per le ditte (anche nelle risposte Telegram).
+- Codice 2FA via email (resta il TOTP).
+- Verifica annuale degli account locali (resta il rinnovo delle deleghe scuola).
+
 ## [0.8.18] - 2026-10-22
 
 ### Added

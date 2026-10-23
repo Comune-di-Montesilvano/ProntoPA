@@ -473,10 +473,7 @@ class TelegramWebhookController extends Controller
         $reply = "Foto caricata con successo per la segnalazione #{$segnalazione->id_segnalazione} (Fase: " . ($fase === 'dopo' ? 'Dopo' : 'Prima') . ").";
 
         if ($user->hasRole('impresa')) {
-            $reply .= "
-
-Per il rapportino di fine lavoro (ore e materiali) apri la scheda:
-" . route('segnalazioni.show', $segnalazione->id_segnalazione);
+            $reply .= "\n\nPer il rapportino di fine lavoro (ore e materiali) apri la scheda:\n" . route('segnalazioni.show', $segnalazione->id_segnalazione);
         }
 
         $this->telegram->sendMessage($chatId, $reply);
