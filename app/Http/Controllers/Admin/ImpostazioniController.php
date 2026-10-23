@@ -7,7 +7,9 @@ use App\Models\Impostazione;
 use App\Models\StatoSegnalazione;
 use App\Services\Oidc\OidcConfig;
 use App\Services\PubblicazioneAutomatica;
+use App\Support\Brand;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,7 +34,21 @@ class ImpostazioniController extends Controller
         $data = $request->validate([
             'impostazioni'          => ['required', 'array'],
             'impostazioni.*'        => ['nullable', 'string', 'max:500'],
+            // Niente SVG: servito dal nostro dominio potrebbe eseguire script.
+            'ente_logo_upload'      => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:1024'],
+            'rimuovi_logo_file'     => ['nullable', 'boolean'],
         ]);
+
+        if ($request->boolean('rimuovi_logo_file') || $request->hasFile('ente_logo_upload')) {
+            $this->cancellaLogoFile();
+        }
+
+        if ($request->hasFile('ente_logo_upload')) {
+            $file = $request->file('ente_logo_upload');
+            $ext = $file->extension() === 'jpeg' ? 'jpg' : $file->extension();
+            $percorso = $file->storeAs(Brand::DIR_LOGO, "logo-ente.{$ext}", 'local');
+            Impostazione::set('ente_logo_file', $percorso);
+        }
 
         foreach ($data['impostazioni'] as $chiave => $valore) {
             if (in_array($chiave, Impostazione::CHIAVI_INTERNE, true)) {
@@ -59,6 +75,15 @@ class ImpostazioniController extends Controller
         }
 
         return back()->with('success', 'Impostazioni salvate.');
+    }
+
+    private function cancellaLogoFile(): void
+    {
+        $attuale = Impostazione::get('ente_logo_file');
+        if (filled($attuale)) {
+            Storage::disk('local')->delete($attuale);
+        }
+        Impostazione::set('ente_logo_file', null);
     }
 
     public function pubblicaEsistenti(PubblicazioneAutomatica $pubblicazione): RedirectResponse

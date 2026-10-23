@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+    @include('partials.favicon')
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ \App\Models\Impostazione::get('ente_nome', 'ProntoPA') }}</title>
@@ -23,7 +24,7 @@
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0">
             <div>
                 <a href="/">
-                    <x-application-logo class="w-16 h-16" style="color: var(--ente-primary);" />
+                    <x-co-branding size="lg" />
                 </a>
             </div>
 

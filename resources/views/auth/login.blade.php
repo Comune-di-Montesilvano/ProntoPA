@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @include('partials.favicon')
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Area riservata operatori — accedi per gestire le segnalazioni di manutenzione di {{ \App\Models\Impostazione::get('ente_nome', 'ProntoPA') }}.">
 
@@ -74,6 +75,8 @@
     {{-- ── Colonna destra — form ───────────────────────────────────────────── --}}
     <main style="background:var(--paper); padding:64px 56px;
                 display:flex; flex-direction:column; justify-content:center; gap:24px;">
+
+        <x-co-branding size="md" />
 
         <div>
             <h2 style="font-family:var(--font-ui); font-size:28px; font-weight:700;

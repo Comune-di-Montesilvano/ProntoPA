@@ -38,6 +38,7 @@ use Illuminate\Support\Facades\Route;
 
 // Home
 Route::get('/', [PublicHomeController::class, 'index'])->name('home');
+Route::get('/brand/logo-ente', \App\Http\Controllers\BrandLogoController::class)->name('brand.logo-ente');
 
 Route::get('/account/verify-annual/{user}/{token}', [AnnualAccountVerificationController::class, 'verify'])
     ->middleware('signed')

@@ -26,6 +26,13 @@ class ImpostazioniSeeder extends Seeder
                 'descrizione' => 'URL o path del logo (lascia vuoto per usare il logo di default)',
             ],
             [
+                'chiave'      => 'ente_logo_file',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'brand',
+                'descrizione' => "File del logo caricato (gestito dall'upload, ha la precedenza sull'URL)",
+            ],
+            [
                 'chiave'      => 'ente_colore_primario',
                 'valore'      => '#1D4ED8',
                 'tipo'        => 'color',

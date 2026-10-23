@@ -4,6 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @include('partials.favicon')
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @if($descrizione)
         <meta name="description" content="{{ $descrizione }}">
@@ -30,6 +31,7 @@
 </head>
 <body>
 <main style="max-width:420px; margin:0 auto; padding:80px 24px; display:flex; flex-direction:column; gap:24px;">
+    <x-co-branding size="md" />
     <div>
         <h1 style="font-family:var(--font-ui); font-size:24px; font-weight:700; color:var(--ink); margin:0; letter-spacing:-.01em;">{{ $titolo }}</h1>
         @isset($sottotitolo)
