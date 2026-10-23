@@ -1,12 +1,18 @@
 <x-app-layout>
     <x-slot name="header">Gestione Segnalazioni</x-slot>
     <x-slot name="actions">
-        <a href="{{ route('gestione.stampa', array_filter(['tab' => $tab, 'q' => $q, 'id_tipologia' => $idTipologia, 'id_provenienza' => $idProvenienza])) }}"
+        <a href="{{ route('gestione.stampa', $filtri) }}"
            target="_blank"
            class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
             Stampa lista
         </a>
-        <a href="{{ route('gestione.export-csv', array_filter(['tab' => $tab, 'q' => $q, 'id_tipologia' => $idTipologia, 'id_provenienza' => $idProvenienza, 'id_operatore' => $idOperatore, 'data_da' => $dataDa, 'data_a' => $dataA, 'livello_priorita' => $livelloPriorita, 'id_specializzazione' => $idSpecializzazione])) }}"
+        <a href="{{ route('gestione.stampa-schede', $filtri) }}"
+           target="_blank"
+           title="Tutte le schede dell'elenco filtrato, una per pagina"
+           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
+            Stampa schede ({{ $segnalazioni->total() }})
+        </a>
+        <a href="{{ route('gestione.export-csv', $filtri) }}"
            class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
             Esporta CSV
         </a>
@@ -22,9 +28,10 @@
     </x-slot>
 
     {{-- KPI cards --}}
-    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
         @foreach([
-            ['tab' => 'aperte',      'label' => 'Aperte',      'color' => 'text-blue-600',   'bg' => 'bg-blue-50'],
+            ['tab' => 'nuove',       'label' => 'Nuove',       'color' => 'text-sky-600',    'bg' => 'bg-sky-50'],
+            ['tab' => 'aperte',     'label' => 'Aperte',      'color' => 'text-blue-600',   'bg' => 'bg-blue-50'],
             ['tab' => 'in_carico',   'label' => 'In carico',   'color' => 'text-indigo-600', 'bg' => 'bg-indigo-50'],
             ['tab' => 'in_gestione', 'label' => 'In gestione', 'color' => 'text-purple-600', 'bg' => 'bg-purple-50'],
             ['tab' => 'evidenza',    'label' => 'In evidenza', 'color' => 'text-yellow-600', 'bg' => 'bg-yellow-50'],
@@ -167,6 +174,7 @@
     <div class="border-b border-gray-200 mb-4">
         <nav class="-mb-px flex space-x-5">
             @foreach([
+                'nuove'       => 'Nuove',
                 'aperte'      => 'Aperte',
                 'in_carico'   => 'In carico',
                 'in_gestione' => 'In gestione',
