@@ -1,4 +1,4 @@
-<x-mail::message>
+<x-mail::message :loghi="\App\Support\Brand::loghiEmail($message ?? null)">
 {{-- Greeting --}}
 @if (! empty($greeting))
 # {{ $greeting }}

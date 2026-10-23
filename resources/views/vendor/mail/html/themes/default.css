@@ -113,9 +113,10 @@ img {
 
 .logo {
     height: auto;
-    margin-bottom: 10px;
-    max-height: 64px;
-    max-width: 240px;
+    margin: 0 8px 10px;
+    max-height: 56px;
+    max-width: 200px;
+    vertical-align: middle;
 }
 
 /* Body */

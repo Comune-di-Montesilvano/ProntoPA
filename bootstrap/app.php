@@ -21,7 +21,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withSchedule(function (Schedule $schedule) {
-        $schedule->command('accounts:annual-check')->dailyAt('02:30');
     })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');

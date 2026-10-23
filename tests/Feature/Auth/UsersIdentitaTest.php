@@ -51,21 +51,19 @@ class UsersIdentitaTest extends TestCase
         $locale = User::factory()->create();
         $this->assertNull($locale->metodoSecondoFattore());
 
-        $ditta = User::factory()->create();
+        // Il codice via email per le ditte non esiste più (v0.8.19).
+        $ditta = User::factory()->create(['two_factor_metodo' => 'email']);
         $ditta->assignRole('impresa');
-        $this->assertSame('email', $ditta->metodoSecondoFattore());
-
-        $optIn = User::factory()->create(['two_factor_metodo' => 'email']);
-        $this->assertSame('email', $optIn->metodoSecondoFattore());
+        $this->assertNull($ditta->metodoSecondoFattore());
 
         $totp = User::factory()->create();
-        $totp->assignRole('impresa');
         app(EnableTwoFactorAuthentication::class)($totp);
         $totp->forceFill(['two_factor_confirmed_at' => now()])->save();
         $this->assertSame('totp', $totp->fresh()->metodoSecondoFattore());
 
-        $ldap = User::factory()->create(['auth_source' => 'ldap', 'two_factor_metodo' => 'email']);
-        $ldap->assignRole('impresa');
-        $this->assertNull($ldap->metodoSecondoFattore());
+        $ldap = User::factory()->create(['auth_source' => 'ldap']);
+        app(EnableTwoFactorAuthentication::class)($ldap);
+        $ldap->forceFill(['two_factor_confirmed_at' => now()])->save();
+        $this->assertNull($ldap->fresh()->metodoSecondoFattore());
     }
 }

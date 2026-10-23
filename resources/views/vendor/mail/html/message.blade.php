@@ -1,15 +1,18 @@
+@props(['loghi' => []])
 @php
+    // Loghi incorporati (cid:) dal template della notifica: mai immagini remote.
     $enteNome = \App\Models\Impostazione::get('ente_nome', config('app.name'));
-    $enteLogo = \App\Models\Impostazione::get('ente_logo_url');
-    $enteLogo = filled($enteLogo) ? url($enteLogo) : null;
     $enteSito = \App\Models\Impostazione::get('ente_sito_url') ?: config('app.url');
 @endphp
 <x-mail::layout>
 {{-- Header --}}
 <x-slot:header>
 <x-mail::header :url="$enteSito">
-@if ($enteLogo)
-<img src="{{ $enteLogo }}" class="logo" alt=""><br>
+@foreach ($loghi as $logo)
+<img src="{{ $logo['src'] }}" class="logo" alt="{{ $logo['alt'] }}">
+@endforeach
+@if ($loghi)
+<br>
 @endif
 {{ $enteNome }}
 </x-mail::header>

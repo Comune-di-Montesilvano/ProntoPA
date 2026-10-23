@@ -35,7 +35,7 @@ class LimitaAccessoSpid
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->with('status', "Accesso non consentito. Contatta l'ente.");
+            return redirect()->route('accesso')->with('status', "Accesso non consentito. Contatta l'ente.");
         }
 
         if ($request->routeIs(...self::SEMPRE)) {
@@ -44,6 +44,11 @@ class LimitaAccessoSpid
 
         if (! $user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
+        }
+
+        // Persona delegata da una ditta: il ruolo lo decide DelegaImpresaService.
+        if ($user->hasRole('impresa')) {
+            return $next($request);
         }
 
         if ($request->routeIs(...self::SENZA_DELEGA)

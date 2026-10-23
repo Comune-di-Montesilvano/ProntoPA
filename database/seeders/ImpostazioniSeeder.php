@@ -26,6 +26,13 @@ class ImpostazioniSeeder extends Seeder
                 'descrizione' => 'URL o path del logo (lascia vuoto per usare il logo di default)',
             ],
             [
+                'chiave'      => 'ente_logo_file',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'brand',
+                'descrizione' => "File del logo caricato (gestito dall'upload, ha la precedenza sull'URL)",
+            ],
+            [
                 'chiave'      => 'ente_colore_primario',
                 'valore'      => '#1D4ED8',
                 'tipo'        => 'color',
@@ -208,42 +215,6 @@ class ImpostazioniSeeder extends Seeder
                 'descrizione' => 'Giorni entro cui è consentita la riapertura di una segnalazione chiusa (0 = mai)',
             ],
 
-            // Verifica annuale account
-            [
-                'chiave'      => 'account_verification_enabled',
-                'valore'      => '1',
-                'tipo'        => 'boolean',
-                'gruppo'      => 'verifica_account',
-                'descrizione' => 'Abilita il controllo annuale account e invio richieste di conferma email istituzionale',
-            ],
-            [
-                'chiave'      => 'account_verification_annual_days',
-                'valore'      => '365',
-                'tipo'        => 'integer',
-                'gruppo'      => 'verifica_account',
-                'descrizione' => 'Giorni massimi tra una conferma annuale e la successiva',
-            ],
-            [
-                'chiave'      => 'account_verification_token_days',
-                'valore'      => '30',
-                'tipo'        => 'integer',
-                'gruppo'      => 'verifica_account',
-                'descrizione' => 'Validita in giorni del link di conferma annuale',
-            ],
-            [
-                'chiave'      => 'account_verification_reminder_days',
-                'valore'      => '15',
-                'tipo'        => 'integer',
-                'gruppo'      => 'verifica_account',
-                'descrizione' => 'Invia reminder quando la scadenza e entro N giorni',
-            ],
-            [
-                'chiave'      => 'account_verification_auto_suspend',
-                'valore'      => '1',
-                'tipo'        => 'boolean',
-                'gruppo'      => 'verifica_account',
-                'descrizione' => 'Sospende automaticamente gli account che non confermano entro la scadenza',
-            ],
 
             // v0.6 — Adozione
             [

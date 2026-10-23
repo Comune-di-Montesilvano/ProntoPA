@@ -167,59 +167,6 @@ class DitteECanaliTest extends TestCase
         $this->assertEquals(450.50, $segnalazione->importo_preventivo);
     }
 
-    // ── 3. TEST MAGIC LINK ───────────────────────────────────────────────────
-
-    public function test_magic_link_mostra_scheda_e_permette_azione_senza_login(): void
-    {
-        $impresaUser = $this->impresaUser();
-        $appalto = Appalto::create([
-            'id_impresa' => $impresaUser->id_impresa,
-            'descrizione' => 'Appalto Magic',
-            'importo_appalto' => 5000.00,
-            'valido' => true,
-            'id_gruppo' => 1,
-        ]);
-
-        $segnalazione = Segnalazione::factory()->create([
-            'id_appalto' => $appalto->id_appalto,
-            'id_stato_segnalazione' => \App\Enums\SegnalazioneStato::ASSEGNATA_IMPRESA, // stato 4
-        ]);
-
-        // Genera URL firmato temporaneo
-        $url = URL::temporarySignedRoute(
-            'magic-link.show',
-            now()->addHours(1),
-            ['segnalazione' => $segnalazione->id_segnalazione]
-        );
-
-        // 1. Accesso GET senza login -> successo (200)
-        $response = $this->get($url);
-        $response->assertOk();
-        $response->assertViewHas('segnalazione');
-
-        // 2. Accesso con URL non firmato -> fallisce (403)
-        $unsignedUrl = route('magic-link.show', $segnalazione);
-        $this->get($unsignedUrl)->assertForbidden();
-
-        // 3. Invio POST azione con URL firmato -> successo
-        $postUrl = URL::temporarySignedRoute(
-            'magic-link.azione',
-            now()->addHours(1),
-            ['segnalazione' => $segnalazione->id_segnalazione]
-        );
-
-        $response = $this->post($postUrl, [
-            'id_azione' => 6, // PRESENTA PREVENTIVO
-            'importo_preventivo' => 350.00,
-            'nota' => 'Preventivo caricato via magic link.',
-        ]);
-
-        $response->assertRedirect();
-
-        $segnalazione->refresh();
-        $this->assertEquals(\App\Enums\SegnalazioneStato::PREVENTIVO_IN_ATTESA, $segnalazione->id_stato_segnalazione);
-    }
-
     // ── 4. TEST TELEGRAM OPERATIVO ───────────────────────────────────────────
 
     public function test_telegram_comando_oggi(): void
@@ -278,6 +225,31 @@ class DitteECanaliTest extends TestCase
         });
     }
 
+    public function test_telegram_utente_disattivato_trattato_come_non_collegato(): void
+    {
+        $impresaUser = $this->impresaUser();
+        $impresaUser->update(['telegram_chat_id' => '12345678', 'attivo' => false]);
+        $appalto = Appalto::create(['id_impresa' => $impresaUser->id_impresa, 'descrizione' => 'A', 'valido' => true, 'id_gruppo' => 1]);
+        $segnalazione = Segnalazione::factory()->create(['id_appalto' => $appalto->id_appalto, 'id_stato_segnalazione' => 4]);
+
+        Impostazione::set('telegram_webhook_secret', 'my-secret');
+        Impostazione::set('telegram_bot_token', 'my-token');
+        Http::fake(['https://api.telegram.org/*' => Http::response(['ok' => true])]);
+
+        $this->withHeader('X-Telegram-Bot-Api-Secret-Token', 'my-secret')
+            ->postJson('/api/telegram/webhook', ['message' => ['chat' => ['id' => 12345678], 'text' => '/oggi']])
+            ->assertOk();
+        $this->withHeader('X-Telegram-Bot-Api-Secret-Token', 'my-secret')
+            ->postJson('/api/telegram/webhook', ['callback_query' => [
+                'id' => 'cb1', 'message' => ['chat' => ['id' => 12345678]],
+                'data' => 'azione:'.$segnalazione->id_segnalazione.':6',
+            ]])->assertOk();
+
+        Http::assertNotSent(fn ($r) => str_contains($r->url(), 'sendMessage') && str_contains((string) $r['text'], 'Lavori per priorità'));
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'answerCallbackQuery') && str_contains((string) $r['text'], 'non collegato'));
+        $this->assertEquals(\App\Enums\SegnalazioneStato::ASSEGNATA_IMPRESA, $segnalazione->fresh()->id_stato_segnalazione);
+    }
+
     public function test_telegram_carica_foto_con_caption_id(): void
     {
         $impresaUser = $this->impresaUser();
@@ -331,13 +303,14 @@ class DitteECanaliTest extends TestCase
         Storage::disk('local')->assertExists($allegato->percorso);
         $this->assertEquals('fake-image-binary', Storage::disk('local')->get($allegato->percorso));
 
-        // Verifica che sia stato inviato il messaggio di successo con il magic link
+        // Messaggio di successo con link alla scheda (niente magic-link)
         Http::assertSent(function ($request) {
             if (!str_contains($request->url(), 'sendMessage')) {
                 return false;
             }
             return str_contains($request['text'], 'Foto caricata con successo')
-                && str_contains($request['text'], '/magic/segnalazione/');
+                && str_contains($request['text'], '/segnalazioni/')
+                && ! str_contains($request['text'], 'signature=');
         });
     }
 }

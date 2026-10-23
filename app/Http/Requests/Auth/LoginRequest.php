@@ -4,7 +4,6 @@ namespace App\Http\Requests\Auth;
 
 use App\Models\User;
 use App\Services\Auth\AccessoLdapNegato;
-use App\Services\Auth\CodiceAccessoEmail;
 use App\Services\Auth\LdapLoginService;
 use App\Services\Auth\NormalizzaUsernameAd;
 use App\Services\Directory\DirectoryNonDisponibile;
@@ -12,7 +11,6 @@ use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -52,9 +50,9 @@ class LoginRequest extends FormRequest
         $password = (string) $this->input('password');
         [$canale, $identita] = $this->identitaLogin();
 
-        $user = $canale === 'email'
-            ? $this->tentaLocale('email', $identita, $password)
-            : $this->tentaDipendente($identita, $password);
+        // Solo personale AD: un'email non di dominio (vecchie ditte) non va
+        // mai ad AD, dove verrebbe ridotta a un sAMAccountName qualsiasi.
+        $user = $canale === 'email' ? null : $this->tentaDipendente($identita, $password);
 
         if ($user === null) {
             $this->fallito(trans('auth.failed'));
@@ -71,10 +69,6 @@ class LoginRequest extends FormRequest
                 'login.remember' => $this->boolean('remember'),
                 'login.metodo'   => $metodo,
             ]);
-
-            if ($metodo === 'email') {
-                app(CodiceAccessoEmail::class)->invia($user);
-            }
 
             return;
         }
@@ -94,32 +88,7 @@ class LoginRequest extends FormRequest
         } catch (DirectoryNonDisponibile $e) {
             report($e);
 
-            return $this->tentaLocale('username', $username, $password)
-                ?? $this->fallito('Autenticazione dei dipendenti temporaneamente non disponibile. Riprova più tardi.');
-        }
-
-        // TRANSITORIO fino al cutover (fase 3): account locali legacy che
-        // entrano ancora con username. Da rimuovere in utenze:cutover.
-        return $user ?? $this->tentaLocale('username', $username, $password);
-    }
-
-    /**
-     * Solo account locali: un utente ldap/spid non entra mai con password,
-     * anche se ha la stessa email di una ditta.
-     */
-    private function tentaLocale(string $campo, string $valore, #[\SensitiveParameter] string $password): ?User
-    {
-        $user = User::where('auth_source', 'locale')
-            ->when(
-                $campo === 'email',
-                fn ($q) => $q->whereRaw('LOWER(email) = ?', [$valore]),
-                fn ($q) => $q->where('username', $valore),
-            )
-            ->orderByDesc('attivo')
-            ->first();
-
-        if ($user === null || $user->password === null || ! Hash::check($password, $user->password)) {
-            return null;
+            $this->fallito('Autenticazione dei dipendenti temporaneamente non disponibile. Riprova più tardi.');
         }
 
         return $user;
@@ -127,20 +96,6 @@ class LoginRequest extends FormRequest
 
     private function ensureUserIsActive(?User $user): void
     {
-        $approvalStatus = $user->approval_status ?? 'approved';
-
-        if ($approvalStatus !== 'approved') {
-            if (Auth::check()) {
-                Auth::logout();
-            }
-
-            throw ValidationException::withMessages([
-                'username' => $approvalStatus === 'rejected'
-                    ? 'La richiesta di registrazione non è stata approvata. Contatta il supporto.'
-                    : 'La tua registrazione è in attesa di approvazione da parte dell\'operatore.',
-            ]);
-        }
-
         if ($user?->attivo ?? true) {
             return;
         }

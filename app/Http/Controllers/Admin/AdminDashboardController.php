@@ -18,8 +18,7 @@ class AdminDashboardController extends Controller
     public function index(CatalogoBackup $backup): View
     {
         $conteggi = [
-            'utenti_attivi' => User::where('attivo', true)->where('approval_status', 'approved')->count(),
-            'utenti_pending' => User::where('approval_status', 'pending')->count(),
+            'utenti_attivi' => User::where('attivo', true)->count(),
             'utenti_disattivati' => User::where('attivo', false)->count(),
             'enti' => Istituto::count(),
             'sedi' => Plesso::count(),
@@ -28,14 +27,8 @@ class AdminDashboardController extends Controller
             'sla' => SlaConfigurazione::count(),
         ];
 
-        $utentiPendenti = User::with('istituto')
-            ->where('approval_status', 'pending')
-            ->orderByDesc('created_at')
-            ->limit(8)
-            ->get();
-
         $backupInAllarme = $backup->inAllarme(CarbonImmutable::now());
 
-        return view('admin.dashboard', compact('conteggi', 'utentiPendenti', 'backupInAllarme'));
+        return view('admin.dashboard', compact('conteggi', 'backupInAllarme'));
     }
 }

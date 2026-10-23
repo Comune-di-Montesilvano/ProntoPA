@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Enums\SegnalazioneStato;
 use App\Models\AdesioneSegnalazione;
+use App\Models\Appalto;
 use App\Models\Impresa;
 use App\Models\Istituto;
 use App\Models\Plesso;
@@ -34,6 +35,12 @@ class PopulateDemoData extends Command
 
     private const EMAIL_DOMAIN = '@demo.prontopa.it';
 
+    /** Chiave utente, nome, codice fiscale fittizio — stesso ordine di creaImprese(). */
+    private const DITTE_SPID = [
+        ['impresa1', 'Marco Edili (Edil Service)', 'DMOMRC80A01G482E'],
+        ['impresa2', 'Luca Termo (Termoidraulica)', 'DMOLCU82B02G482T'],
+    ];
+
     public function handle(): int
     {
         if (app()->environment('production') && ! $this->option('force')) {
@@ -55,21 +62,16 @@ class PopulateDemoData extends Command
             $imprese              = $this->creaImprese();
             $utenti                = $this->creaUtenti($istituti, $imprese);
             $this->creaSquadra($utenti);
-            $segnalazioni          = $this->creaSegnalazioni($plessi, $utenti);
+            $appalti               = $this->creaAppalti($imprese);
+            $segnalazioni          = $this->creaSegnalazioni($plessi, $utenti, $appalti);
             $this->creaAdesioniDuplicati($segnalazioni, $utenti);
         });
 
         $this->newLine();
         $this->info('Dati demo creati.');
-        $this->line('Accedi con uno di questi utenti (password: demo1234):');
-        $this->table(['Ruolo', 'Email'], [
-            ['Gestore supervisore', 'supervisore' . self::EMAIL_DOMAIN],
-            ['Gestore', 'gestore' . self::EMAIL_DOMAIN],
-            ['Operaio', 'operaio1' . self::EMAIL_DOMAIN],
-            ['Segnalatore (scuola)', 'segnalatore1' . self::EMAIL_DOMAIN],
-            ['Segnalatore (URP)', 'segnalatore-urp' . self::EMAIL_DOMAIN],
-            ['Impresa', 'impresa1' . self::EMAIL_DOMAIN],
-        ]);
+        $this->line('Operatori: /login con gli utenti AD simulati (mock.admin, mock.gestore… password = username, LDAP_HOST=mock).');
+        $this->line('Gli utenti demo locali (gestore, operaio1, segnalatore1…) servono solo come autori dei dati: non accedono.');
+        $this->line('Ditte: /accesso → simulatore SPID con codice fiscale ' . self::DITTE_SPID[0][2] . ' (Edil Service) o ' . self::DITTE_SPID[1][2] . '.');
 
         return self::SUCCESS;
     }
@@ -89,6 +91,8 @@ class PopulateDemoData extends Command
 
         Squadra::where('nome', 'like', 'Squadra demo%')->delete();
         User::where('email', 'like', '%' . self::EMAIL_DOMAIN)->delete();
+        Appalto::where('descrizione', 'like', 'DEMO %')->delete();
+        \App\Models\DelegaImpresa::whereIn('id_impresa', Impresa::where('note', 'DEMO')->pluck('id_impresa'))->delete();
         Impresa::where('note', 'DEMO')->delete();
     }
 
@@ -178,16 +182,14 @@ class PopulateDemoData extends Command
             'password' => $password, 'attivo' => true, 'email_verified_at' => now(),
             'id_provenienza' => $urp,
         ]);
-        $u['impresa1'] = User::create([
-            'name' => 'Edil Service — referente', 'username' => 'impresa1', 'email' => 'impresa1' . self::EMAIL_DOMAIN,
-            'password' => $password, 'attivo' => true, 'email_verified_at' => now(),
-            'id_impresa' => $imprese[0]->id_impresa,
-        ]);
-        $u['impresa2'] = User::create([
-            'name' => 'Termoidraulica — referente', 'username' => 'impresa2', 'email' => 'impresa2' . self::EMAIL_DOMAIN,
-            'password' => $password, 'attivo' => true, 'email_verified_at' => now(),
-            'id_impresa' => $imprese[1]->id_impresa,
-        ]);
+        // Ditte: persone SPID pre-delegate (entrano dal simulatore SPID con questo CF).
+        foreach (self::DITTE_SPID as [$chiave, $nome, $cf]) {
+            $u[$chiave] = new User();
+            $u[$chiave]->forceFill([
+                'name' => $nome, 'username' => $cf, 'codice_fiscale' => $cf, 'auth_source' => 'spid',
+                'email' => $chiave . self::EMAIL_DOMAIN, 'password' => null, 'attivo' => true, 'email_verified_at' => now(),
+            ])->save();
+        }
 
         $u['supervisore']->syncRoles(['gestore']);
         $u['gestore']->syncRoles(['gestore']);
@@ -196,8 +198,13 @@ class PopulateDemoData extends Command
         $u['segnalatore1']->syncRoles(['segnalatore']);
         $u['segnalatore2']->syncRoles(['segnalatore']);
         $u['segnalatore_urp']->syncRoles(['segnalatore']);
-        $u['impresa1']->syncRoles(['impresa']);
-        $u['impresa2']->syncRoles(['impresa']);
+
+        // predelega → allinea(): ruolo impresa e id_impresa
+        $deleghe = app(\App\Services\Deleghe\DelegaImpresaService::class);
+        foreach (self::DITTE_SPID as $i => [$chiave, , $cf]) {
+            $deleghe->predelega($cf, $imprese[$i], 'Demo', $u['gestore']);
+            $u[$chiave]->refresh();
+        }
 
         return $u;
     }
@@ -213,7 +220,16 @@ class PopulateDemoData extends Command
     }
 
     /** @return \Illuminate\Support\Collection<int, Segnalazione> */
-    private function creaSegnalazioni($plessi, array $utenti)
+    /** Un appalto per ditta, così il portale imprese mostra le sue segnalazioni. */
+    private function creaAppalti($imprese)
+    {
+        return $imprese->map(fn (Impresa $impresa) => Appalto::create([
+            'id_gruppo' => 1, 'descrizione' => 'DEMO manutenzione ' . $impresa->ragione_sociale,
+            'id_impresa' => $impresa->id_impresa, 'valido' => true,
+        ]));
+    }
+
+    private function creaSegnalazioni($plessi, array $utenti, $appalti)
     {
         $tipologieIds = TipologiaSegnalazione::pluck('id_tipologia_segnalazione');
         $urp          = Provenienza::where('descrizione', 'URP')->value('id_provenienza');
@@ -289,6 +305,7 @@ class PopulateDemoData extends Command
                     'segnalante'                 => $segnalante->name,
                     'email'                      => $segnalante->email,
                     'telefono'                   => fake('it_IT')->phoneNumber(),
+                    'id_appalto'                 => $assegnaImpresa ? $appalti->random()->id_appalto : null,
                     'importo_preventivo'         => $assegnaImpresa ? fake()->randomFloat(2, 150, 4500) : 0,
                     'importo_liquidato'          => $stato === SegnalazioneStato::COMPLETATA ? fake()->randomFloat(2, 150, 4500) : 0,
                     'segnalazione_urgente'       => fake()->boolean(15),

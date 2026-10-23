@@ -17,7 +17,6 @@ use App\Http\Controllers\Admin\SquadreController;
 use App\Http\Controllers\Admin\UtentiController;
 use App\Http\Controllers\AdesioniSegnalazioniController;
 use App\Http\Controllers\AllegatiSegnalazioniController;
-use App\Http\Controllers\Auth\AnnualAccountVerificationController;
 use App\Http\Controllers\AppaltiController;
 use App\Http\Controllers\GestioneController;
 use App\Http\Controllers\ImpreseDashboardController;
@@ -38,10 +37,7 @@ use Illuminate\Support\Facades\Route;
 
 // Home
 Route::get('/', [PublicHomeController::class, 'index'])->name('home');
-
-Route::get('/account/verify-annual/{user}/{token}', [AnnualAccountVerificationController::class, 'verify'])
-    ->middleware('signed')
-    ->name('account.verification.annual');
+Route::get('/brand/logo-ente', \App\Http\Controllers\BrandLogoController::class)->name('brand.logo-ente');
 
 // Dashboard — dispatcher per ruolo
 Route::get('/dashboard', [RoleDashboardController::class, 'index'])
@@ -126,6 +122,14 @@ Route::middleware(['auth', 'role:admin|gestore'])->prefix('gestione')->name('ges
     Route::get('/reports/mensile/xlsx', [ReportController::class, 'mensileGestoreXlsx'])->name('reports.mensile.xlsx');
 });
 
+// ── Imprese: persone delegate (SPID/CIE) e disattivazione (admin + gestore) ──
+Route::middleware(['auth', 'role:admin|gestore'])->prefix('imprese/{impresa}')->name('imprese.')->group(function () {
+    Route::post('deleghe', [\App\Http\Controllers\DelegheImpresaController::class, 'store'])->name('deleghe.store');
+    Route::delete('deleghe/{delega}', [\App\Http\Controllers\DelegheImpresaController::class, 'destroy'])->name('deleghe.destroy');
+    Route::post('disattiva', [\App\Http\Controllers\DelegheImpresaController::class, 'disattiva'])->name('disattiva');
+    Route::post('riattiva', [\App\Http\Controllers\DelegheImpresaController::class, 'riattiva'])->name('riattiva');
+});
+
 // ── Imprese CRUD (admin + gestore) ────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin|gestore'])
     ->resource('imprese', ImpreseCRUDController::class)
@@ -156,14 +160,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::patch('utenti/{utente}/attivo', [UtentiController::class, 'toggleAttivo'])
         ->name('utenti.toggle-attivo');
 
-    Route::patch('utenti/{utente}/approve', [UtentiController::class, 'approve'])
-        ->name('utenti.approve');
-
-    Route::patch('utenti/{utente}/reject', [UtentiController::class, 'reject'])
-        ->name('utenti.reject');
-
     Route::resource('utenti', UtentiController::class)
-        ->except(['show'])
+        ->except(['show', 'create', 'store'])
         ->parameters(['utenti' => 'utente']);
 
     Route::resource('organizzazioni', OrganizzazioniController::class)
@@ -245,14 +243,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::post('/profile/telegram/link', [TelegramAccountController::class, 'store'])->name('profile.telegram.store');
     Route::delete('/profile/telegram/link', [TelegramAccountController::class, 'destroy'])->name('profile.telegram.destroy');
-});
-
-// ── Magic links per ditte (non autenticate, protette da firma) ─────────────────
-Route::middleware('signed')->group(function () {
-    Route::get('/magic/segnalazione/{segnalazione}', [\App\Http\Controllers\MagicLinkController::class, 'show'])
-        ->name('magic-link.show');
-    Route::post('/magic/segnalazione/{segnalazione}', [\App\Http\Controllers\MagicLinkController::class, 'eseguiAzione'])
-        ->name('magic-link.azione');
 });
 
 require __DIR__.'/auth.php';

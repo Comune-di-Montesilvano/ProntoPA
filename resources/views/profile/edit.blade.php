@@ -13,15 +13,6 @@
                 </div>
             </div>
 
-            {{-- Password e 2FA solo per account locali: SPID/CIE e AD si autenticano altrove. --}}
-            @if($user->isLocale())
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.update-password-form')
-                </div>
-            </div>
-            @endif
-
             <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
                 <div class="max-w-xl">
                     @include('profile.partials.telegram-link-form')

@@ -37,7 +37,6 @@ class PasswordNonNeiLogTest extends TestCase
             'NullDirectory::authenticate' => [NullDirectory::class, 'authenticate'],
             'LdapLoginService::login' => [LdapLoginService::class, 'login'],
             'LoginRequest::tentaDipendente' => [LoginRequest::class, 'tentaDipendente'],
-            'LoginRequest::tentaLocale' => [LoginRequest::class, 'tentaLocale'],
             'ArchivioBackup::scrivi' => [ArchivioBackup::class, 'scrivi', 'passphrase'],
             'ArchivioBackup::manifest' => [ArchivioBackup::class, 'manifest', 'passphrase'],
             'ArchivioBackup::verifica' => [ArchivioBackup::class, 'verifica', 'passphrase'],

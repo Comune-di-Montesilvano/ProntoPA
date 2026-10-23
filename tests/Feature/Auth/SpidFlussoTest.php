@@ -107,8 +107,8 @@ class SpidFlussoTest extends TestCase
         $this->get('/auth/spid/callback?code=c1&state='.$state);
 
         $this->get('/auth/spid/callback?code=c1&state='.$state)
-            ->assertRedirect(route('login'))
-            ->assertSessionHasErrors(['username' => 'Sessione di accesso scaduta, riprova.']);
+            ->assertRedirect(route('accesso'))
+            ->assertSessionHasErrors(['spid' => 'Sessione di accesso scaduta, riprova.']);
     }
 
     public function test_state_errato_non_contatta_il_proxy(): void
@@ -116,7 +116,7 @@ class SpidFlussoTest extends TestCase
         $this->avvia();
 
         $this->get('/auth/spid/callback?code=c1&state=falso')
-            ->assertSessionHasErrors(['username' => 'Sessione di accesso scaduta, riprova.']);
+            ->assertSessionHasErrors(['spid' => 'Sessione di accesso scaduta, riprova.']);
 
         Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/OIDC/token'));
     }
@@ -126,8 +126,8 @@ class SpidFlussoTest extends TestCase
         $state = $this->avvia();
 
         $this->get('/auth/spid/callback?error=access_denied&state='.$state)
-            ->assertRedirect(route('login'))
-            ->assertSessionHasErrors(['username' => 'Accesso SPID/CIE annullato.']);
+            ->assertRedirect(route('accesso'))
+            ->assertSessionHasErrors(['spid' => 'Accesso SPID/CIE annullato.']);
     }
 
     public function test_proxy_giu_messaggio_non_disponibile(): void
@@ -135,8 +135,8 @@ class SpidFlussoTest extends TestCase
         $this->idp->proxyGiu = true;
 
         $this->get('/auth/spid')
-            ->assertRedirect(route('login'))
-            ->assertSessionHasErrors(['username' => 'Accesso SPID/CIE temporaneamente non disponibile. Riprova più tardi.']);
+            ->assertRedirect(route('accesso'))
+            ->assertSessionHasErrors(['spid' => 'Accesso SPID/CIE temporaneamente non disponibile. Riprova più tardi.']);
     }
 
     public function test_token_non_valido_messaggio_generico(): void
@@ -145,7 +145,7 @@ class SpidFlussoTest extends TestCase
         $this->idp->statoToken = 400;
 
         $this->get('/auth/spid/callback?code=c1&state='.$state)
-            ->assertSessionHasErrors(['username' => 'Accesso SPID/CIE non riuscito, riprova.']);
+            ->assertSessionHasErrors(['spid' => 'Accesso SPID/CIE non riuscito, riprova.']);
         $this->assertGuest();
     }
 
@@ -155,14 +155,14 @@ class SpidFlussoTest extends TestCase
         $state = $this->avvia();
 
         $this->get('/auth/spid/callback?code=c1&state='.$state)
-            ->assertSessionHasErrors(['username' => 'Accesso non consentito. Contatta l\'ente.']);
+            ->assertSessionHasErrors(['spid' => 'Accesso non consentito. Contatta l\'ente.']);
         $this->assertGuest();
     }
 
-    public function test_completa_profilo_senza_identita_in_sessione_torna_al_login(): void
+    public function test_completa_profilo_senza_identita_in_sessione_torna_ad_accesso(): void
     {
-        $this->get(route('spid.completa-profilo'))->assertRedirect(route('login'));
-        $this->post(route('spid.completa-profilo.store'), ['email' => 'a@b.it'])->assertRedirect(route('login'));
+        $this->get(route('spid.completa-profilo'))->assertRedirect(route('accesso'));
+        $this->post(route('spid.completa-profilo.store'), ['email' => 'a@b.it'])->assertRedirect(route('accesso'));
     }
 
     public function test_email_di_ditta_attiva_rifiutata_email_di_utente_ad_ammessa(): void
@@ -176,8 +176,8 @@ class SpidFlussoTest extends TestCase
         $this->post(route('spid.completa-profilo.store'), ['email' => 'dipendente@ente.it'])->assertRedirect(route('verification.notice'));
     }
 
-    public function test_pulsante_spid_sulla_pagina_di_login(): void
+    public function test_pulsante_spid_sulla_pagina_accesso(): void
     {
-        $this->get('/login')->assertSee(route('spid.start'), false)->assertSee('SPID');
+        $this->get('/accesso')->assertSee(route('spid.start'), false)->assertSee('SPID');
     }
 }

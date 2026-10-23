@@ -30,7 +30,7 @@ Dev: `docker compose --profile dev up -d`
 `docker-compose.yml`=prod · `docker-compose.override.yml`=dev (auto, bind mount+Adminer+Mailpit, OPcache hot-reload)  
 AI locale opzionale: `docker compose --profile ai up -d` (container Ollama)
 
-Dati demo realistici (istituti/utenti/segnalazioni in tutti gli stati, rilanciabile senza accumulo):
+Dati demo realistici (istituti/utenti/segnalazioni in tutti gli stati, rilanciabile senza accumulo). Gli utenti demo locali non accedono (solo autori dei dati); le 2 ditte demo sono persone SPID pre-delegate: `/accesso` → simulatore SPID con CF `DMOMRC80A01G482E` o `DMOLCU82B02G482T`:
 ```bash
 docker compose exec php php artisan demo
 ```
@@ -77,7 +77,7 @@ Brand/mappa/email → **Admin → Impostazioni**.
 
 | Chiave | Gruppo |
 |---|---|
-| `ente_nome` `ente_logo_url` `ente_colore_primario` `ente_colore_secondario` `ente_sito_url` | brand |
+| `ente_nome` `ente_logo_url` `ente_logo_file` (interna, upload su disco `local` `brand/`, servito da `brand.logo-ente`, ha precedenza sull'URL) `ente_colore_primario` `ente_colore_secondario` `ente_sito_url` | brand |
 | `osm_lat` `osm_lng` `osm_zoom` | mappa |
 | `mail_from_address` `mail_from_name` | email |
 | `miur_anagrafe_url` `miur_comune_default` | scuole |
@@ -97,7 +97,7 @@ app/Http/Controllers/
   SegnalatoreDashboardController  OperaioDashboardController  RoleDashboardController
   ImpreseDashboardController  ImpreseCRUDController  AppaltiController
   StatisticheController  ReportController  FascicoloPdfController
-  AdesioniSegnalazioniController  AllegatiSegnalazioniController  MagicLinkController
+  AdesioniSegnalazioniController  AllegatiSegnalazioniController  BrandLogoController  DelegheImpresaController
   AiTriageController  PublicHomeController  ProfileController  TelegramAccountController
   Admin/{ImpostazioniController,UtentiController,ProfiliController,ProvenienzaController,
          SediController,SlaController,SquadreController,OrganizzazioniController,AdminDashboardController,
@@ -108,7 +108,7 @@ app/Models/
   Segnalazione  User  Impresa  Appalto  NotaSegnalazione  AllegatoSegnalazione
   StatoSegnalazione  StoricoStatoSegnalazione  Squadra  AdesioneSegnalazione
   SlaConfigurazione  Specializzazione  TipologiaSegnalazione  Profilo  Azione  ApiLog
-  Delega  DelegaStorico  Istituto  Plesso  Provenienza  GruppoSegnalazione  Impostazione (helper statico+cache)
+  Delega  DelegaStorico  DelegaImpresa  Istituto  Plesso  Provenienza  GruppoSegnalazione  Impostazione (helper statico+cache)
 app/Enums/SegnalazioneStato.php    # fonte di verità sugli stati, vedi sotto
 app/Policies/SegnalazionePolicy.php
 app/Services/
@@ -118,8 +118,9 @@ app/Services/
   TelegramBotService
   Backup/     dump logico JSONL · archivio ZIP AES-256 · BackupService (crea/retention) · RipristinoService (con rollback)
   Directory/  Directory (interfaccia) · LdapRecordDirectory (AD reale) · MockDirectory · NullDirectory
-  Auth/       LdapLoginService · MappaGruppiLdap · NormalizzaUsernameAd · CodiceAccessoEmail (2FA email) · SpidLoginService
-  Deleghe/    DelegaService (richiesta, decisione segreteria, pre-delega, rinnovo, scadenze)
+  Auth/       LdapLoginService · MappaGruppiLdap · NormalizzaUsernameAd · SpidLoginService
+  Deleghe/    DelegaService (scuole: richiesta, decisione segreteria, pre-delega, rinnovo, scadenze) · DelegaImpresaService (ditte: predelega CF→impresa, revoca, disattiva ditta, allinea ruolo)
+app/Support/Brand.php  # logo ente (file/URL), loghi email inline (cid; logo da URL scaricato in cache storage/framework/cache/brand)
   Scuole/     AnagrafeMiur (indice open data MIUR su disco local, miur/*.json) · SincronizzaScuole (selezione admin + riallineamento, fonte_dati=miur)
   Oidc/       OidcClient (discovery/PKCE/token/id_token/userinfo) · OidcConfig · ClaimsSpid · IdentitaSpid
 app/Jobs/           ScaricaAnagrafeMiur  CreaBackup  EseguiRipristino  CompletaCaricamento  CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
@@ -135,12 +136,13 @@ app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  Ch
 | `gestore` | Segnalazioni. `supervisore_segnalazioni=true`→tutto; altrimenti solo assegnate |
 | `operaio` | Lavori assegnati a sé o alla propria squadra (`Squadra`, caposquadra riassegna ai membri) |
 | `segnalatore` | Proprie segnalazioni. Ha `id_provenienza` (scuola/URP/portale/interno) |
-| `impresa` | Solo lavori propria impresa. Ditte non registrate operano via magic-link firmato (no login) |
+| `impresa` | Solo lavori propria impresa (anche appalti scaduti, via `appalto.id_impresa`). Solo persone `spid` con `DelegaImpresa` attiva: ruolo e `id_impresa` decisi da `DelegaImpresaService::allinea()` (login SPID, predelega, revoca), mai a mano |
 
 **Accesso (v1.2, spec `docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md`)** — campo form `username`, instradato da `LoginRequest`:
-- contiene `@` e non è l'UPN AD (suffisso di `LDAP_USER_DN_TEMPLATE`) → account `locale` per email (ditte) → 2FA (`User::metodoSecondoFattore()`: TOTP se attivo, altrimenti email obbligatoria per ruolo `impresa`)
-- altrimenti (`m.rossi`, `m.rossi@ente.local`, `ENTE\m.rossi`) → AD via `LdapLoginService`; **transitorio fino al cutover (fase 3)**: se AD non riconosce, fallback account `locale` per username (segnalatori legacy)
-- **Username per tipo di account** (regola del committente, non derogabile): dominio = sAMAccountName (`mario.rossi`), SPID = codice fiscale, ditta = email (forzato in `UtentiController` per ruolo `impresa`). I tre spazi non collidono: niente generatori `nome.cognome`.
+- `/login` = solo personale del comune via AD (`m.rossi`, `m.rossi@ente.local`, `ENTE\m.rossi` → `LdapLoginService`). Email non-UPN → `auth.failed` senza bind AD. Nessun fallback `locale` (v0.8.19: account `locale` tutti disattivati da migration, mai eliminati; niente registrazione/reset/cambio password/verifica annuale)
+- `/accesso` = scuole e ditte via SPID/CIE. Ditte: operatore aggiunge il CF della persona nella scheda impresa (`deleghe_imprese`, una persona = una ditta); ditta disattivata (`imprese.attiva=false`) revoca tutto. Magic-link rimosso
+- 2FA: solo TOTP per eventuali `locale` (`User::metodoSecondoFattore()`), 2FA email rimosso
+- **Username per tipo di account** (regola del committente, non derogabile): dominio = sAMAccountName (`mario.rossi`), SPID = codice fiscale (anche persone delle ditte). Niente generatori `nome.cognome`.
 - `users.auth_source` = `locale`·`ldap`·`spid`; `ldap_guid` chiave identità AD; `email` NON unique a DB (unicità applicativa solo tra `locale` attivi); reset password solo `locale` attivi
 
 **Scuole via SPID/CIE** (`/auth/spid` → pa-sso-proxy): OIDC Authorization Code + PKCE, solo `client_secret_basic`, id_token verificato via JWKS (senza `kid` ok se JWKS ha una chiave) + claim persona da userinfo (`sub` deve coincidere). Identità = `users.codice_fiscale` (`TINIT-` rimosso), **mai** il `sub`. Primo accesso → "Completa profilo" (utente creato SOLO con l'email) → verifica email (`verification.*`) → `LimitaAccessoSpid`: senza delega attiva gli utenti `spid` vedono solo verifica email e "Le mie deleghe" (`scuola.deleghe.*`); visibilità segnalazioni = `Delega::plessiCopertiDa()` (scope, policy, form). Deleghe decise dalla segreteria via link firmato senza login (`deleghe/decidi|rinnovo/{token}`, solo hash SHA-256 a DB, firma legata ad `APP_URL`). `state`/`nonce`/`verifier` in sessione Laravel (monouso). Config in Admin → Impostazioni → SPID: issuer (radice, senza `/OIDC`), client id, secret **cifrato con `APP_KEY`** (cambiare `APP_KEY` = reinserire il secret); redirect URI `{APP_URL}/auth/spid/callback` mostrato in sola lettura. Logout SPID → `end_session_endpoint` del proxy.
@@ -173,12 +175,13 @@ Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella 
 ## Funzionalità v0.6+
 
 - **Anti-duplicato**: adesioni multiple a una segnalazione esistente + merge a posteriori (`DedupService`, `AdesioneSegnalazione`)
+- **Notifiche ditta** (v0.8.19): assegnazione a impresa → email alle persone delegate attive + email aziendale, dedup case-insensitive; ditta disattivata → nessuna email; link solo a `route('accesso')`.
 - **Squadre**: assegnazione a operatore singolo o squadra, notifica al solo caposquadra
 - **Assistente AI locale opzionale** (profilo Docker `ai`, Ollama): titolo auto-generato, triage suggerito, dedup semantico via embeddings — sempre asincrono (queue), mai sul path sincrono; degrada in silenzio se Ollama non è raggiungibile (`Impostazione::get('ai_enabled')`)
 - **Digest mattutino gestori**: comando `digest:invia` / `InviaDigestGestori`
 - **Rendicontazione**: export XLSX (report mensile gestore, riepilogo impresa) e fascicolo PDF per segnalazione (richiede `composer install` per `phpoffice/phpspreadsheet` e `barryvdh/laravel-dompdf`)
 - **Nessun wizard/admin da `.env`** (rimossi in v1.2): il primo admin è chi sta nel gruppo AD `PRONTOPA_ADMIN`
-- **2FA** (TOTP + recovery codes, oppure codice via email per le ditte: 6 cifre, 10 min, 5 tentativi, cache `2fa-email:{id}`): Fortify usato solo come libreria (`Fortify::ignoreRoutes()` in `App\Providers\FortifyServiceProvider::register()`) — login/registrazione/reset restano ai controller custom in `routes/auth.php`, zero rotte Fortify attive. **Va registrato a mano in `bootstrap/providers.php`** (non auto-discovered come le altre integrazioni Laravel). Self-service da profilo, dietro `password.confirm`.
+- **2FA** (TOTP + recovery codes; codice via email rimosso in v0.8.19): Fortify usato solo come libreria (`Fortify::ignoreRoutes()` in `App\Providers\FortifyServiceProvider::register()`) — login resta ai controller custom in `routes/auth.php`, zero rotte Fortify attive. **Va registrato a mano in `bootstrap/providers.php`** (non auto-discovered come le altre integrazioni Laravel). Self-service da profilo, dietro `password.confirm`.
 - **Scan antimalware allegati** (opzionale, profilo Docker `security` + `Impostazione::get('antivirus_enabled')`): `ClamAvService` parla INSTREAM via socket raw a `clamav/clamav:stable` (no dipendenza composer), job `ScansionaAllegato` dispatchato da un unico hook su `AllegatoSegnalazione::booted()` (created event) — copre tutti i path di upload senza doverli aggiornare uno per uno. Infetto → spostato (non cancellato) su disco `quarantena`, mai servito dalla route di download. Degrada in silenzio se disattivato/clamd irraggiungibile.
 
 ## Backup e ripristino (v0.8.2)
@@ -283,6 +286,6 @@ Servizi `queue` (`queue:work`), `queue-lunghi` (connessione `redis-lunghi`, coda
 
 **Password MariaDB** (v0.8.2): `DB_PASSWORD` obbligatoria (`:?`, stesso valore per `php` e `mariadb`), nessun default `segnalazioni_secret`/`root_secret`. Le password valgono SOLO alla creazione del volume `mariadb_data`: cambiarle nello stack dopo non ha effetto. `DB_ROOT_PASSWORD` è ignorata su volume esistente ma su un volume NUOVO mariadb non si inizializza senza → nuove installazioni: impostarla. Se il DB rifiuta l'accesso l'entrypoint, dopo ~30 s, stampa l'errore PDO reale con suggerimento "Access denied".
 **Reset password DB senza shell host** (emergenza, non operatività ordinaria): ferma `mariadb` dello stack → da Portainer crea un container temporaneo `mariadb:12.3` (stessa versione dello stack) con command `--skip-grant-tables` sullo stesso volume `mariadb_data` → dalla sua console Portainer: `FLUSH PRIVILEGES; ALTER USER 'segnalazioni'@'%' IDENTIFIED BY '<nuova>';` → rimuovi il container temporaneo → imposta la stessa `<nuova>` in `DB_PASSWORD` e riavvia lo stack.
-**Disaster recovery**: ripristina su stack nuovo con stessa `APP_KEY`, `APP_URL`, `BACKUP_PASSPHRASE`. Con `APP_KEY`/`APP_URL` diversi i link firmati già inviati (magic-link ditte, deleghe, verifica annuale) smettono di funzionare e le impostazioni legate all'host (es. `ente_logo_url`) vanno ricontrollate; il secret SPID è ricifrato in automatico.
+**Disaster recovery**: ripristina su stack nuovo con stessa `APP_KEY`, `APP_URL`, `BACKUP_PASSPHRASE`. Con `APP_KEY`/`APP_URL` diversi i link firmati già inviati (deleghe) smettono di funzionare e le impostazioni legate all'host (es. `ente_logo_url`) vanno ricontrollate; il secret SPID è ricifrato in automatico.
 
 Error tracking: `sentry/sentry-laravel` (compatibile Glitchtip self-hosted, stesso protocollo). `SENTRY_LARAVEL_DSN` vuoto in `.env` = disattivato, nessuna configurazione aggiuntiva richiesta. `release`/`environment` derivati da `APP_VERSION`/`APP_ENV`.

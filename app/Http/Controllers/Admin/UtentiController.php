@@ -3,13 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Impresa;
 use App\Models\Profilo;
 use App\Models\Provenienza;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -18,114 +16,49 @@ class UtentiController extends Controller
     public function index(): View
     {
         $mostraDisattivati = request()->boolean('mostra_disattivati');
-        $mostraSoloPending = request()->boolean('solo_pending');
 
         $utenti = User::with(['profilo', 'istituto'])
-            ->when($mostraSoloPending, fn ($query) => $query->where('approval_status', 'pending'))
             ->when(! $mostraDisattivati, fn ($query) => $query->where(function ($subQuery) {
                 $subQuery->where('attivo', true)->orWhereNull('attivo');
             }))
-            ->orderByRaw("CASE WHEN approval_status = 'pending' THEN 0 ELSE 1 END")
             ->orderBy('name')
             ->paginate(25)
             ->withQueryString();
 
-        return view('admin.utenti.index', compact('utenti', 'mostraDisattivati', 'mostraSoloPending'));
+        return view('admin.utenti.index', compact('utenti', 'mostraDisattivati'));
     }
 
-    public function create(): View
-    {
-        $profili     = Profilo::with('istituto')->orderBy('descrizione')->get();
-        $provenienze = Provenienza::orderBy('descrizione')->get();
-        $imprese     = Impresa::orderBy('ragione_sociale')->get();
-
-        return view('admin.utenti.create', compact('profili', 'provenienze', 'imprese'));
-    }
-
-    /**
-     * Username: dominio = sAMAccountName, SPID = codice fiscale, ditta =
-     * email. Per le ditte lo username non si sceglie: è l'email.
+    /*
+     * Niente creazione da qui (v0.8.19): gli utenti arrivano solo dal primo
+     * login AD o SPID. Il ruolo ditta lo decide solo la delega impresa.
      */
-    private function usernameDittaDaEmail(Request $request): void
-    {
-        if ($request->input('ruolo') === 'impresa' && filled($request->input('email'))) {
-            $email = mb_strtolower(trim((string) $request->input('email')));
-            $request->merge(['email' => $email, 'username' => $email]);
-        }
-    }
-
-    public function store(Request $request): RedirectResponse
-    {
-        $this->usernameDittaDaEmail($request);
-
-        $data = $request->validate([
-            'name'       => ['required', 'string', 'max:100'],
-            'username'   => ['required', 'string', 'max:50', 'unique:users,username'],
-            'email'      => ['required', 'email', 'max:100', Rule::unique('users', 'email')
-                ->where(fn ($q) => $q->where('auth_source', 'locale')->where('attivo', true))],
-            'password'   => ['required', 'string', 'min:8'],
-            'ruolo'      => ['required', Rule::in(['admin', 'gestore', 'segnalatore', 'impresa'])],
-            'id_profilo'    => ['nullable', 'integer', 'exists:profili,id_profilo'],
-            'id_provenienza'=> ['nullable', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
-            'id_impresa'    => ['nullable', 'integer', 'exists:imprese,id_impresa'],
-            'telefono'      => ['nullable', 'string', 'max:50'],
-            'supervisore'   => ['boolean'],
-            'attivo'        => ['nullable', 'boolean'],
-        ]);
-
-        $user = User::create([
-            'name'                     => $data['name'],
-            'username'                 => $data['username'],
-            'email'                    => $data['email'],
-            'password'                 => Hash::make($data['password']),
-            'id_profilo'               => $data['id_profilo'] ?? null,
-            'id_provenienza'           => $data['id_provenienza'] ?? null,
-            'id_impresa'               => $data['id_impresa'] ?? null,
-            'telefono'                 => $data['telefono'] ?? null,
-            'amministratore'           => $data['ruolo'] === 'admin',
-            'gestore_segnalazioni'     => $data['ruolo'] === 'gestore',
-            'supervisore_segnalazioni' => ($data['ruolo'] === 'gestore') && ($data['supervisore'] ?? false),
-            'attivo'                   => (bool) ($data['attivo'] ?? true),
-            'approval_status'          => 'approved',
-            'approved_at'              => now(),
-            'approved_by'              => auth()->id(),
-            'prossima_verifica_annuale_at' => now()->addYear(),
-        ]);
-
-        $user->syncRoles([$data['ruolo']]);
-
-        return redirect()->route('admin.utenti.index')
-            ->with('success', "Utente {$user->username} creato.");
-    }
 
     public function edit(User $utente): View
     {
         $profili     = Profilo::with('istituto')->orderBy('descrizione')->get();
         $provenienze = Provenienza::orderBy('descrizione')->get();
-        $imprese     = Impresa::orderBy('ragione_sociale')->get();
 
-        return view('admin.utenti.edit', compact('utente', 'profili', 'provenienze', 'imprese'));
+        return view('admin.utenti.edit', compact('utente', 'profili', 'provenienze'));
     }
 
     public function update(Request $request, User $utente): RedirectResponse
     {
-        $this->usernameDittaDaEmail($request);
-
         $data = $request->validate([
             'name'       => ['required', 'string', 'max:100'],
             'username'   => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($utente->id)],
             'email'      => ['required', 'email', 'max:100', Rule::unique('users', 'email')
                 ->where(fn ($q) => $q->where('auth_source', 'locale')->where('attivo', true))
                 ->ignore($utente->id)],
-            'password'   => ['nullable', 'string', 'min:8'],
-            'ruolo'      => ['required', Rule::in(['admin', 'gestore', 'segnalatore', 'impresa'])],
+            'ruolo'      => ['required', Rule::in(['admin', 'gestore', 'segnalatore'])],
             'id_profilo'    => ['nullable', 'integer', 'exists:profili,id_profilo'],
             'id_provenienza'=> ['nullable', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
-            'id_impresa'    => ['nullable', 'integer', 'exists:imprese,id_impresa'],
             'telefono'      => ['nullable', 'string', 'max:50'],
             'supervisore'   => ['boolean'],
             'attivo'        => ['nullable', 'boolean'],
         ]);
+
+        // Persona di una ditta: ruolo e impresa li governa DelegaImpresaService.
+        $ditta = $utente->hasRole('impresa');
 
         if ($utente->is(auth()->user()) && ! ($data['attivo'] ?? false)) {
             return back()
@@ -138,27 +71,18 @@ class UtentiController extends Controller
         $utente->email             = $data['email'];
         $utente->id_profilo        = $data['id_profilo'] ?? null;
         $utente->id_provenienza    = $data['id_provenienza'] ?? null;
-        $utente->id_impresa        = $data['id_impresa'] ?? null;
         $utente->telefono          = $data['telefono'] ?? null;
-        $utente->amministratore           = $data['ruolo'] === 'admin';
-        $utente->gestore_segnalazioni     = $data['ruolo'] === 'gestore';
-        $utente->supervisore_segnalazioni = ($data['ruolo'] === 'gestore') && ($data['supervisore'] ?? false);
+        if (! $ditta) {
+            $utente->amministratore           = $data['ruolo'] === 'admin';
+            $utente->gestore_segnalazioni     = $data['ruolo'] === 'gestore';
+            $utente->supervisore_segnalazioni = ($data['ruolo'] === 'gestore') && ($data['supervisore'] ?? false);
+        }
         $utente->attivo                    = (bool) ($data['attivo'] ?? false);
 
-        if (($utente->approval_status ?? 'approved') === 'pending' && $utente->attivo) {
-            $utente->approval_status = 'approved';
-            $utente->approved_at = now();
-            $utente->approved_by = auth()->id();
-            $utente->prossima_verifica_annuale_at = $utente->prossima_verifica_annuale_at ?? now()->addYear();
-        }
-
-        if (filled($data['password'])) {
-            $utente->password = Hash::make($data['password']);
-            $utente->password_legacy = null;
-        }
-
         $utente->save();
-        $utente->syncRoles([$data['ruolo']]);
+        if (! $ditta) {
+            $utente->syncRoles([$data['ruolo']]);
+        }
 
         return redirect()->route('admin.utenti.index')
             ->with('success', "Utente {$utente->username} aggiornato.");
@@ -168,10 +92,6 @@ class UtentiController extends Controller
     {
         if ($utente->is(auth()->user())) {
             return back()->with('error', 'Non puoi modificare lo stato del tuo account.');
-        }
-
-        if (($utente->approval_status ?? 'approved') === 'pending') {
-            return back()->with('error', 'Utente in attesa: usa Approva o Rifiuta.');
         }
 
         $utente->update(['attivo' => ! $utente->attivo]);
@@ -189,42 +109,5 @@ class UtentiController extends Controller
         $utente->delete();
 
         return back()->with('success', 'Utente eliminato.');
-    }
-
-    public function approve(User $utente): RedirectResponse
-    {
-        if ($utente->is(auth()->user())) {
-            return back()->with('error', 'Non puoi approvare il tuo account.');
-        }
-
-        $utente->update([
-            'approval_status' => 'approved',
-            'approved_at' => now(),
-            'approved_by' => auth()->id(),
-            'attivo' => true,
-            'prossima_verifica_annuale_at' => $utente->prossima_verifica_annuale_at ?? now()->addYear(),
-        ]);
-
-        if (! $utente->getRoleNames()->isNotEmpty()) {
-            $utente->syncRoles(['segnalatore']);
-        }
-
-        return back()->with('success', "Utente {$utente->username} approvato.");
-    }
-
-    public function reject(User $utente): RedirectResponse
-    {
-        if ($utente->is(auth()->user())) {
-            return back()->with('error', 'Non puoi rifiutare il tuo account.');
-        }
-
-        $utente->update([
-            'approval_status' => 'rejected',
-            'approved_at' => null,
-            'approved_by' => auth()->id(),
-            'attivo' => false,
-        ]);
-
-        return back()->with('success', "Utente {$utente->username} rifiutato.");
     }
 }

@@ -2,7 +2,7 @@
     <x-slot name="header">Impostazioni ente</x-slot>
 
     <div class="space-y-4">
-        <form method="POST" action="{{ route('admin.impostazioni.update') }}">
+        <form method="POST" action="{{ route('admin.impostazioni.update') }}" enctype="multipart/form-data">
                 @csrf @method('PATCH')
 
                 @foreach($impostazioni as $gruppo => $voci)
@@ -18,7 +18,6 @@
                                     'webhook'           => 'Webhook cittadini',
                                     'pubblicazione'     => 'Pubblicazione automatica',
                                     'allegati'          => 'Allegati segnalazioni',
-                                    'verifica_account'  => 'Verifica annuale account',
                                     'antivirus'         => 'Scansione allegati',
                                     'spid'              => 'SPID/CIE (scuole)',
                                     'ldap'              => 'Gruppi Active Directory',
@@ -81,6 +80,26 @@
                                                      class="mt-2 h-12 object-contain rounded border border-gray-200 bg-gray-50 p-1">
                                             </template>
                                         </div>
+                                        @if($imp->chiave === 'ente_logo_url')
+                                            @php $logoCaricato = \App\Support\Brand::logoEnteFile() !== null; @endphp
+                                            <div class="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
+                                                <label for="ente_logo_upload" class="block text-sm font-medium text-gray-700">
+                                                    Oppure carica il file del logo (PNG, JPG o WebP, max 1 MB): ha la precedenza sull'URL
+                                                </label>
+                                                @if($logoCaricato)
+                                                    <img src="{{ \App\Support\Brand::logoEnteUrl() }}" alt="Logo caricato"
+                                                         class="h-12 object-contain rounded border border-gray-200 bg-white p-1">
+                                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                                        <input type="checkbox" name="rimuovi_logo_file" value="1"> Rimuovi il file caricato
+                                                    </label>
+                                                @endif
+                                                <input type="file" id="ente_logo_upload" name="ente_logo_upload"
+                                                       accept="image/png,image/jpeg,image/webp" class="block w-full text-sm">
+                                                @error('ente_logo_upload')
+                                                    <p class="text-sm text-red-600">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+                                        @endif
                                     @elseif($imp->tipo === 'color')
                                         <div class="flex items-center gap-3"
                                              x-data="{ hex: '{{ $imp->valore ?? '#1D4ED8' }}' }">

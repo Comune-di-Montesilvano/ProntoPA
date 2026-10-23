@@ -17,21 +17,6 @@ class EnsureUserIsActive
             return $next($request);
         }
 
-        if (($user->approval_status ?? 'approved') !== 'approved') {
-            Auth::guard('web')->logout();
-
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            $messaggio = $user->approval_status === 'rejected'
-                ? 'La richiesta di registrazione non è stata approvata. Contatta il supporto.'
-                : 'La tua registrazione è in attesa di approvazione da parte dell\'operatore.';
-
-            return redirect()
-                ->route('login')
-                ->withErrors(['username' => $messaggio]);
-        }
-
         if ($user->attivo !== false) {
             return $next($request);
         }

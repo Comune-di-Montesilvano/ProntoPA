@@ -39,7 +39,7 @@ class AllegatoSegnalazione extends Model
     protected static function booted(): void
     {
         // Unico punto di dispatch: gli allegati vengono creati da più
-        // controller (upload diretto, Telegram, magic-link, rapportino di
+        // controller (upload diretto, Telegram, rapportino di
         // chiusura) — un hook sul model garantisce che nessun path se lo
         // dimentichi.
         static::created(function (self $allegato): void {

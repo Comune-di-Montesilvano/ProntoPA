@@ -12,8 +12,8 @@ class Impostazione extends Model
     protected $keyType    = 'string';
     public    $incrementing = false;
 
-    /** Stato interno dell'applicazione: mai mostrato né modificabile da Admin → Impostazioni. */
-    public const CHIAVI_INTERNE = ['ripristino_id'];
+    /** Stato interno: mai mostrato né modificabile dal form generico di Admin → Impostazioni (ente_logo_file passa dall'upload). */
+    public const CHIAVI_INTERNE = ['ripristino_id', 'ente_logo_file'];
 
     protected $fillable = [
         'chiave',

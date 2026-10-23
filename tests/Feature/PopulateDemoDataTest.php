@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AdesioneSegnalazione;
+use App\Models\DelegaImpresa;
 use App\Models\Impresa;
 use App\Models\Istituto;
 use App\Models\Plesso;
@@ -68,6 +69,25 @@ class PopulateDemoDataTest extends TestCase
         $this->assertSame(4, Istituto::count());
         $this->assertSame(53, Segnalazione::count());
         $this->assertSame(9, User::where('email', 'like', '%@demo.prontopa.it')->count());
+    }
+
+    public function test_ditte_demo_via_spid_con_delega(): void
+    {
+        $this->artisan('demo')->assertExitCode(0);
+        $this->artisan('demo')->assertExitCode(0);
+
+        $deleghe = DelegaImpresa::attive()->with('user')->get();
+        $this->assertCount(2, $deleghe);
+        foreach ($deleghe as $d) {
+            $this->assertSame('spid', $d->user->auth_source);
+            $this->assertSame($d->codice_fiscale, $d->user->codice_fiscale);
+            $this->assertTrue($d->user->hasRole('impresa'));
+            $this->assertSame($d->id_impresa, $d->user->id_impresa);
+        }
+        // Le segnalazioni assegnate a impresa hanno un appalto: la persona delegata le vede.
+        $this->assertGreaterThan(0, Segnalazione::visibileA($deleghe->first()->user)->count());
+        $this->assertSame(0, Segnalazione::where('id_stato_segnalazione', 4)->whereNull('id_appalto')->count());
+        $this->assertSame(0, User::role('impresa')->where('auth_source', 'locale')->count());
     }
 
     public function test_rifiuta_produzione_senza_force(): void

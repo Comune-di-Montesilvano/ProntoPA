@@ -229,7 +229,10 @@ class RipristinoServiceTest extends TestCase
     {
         // Backup reale prodotto da un'app "indietro di due release": l'ultima migration
         // crea tabelle (deleghe), la penultima aggiunge una colonna (plessi.fonte_dati).
-        Artisan::call('migrate:rollback', ['--step' => 2, '--force' => true]);
+        // Passi contati dal nome: le migration successive (v0.8.19+) si aggiungono in coda.
+        $passi = collect(glob(database_path('migrations/*.php')))
+            ->filter(fn (string $f) => basename($f) >= '2026_10_08_000001')->count();
+        Artisan::call('migrate:rollback', ['--step' => $passi, '--force' => true]);
         $this->assertFalse(Schema::hasColumn('plessi', 'fonte_dati'));
         $this->assertFalse(Schema::hasTable('deleghe'));
         $idIstituto = DB::table('istituti')->insertGetId(['descrizione' => 'IC Vecchio']);

@@ -55,8 +55,8 @@ class SpidRevisioneTest extends TestCase
 
         $this->travel(16)->minutes();
 
-        $this->get(route('spid.completa-profilo'))->assertRedirect(route('login'));
-        $this->post(route('spid.completa-profilo.store'), ['email' => 'b@altro.it'])->assertRedirect(route('login'));
+        $this->get(route('spid.completa-profilo'))->assertRedirect(route('accesso'));
+        $this->post(route('spid.completa-profilo.store'), ['email' => 'b@altro.it'])->assertRedirect(route('accesso'));
         $this->assertSame(0, User::where('codice_fiscale', 'RSSMRA80A01G482X')->count());
         $this->assertNull(session('spid.identita'));
     }
@@ -103,17 +103,5 @@ class SpidRevisioneTest extends TestCase
 
         $this->assertSame('Conferma il tuo indirizzo email', $mail->subject);
         $this->assertSame('Conferma email', $mail->actionText);
-    }
-
-    public function test_login_spid_non_consuma_il_limite_del_reinvio_codice_ditta(): void
-    {
-        config(['oidc.mock' => false]);
-        $ditta = User::factory()->create(['email' => 'mario@ditta.it']);
-        $ditta->assignRole('impresa');
-        $this->post('/login', ['username' => 'mario@ditta.it', 'password' => 'password']);
-
-        $this->get('/auth/spid');
-
-        $this->post('/two-factor-challenge/reinvia')->assertRedirect(route('two-factor.login'));
     }
 }

@@ -67,7 +67,7 @@ class TelegramWebhookController extends Controller
             return;
         }
 
-        $user = User::where('telegram_chat_id', $chatId)->first();
+        $user = User::where('telegram_chat_id', $chatId)->where('attivo', true)->first(); // disattivato = non collegato
 
         if (! $user) {
             $this->telegram->sendMessage($chatId, $this->buildUnlinkedMessage());
@@ -215,7 +215,7 @@ class TelegramWebhookController extends Controller
         $callbackId = (string) data_get($callbackQuery, 'id', '');
         $data = (string) data_get($callbackQuery, 'data', '');
 
-        $user = User::where('telegram_chat_id', $chatId)->first();
+        $user = User::where('telegram_chat_id', $chatId)->where('attivo', true)->first(); // disattivato = non collegato
 
         if (! $user) {
             $this->telegram->answerCallbackQuery($callbackId, 'Account Telegram non collegato.');
@@ -473,12 +473,7 @@ class TelegramWebhookController extends Controller
         $reply = "Foto caricata con successo per la segnalazione #{$segnalazione->id_segnalazione} (Fase: " . ($fase === 'dopo' ? 'Dopo' : 'Prima') . ").";
 
         if ($user->hasRole('impresa')) {
-            $magicLink = URL::temporarySignedRoute(
-                'magic-link.show',
-                now()->addDays(7),
-                ['segnalazione' => $segnalazione->id_segnalazione]
-            );
-            $reply .= "\n\nPer compilare il rapportino di fine lavoro (ore e materiali), usa questo link sicuro:\n" . $magicLink;
+            $reply .= "\n\nPer il rapportino di fine lavoro (ore e materiali) apri la scheda:\n" . route('segnalazioni.show', $segnalazione->id_segnalazione);
         }
 
         $this->telegram->sendMessage($chatId, $reply);

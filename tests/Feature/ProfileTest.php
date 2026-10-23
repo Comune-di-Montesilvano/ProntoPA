@@ -29,10 +29,10 @@ class ProfileTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_account_locale_vede_password_e_2fa(): void
+    public function test_account_locale_vede_2fa_ma_non_cambio_password(): void
     {
         $this->actingAs(User::factory()->create())->get('/profile')
-            ->assertSee('Update Password')
+            ->assertDontSee('Update Password')
             ->assertSee('Autenticazione a due fattori');
     }
 

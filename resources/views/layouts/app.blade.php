@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @include('partials.favicon')
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ \App\Models\Impostazione::get('ente_nome', 'ProntoPA') }}</title>
@@ -43,7 +44,6 @@
 
 @php
     $enteNome   = \App\Models\Impostazione::get('ente_nome', 'ProntoPA');
-    $logoUrl    = \App\Models\Impostazione::get('ente_logo_url');
     $u          = auth()->user();
     $isAdmin    = $u && ($u->isAdmin() || $u->hasRole('admin'));
     $isGestore  = $u && ($u->isGestore() || $u->hasRole('gestore'));
@@ -66,19 +66,10 @@
            x-cloak>
 
         {{-- Logo / Co-brand --}}
-        <div class="flex items-center gap-3 px-4 py-4" style="border-bottom:1px solid var(--slate-200);">
-            @if($logoUrl)
-                <img src="{{ $logoUrl }}" alt="{{ $enteNome }}"
-                     class="h-9 w-9 object-contain shrink-0 rounded">
-            @else
-                <x-application-logo class="h-9 w-9 shrink-0" style="color: var(--ente-primary);" />
-            @endif
-            <div style="width:1px; height:28px; background: var(--slate-200); flex-shrink:0;"></div>
-            <div class="flex-1 min-w-0" style="line-height:1.15;">
-                {{-- Nome intero su due righe: "Comune di Montesil…" non identifica l'ente. --}}
-                <div class="line-clamp-2 break-words" title="{{ $enteNome }}" style="font-size:13px; font-weight:700; color: var(--ink);">{{ $enteNome }}</div>
-                <div style="font-size:11px; color: var(--slate-500);">ProntoPA</div>
-            </div>
+        <div class="px-4 py-4 space-y-2" style="border-bottom:1px solid var(--slate-200);">
+            <x-co-branding size="sm" />
+            {{-- Nome intero su due righe: "Comune di Montesil…" non identifica l'ente. --}}
+            <div class="line-clamp-2 break-words" title="{{ $enteNome }}" style="font-size:13px; font-weight:700; line-height:1.15; color: var(--ink);">{{ $enteNome }}</div>
         </div>
 
         {{-- Navigation --}}

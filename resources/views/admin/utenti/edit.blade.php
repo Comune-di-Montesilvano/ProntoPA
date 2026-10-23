@@ -43,13 +43,16 @@
                 </div>
             </div>
 
+            @if($ruoloCorrente === 'impresa')
             <div>
-                <x-input-label for="password" value="Nuova password" />
-                <x-text-input id="password" name="password" type="password" class="mt-1 block w-full"
-                    autocomplete="new-password" placeholder="Lascia vuoto per non cambiare" />
-                <x-input-error :messages="$errors->get('password')" class="mt-1" />
+                <x-input-label value="Ruolo" />
+                <p class="mt-1 text-sm text-gray-700">
+                    Impresa: {{ $utente->impresa?->ragione_sociale ?? '—' }}
+                    <span class="block text-xs text-gray-500">Gestito dalle persone delegate nella scheda della ditta.</span>
+                </p>
+                <input type="hidden" name="ruolo" value="segnalatore">
             </div>
-
+            @else
             <div>
                 <x-input-label for="ruolo" value="Ruolo *" />
                 <select id="ruolo" name="ruolo"
@@ -58,10 +61,10 @@
                     <option value="admin"       {{ $ruoloCorrente === 'admin'       ? 'selected' : '' }}>Admin</option>
                     <option value="gestore"     {{ $ruoloCorrente === 'gestore'     ? 'selected' : '' }}>Gestore</option>
                     <option value="segnalatore" {{ $ruoloCorrente === 'segnalatore' ? 'selected' : '' }}>Segnalatore</option>
-                    <option value="impresa"     {{ $ruoloCorrente === 'impresa'     ? 'selected' : '' }}>Impresa</option>
                 </select>
                 <x-input-error :messages="$errors->get('ruolo')" class="mt-1" />
             </div>
+            @endif
 
             {{-- Supervisore --}}
             <div x-data="{ show: '{{ $ruoloCorrente }}' === 'gestore' }"
@@ -116,24 +119,6 @@
                     @endforeach
                 </select>
                 <x-input-error :messages="$errors->get('id_provenienza')" class="mt-1" />
-            </div>
-
-            {{-- Impresa --}}
-            <div x-data="{ show: '{{ $ruoloCorrente }}' === 'impresa' }"
-                 x-on:ruolo-changed.window="show = $event.detail.ruolo === 'impresa'"
-                 x-show="show">
-                <x-input-label for="id_impresa" value="Impresa" />
-                <select id="id_impresa" name="id_impresa"
-                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    <option value="">— Nessuna —</option>
-                    @foreach($imprese as $i)
-                        <option value="{{ $i->id_impresa }}"
-                            {{ old('id_impresa', $utente->id_impresa) == $i->id_impresa ? 'selected' : '' }}>
-                            {{ $i->ragione_sociale }}
-                        </option>
-                    @endforeach
-                </select>
-                <x-input-error :messages="$errors->get('id_impresa')" class="mt-1" />
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
