@@ -473,12 +473,10 @@ class TelegramWebhookController extends Controller
         $reply = "Foto caricata con successo per la segnalazione #{$segnalazione->id_segnalazione} (Fase: " . ($fase === 'dopo' ? 'Dopo' : 'Prima') . ").";
 
         if ($user->hasRole('impresa')) {
-            $magicLink = URL::temporarySignedRoute(
-                'magic-link.show',
-                now()->addDays(7),
-                ['segnalazione' => $segnalazione->id_segnalazione]
-            );
-            $reply .= "\n\nPer compilare il rapportino di fine lavoro (ore e materiali), usa questo link sicuro:\n" . $magicLink;
+            $reply .= "
+
+Per il rapportino di fine lavoro (ore e materiali) apri la scheda:
+" . route('segnalazioni.show', $segnalazione->id_segnalazione);
         }
 
         $this->telegram->sendMessage($chatId, $reply);
