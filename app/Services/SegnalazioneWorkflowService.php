@@ -351,12 +351,13 @@ class SegnalazioneWorkflowService
         }
 
         if ($azione->flag_appalto && $segnalazione->id_appalto) {
-            $appalto = $segnalazione->appalto()->with('impresa')->first();
+            $appalto = $segnalazione->appalto()->first();
+            $impresa = $appalto?->id_impresa ? \App\Models\Impresa::find($appalto->id_impresa) : null;
 
             // Ditta disattivata: nessuno ha accesso, nessuna email.
-            if ($appalto?->id_impresa && $appalto->impresa?->attiva !== false) {
+            if ($impresa !== null && $impresa->attiva !== false) {
                 $destinatari = User::role('impresa')
-                    ->where('id_impresa', $appalto->id_impresa)
+                    ->where('id_impresa', $impresa->id_impresa)
                     ->get()
                     ->filter(fn (User $user) => $user->attivo !== false);
 
@@ -365,7 +366,7 @@ class SegnalazioneWorkflowService
                 }
 
                 // Anche l'email aziendale, se non coincide con quella di un delegato.
-                $emailDitta = mb_strtolower(trim((string) $appalto->impresa?->email));
+                $emailDitta = mb_strtolower(trim((string) $impresa->email));
                 $giaAvvisata = $destinatari->contains(fn (User $u) => mb_strtolower(trim((string) $u->email)) === $emailDitta);
                 if ($emailDitta !== '' && ! $giaAvvisata) {
                     Notification::route('mail', $emailDitta)
