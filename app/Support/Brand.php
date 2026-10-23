@@ -116,6 +116,7 @@ class Brand
             return null;
         }
 
+        $corpo = '';
         try {
             $risposta = Http::timeout(5)->get($url);
             $corpo = $risposta->successful() ? $risposta->body() : '';
