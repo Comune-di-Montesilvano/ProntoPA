@@ -18,7 +18,6 @@
                                     'webhook'           => 'Webhook cittadini',
                                     'pubblicazione'     => 'Pubblicazione automatica',
                                     'allegati'          => 'Allegati segnalazioni',
-                                    'verifica_account'  => 'Verifica annuale account',
                                     'antivirus'         => 'Scansione allegati',
                                     'spid'              => 'SPID/CIE (scuole)',
                                     'ldap'              => 'Gruppi Active Directory',

@@ -55,7 +55,7 @@
                     <li>Tutti gli utenti vengono disconnessi e devono accedere di nuovo.</li>
                 </ul>
                 @unless($anteprima->stessaAppKey)
-                    <p class="text-sm text-amber-800">Il backup proviene da un'installazione con APP_KEY diversa: i segreti cifrati vengono ricifrati con quella locale, ma i link firmati già inviati (magic-link ditte, decisione e rinnovo deleghe, verifica annuale) smetteranno di funzionare.</p>
+                    <p class="text-sm text-amber-800">Il backup proviene da un'installazione con APP_KEY diversa: i segreti cifrati vengono ricifrati con quella locale, ma i link firmati già inviati (decisione e rinnovo deleghe) smetteranno di funzionare.</p>
                 @endunless
                 @unless($anteprima->stessoAppUrl)
                     <p class="text-sm text-amber-800">Il backup proviene da un APP_URL diverso: i link firmati già inviati smetteranno di funzionare e le impostazioni legate all'host (es. logo dell'ente) vanno ricontrollate.</p>

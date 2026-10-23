@@ -135,13 +135,6 @@
                 <label class="pa-field-label" for="password">Password</label>
                 <input id="password" type="password" name="password" class="pa-input"
                        required autocomplete="current-password">
-                @if(Route::has('password.request'))
-                    <a href="{{ route('password.request') }}"
-                       style="font-size:12px; color:var(--ente-primary); font-weight:600;
-                              text-decoration:none; align-self:flex-end; margin-top:2px;">
-                        Ho dimenticato la password
-                    </a>
-                @endif
             </div>
 
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
@@ -156,14 +149,6 @@
             </button>
         </form>
 
-        @if(Route::has('register'))
-            <p style="font-size:12px; color:var(--slate-500); text-align:center; margin:0;">
-                Non hai un account?
-                <a href="{{ route('register') }}" style="color:var(--ente-primary); font-weight:600; text-decoration:none;">
-                    Registrati →
-                </a>
-            </p>
-        @endif
     </main>
 </div>
 </body>

@@ -17,7 +17,6 @@ use App\Http\Controllers\Admin\SquadreController;
 use App\Http\Controllers\Admin\UtentiController;
 use App\Http\Controllers\AdesioniSegnalazioniController;
 use App\Http\Controllers\AllegatiSegnalazioniController;
-use App\Http\Controllers\Auth\AnnualAccountVerificationController;
 use App\Http\Controllers\AppaltiController;
 use App\Http\Controllers\GestioneController;
 use App\Http\Controllers\ImpreseDashboardController;
@@ -39,10 +38,6 @@ use Illuminate\Support\Facades\Route;
 // Home
 Route::get('/', [PublicHomeController::class, 'index'])->name('home');
 Route::get('/brand/logo-ente', \App\Http\Controllers\BrandLogoController::class)->name('brand.logo-ente');
-
-Route::get('/account/verify-annual/{user}/{token}', [AnnualAccountVerificationController::class, 'verify'])
-    ->middleware('signed')
-    ->name('account.verification.annual');
 
 // Dashboard — dispatcher per ruolo
 Route::get('/dashboard', [RoleDashboardController::class, 'index'])
@@ -156,12 +151,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     Route::patch('utenti/{utente}/attivo', [UtentiController::class, 'toggleAttivo'])
         ->name('utenti.toggle-attivo');
-
-    Route::patch('utenti/{utente}/approve', [UtentiController::class, 'approve'])
-        ->name('utenti.approve');
-
-    Route::patch('utenti/{utente}/reject', [UtentiController::class, 'reject'])
-        ->name('utenti.reject');
 
     Route::resource('utenti', UtentiController::class)
         ->except(['show'])
