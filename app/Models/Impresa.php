@@ -13,10 +13,21 @@ class Impresa extends Model
     protected $primaryKey = 'id_impresa';
 
     protected $fillable = [
-        'ragione_sociale', 'partita_iva', 'referente', 'email', 'cellulare', 'note',
+        'ragione_sociale', 'partita_iva', 'referente', 'email', 'cellulare', 'note', 'attiva',
     ];
 
     protected $hidden = ['password'];
+
+    protected function casts(): array
+    {
+        return ['attiva' => 'boolean'];
+    }
+
+    /** @return HasMany<DelegaImpresa, $this> */
+    public function deleghe(): HasMany
+    {
+        return $this->hasMany(DelegaImpresa::class, 'id_impresa', 'id_impresa');
+    }
 
     public function appalti(): HasMany
     {

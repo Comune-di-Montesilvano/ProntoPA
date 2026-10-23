@@ -37,6 +37,9 @@ final class SpidLoginService
             'last_login' => now(),
         ])->save();
 
+        // Delega ditta per prima: decide ruolo e impresa, anche a email non verificata.
+        app(\App\Services\Deleghe\DelegaImpresaService::class)->allinea($user);
+
         // Utente già verificato che rientra: pre-deleghe create dall'admin nel frattempo.
         app(\App\Services\Deleghe\DelegaService::class)->agganciaPredeleghe($user);
 
@@ -71,6 +74,7 @@ final class SpidLoginService
                 ])->save();
 
                 $user->syncRoles(['segnalatore']);
+                app(\App\Services\Deleghe\DelegaImpresaService::class)->allinea($user);
 
                 return $user;
             });

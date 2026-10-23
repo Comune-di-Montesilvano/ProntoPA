@@ -46,6 +46,11 @@ class LimitaAccessoSpid
             return redirect()->route('verification.notice');
         }
 
+        // Persona delegata da una ditta: il ruolo lo decide DelegaImpresaService.
+        if ($user->hasRole('impresa')) {
+            return $next($request);
+        }
+
         if ($request->routeIs(...self::SENZA_DELEGA)
             || Delega::attive()->where('user_id', $user->id)->exists()) {
             return $next($request);
