@@ -19,6 +19,9 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
+    // Porta di scuole e ditte: solo SPID/CIE (il /login è del personale AD).
+    Route::view('accesso', 'auth.accesso')->name('accesso');
+
     Route::get('two-factor-challenge', [TwoFactorChallengeController::class, 'create'])
         ->name('two-factor.login');
 

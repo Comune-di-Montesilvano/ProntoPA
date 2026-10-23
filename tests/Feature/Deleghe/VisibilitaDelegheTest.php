@@ -124,7 +124,7 @@ class VisibilitaDelegheTest extends TestCase
         $this->assertSame([], $this->visibili());
         $this->assertFalse(\Illuminate\Support\Facades\Gate::forUser($this->user)->allows('view', $this->suP1));
 
-        $this->actingAs($this->user)->get(route('segnalazioni.create'))->assertRedirect(route('login'));
+        $this->actingAs($this->user)->get(route('segnalazioni.create'))->assertRedirect(route('accesso'));
         $this->assertGuest();
     }
 }

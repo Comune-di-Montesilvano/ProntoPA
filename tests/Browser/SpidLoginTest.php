@@ -26,7 +26,7 @@ class SpidLoginTest extends DuskTestCase
     public function test_primo_accesso_spid_fino_alla_verifica_email(): void
     {
         $this->browse(function (Browser $browser) {
-            $browser->visit('/login')
+            $browser->visit('/accesso')
                 ->clickLink('Entra con SPID o CIE')
                 ->waitForText('Simulatore SPID')
                 ->type('codice_fiscale', 'VRDLGU75B02H501K')

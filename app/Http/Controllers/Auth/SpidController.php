@@ -114,6 +114,6 @@ class SpidController extends Controller
 
     private function errore(string $messaggio): RedirectResponse
     {
-        return redirect()->route('login')->withErrors(['username' => $messaggio]);
+        return redirect()->route('accesso')->withErrors(['spid' => $messaggio]);
     }
 }

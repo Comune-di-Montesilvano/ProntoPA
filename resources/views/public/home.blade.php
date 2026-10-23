@@ -16,6 +16,18 @@
             <p style="font-size:15px; color:var(--slate-600); margin:0; max-width:560px; line-height:1.55;">
                 Dati aggregati e anonimizzati aggiornati in tempo reale. Nessun dato personale esposto.
             </p>
+
+            @guest
+                {{-- Due porte: SPID in evidenza per chi viene da fuori, dominio per il personale. --}}
+                <div style="margin-top:24px; display:flex; flex-wrap:wrap; align-items:center; gap:12px 24px;">
+                    <a href="{{ route('accesso') }}" class="pa-btn pa-btn-primary pa-btn-lg">
+                        Scuole e ditte — Entra con SPID/CIE
+                    </a>
+                    <a href="{{ route('login') }}" style="font-size:13px; color:var(--slate-600); text-decoration:underline;">
+                        Personale del comune — accesso con credenziali di dominio
+                    </a>
+                </div>
+            @endguest
         </div>
 
         {{-- KPI Cards --}}

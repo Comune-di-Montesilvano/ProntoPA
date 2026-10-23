@@ -70,7 +70,7 @@
                 @auth
                     <a href="{{ route('dashboard') }}" class="pa-btn pa-btn-primary pa-btn-sm">Dashboard</a>
                 @else
-                    <a href="{{ route('login') }}" class="pa-btn pa-btn-primary pa-btn-sm">Accedi</a>
+                    <a href="{{ route('accesso') }}" class="pa-btn pa-btn-primary pa-btn-sm">Accedi</a>
                 @endauth
             </nav>
         </div>

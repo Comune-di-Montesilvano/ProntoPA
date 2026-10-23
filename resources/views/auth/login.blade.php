@@ -80,9 +80,9 @@
 
         <div>
             <h2 style="font-family:var(--font-ui); font-size:28px; font-weight:700;
-                       color:var(--ink); margin:0; letter-spacing:-.01em;">Bentornato.</h2>
+                       color:var(--ink); margin:0; letter-spacing:-.01em;">Accesso personale del comune</h2>
             <p style="font-size:14px; color:var(--slate-600); margin:6px 0 0;">
-                Accedi con le credenziali di {{ $enteNome }}.
+                Usa le credenziali di dominio di {{ $enteNome }} (le stesse del PC dell'ufficio).
             </p>
         </div>
 
@@ -103,31 +103,17 @@
             </div>
         @endif
 
-        @if(app(\App\Services\Oidc\OidcConfig::class)->configurato() || config('oidc.mock'))
-            <div style="display:flex; flex-direction:column; gap:8px;">
-                <p style="font-size:13px; font-weight:600; color:var(--ink); margin:0;">Personale delle scuole</p>
-                <a href="{{ route('spid.start') }}" class="pa-btn pa-btn-primary pa-btn-lg" style="width:100%; justify-content:center;">
-                    Entra con SPID o CIE
-                </a>
-            </div>
-            <div style="display:flex; align-items:center; gap:12px; color:var(--slate-500); font-size:12px;">
-                <span style="flex:1; height:1px; background:var(--slate-200, #e5e7eb);"></span>
-                oppure
-                <span style="flex:1; height:1px; background:var(--slate-200, #e5e7eb);"></span>
-            </div>
-            <p style="font-size:13px; font-weight:600; color:var(--ink); margin:0;">Personale dell'ente e ditte</p>
-        @endif
 
         <form method="POST" action="{{ route('login') }}" style="display:flex; flex-direction:column; gap:20px;">
             @csrf
 
             <div class="pa-field">
-                <label class="pa-field-label" for="username">Utente di dominio (dipendenti) o email (ditte)</label>
+                <label class="pa-field-label" for="username">Utente di dominio</label>
                 <input id="username" type="text" name="username" class="pa-input"
                        value="{{ old('username') }}" required autofocus autocomplete="username"
                        aria-describedby="username-aiuto">
                 <span id="username-aiuto" style="font-size:12px; color:var(--slate-500);">
-                    Dipendenti: le credenziali del PC dell'ufficio. Ditte: l'email registrata.
+                    Esempio: mario.rossi
                 </span>
             </div>
 
@@ -149,6 +135,12 @@
             </button>
         </form>
 
+        <p style="font-size:13px; color:var(--slate-600); text-align:center; margin:0;">
+            Scuole e ditte:
+            <a href="{{ route('accesso') }}" style="color:var(--ente-primary); font-weight:600; text-decoration:none;">
+                accedi con SPID o CIE →
+            </a>
+        </p>
     </main>
 </div>
 </body>

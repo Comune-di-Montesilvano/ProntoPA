@@ -55,8 +55,8 @@ class SpidRevisioneTest extends TestCase
 
         $this->travel(16)->minutes();
 
-        $this->get(route('spid.completa-profilo'))->assertRedirect(route('login'));
-        $this->post(route('spid.completa-profilo.store'), ['email' => 'b@altro.it'])->assertRedirect(route('login'));
+        $this->get(route('spid.completa-profilo'))->assertRedirect(route('accesso'));
+        $this->post(route('spid.completa-profilo.store'), ['email' => 'b@altro.it'])->assertRedirect(route('accesso'));
         $this->assertSame(0, User::where('codice_fiscale', 'RSSMRA80A01G482X')->count());
         $this->assertNull(session('spid.identita'));
     }

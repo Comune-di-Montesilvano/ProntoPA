@@ -35,7 +35,7 @@ class LimitaAccessoSpid
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->with('status', "Accesso non consentito. Contatta l'ente.");
+            return redirect()->route('accesso')->with('status', "Accesso non consentito. Contatta l'ente.");
         }
 
         if ($request->routeIs(...self::SEMPRE)) {

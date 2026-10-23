@@ -48,7 +48,7 @@ class CompletaProfiloController extends Controller
         $dati = $this->identitaInSessione($request);
 
         if ($dati === null) {
-            return redirect()->route('login');
+            return redirect()->route('accesso');
         }
 
         return view('auth.spid-completa-profilo', ['identita' => IdentitaSpid::fromArray($dati)]);
@@ -59,7 +59,7 @@ class CompletaProfiloController extends Controller
         $dati = $this->identitaInSessione($request);
 
         if ($dati === null) {
-            return redirect()->route('login');
+            return redirect()->route('accesso');
         }
 
         $validati = $request->validate([

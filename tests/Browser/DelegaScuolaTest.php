@@ -41,7 +41,7 @@ class DelegaScuolaTest extends DuskTestCase
         // chiamata e passa un solo browser. La segreteria apre il link nello
         // stesso browser (come una DSGA con sessione SPID aperta).
         $this->browse(function (Browser $browser) use ($user) {
-            $browser->visit('/login')
+            $browser->visit('/accesso')
                 ->clickLink('Entra con SPID o CIE')
                 ->waitForText('Simulatore SPID')
                 ->type('codice_fiscale', 'VRDLGU75B02H501K')
