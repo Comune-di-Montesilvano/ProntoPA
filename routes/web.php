@@ -122,6 +122,14 @@ Route::middleware(['auth', 'role:admin|gestore'])->prefix('gestione')->name('ges
     Route::get('/reports/mensile/xlsx', [ReportController::class, 'mensileGestoreXlsx'])->name('reports.mensile.xlsx');
 });
 
+// ── Imprese: persone delegate (SPID/CIE) e disattivazione (admin + gestore) ──
+Route::middleware(['auth', 'role:admin|gestore'])->prefix('imprese/{impresa}')->name('imprese.')->group(function () {
+    Route::post('deleghe', [\App\Http\Controllers\DelegheImpresaController::class, 'store'])->name('deleghe.store');
+    Route::delete('deleghe/{delega}', [\App\Http\Controllers\DelegheImpresaController::class, 'destroy'])->name('deleghe.destroy');
+    Route::post('disattiva', [\App\Http\Controllers\DelegheImpresaController::class, 'disattiva'])->name('disattiva');
+    Route::post('riattiva', [\App\Http\Controllers\DelegheImpresaController::class, 'riattiva'])->name('riattiva');
+});
+
 // ── Imprese CRUD (admin + gestore) ────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin|gestore'])
     ->resource('imprese', ImpreseCRUDController::class)

@@ -25,7 +25,15 @@
                         <tbody class="bg-white divide-y divide-gray-100">
                             @foreach($imprese as $impresa)
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 font-medium text-gray-900">{{ $impresa->ragione_sociale }}</td>
+                                    <td class="px-4 py-3 font-medium text-gray-900">
+                                        {{ $impresa->ragione_sociale }}
+                                        @if($impresa->attiva === false)
+                                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">Disattivata</span>
+                                        @endif
+                                        @if($impresa->deleghe_attive_count)
+                                            <span class="ml-2 text-xs text-gray-500">{{ $impresa->deleghe_attive_count }} {{ $impresa->deleghe_attive_count === 1 ? 'persona' : 'persone' }} SPID</span>
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3 text-gray-500 font-mono text-xs">{{ $impresa->partita_iva ?? '—' }}</td>
                                     <td class="px-4 py-3 text-gray-500">{{ $impresa->referente ?? '—' }}</td>
                                     <td class="px-4 py-3 text-gray-500">{{ $impresa->email ?? '—' }}</td>

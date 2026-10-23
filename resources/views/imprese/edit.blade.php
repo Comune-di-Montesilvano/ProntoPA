@@ -15,5 +15,7 @@
                 </div>
             </form>
         </div>
+
+        @include('imprese._deleghe')
     </div>
 </x-app-layout>

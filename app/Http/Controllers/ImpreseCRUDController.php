@@ -11,7 +11,8 @@ class ImpreseCRUDController extends Controller
 {
     public function index(): View
     {
-        $imprese = Impresa::orderBy('ragione_sociale')->paginate(30);
+        $imprese = Impresa::withCount(['deleghe as deleghe_attive_count' => fn ($q) => $q->where('stato', \App\Models\DelegaImpresa::ATTIVA)])
+            ->orderBy('ragione_sociale')->paginate(30);
         return view('imprese.index', compact('imprese'));
     }
 
@@ -61,6 +62,11 @@ class ImpreseCRUDController extends Controller
 
     public function destroy(Impresa $impresa): RedirectResponse
     {
+        // Le deleghe sono lo storico di chi ha avuto accesso: si disattiva, non si elimina.
+        if ($impresa->deleghe()->exists()) {
+            return back()->with('error', 'La ditta ha persone delegate (anche revocate): disattivala invece di eliminarla.');
+        }
+
         $impresa->delete();
         return redirect()->route('imprese.index')
             ->with('success', 'Impresa eliminata.');
