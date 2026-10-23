@@ -225,6 +225,31 @@ class DitteECanaliTest extends TestCase
         });
     }
 
+    public function test_telegram_utente_disattivato_trattato_come_non_collegato(): void
+    {
+        $impresaUser = $this->impresaUser();
+        $impresaUser->update(['telegram_chat_id' => '12345678', 'attivo' => false]);
+        $appalto = Appalto::create(['id_impresa' => $impresaUser->id_impresa, 'descrizione' => 'A', 'valido' => true, 'id_gruppo' => 1]);
+        $segnalazione = Segnalazione::factory()->create(['id_appalto' => $appalto->id_appalto, 'id_stato_segnalazione' => 4]);
+
+        Impostazione::set('telegram_webhook_secret', 'my-secret');
+        Impostazione::set('telegram_bot_token', 'my-token');
+        Http::fake(['https://api.telegram.org/*' => Http::response(['ok' => true])]);
+
+        $this->withHeader('X-Telegram-Bot-Api-Secret-Token', 'my-secret')
+            ->postJson('/api/telegram/webhook', ['message' => ['chat' => ['id' => 12345678], 'text' => '/oggi']])
+            ->assertOk();
+        $this->withHeader('X-Telegram-Bot-Api-Secret-Token', 'my-secret')
+            ->postJson('/api/telegram/webhook', ['callback_query' => [
+                'id' => 'cb1', 'message' => ['chat' => ['id' => 12345678]],
+                'data' => 'azione:'.$segnalazione->id_segnalazione.':6',
+            ]])->assertOk();
+
+        Http::assertNotSent(fn ($r) => str_contains($r->url(), 'sendMessage') && str_contains((string) $r['text'], 'Lavori per priorità'));
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'answerCallbackQuery') && str_contains((string) $r['text'], 'non collegato'));
+        $this->assertEquals(\App\Enums\SegnalazioneStato::ASSEGNATA_IMPRESA, $segnalazione->fresh()->id_stato_segnalazione);
+    }
+
     public function test_telegram_carica_foto_con_caption_id(): void
     {
         $impresaUser = $this->impresaUser();

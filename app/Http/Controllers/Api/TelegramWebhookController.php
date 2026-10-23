@@ -67,7 +67,7 @@ class TelegramWebhookController extends Controller
             return;
         }
 
-        $user = User::where('telegram_chat_id', $chatId)->first();
+        $user = User::where('telegram_chat_id', $chatId)->where('attivo', true)->first(); // disattivato = non collegato
 
         if (! $user) {
             $this->telegram->sendMessage($chatId, $this->buildUnlinkedMessage());
@@ -215,7 +215,7 @@ class TelegramWebhookController extends Controller
         $callbackId = (string) data_get($callbackQuery, 'id', '');
         $data = (string) data_get($callbackQuery, 'data', '');
 
-        $user = User::where('telegram_chat_id', $chatId)->first();
+        $user = User::where('telegram_chat_id', $chatId)->where('attivo', true)->first(); // disattivato = non collegato
 
         if (! $user) {
             $this->telegram->answerCallbackQuery($callbackId, 'Account Telegram non collegato.');
