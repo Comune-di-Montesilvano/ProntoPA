@@ -11,10 +11,6 @@
                     Mostra disattivati
                 </label>
             </form>
-            <a href="{{ route('admin.utenti.create') }}"
-               class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
-                + Nuovo utente
-            </a>
         </div>
     </x-slot>
 

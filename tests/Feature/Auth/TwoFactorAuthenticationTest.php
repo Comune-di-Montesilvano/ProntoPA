@@ -21,39 +21,16 @@ class TwoFactorAuthenticationTest extends TestCase
         $this->withoutMiddleware(PreventRequestForgery::class);
     }
 
+    /** Credenziali già verificate, in attesa del secondo fattore (come dopo LoginRequest). */
+    private function inChallenge(User $user): void
+    {
+        $this->withSession(['login.id' => $user->id, 'login.remember' => false, 'login.metodo' => 'totp']);
+    }
+
     private function confirmPasswordInSession(User $user): void
     {
         $this->actingAs($user);
         session(['auth.password_confirmed_at' => time()]);
-    }
-
-    public function test_login_normale_senza_2fa_non_richiede_challenge(): void
-    {
-        $user = User::factory()->create();
-
-        $response = $this->post('/login', [
-            'username' => $user->username,
-            'password' => 'password',
-        ]);
-
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
-    }
-
-    public function test_login_con_2fa_attivo_richiede_challenge(): void
-    {
-        $user = User::factory()->create();
-        app(EnableTwoFactorAuthentication::class)($user);
-        $user->forceFill(['two_factor_confirmed_at' => now()])->save();
-
-        $response = $this->post('/login', [
-            'username' => $user->username,
-            'password' => 'password',
-        ]);
-
-        $this->assertGuest();
-        $response->assertRedirect(route('two-factor.login'));
-        $this->assertEquals($user->id, session('login.id'));
     }
 
     public function test_challenge_con_codice_totp_valido_completa_login(): void
@@ -62,7 +39,7 @@ class TwoFactorAuthenticationTest extends TestCase
         app(EnableTwoFactorAuthentication::class)($user);
         $user->forceFill(['two_factor_confirmed_at' => now()])->save();
 
-        $this->post('/login', ['username' => $user->username, 'password' => 'password']);
+        $this->inChallenge($user);
 
         $secret = Fortify::currentEncrypter()->decrypt($user->fresh()->two_factor_secret);
         $code = (new Google2FA())->getCurrentOtp($secret);
@@ -79,7 +56,7 @@ class TwoFactorAuthenticationTest extends TestCase
         app(EnableTwoFactorAuthentication::class)($user);
         $user->forceFill(['two_factor_confirmed_at' => now()])->save();
 
-        $this->post('/login', ['username' => $user->username, 'password' => 'password']);
+        $this->inChallenge($user);
 
         $response = $this->post('/two-factor-challenge', ['code' => '000000']);
 
@@ -95,7 +72,7 @@ class TwoFactorAuthenticationTest extends TestCase
         $user = $user->fresh();
         $recoveryCode = $user->recoveryCodes()[0];
 
-        $this->post('/login', ['username' => $user->username, 'password' => 'password']);
+        $this->inChallenge($user);
 
         $response = $this->post('/two-factor-challenge', ['recovery_code' => $recoveryCode]);
 

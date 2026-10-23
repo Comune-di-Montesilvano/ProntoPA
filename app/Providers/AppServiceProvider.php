@@ -37,7 +37,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Un solo punto per tutti i metodi di accesso (AD, locale, SPID, magic link):
+        // Un solo punto per tutti i metodi di accesso (AD, SPID):
         // la sessione ricorda a quale ripristino appartiene (InvalidaSessioniDopoRipristino).
         Event::listen(Login::class, function (): void {
             session()->put('ripristino_id', Impostazione::ripristinoId());

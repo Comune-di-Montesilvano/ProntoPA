@@ -25,10 +25,6 @@ Route::middleware('guest')->group(function () {
     Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
         ->middleware('throttle:two-factor');
 
-    Route::post('two-factor-challenge/reinvia', [TwoFactorChallengeController::class, 'reinvia'])
-        ->middleware('throttle:1,1,2fa-reinvia')
-        ->name('two-factor.reinvia');
-
     Route::get('auth/spid', [SpidController::class, 'start'])
         ->middleware('throttle:20,1,spid-start')
         ->name('spid.start');

@@ -25,17 +25,16 @@ class AuthenticationTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_users_can_authenticate_using_the_login_screen(): void
+    public function test_account_locale_non_entra_dal_login(): void
     {
         $user = User::factory()->create();
 
-        $response = $this->post('/login', [
+        $this->post('/login', [
             'username' => $user->username,
             'password' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertGuest();
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void

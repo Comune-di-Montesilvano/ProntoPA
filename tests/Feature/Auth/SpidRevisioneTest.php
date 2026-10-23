@@ -104,16 +104,4 @@ class SpidRevisioneTest extends TestCase
         $this->assertSame('Conferma il tuo indirizzo email', $mail->subject);
         $this->assertSame('Conferma email', $mail->actionText);
     }
-
-    public function test_login_spid_non_consuma_il_limite_del_reinvio_codice_ditta(): void
-    {
-        config(['oidc.mock' => false]);
-        $ditta = User::factory()->create(['email' => 'mario@ditta.it']);
-        $ditta->assignRole('impresa');
-        $this->post('/login', ['username' => 'mario@ditta.it', 'password' => 'password']);
-
-        $this->get('/auth/spid');
-
-        $this->post('/two-factor-challenge/reinvia')->assertRedirect(route('two-factor.login'));
-    }
 }

@@ -148,9 +148,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Secondo fattore richiesto al login, solo per account locali (ditte e
-     * legacy): per ldap/spid l'autenticazione forte è di AD/SPID.
-     * TOTP confermato vince; le ditte hanno email come default obbligatorio.
+     * Secondo fattore richiesto al login: TOTP confermato, solo per account
+     * locali (per ldap/spid l'autenticazione forte è di AD/SPID). Il codice
+     * via email per le ditte è stato rimosso in v0.8.19 (ditte via SPID).
      */
     public function metodoSecondoFattore(): ?string
     {
@@ -158,15 +158,7 @@ class User extends Authenticatable
             return null;
         }
 
-        if ($this->hasEnabledTwoFactorAuthentication()) {
-            return 'totp';
-        }
-
-        if ($this->two_factor_metodo === 'email' || $this->hasRole('impresa')) {
-            return 'email';
-        }
-
-        return null;
+        return $this->hasEnabledTwoFactorAuthentication() ? 'totp' : null;
     }
 
     // --- Relazioni ---
@@ -174,6 +166,11 @@ class User extends Authenticatable
     public function profilo()
     {
         return $this->belongsTo(Profilo::class, 'id_profilo', 'id_profilo');
+    }
+
+    public function impresa()
+    {
+        return $this->belongsTo(Impresa::class, 'id_impresa', 'id_impresa');
     }
 
     public function provenienza()

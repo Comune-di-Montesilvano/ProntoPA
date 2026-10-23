@@ -153,7 +153,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         ->name('utenti.toggle-attivo');
 
     Route::resource('utenti', UtentiController::class)
-        ->except(['show'])
+        ->except(['show', 'create', 'store'])
         ->parameters(['utenti' => 'utente']);
 
     Route::resource('organizzazioni', OrganizzazioniController::class)
