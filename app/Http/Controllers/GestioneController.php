@@ -8,13 +8,24 @@ use App\Models\Segnalazione;
 use App\Models\Specializzazione;
 use App\Models\TipologiaSegnalazione;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
 class GestioneController extends Controller
 {
+    private const TAB_LABELS = [
+        'nuove' => 'Nuove', 'aperte' => 'Aperte', 'in_carico' => 'In carico',
+        'in_gestione' => 'In gestione', 'evidenza' => 'In evidenza', 'chiuse' => 'Chiuse',
+    ];
+
+    private const STATI_IN_CARICO = [SegnalazioneStato::IN_CARICO, SegnalazioneStato::SOSPESA];
+
+    private const STATI_IN_GESTIONE = [
+        SegnalazioneStato::ASSEGNATA_OPERATORE, SegnalazioneStato::ASSEGNATA_IMPRESA, SegnalazioneStato::PREVENTIVO_IN_ATTESA,
+    ];
+
     /**
      * Dashboard gestione con tab + ricerca
      */
@@ -31,73 +42,17 @@ class GestioneController extends Controller
         $livelloPriorita  = $request->get('livello_priorita');
         $idSpecializzazione = $request->get('id_specializzazione');
 
-        $base = Segnalazione::visibileA($user)
-            ->with(['tipologia', 'operatore', 'provenienza', 'plesso']);
-
-        // Applica filtri ricerca
-        if ($q !== '') {
-            $base->where(function ($query) use ($q) {
-                $query->where(function ($qq) use ($q) {
-                        // FULLTEXT per la ricerca in produzione (dati committed);
-                        // LIKE come fallback corretto (RefreshDatabase usa transazioni,
-                        // InnoDB FULLTEXT non vede righe uncommitted).
-                        if (\Illuminate\Support\Facades\DB::getDriverName() === 'sqlite') {
-                            $qq->where('testo_segnalazione', 'like', "%{$q}%");
-                        } else {
-                            $qq->whereFullText('testo_segnalazione', $q)
-                               ->orWhere('testo_segnalazione', 'like', "%{$q}%");
-                        }
-                    })
-                      ->orWhere('segnalante', 'like', "%{$q}%")
-                      ->orWhere('id_segnalazione', $q);
-            });
-        }
-        if ($idTipologia) {
-            $base->where('id_tipologia_segnalazione', $idTipologia);
-        }
-        if ($idProvenienza) {
-            $base->where('id_provenienza', $idProvenienza);
-        }
-        if ($idOperatore) {
-            $base->where('id_operatore_assegnato', $idOperatore);
-        }
-        if ($dataDa) {
-            $base->whereDate('data_segnalazione', '>=', $dataDa);
-        }
-        if ($dataA) {
-            $base->whereDate('data_segnalazione', '<=', $dataA);
-        }
-        if ($livelloPriorita) {
-            $base->where('livello_priorita', $livelloPriorita);
-        }
-        if ($idSpecializzazione) {
-            $base->where('id_specializzazione', $idSpecializzazione);
-        }
-
-        $statiInCarico   = [SegnalazioneStato::IN_CARICO->value, SegnalazioneStato::SOSPESA->value];
-        $statiInGestione = [SegnalazioneStato::ASSEGNATA_OPERATORE->value, SegnalazioneStato::ASSEGNATA_IMPRESA->value, SegnalazioneStato::PREVENTIVO_IN_ATTESA->value];
-
-        $segnalazioni = match($tab) {
-            'evidenza'    => (clone $base)->inEvidenza()
-                                ->orderByDesc('data_segnalazione')->paginate(30),
-            'in_carico'   => (clone $base)->aperte()
-                                ->whereIn('id_stato_segnalazione', $statiInCarico)
-                                ->orderByDesc('data_segnalazione')->paginate(30),
-            'in_gestione' => (clone $base)->aperte()
-                                ->whereIn('id_stato_segnalazione', $statiInGestione)
-                                ->orderByDesc('data_segnalazione')->paginate(30),
-            'chiuse'      => (clone $base)->whereNotNull('data_chiusura')
-                                ->orderByDesc('data_chiusura')->paginate(30),
-            default       => (clone $base)->aperte()
-                                ->orderByDesc('data_segnalazione')->paginate(30),
-        };
+        $segnalazioni = $this->elencoFiltrato($request)
+            ->with(['tipologia', 'operatore', 'provenienza', 'plesso'])
+            ->paginate(30);
 
         // Conteggi (senza filtro ricerca per non distorcere i badge)
         $baseCount = Segnalazione::visibileA($user);
         $conteggi  = [
+            'nuove'       => (clone $baseCount)->where('id_stato_segnalazione', SegnalazioneStato::NUOVA->value)->count(),
             'evidenza'    => (clone $baseCount)->inEvidenza()->count(),
-            'in_carico'   => (clone $baseCount)->aperte()->whereIn('id_stato_segnalazione', $statiInCarico)->count(),
-            'in_gestione' => (clone $baseCount)->aperte()->whereIn('id_stato_segnalazione', $statiInGestione)->count(),
+            'in_carico'   => (clone $baseCount)->aperte()->whereIn('id_stato_segnalazione', self::valori(self::STATI_IN_CARICO))->count(),
+            'in_gestione' => (clone $baseCount)->aperte()->whereIn('id_stato_segnalazione', self::valori(self::STATI_IN_GESTIONE))->count(),
             'aperte'      => (clone $baseCount)->aperte()->count(),
             'chiuse'      => (clone $baseCount)->whereNotNull('data_chiusura')->count(),
             'sla_rischio' => (clone $baseCount)->aperte()->slaArischio()->count(),
@@ -118,56 +73,22 @@ class GestioneController extends Controller
                 $s->id_segnalazione => $workflow->getAzioniRapide($s, $user),
             ]);
 
+        $filtri = $this->parametriFiltro($request);
+
         return view('gestione.dashboard', compact(
             'segnalazioni', 'tab', 'conteggi',
             'q', 'idTipologia', 'idProvenienza',
             'idOperatore', 'dataDa', 'dataA', 'livelloPriorita', 'idSpecializzazione',
             'tipologie', 'provenienze', 'specializzazioni', 'operatori',
-            'azioniRapidePerSegnalazione'
+            'azioniRapidePerSegnalazione', 'filtri'
         ));
     }
 
     public function exportCsv(Request $request): StreamedResponse
     {
-        $user = auth()->user();
-        $tab             = $request->get('tab', 'aperte');
-        $q               = trim($request->get('q', ''));
-        $idTipologia     = $request->get('id_tipologia');
-        $idProvenienza   = $request->get('id_provenienza');
-        $idOperatore     = $request->get('id_operatore');
-        $dataDa          = $request->get('data_da');
-        $dataA           = $request->get('data_a');
-        $livelloPriorita = $request->get('livello_priorita');
-        $idSpec          = $request->get('id_specializzazione');
-
-        $base = Segnalazione::visibileA($user)
-            ->with(['tipologia', 'plesso', 'operatore', 'appalto.impresa', 'specializzazione']);
-
-        if ($q !== '') {
-            $base->where(function ($query) use ($q) {
-                $query->where('testo_segnalazione', 'like', "%{$q}%")
-                      ->orWhere('segnalante', 'like', "%{$q}%")
-                      ->orWhere('id_segnalazione', $q);
-            });
-        }
-        if ($idTipologia)     { $base->where('id_tipologia_segnalazione', $idTipologia); }
-        if ($idProvenienza)   { $base->where('id_provenienza', $idProvenienza); }
-        if ($idOperatore)     { $base->where('id_operatore_assegnato', $idOperatore); }
-        if ($dataDa)          { $base->whereDate('data_segnalazione', '>=', $dataDa); }
-        if ($dataA)           { $base->whereDate('data_segnalazione', '<=', $dataA); }
-        if ($livelloPriorita) { $base->where('livello_priorita', $livelloPriorita); }
-        if ($idSpec)          { $base->where('id_specializzazione', $idSpec); }
-
-        $statiInCarico   = [SegnalazioneStato::IN_CARICO->value, SegnalazioneStato::SOSPESA->value];
-        $statiInGestione = [SegnalazioneStato::ASSEGNATA_OPERATORE->value, SegnalazioneStato::ASSEGNATA_IMPRESA->value, SegnalazioneStato::PREVENTIVO_IN_ATTESA->value];
-
-        $segnalazioni = match($tab) {
-            'evidenza'    => (clone $base)->inEvidenza()->orderByDesc('data_segnalazione')->get(),
-            'in_carico'   => (clone $base)->aperte()->whereIn('id_stato_segnalazione', $statiInCarico)->orderByDesc('data_segnalazione')->get(),
-            'in_gestione' => (clone $base)->aperte()->whereIn('id_stato_segnalazione', $statiInGestione)->orderByDesc('data_segnalazione')->get(),
-            'chiuse'      => (clone $base)->whereNotNull('data_chiusura')->orderByDesc('data_chiusura')->get(),
-            default       => (clone $base)->aperte()->orderByDesc('data_segnalazione')->get(),
-        };
+        $segnalazioni = $this->elencoFiltrato($request)
+            ->with(['tipologia', 'plesso', 'operatore', 'appalto.impresa', 'specializzazione'])
+            ->get();
 
         $filename = 'segnalazioni-' . now()->format('Y-m-d') . '.csv';
 
@@ -200,43 +121,112 @@ class GestioneController extends Controller
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    public function stampaLista(Request $request): \Illuminate\View\View
+    public function stampaLista(Request $request): View
     {
-        $user = auth()->user();
-        $tab  = $request->get('tab', 'aperte');
-        $q    = trim($request->get('q', ''));
-        $idTipologia   = $request->get('id_tipologia');
-        $idProvenienza = $request->get('id_provenienza');
+        $segnalazioni = $this->elencoFiltrato($request)
+            ->with(['tipologia', 'operatore', 'provenienza', 'plesso.istituto', 'utente'])
+            ->get();
 
-        $base = Segnalazione::visibileA($user)
-            ->with(['tipologia', 'operatore', 'provenienza', 'plesso.istituto', 'utente']);
+        return view('gestione.print', [
+            'segnalazioni' => $segnalazioni,
+            'tab' => $request->get('tab', 'aperte'),
+            'tabLabels' => self::TAB_LABELS,
+            'q' => trim($request->get('q', '')),
+        ]);
+    }
+
+    /** Tutte le schede dell'elenco filtrato, una per pagina, in un unico documento. */
+    public function stampaSchede(Request $request): View
+    {
+        // Stesse relazioni di SegnalazioneController::stampa (scheda singola).
+        $segnalazioni = $this->elencoFiltrato($request)
+            ->with([
+                'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
+                'operatore', 'utente', 'appalto.impresa',
+                'note',
+                'storicoStati.stato', 'storicoStati.utente',
+            ])
+            ->get();
+
+        return view('segnalazioni.print-multiple', [
+            'segnalazioni' => $segnalazioni,
+            'tab' => $request->get('tab', 'aperte'),
+            'tabLabels' => self::TAB_LABELS,
+        ]);
+    }
+
+    /**
+     * Query dell'elenco: visibilità, filtri e tab, già ordinata. Unica per dashboard, CSV e stampe.
+     *
+     * @return Builder<Segnalazione>
+     */
+    private function elencoFiltrato(Request $request): Builder
+    {
+        $q = trim($request->get('q', ''));
+        $base = Segnalazione::visibileA($request->user());
 
         if ($q !== '') {
             $base->where(function ($query) use ($q) {
-                $query->where('testo_segnalazione', 'like', "%{$q}%")
+                $query->where(function ($qq) use ($q) {
+                        // FULLTEXT per la ricerca in produzione (dati committed);
+                        // LIKE come fallback corretto (RefreshDatabase usa transazioni,
+                        // InnoDB FULLTEXT non vede righe uncommitted).
+                        if (\Illuminate\Support\Facades\DB::getDriverName() === 'sqlite') {
+                            $qq->where('testo_segnalazione', 'like', "%{$q}%");
+                        } else {
+                            $qq->whereFullText('testo_segnalazione', $q)
+                               ->orWhere('testo_segnalazione', 'like', "%{$q}%");
+                        }
+                    })
                       ->orWhere('segnalante', 'like', "%{$q}%")
                       ->orWhere('id_segnalazione', $q);
             });
         }
-        if ($idTipologia)   { $base->where('id_tipologia_segnalazione', $idTipologia); }
-        if ($idProvenienza) { $base->where('id_provenienza', $idProvenienza); }
 
-        $statiInCarico   = [SegnalazioneStato::IN_CARICO->value, SegnalazioneStato::SOSPESA->value];
-        $statiInGestione = [SegnalazioneStato::ASSEGNATA_OPERATORE->value, SegnalazioneStato::ASSEGNATA_IMPRESA->value, SegnalazioneStato::PREVENTIVO_IN_ATTESA->value];
-
-        $segnalazioni = match($tab) {
-            'evidenza'    => (clone $base)->inEvidenza()->orderByDesc('data_segnalazione')->get(),
-            'in_carico'   => (clone $base)->aperte()->whereIn('id_stato_segnalazione', $statiInCarico)->orderByDesc('data_segnalazione')->get(),
-            'in_gestione' => (clone $base)->aperte()->whereIn('id_stato_segnalazione', $statiInGestione)->orderByDesc('data_segnalazione')->get(),
-            'chiuse'      => (clone $base)->whereNotNull('data_chiusura')->orderByDesc('data_chiusura')->get(),
-            default       => (clone $base)->aperte()->orderByDesc('data_segnalazione')->get(),
-        };
-
-        $tabLabels = [
-            'aperte' => 'Aperte', 'in_carico' => 'In carico',
-            'in_gestione' => 'In gestione', 'evidenza' => 'In evidenza', 'chiuse' => 'Chiuse',
+        $colonne = [
+            'id_tipologia' => 'id_tipologia_segnalazione',
+            'id_provenienza' => 'id_provenienza',
+            'id_operatore' => 'id_operatore_assegnato',
+            'livello_priorita' => 'livello_priorita',
+            'id_specializzazione' => 'id_specializzazione',
         ];
+        foreach ($colonne as $parametro => $colonna) {
+            if ($request->filled($parametro)) {
+                $base->where($colonna, $request->get($parametro));
+            }
+        }
+        if ($request->filled('data_da')) {
+            $base->whereDate('data_segnalazione', '>=', $request->get('data_da'));
+        }
+        if ($request->filled('data_a')) {
+            $base->whereDate('data_segnalazione', '<=', $request->get('data_a'));
+        }
 
-        return view('gestione.print', compact('segnalazioni', 'tab', 'tabLabels', 'q'));
+        return match ($request->get('tab', 'aperte')) {
+            'nuove'       => $base->where('id_stato_segnalazione', SegnalazioneStato::NUOVA->value)->orderByDesc('data_segnalazione'),
+            'evidenza'    => $base->inEvidenza()->orderByDesc('data_segnalazione'),
+            'in_carico'   => $base->aperte()->whereIn('id_stato_segnalazione', self::valori(self::STATI_IN_CARICO))->orderByDesc('data_segnalazione'),
+            'in_gestione' => $base->aperte()->whereIn('id_stato_segnalazione', self::valori(self::STATI_IN_GESTIONE))->orderByDesc('data_segnalazione'),
+            'chiuse'      => $base->whereNotNull('data_chiusura')->orderByDesc('data_chiusura'),
+            default       => $base->aperte()->orderByDesc('data_segnalazione'),
+        };
+    }
+
+    /** @return array<string, string> filtri attivi, per i link di stampa/export */
+    private function parametriFiltro(Request $request): array
+    {
+        return array_filter($request->only([
+            'tab', 'q', 'id_tipologia', 'id_provenienza', 'id_operatore',
+            'data_da', 'data_a', 'livello_priorita', 'id_specializzazione',
+        ]), fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * @param  list<SegnalazioneStato>  $stati
+     * @return list<int>
+     */
+    private static function valori(array $stati): array
+    {
+        return array_map(fn (SegnalazioneStato $s) => $s->value, $stati);
     }
 }

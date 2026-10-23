@@ -4,6 +4,17 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.20] - 2026-10-23
+
+### Added
+- Gestione → "Stampa schede": tutte le schede dell'elenco filtrato in un unico documento,
+  una per pagina, uguali alla stampa della singola segnalazione.
+- Filtro rapido "Nuove" (stato Nuova) in Gestione, con contatore.
+
+### Fixed
+- "Stampa lista" ignorava i filtri operatore, date, priorità e specializzazione: ora
+  dashboard, stampa e CSV usano gli stessi filtri.
+
 ## [0.8.19] - 2026-10-23
 
 > **Nota operativa.** All'aggiornamento tutti gli account locali (email/password) vengono

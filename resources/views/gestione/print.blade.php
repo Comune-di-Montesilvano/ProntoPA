@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Lista Segnalazioni — {{ $tabLabels[$tab] }}</title>
+    <title>Lista Segnalazioni — {{ $tabLabels[$tab] ?? $tab }}</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -88,7 +88,7 @@
     <div class="header">
         <div>
             <div class="ente">{{ \App\Models\Impostazione::get('ente_nome', 'ProntoPA') }}</div>
-            <div class="titolo">Lista Segnalazioni — {{ $tabLabels[$tab] }}</div>
+            <div class="titolo">Lista Segnalazioni — {{ $tabLabels[$tab] ?? $tab }}</div>
         </div>
         <div class="meta">
             Stampato il {{ now()->format('d/m/Y H:i') }}<br>

@@ -117,6 +117,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'role:admin|gestore'])->prefix('gestione')->name('gestione.')->group(function () {
     Route::get('/', [GestioneController::class, 'index'])->name('dashboard');
     Route::get('/stampa', [GestioneController::class, 'stampaLista'])->name('stampa');
+    Route::get('/stampa-schede', [GestioneController::class, 'stampaSchede'])->name('stampa-schede');
     Route::get('/export-csv', [GestioneController::class, 'exportCsv'])->name('export-csv');
     Route::get('/reports/mensile', [ReportController::class, 'mensileGestore'])->name('reports.mensile');
     Route::get('/reports/mensile/xlsx', [ReportController::class, 'mensileGestoreXlsx'])->name('reports.mensile.xlsx');
