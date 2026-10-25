@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Models\Delega;
+use App\Enums\SegnalazioneStato;
 use App\Models\Segnalazione;
 use App\Models\User;
 
@@ -19,35 +19,16 @@ class SegnalazionePolicy
         return true; // filtro applicato nel model scope
     }
 
+    /**
+     * Una sola regola: si apre ciò che si vede in elenco (Segnalazione::scopeVisibileA).
+     */
     public function view(User $user, Segnalazione $segnalazione): bool
     {
         if ($user->isAdmin() || $user->hasRole('admin')) {
             return true;
         }
 
-        if ($user->isGestore() || $user->hasRole('gestore')) {
-            if ($user->isSupervisore()) {
-                return true;
-            }
-            return $segnalazione->id_operatore_assegnato === $user->id
-                || $segnalazione->id_utente_segnalazione === $user->id;
-        }
-
-        if ($user->hasRole('segnalatore')) {
-            if ($user->isSpid()) {
-                return ! $user->isBloccato() && Delega::plessiCopertiDa($user)
-                    ->where('plessi.id_plesso', $segnalazione->id_plesso)
-                    ->exists();
-            }
-
-            return $segnalazione->id_utente_segnalazione === $user->id;
-        }
-
-        if ($user->hasRole('impresa')) {
-            return $segnalazione->appalto?->id_impresa === $user->id_impresa;
-        }
-
-        return false;
+        return Segnalazione::visibileA($user)->whereKey($segnalazione->getKey())->exists();
     }
 
     public function create(User $user): bool
@@ -88,6 +69,38 @@ class SegnalazionePolicy
         }
 
         return $this->update($user, $segnalazione);
+    }
+
+    /** Ditta o operaio assegnati comunicano la fine dei lavori (rapportino), senza chiudere. */
+    public function comunicaFineLavori(User $user, Segnalazione $segnalazione): bool
+    {
+        if ($segnalazione->isChiusa() || ! in_array($segnalazione->statoEnum(), [
+            SegnalazioneStato::ASSEGNATA_OPERATORE, SegnalazioneStato::ASSEGNATA_IMPRESA,
+        ], true)) {
+            return false;
+        }
+
+        if ($user->hasRole('impresa')) {
+            return $user->id_impresa !== null && $segnalazione->appalto?->id_impresa === $user->id_impresa;
+        }
+
+        return $user->hasRole('operaio') && $this->view($user, $segnalazione);
+    }
+
+    /** Il comune sollecita chi ha il lavoro. */
+    public function sollecita(User $user, Segnalazione $segnalazione): bool
+    {
+        return ! $segnalazione->isChiusa()
+            && in_array($segnalazione->statoEnum(), [
+                SegnalazioneStato::ASSEGNATA_OPERATORE, SegnalazioneStato::ASSEGNATA_IMPRESA, SegnalazioneStato::PREVENTIVO_IN_ATTESA,
+            ], true)
+            && $this->modificaPriorita($user, $segnalazione);
+    }
+
+    /** Il comune accorpa una segnalazione aperta a un'altra già esistente. */
+    public function accorpa(User $user, Segnalazione $segnalazione): bool
+    {
+        return ! $segnalazione->isChiusa() && $this->modificaPriorita($user, $segnalazione);
     }
 
     public function delete(User $user, Segnalazione $segnalazione): bool

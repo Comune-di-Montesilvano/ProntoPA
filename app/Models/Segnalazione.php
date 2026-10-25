@@ -277,7 +277,8 @@ class Segnalazione extends Model
                 return $query->whereRaw('1 = 0');
             }
 
-            return $query->whereIn('id_plesso', Delega::plessiCopertiDa($user));
+            return $query->where(fn ($q) => $q->whereIn('id_plesso', Delega::plessiCopertiDa($user))
+                ->orWhereHas('adesioni', fn ($a) => $a->where('id_utente', $user->id)));
         }
 
         // Segnalatore scuola: vede tutte le segnalazioni dei plessi del suo istituto
@@ -285,11 +286,13 @@ class Segnalazione extends Model
         if ($profilo && $profilo->limita_istituto && $profilo->id_istituto) {
             $plessoIds = Plesso::where('id_istituto', $profilo->id_istituto)
                                ->pluck('id_plesso');
-            return $query->whereIn('id_plesso', $plessoIds);
+            return $query->where(fn ($q) => $q->whereIn('id_plesso', $plessoIds)
+                ->orWhereHas('adesioni', fn ($a) => $a->where('id_utente', $user->id)));
         }
 
-        // Segnalatore generico (URP, interni): solo proprie
-        return $query->where('id_utente_segnalazione', $user->id);
+        // Segnalatore generico (URP, interni): proprie e quelle a cui partecipa (adesione/accorpamento)
+        return $query->where(fn ($q) => $q->where('id_utente_segnalazione', $user->id)
+            ->orWhereHas('adesioni', fn ($a) => $a->where('id_utente', $user->id)));
     }
 
     public function scopeAperte($query)
