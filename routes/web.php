@@ -106,6 +106,9 @@ Route::middleware('auth')->group(function () {
     Route::get('segnalazioni/{segnalazione}/fascicolo-pdf', [FascicoloPdfController::class, 'fascicolo'])
         ->name('segnalazioni.fascicolo-pdf');
 
+    Route::patch('segnalazioni/{segnalazione}/priorita', [SegnalazioneController::class, 'aggiornaPriorita'])
+        ->name('segnalazioni.priorita');
+
     Route::patch('segnalazioni/{segnalazione}/toggle-riservata', [SegnalazioneController::class, 'toggleRiservata'])
         ->name('segnalazioni.toggle-riservata');
 

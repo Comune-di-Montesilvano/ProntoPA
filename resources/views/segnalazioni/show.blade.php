@@ -62,6 +62,26 @@
                 @if($segnalazione->segnalazione_urgente)
                     <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">Urgente</span>
                 @endif
+                @can('modificaPriorita', $segnalazione)
+                    <div x-data="{ apri: false }" class="inline">
+                        <button type="button" @click="apri = !apri" class="ml-2 text-xs text-blue-600 hover:text-blue-800 underline">Modifica</button>
+                        <form x-show="apri" x-cloak method="POST" action="{{ route('segnalazioni.priorita', $segnalazione->id_segnalazione) }}"
+                              class="mt-2 flex flex-wrap items-center gap-2">
+                            @csrf @method('PATCH')
+                            <select name="livello_priorita" class="border-gray-300 rounded-md text-xs py-1">
+                                @foreach([1 => 'Bassa', 2 => 'Media', 3 => 'Alta', 4 => 'Critica'] as $val => $label)
+                                    <option value="{{ $val }}" @selected((int) ($segnalazione->livello_priorita ?? 2) === $val)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <input type="hidden" name="segnalazione_urgente" value="0">
+                            <label class="inline-flex items-center gap-1 text-xs text-gray-600">
+                                <input type="checkbox" name="segnalazione_urgente" value="1" class="rounded border-gray-300" @checked($segnalazione->segnalazione_urgente)>
+                                Urgente
+                            </label>
+                            <button type="submit" class="px-2 py-1 bg-blue-600 text-white rounded text-xs font-semibold hover:bg-blue-700">Salva</button>
+                        </form>
+                    </div>
+                @endcan
             </div>
             @if($segnalazione->specializzazione)
                 <div>
