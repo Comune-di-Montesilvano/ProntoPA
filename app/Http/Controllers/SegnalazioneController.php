@@ -16,6 +16,7 @@ use App\Models\StoricoStatoSegnalazione;
 use App\Notifications\NotaDaEsternoNotification;
 use App\Notifications\NuovaNotaSegnalazione;
 use App\Notifications\SollecitoNotification;
+use App\Services\Segnalazioni\AccorpamentoService;
 use App\Services\Segnalazioni\DestinatariAssegnatario;
 use App\Services\Segnalazioni\DestinatariComune;
 use App\Services\Segnalazioni\FineLavoriService;
@@ -260,7 +261,6 @@ class SegnalazioneController extends Controller
             'id_appalto'                => ['nullable', 'integer', 'exists:appalti,id_appalto'],
             'id_squadra'                => ['nullable', 'integer', 'exists:squadre,id_squadra'],
             'nota'                      => ['nullable', 'string', 'max:2000'],
-            'id_segnalazione_madre'     => ['nullable', 'integer', 'exists:segnalazioni,id_segnalazione'],
             'id_segnalazione_correlata' => ['nullable', 'integer', 'exists:segnalazioni,id_segnalazione'],
         ];
 
@@ -518,84 +518,77 @@ class SegnalazioneController extends Controller
         })->values());
     }
 
-    // ── Unisci duplicato a un'altra segnalazione ──────────────────────────────
+    // ── Accorpa a una segnalazione già aperta sullo stesso guasto ─────────────
 
-    public function unisci(Request $request, Segnalazione $segnalazione): RedirectResponse
+    public function accorpa(Request $request, Segnalazione $segnalazione, AccorpamentoService $servizio): RedirectResponse
     {
-        $this->authorize('update', $segnalazione);
+        $this->authorize('accorpa', $segnalazione);
 
         $data = $request->validate([
             'id_destinazione' => ['required', 'integer', 'exists:segnalazioni,id_segnalazione'],
         ]);
 
-        $destinazione = Segnalazione::findOrFail($data['id_destinazione']);
+        $destinazione = $servizio->destinazioneEffettiva(Segnalazione::findOrFail($data['id_destinazione']));
+        // Chi accorpa deve poter gestire anche la segnalazione che riceve.
+        $this->authorize('modificaPriorita', $destinazione);
 
-        // Il gestore deve poter operare anche sulla destinazione, non solo sul duplicato
-        $this->authorize('update', $destinazione);
-
-        if ($destinazione->id_segnalazione === $segnalazione->id_segnalazione) {
-            return back()->withErrors(['id_destinazione' => 'Impossibile unire una segnalazione a sé stessa.']);
-        }
-        if ($destinazione->isChiusa()) {
-            return back()->withErrors(['id_destinazione' => 'La segnalazione di destinazione è chiusa.']);
-        }
-        if ($segnalazione->isChiusa()) {
-            return back()->withErrors(['id_destinazione' => 'La segnalazione corrente è già chiusa.']);
-        }
-
-        $user = $request->user();
-
-        DB::transaction(function () use ($segnalazione, $destinazione, $user) {
-            // 1. Allegati del duplicato → destinazione
-            $segnalazione->allegati()->update([
-                'id_segnalazione' => $destinazione->id_segnalazione,
-            ]);
-
-            // 2. Adesioni del duplicato → destinazione
-            $segnalazione->adesioni()->update([
-                'id_segnalazione' => $destinazione->id_segnalazione,
-            ]);
-
-            // 3. Il segnalante del duplicato diventa adesione della destinazione
-            $destinazione->adesioni()->create([
-                'id_utente'  => $segnalazione->id_utente_segnalazione ?: $user->id,
-                'segnalante' => $segnalazione->segnalante,
-                'telefono'   => $segnalazione->telefono,
-                'email'      => $segnalazione->email,
-            ]);
-
-            // 4. Chiudi il duplicato come Duplicata
-            $segnalazione->update([
-                'id_stato_segnalazione' => SegnalazioneStato::DUPLICATA->value,
-                'data_chiusura'         => now(),
-            ]);
-
-            StoricoStatoSegnalazione::create([
-                'id_segnalazione'       => $segnalazione->id_segnalazione,
-                'id_stato_segnalazione' => SegnalazioneStato::DUPLICATA->value,
-                'id_utente'             => $user->id,
-                'id_utente_collegato'   => 0,
-                'id_appalto'            => 0,
-            ]);
-
-            // 5. Note di tracciamento su entrambe
-            $segnalazione->note()->create([
-                'testo'            => "Unita alla segnalazione #{$destinazione->id_segnalazione} come duplicato.",
-                'id_utente'        => $user->id,
-                'visibile_web'     => false,
-                'visibile_impresa' => false,
-            ]);
-            $destinazione->note()->create([
-                'testo'            => "Assorbita la segnalazione duplicata #{$segnalazione->id_segnalazione}.",
-                'id_utente'        => $user->id,
-                'visibile_web'     => false,
-                'visibile_impresa' => false,
-            ]);
-        });
+        $destinazione = $servizio->accorpa($segnalazione, $destinazione, $request->user());
 
         return redirect()
             ->route('segnalazioni.show', $destinazione->id_segnalazione)
-            ->with('success', "Segnalazione #{$segnalazione->id_segnalazione} unita alla #{$destinazione->id_segnalazione}.");
+            ->with('success', "Segnalazione #{$segnalazione->id_segnalazione} accorpata alla #{$destinazione->id_segnalazione}.");
+    }
+
+    /** Candidati per l'accorpamento: simili per luogo e tipologia, o ricerca per numero/testo. */
+    public function candidatiAccorpa(Request $request, Segnalazione $segnalazione, DedupService $dedup): JsonResponse
+    {
+        $this->authorize('accorpa', $segnalazione);
+
+        $q = trim((string) $request->query('q', ''));
+
+        if ($q === '') {
+            $candidati = $dedup->trovaSimili(
+                (int) $segnalazione->id_tipologia_segnalazione,
+                $segnalazione->id_plesso ? (int) $segnalazione->id_plesso : null,
+                $segnalazione->latitudine !== null ? (float) $segnalazione->latitudine : null,
+                $segnalazione->longitudine !== null ? (float) $segnalazione->longitudine : null,
+                $segnalazione->testo_segnalazione,
+                9,
+                soloSeAttivo: false,
+            );
+        } else {
+            $candidati = Segnalazione::visibileA($request->user())
+                ->aperte()
+                ->where(fn ($w) => ctype_digit($q)
+                    ? $w->where('id_segnalazione', (int) $q)
+                    : $w->where('testo_segnalazione', 'like', '%'.$q.'%')->orWhere('titolo_generato', 'like', '%'.$q.'%'))
+                ->with(['stato', 'plesso'])
+                ->orderByDesc('data_segnalazione')
+                ->limit(10)
+                ->get();
+        }
+
+        return response()->json(self::candidatiJson($candidati, $segnalazione));
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Segnalazione>  $candidati
+     * @return list<array{id: int, titolo: string, sede: ?string, stato: string, data: ?string}>
+     */
+    private static function candidatiJson(\Illuminate\Support\Collection $candidati, Segnalazione $esclusa): array
+    {
+        return $candidati
+            ->reject(fn (Segnalazione $s) => $s->id_segnalazione === $esclusa->id_segnalazione)
+            ->take(8)
+            ->map(fn (Segnalazione $s) => [
+                'id'     => $s->id_segnalazione,
+                'titolo' => (string) ($s->titolo_generato ?: Str::limit((string) $s->testo_segnalazione, 80)),
+                'sede'   => $s->plesso?->etichetta(),
+                'stato'  => $s->statoEnum()->etichetta(),
+                'data'   => $s->data_segnalazione?->format('d/m/Y'),
+            ])
+            ->values()
+            ->all();
     }
 
     private function notificaNota(Segnalazione $segnalazione, NotaSegnalazione $nota): void

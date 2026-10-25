@@ -114,6 +114,7 @@ class Segnalazione extends Model
         return $this->belongsTo(Provenienza::class, 'id_provenienza', 'id_provenienza');
     }
 
+    /** @return BelongsTo<Plesso, $this> */
     public function plesso(): BelongsTo
     {
         return $this->belongsTo(Plesso::class, 'id_plesso', 'id_plesso');
@@ -184,6 +185,18 @@ class Segnalazione extends Model
     public function isChiusa(): bool
     {
         return $this->data_chiusura !== null;
+    }
+
+    /** Quante persone hanno segnalato lo stesso guasto: chi l'ha aperta più le adesioni (anche da accorpamento). */
+    public function volteSegnalata(): int
+    {
+        return 1 + (int) ($this->adesioni_count ?? $this->adesioni()->count());
+    }
+
+    /** Ancora aperta e segnalata da più persone: va trattata con più urgenza. */
+    public function isSollecitata(): bool
+    {
+        return ! $this->isChiusa() && $this->volteSegnalata() > 1;
     }
 
     /** Ditta o operaio hanno già mandato le foto del lavoro finito. */

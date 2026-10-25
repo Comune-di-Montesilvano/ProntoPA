@@ -67,7 +67,6 @@ class SegnalazioneWorkflowService
      *   id_operatore?: int,
      *   id_appalto?: int,
      *   nota?: string,
-     *   id_segnalazione_madre?: int,   (richiesto per segna_duplicata)
      *   id_segnalazione_correlata?: int (per collega)
      * }
      *
@@ -202,28 +201,6 @@ class SegnalazioneWorkflowService
             $update['importo_preventivo'] = $params['importo_preventivo'];
         }
 
-        // Gestione DUPLICATA: imposta la segnalazione madre
-        if ($azione->codice === 'segna_duplicata') {
-            $idMadre = (int) ($params['id_segnalazione_madre'] ?? 0);
-            if (! $idMadre) {
-                throw ValidationException::withMessages([
-                    'id_segnalazione_madre' => 'Seleziona la segnalazione madre.',
-                ]);
-            }
-            if ($idMadre === $segnalazione->id_segnalazione) {
-                throw ValidationException::withMessages([
-                    'id_segnalazione_madre' => 'Non puoi marcare una segnalazione come duplicata di se stessa.',
-                ]);
-            }
-            $madre = Segnalazione::find($idMadre);
-            if (! $madre || $madre->statoEnum() === SegnalazioneStato::DUPLICATA) {
-                throw ValidationException::withMessages([
-                    'id_segnalazione_madre' => 'La segnalazione madre non è valida.',
-                ]);
-            }
-            $update['id_segnalazione_madre'] = $idMadre;
-        }
-
         // Motivazione obbligatoria per ANNULLATA
         if ($azione->codice === 'annulla' && empty($params['nota'])) {
             throw ValidationException::withMessages([
@@ -297,6 +274,11 @@ class SegnalazioneWorkflowService
         $statiConsentiti = is_array($filtro) ? ($filtro['stati'] ?? []) : [];
 
         if (! in_array($statoCorrente->value, $statiConsentiti, true)) {
+            return false;
+        }
+
+        // Sostituita da "Accorpa" (AccorpamentoService): la riga resta in db_azioni per lo storico.
+        if ($azione->codice === 'segna_duplicata') {
             return false;
         }
 
