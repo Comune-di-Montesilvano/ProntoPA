@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\SegnalazioneStato;
 use App\Events\SegnalazionePublishedAutomatically;
 use App\Jobs\InviaWebhookOutbound;
+use App\Services\Segnalazioni\DestinatariAssegnatario;
 use App\Models\Azione;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
@@ -351,27 +352,15 @@ class SegnalazioneWorkflowService
         }
 
         if ($azione->flag_appalto && $segnalazione->id_appalto) {
-            $appalto = $segnalazione->appalto()->first();
-            $impresa = $appalto?->id_impresa ? \App\Models\Impresa::find($appalto->id_impresa) : null;
+            // Delegati attivi + email aziendale; ditta disattivata: nessuno.
+            $destinatari = DestinatariAssegnatario::per($segnalazione);
 
-            // Ditta disattivata: nessuno ha accesso, nessuna email.
-            if ($impresa !== null && $impresa->attiva !== false) {
-                $destinatari = User::role('impresa')
-                    ->where('id_impresa', $impresa->id_impresa)
-                    ->get()
-                    ->filter(fn (User $user) => $user->attivo !== false);
-
-                if ($destinatari->isNotEmpty()) {
-                    Notification::send($destinatari, new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
-                }
-
-                // Anche l'email aziendale, se non coincide con quella di un delegato.
-                $emailDitta = mb_strtolower(trim((string) $impresa->email));
-                $giaAvvisata = $destinatari->contains(fn (User $u) => mb_strtolower(trim((string) $u->email)) === $emailDitta);
-                if ($emailDitta !== '' && ! $giaAvvisata) {
-                    Notification::route('mail', $emailDitta)
-                        ->notify(new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
-                }
+            if ($destinatari['utenti']->isNotEmpty()) {
+                Notification::send($destinatari['utenti'], new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
+            }
+            foreach ($destinatari['email'] as $email) {
+                Notification::route('mail', $email)
+                    ->notify(new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
             }
 
             return;

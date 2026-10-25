@@ -15,6 +15,8 @@ use App\Models\Specializzazione;
 use App\Models\StoricoStatoSegnalazione;
 use App\Notifications\NotaDaEsternoNotification;
 use App\Notifications\NuovaNotaSegnalazione;
+use App\Notifications\SollecitoNotification;
+use App\Services\Segnalazioni\DestinatariAssegnatario;
 use App\Services\Segnalazioni\DestinatariComune;
 use App\Support\Segnalazioni\CaricaAllegati;
 use App\Support\Segnalazioni\LetturaScheda;
@@ -362,6 +364,35 @@ class SegnalazioneController extends Controller
         return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
             ->with('success', 'Nota aggiunta.')
             ->withFragment('note');
+    }
+
+    // ── Sollecito a chi ha il lavoro ──────────────────────────────────────────
+
+    public function sollecita(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('sollecita', $segnalazione);
+
+        $data = $request->validate(['testo' => ['nullable', 'string', 'max:2000']]);
+        $testo = 'Sollecito: '.(trim((string) ($data['testo'] ?? '')) ?: 'aggiornare sullo stato del lavoro.');
+
+        $segnalazione->note()->create([
+            'testo'            => $testo,
+            'id_utente'        => auth()->id(),
+            'visibile_web'     => false,
+            'visibile_impresa' => (bool) $segnalazione->id_appalto,
+        ]);
+
+        $destinatari = DestinatariAssegnatario::per($segnalazione, auth()->user());
+        $notifica = new SollecitoNotification($segnalazione, $testo);
+        if ($destinatari['utenti']->isNotEmpty()) {
+            Notification::send($destinatari['utenti'], $notifica);
+        }
+        foreach ($destinatari['email'] as $email) {
+            Notification::route('mail', $email)->notify($notifica);
+        }
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Sollecito inviato.');
     }
 
     // ── Stampa scheda ────────────────────────────────────────────────────────
