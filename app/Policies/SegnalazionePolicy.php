@@ -77,6 +77,19 @@ class SegnalazionePolicy
         return false;
     }
 
+    /**
+     * Priorità e urgenza le decide il comune (admin o gestore che può gestirla),
+     * non chi segnala né chi esegue il lavoro.
+     */
+    public function modificaPriorita(User $user, Segnalazione $segnalazione): bool
+    {
+        if (! ($user->isAdmin() || $user->hasRole('admin') || $user->isGestore() || $user->hasRole('gestore'))) {
+            return false;
+        }
+
+        return $this->update($user, $segnalazione);
+    }
+
     public function delete(User $user, Segnalazione $segnalazione): bool
     {
         return $user->isAdmin() || $user->hasRole('admin');

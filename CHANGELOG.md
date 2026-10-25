@@ -4,6 +4,13 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.21] - 2026-10-25
+
+### Added
+- Scheda segnalazione: gestori e admin possono modificare priorità e urgenza ("Modifica"
+  accanto al badge). La scadenza SLA viene ricalcolata e resta una nota interna con
+  priorità precedente e nuova. Segnalatori, operai e ditte non possono modificarla.
+
 ## [0.8.20] - 2026-10-23
 
 ### Added

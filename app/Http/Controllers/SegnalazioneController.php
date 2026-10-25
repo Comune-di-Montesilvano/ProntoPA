@@ -372,6 +372,53 @@ class SegnalazioneController extends Controller
         return back()->with('success', $segnalazione->flag_evidenza ? 'Rimossa da evidenza.' : 'Aggiunta in evidenza.');
     }
 
+    // ── Priorità (decisa dal comune) ──────────────────────────────────────────
+
+    public function aggiornaPriorita(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('modificaPriorita', $segnalazione);
+
+        $data = $request->validate([
+            'livello_priorita'     => ['required', 'integer', 'between:1,4'],
+            'segnalazione_urgente' => ['nullable', 'boolean'],
+        ]);
+
+        $prima = $segnalazione->label_priorita . ($segnalazione->segnalazione_urgente ? ', urgente' : '');
+
+        $segnalazione->fill([
+            'livello_priorita'     => (int) $data['livello_priorita'],
+            'segnalazione_urgente' => (bool) ($data['segnalazione_urgente'] ?? false),
+        ]);
+
+        if (! $segnalazione->isDirty()) {
+            return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione);
+        }
+
+        // La scadenza SLA dipende da priorità e urgenza: va ricalcolata sulle aperte.
+        if (! $segnalazione->isChiusa()) {
+            $scadenza = $this->sla->calcolaScadenza($segnalazione);
+            if ($scadenza) {
+                $segnalazione->data_scadenza_sla = $scadenza;
+                $segnalazione->sla_violato = $scadenza->isPast();
+            }
+        }
+
+        $segnalazione->save();
+
+        $dopo = $segnalazione->label_priorita . ($segnalazione->segnalazione_urgente ? ', urgente' : '');
+
+        // Traccia interna: chi ha cambiato cosa (non visibile a ditta né sul web).
+        $segnalazione->note()->create([
+            'testo'            => "Priorità modificata: {$prima} → {$dopo}.",
+            'id_utente'        => auth()->id(),
+            'visibile_web'     => false,
+            'visibile_impresa' => false,
+        ]);
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Priorità aggiornata.');
+    }
+
     // ── Toggle riservata ──────────────────────────────────────────────────────
 
     public function toggleRiservata(Segnalazione $segnalazione): RedirectResponse
