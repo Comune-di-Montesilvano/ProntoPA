@@ -21,6 +21,7 @@ class FascicoloPdfController extends Controller
             'operatore',
             'utente',
             'appalto.impresa',
+            'note' => fn ($q) => $q->visibiliA(auth()->user()),
             'note.autore',
             'storicoStati.stato',
             'storicoStati.utente',
