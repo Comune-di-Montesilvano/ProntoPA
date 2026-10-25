@@ -13,7 +13,11 @@ use App\Models\Provenienza;
 use App\Models\Segnalazione;
 use App\Models\Specializzazione;
 use App\Models\StoricoStatoSegnalazione;
+use App\Notifications\NotaDaEsternoNotification;
 use App\Notifications\NuovaNotaSegnalazione;
+use App\Services\Segnalazioni\DestinatariComune;
+use App\Support\Segnalazioni\CaricaAllegati;
+use App\Support\Segnalazioni\LetturaScheda;
 use App\Jobs\CalcolaEmbeddingSegnalazione;
 use App\Jobs\GeneraTitoloSegnalazione;
 use App\Jobs\SuggerisciTriageSegnalazione;
@@ -330,14 +334,28 @@ class SegnalazioneController extends Controller
             'testo'            => ['required', 'string', 'max:2000'],
             'visibile_web'     => ['boolean'],
             'visibile_impresa' => ['boolean'],
-        ]);
+            ...CaricaAllegati::regole(),
+        ], CaricaAllegati::messaggi());
+
+        // Chi scrive da fuori non sceglie a chi arriva: la ditta parla al comune (e ai suoi),
+        // il segnalante al comune. Solo il comune decide la visibilità.
+        $utente = auth()->user();
+        [$web, $impresa] = match (true) {
+            $utente->hasRole('impresa')                  => [false, true],
+            LetturaScheda::per($utente) === 'segnalante' => [true, false],
+            default => [(bool) ($data['visibile_web'] ?? false), (bool) ($data['visibile_impresa'] ?? false)],
+        };
 
         $nota = $segnalazione->note()->create([
             'testo'            => $data['testo'],
-            'id_utente'        => auth()->id(),
-            'visibile_web'     => $data['visibile_web'] ?? false,
-            'visibile_impresa' => $data['visibile_impresa'] ?? false,
+            'id_utente'        => $utente->id,
+            'visibile_web'     => $web,
+            'visibile_impresa' => $impresa,
         ]);
+
+        if ($request->hasFile('allegati')) {
+            CaricaAllegati::salva($segnalazione, $request->file('allegati'), $utente);
+        }
 
         $this->notificaNota($segnalazione, $nota);
 
@@ -580,6 +598,17 @@ class SegnalazioneController extends Controller
         if ($nota->visibile_web && $segnalazione->id_utente_segnalazione && $segnalazione->id_utente_segnalazione !== $attoreId) {
             $segnalatore = User::find($segnalazione->id_utente_segnalazione);
             $segnalatore?->notify($notification);
+        }
+
+        $attore = auth()->user();
+        if ($attore && LetturaScheda::per($attore) !== 'gestore') {
+            $mittente = $attore->hasRole('impresa')
+                ? ($attore->impresa->ragione_sociale ?? $attore->name)
+                : $attore->name;
+            $comune = DestinatariComune::per($segnalazione, $attore);
+            if ($comune->isNotEmpty()) {
+                Notification::send($comune, new NotaDaEsternoNotification($segnalazione, $nota, (string) $mittente));
+            }
         }
     }
 

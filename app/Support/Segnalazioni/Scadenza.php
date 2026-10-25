@@ -54,7 +54,7 @@ class Scadenza
             return ['testo' => 'Scade tra '.self::plurale(max(1, $ore), 'ora', 'ore'), 'tono' => 'amber'];
         }
 
-        return ['testo' => 'Scade il '.$s->data_scadenza_sla->format('d/m'), 'tono' => 'slate'];
+        return ['testo' => 'Scade il '.Carbon::parse($s->data_scadenza_sla)->format('d/m'), 'tono' => 'slate'];
     }
 
     private static function secondiRimasti(Segnalazione $s, ?Carbon $ora): ?int
@@ -63,7 +63,7 @@ class Scadenza
             return null;
         }
 
-        return $s->data_scadenza_sla->getTimestamp() - ($ora ?? now())->getTimestamp();
+        return Carbon::parse($s->data_scadenza_sla)->getTimestamp() - ($ora ?? now())->getTimestamp();
     }
 
     private static function plurale(int $n, string $uno, string $molti): string
