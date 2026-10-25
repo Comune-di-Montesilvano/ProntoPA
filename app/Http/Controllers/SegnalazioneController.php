@@ -219,6 +219,7 @@ class SegnalazioneController extends Controller
             'operatore', 'utente', 'appalto', 'specializzazione',
             'squadraAssegnata',
             'segnalazioneMadre', 'duplicati', 'segnalazioneCorrelata', 'correlate',
+            'note' => fn ($q) => $q->visibiliA(auth()->user()),
             'note.autore',
             'storicoStati.stato', 'storicoStati.utente',
             'allegati.utenteCreazione',
@@ -354,7 +355,7 @@ class SegnalazioneController extends Controller
         $segnalazione->load([
             'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
             'operatore', 'utente', 'appalto.impresa',
-            'note',
+            'note' => fn ($q) => $q->visibiliA(auth()->user()),
             'storicoStati.stato', 'storicoStati.utente',
         ]);
 

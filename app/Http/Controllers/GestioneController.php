@@ -143,7 +143,7 @@ class GestioneController extends Controller
             ->with([
                 'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
                 'operatore', 'utente', 'appalto.impresa',
-                'note',
+                'note' => fn ($q) => $q->visibiliA($request->user()),
                 'storicoStati.stato', 'storicoStati.utente',
             ])
             ->get();

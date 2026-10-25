@@ -4,6 +4,15 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.8.22] - 2026-10-25
+
+### Security
+- Note interne non più visibili a ditte e segnalanti. Finora la scheda (e stampa,
+  fascicolo PDF, Telegram per i segnalanti) mostrava tutte le note a chiunque potesse
+  aprire la segnalazione: "visibile impresa" / "visibile web" decidevano solo chi
+  riceveva l'email. Ora la ditta vede le note per la ditta e quelle della propria ditta,
+  il segnalante quelle pubbliche e le proprie; il personale del comune vede tutto.
+
 ## [0.8.21] - 2026-10-25
 
 ### Added

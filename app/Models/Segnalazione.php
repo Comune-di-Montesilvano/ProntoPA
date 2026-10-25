@@ -129,6 +129,7 @@ class Segnalazione extends Model
         return $this->belongsTo(Specializzazione::class, 'id_specializzazione', 'id_specializzazione');
     }
 
+    /** @return HasMany<NotaSegnalazione, $this> */
     public function note(): HasMany
     {
         return $this->hasMany(NotaSegnalazione::class, 'id_segnalazione', 'id_segnalazione')

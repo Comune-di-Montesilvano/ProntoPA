@@ -299,11 +299,7 @@ class TelegramWebhookController extends Controller
             return;
         }
 
-        $query = $segnalazione->note()->latest();
-        if ($user->hasRole('impresa')) {
-            $query->where('visibile_impresa', true);
-        }
-        $ultime = $query->limit(3)->get();
+        $ultime = $segnalazione->note()->visibiliA($user)->latest()->limit(3)->get();
 
         if ($ultime->isEmpty()) {
             $this->telegram->sendMessage($user->telegram_chat_id, 'Nessuna nota per #' . $idSegnalazione . '.');
