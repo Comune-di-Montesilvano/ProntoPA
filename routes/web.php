@@ -98,6 +98,8 @@ Route::middleware('auth')->group(function () {
         ->name('segnalazioni.nota');
     Route::post('segnalazioni/{segnalazione}/sollecita', [SegnalazioneController::class, 'sollecita'])
         ->name('segnalazioni.sollecita');
+    Route::post('segnalazioni/{segnalazione}/fine-lavori', [SegnalazioneController::class, 'fineLavori'])
+        ->name('segnalazioni.fine-lavori');
 
     Route::post('segnalazioni/{segnalazione}/evidenza', [SegnalazioneController::class, 'toggleEvidenza'])
         ->name('segnalazioni.evidenza');

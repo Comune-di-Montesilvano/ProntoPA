@@ -186,6 +186,12 @@ class Segnalazione extends Model
         return $this->data_chiusura !== null;
     }
 
+    /** Ditta o operaio hanno già mandato le foto del lavoro finito. */
+    public function haFineLavori(): bool
+    {
+        return $this->allegati()->where('fase', 'dopo')->exists();
+    }
+
     public function statoEnum(): SegnalazioneStato
     {
         return SegnalazioneStato::from($this->id_stato_segnalazione instanceof SegnalazioneStato

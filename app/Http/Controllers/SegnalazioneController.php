@@ -18,6 +18,7 @@ use App\Notifications\NuovaNotaSegnalazione;
 use App\Notifications\SollecitoNotification;
 use App\Services\Segnalazioni\DestinatariAssegnatario;
 use App\Services\Segnalazioni\DestinatariComune;
+use App\Services\Segnalazioni\FineLavoriService;
 use App\Support\Segnalazioni\CaricaAllegati;
 use App\Support\Segnalazioni\LetturaScheda;
 use App\Jobs\CalcolaEmbeddingSegnalazione;
@@ -268,25 +269,17 @@ class SegnalazioneController extends Controller
         }
 
         if ($azione->codice === 'chiudi') {
-            $rules['ore_lavoro'] = ['required', 'numeric', 'min:0'];
-            $rules['materiali']  = ['required', 'string', 'max:1000'];
-            $rules['nota']       = ['required', 'string', 'max:2000'];
-
-            $maxSizeMb      = (int) Impostazione::get('allegati_max_size_mb', 10);
-            $maxPerRequest  = (int) Impostazione::get('allegati_max_per_request', 5);
-            $mimeConsentiti = array_filter(
-                array_map('trim', explode(',', Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png')))
-            );
-
-            $rules['allegati']   = ['required', 'array', 'min:1', 'max:' . $maxPerRequest];
-            $rules['allegati.*'] = [
-                'file',
-                'max:' . ($maxSizeMb * 1024),
-                'mimetypes:' . implode(',', $mimeConsentiti),
-            ];
+            // Se ditta/operaio hanno già mandato il rapportino con le foto, il comune chiude e basta.
+            $giaRendicontata = $segnalazione->haFineLavori();
+            $obbligo = $giaRendicontata ? 'nullable' : 'required';
+            $rules['ore_lavoro'] = [$obbligo, 'numeric', 'min:0'];
+            $rules['materiali']  = [$obbligo, 'string', 'max:1000'];
+            $rules['nota']       = [$obbligo, 'string', 'max:2000'];
+            $rules += CaricaAllegati::regole(obbligatori: ! $giaRendicontata);
         }
 
         $data = $request->validate($rules, [
+            ...CaricaAllegati::messaggi(),
             'allegati.required' => 'Devi caricare almeno una foto dell\'intervento per proporre la chiusura.',
             'allegati.min' => 'Devi caricare almeno una foto dell\'intervento per proporre la chiusura.',
         ]);
@@ -299,31 +292,34 @@ class SegnalazioneController extends Controller
         );
 
         if ($request->hasFile('allegati') && $azione->codice === 'chiudi') {
-            $disk = Impostazione::get('allegati_storage_disk', 'local');
-            $user = auth()->user();
-
-            foreach ($request->file('allegati') as $file) {
-                $ext      = $file->getClientOriginalExtension();
-                $filename = Str::uuid() . ($ext ? '.' . $ext : '');
-                $path     = $file->storeAs(
-                    'allegati/' . $segnalazione->id_segnalazione,
-                    $filename,
-                    $disk
-                );
-                AllegatoSegnalazione::create([
-                    'id_segnalazione'     => $segnalazione->id_segnalazione,
-                    'percorso'            => $path,
-                    'tipo'                => $file->getMimeType(),
-                    'nome_originale'      => $file->getClientOriginalName(),
-                    'dimensione'          => $file->getSize(),
-                    'id_utente_creazione' => $user->id,
-                    'fase'                => 'dopo',
-                ]);
-            }
+            CaricaAllegati::salva($segnalazione, $request->file('allegati'), auth()->user(), 'dopo');
         }
 
         return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
             ->with('success', 'Azione eseguita.');
+    }
+
+    // ── Fine lavori (ditta, operaio) ──────────────────────────────────────────
+
+    public function fineLavori(Request $request, Segnalazione $segnalazione, FineLavoriService $servizio): RedirectResponse
+    {
+        $this->authorize('comunicaFineLavori', $segnalazione);
+
+        $data = $request->validate([
+            'ore_lavoro' => ['nullable', 'numeric', 'min:0'],
+            'materiali'  => ['nullable', 'string', 'max:1000'],
+            'nota'       => ['required', 'string', 'max:2000'],
+            ...CaricaAllegati::regole(obbligatori: true),
+        ], [
+            ...CaricaAllegati::messaggi(),
+            'allegati.required' => 'Serve almeno una foto del lavoro finito.',
+            'allegati.min'      => 'Serve almeno una foto del lavoro finito.',
+        ]);
+
+        $servizio->comunica($segnalazione, auth()->user(), $data, $request->file('allegati'));
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Fine lavori comunicata al comune.');
     }
 
     // ── Aggiungi nota ─────────────────────────────────────────────────────────
