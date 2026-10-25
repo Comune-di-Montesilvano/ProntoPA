@@ -37,13 +37,10 @@ class CambioStatoTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($gestore, $segnalazione) {
             $browser->loginAs($gestore)
                 ->visit('/segnalazioni/' . $segnalazione->id_segnalazione)
-                ->assertSee('Nuova')
-                ->press('Gestione Segnalazione')
-                ->waitFor('#gestione')
-                ->select('id_azione', '1') // Prendi in carico
-                ->waitFor('@esegui-azione')
-                ->press('@esegui-azione')
-                ->waitForText('In carico');
+                ->assertSee('Da smistare')
+                ->within('@prossimo-passo', fn (Browser $b) => $b->press('Prendi in carico'))
+                ->waitForText('Da assegnare')
+                ->assertSee('In carico');
         });
     }
 }

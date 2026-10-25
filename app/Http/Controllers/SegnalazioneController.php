@@ -20,7 +20,11 @@ use App\Services\Segnalazioni\AccorpamentoService;
 use App\Services\Segnalazioni\DestinatariAssegnatario;
 use App\Services\Segnalazioni\DestinatariComune;
 use App\Services\Segnalazioni\FineLavoriService;
+use App\Models\Appalto;
+use App\Models\Squadra;
+use App\Support\Segnalazioni\Attivita;
 use App\Support\Segnalazioni\CaricaAllegati;
+use App\Support\Segnalazioni\ProssimoPasso;
 use App\Support\Segnalazioni\LetturaScheda;
 use App\Jobs\CalcolaEmbeddingSegnalazione;
 use App\Jobs\GeneraTitoloSegnalazione;
@@ -234,16 +238,42 @@ class SegnalazioneController extends Controller
             'adesioni.utente',
         ]);
 
-        $azioniDisponibili = $this->workflow->getAzioniDisponibili($segnalazione, auth()->user());
-        $operatori = User::where('gestore_segnalazioni', true)
-            ->orWhere('amministratore', true)
-            ->orderBy('name')
-            ->get();
+        $utente = auth()->user();
+        $lettura = LetturaScheda::per($utente);
+        $azioniDisponibili = $utente->can('update', $segnalazione)
+            ? $this->workflow->getAzioniDisponibili($segnalazione, $utente)
+            : collect();
+        $prossimoPasso = ProssimoPasso::per($segnalazione, $utente);
+        $attivita = Attivita::per($segnalazione, $utente);
 
         $fotoPrima = $segnalazione->allegati->where('fase', 'prima');
         $fotoDopo = $segnalazione->allegati->where('fase', 'dopo');
 
-        return view('segnalazioni.show', compact('segnalazione', 'azioniDisponibili', 'operatori', 'fotoPrima', 'fotoDopo'));
+        // Dati dei pannelli di assegnazione: servono solo alla lettura del comune.
+        $operatori = collect();
+        $squadre = collect();
+        $appaltiValidi = collect();
+        if ($lettura === 'gestore') {
+            $operatori = User::where(fn ($q) => $q->where('gestore_segnalazioni', true)
+                    ->orWhere('amministratore', true)
+                    ->orWhereHas('roles', fn ($r) => $r->whereIn('name', ['operaio', 'gestore', 'admin'])))
+                ->where(fn ($q) => $q->whereNull('attivo')->orWhere('attivo', true))
+                ->orderBy('name')
+                ->get();
+            if (Impostazione::get('squadre_enabled', false)) {
+                $squadre = Squadra::where('attiva', true)->orderBy('nome')->get();
+            }
+            $appaltiValidi = Appalto::where('valido', true)->with('impresa')->orderBy('descrizione')->get();
+            $gruppo = TipologiaSegnalazione::whereKey($segnalazione->id_tipologia_segnalazione)->value('id_gruppo');
+            if ($gruppo && $appaltiValidi->contains('id_gruppo', $gruppo)) {
+                $appaltiValidi = $appaltiValidi->where('id_gruppo', $gruppo)->values();
+            }
+        }
+
+        return view('segnalazioni.show', compact(
+            'segnalazione', 'lettura', 'prossimoPasso', 'attivita', 'azioniDisponibili',
+            'operatori', 'squadre', 'appaltiValidi', 'fotoPrima', 'fotoDopo',
+        ));
     }
 
     // ── Esegui azione workflow ────────────────────────────────────────────────
