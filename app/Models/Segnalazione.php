@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Squadra;
+use Illuminate\Support\Carbon;
 
 class Segnalazione extends Model
 {
@@ -197,6 +198,40 @@ class Segnalazione extends Model
     public function isSollecitata(): bool
     {
         return ! $this->isChiusa() && $this->volteSegnalata() > 1;
+    }
+
+    /** Guasto che si ripresenta: collegata a una riparazione precedente già chiusa. */
+    public function isRicorrente(): bool
+    {
+        return (bool) $this->id_segnalazione_correlata;
+    }
+
+    /**
+     * La riparazione precedente di un guasto ricorrente: quando è stata chiusa,
+     * da chi (ditta o operaio) e quanti giorni prima di questa segnalazione.
+     *
+     * @return array{id: int, chiusa_il: Carbon, da: string, giorni: int}|null
+     */
+    public function riparazionePrecedente(): ?array
+    {
+        $precedente = $this->isRicorrente() ? self::find($this->id_segnalazione_correlata) : null;
+
+        if ($precedente === null || $precedente->data_chiusura === null) {
+            return null;
+        }
+
+        $chiusaIl = Carbon::parse($precedente->data_chiusura);
+        $idImpresa = $precedente->id_appalto ? Appalto::whereKey($precedente->id_appalto)->value('id_impresa') : null;
+        $da = ($idImpresa ? Impresa::whereKey($idImpresa)->value('ragione_sociale') : null)
+            ?? ($precedente->id_operatore_assegnato ? User::whereKey($precedente->id_operatore_assegnato)->value('name') : null)
+            ?? '—';
+
+        return [
+            'id' => (int) $precedente->id_segnalazione,
+            'chiusa_il' => $chiusaIl,
+            'da' => (string) $da,
+            'giorni' => (int) $chiusaIl->copy()->startOfDay()->diffInDays(Carbon::parse($this->data_segnalazione ?? now())->startOfDay()),
+        ];
     }
 
     /** Ditta o operaio hanno già mandato le foto del lavoro finito. */

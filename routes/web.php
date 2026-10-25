@@ -92,6 +92,8 @@ Route::middleware('auth')->group(function () {
         ->name('segnalazioni.accorpa');
     Route::get('segnalazioni/{segnalazione}/candidati-accorpa', [SegnalazioneController::class, 'candidatiAccorpa'])
         ->name('segnalazioni.candidati-accorpa');
+    Route::get('segnalazioni/{segnalazione}/candidati-collega', [SegnalazioneController::class, 'candidatiCollega'])
+        ->name('segnalazioni.candidati-collega');
 
     Route::post('segnalazioni/{segnalazione}/azione', [SegnalazioneController::class, 'eseguiAzione'])
         ->name('segnalazioni.azione');

@@ -571,6 +571,32 @@ class SegnalazioneController extends Controller
         return response()->json(self::candidatiJson($candidati, $segnalazione));
     }
 
+    /** Candidati per "Collega a precedente": riparazioni chiuse negli ultimi 24 mesi, stessa sede e tipologia. */
+    public function candidatiCollega(Request $request, Segnalazione $segnalazione): JsonResponse
+    {
+        $this->authorize('update', $segnalazione);
+
+        $q = trim((string) $request->query('q', ''));
+        $query = Segnalazione::visibileA($request->user())
+            ->whereNotNull('data_chiusura')
+            ->where('id_stato_segnalazione', SegnalazioneStato::COMPLETATA->value)
+            ->with(['stato', 'plesso']);
+
+        if ($q === '') {
+            $query->where('id_tipologia_segnalazione', $segnalazione->id_tipologia_segnalazione)
+                ->where('data_chiusura', '>=', now()->subMonths(24));
+            if ($segnalazione->id_plesso) {
+                $query->where('id_plesso', $segnalazione->id_plesso);
+            }
+        } else {
+            $query->where(fn ($w) => ctype_digit($q)
+                ? $w->where('id_segnalazione', (int) $q)
+                : $w->where('testo_segnalazione', 'like', '%'.$q.'%')->orWhere('titolo_generato', 'like', '%'.$q.'%'));
+        }
+
+        return response()->json(self::candidatiJson($query->orderByDesc('data_chiusura')->limit(9)->get(), $segnalazione));
+    }
+
     /**
      * @param  \Illuminate\Support\Collection<int, Segnalazione>  $candidati
      * @return list<array{id: int, titolo: string, sede: ?string, stato: string, data: ?string}>
