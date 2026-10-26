@@ -22,6 +22,12 @@ class RiepilogoInattivitaNotification extends Notification implements ShouldQueu
      */
     public function __construct(public readonly array $avvisate, public readonly array $archiviate) {}
 
+    /** @return list<int> per TracciaNotificaInviata */
+    public function segnalazioniTracciate(): array
+    {
+        return array_map(fn (Segnalazione $s) => $s->id_segnalazione, [...$this->avvisate, ...$this->archiviate]);
+    }
+
     /** @return list<string> */
     public function via(object $notifiable): array
     {

@@ -4,6 +4,15 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.4] - 2026-10-27
+
+### Added
+- Scheda segnalazione (lettura del comune): riquadro "Notifiche inviate" con tipo, destinatario
+  (nome o email), data e canale di ogni notifica partita per la segnalazione: assegnazioni,
+  solleciti, avvisi di inattività, riepiloghi ai supervisori, tempi superati, chiusure. Si
+  registra all'invio effettivo; segnalante e ditta non lo vedono. Le notifiche inviate prima
+  dell'aggiornamento non compaiono.
+
 ## [0.9.3] - 2026-10-27
 
 Segnalazioni ferme: avviso e archiviazione automatica; il segnalante può sollecitare.

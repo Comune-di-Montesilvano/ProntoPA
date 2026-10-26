@@ -152,6 +152,11 @@ class Segnalazione extends Model
             ->orderByDesc('created_at');
     }
 
+    public function notifiche(): HasMany
+    {
+        return $this->hasMany(NotificaSegnalazione::class, 'id_segnalazione', 'id_segnalazione');
+    }
+
     public function adesioni(): HasMany
     {
         return $this->hasMany(AdesioneSegnalazione::class, 'id_segnalazione', 'id_segnalazione')
