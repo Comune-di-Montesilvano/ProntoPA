@@ -167,7 +167,7 @@ class ImpostazioniSeeder extends Seeder
                 'valore'      => '1',
                 'tipo'        => 'boolean',
                 'gruppo'      => 'notifiche_telegram',
-                'descrizione' => 'Notifica Telegram per segnalazioni in stato critico/urgente',
+                'descrizione' => 'Notifica Telegram per segnalazioni a priorità critica',
             ],
             [
                 'chiave'      => 'telegram_notifica_sla_warning',

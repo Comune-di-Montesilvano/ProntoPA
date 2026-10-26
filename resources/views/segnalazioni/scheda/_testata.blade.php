@@ -17,10 +17,10 @@
             @can('modificaPriorita', $segnalazione)
                 <button type="button" x-data x-on:click="$dispatch('apri-pannello', 'priorita')"
                         class="rounded-md px-1.5 py-0.5 hover:bg-[var(--slate-100)]" title="Cambia priorità">
-                    <x-pa.prio :livello="$segnalazione->livello_priorita" :urgente="$segnalazione->segnalazione_urgente" />
+                    <x-pa.prio :livello="$segnalazione->livello_priorita" />
                 </button>
             @else
-                <x-pa.prio :livello="$segnalazione->livello_priorita" :urgente="$segnalazione->segnalazione_urgente" />
+                <x-pa.prio :livello="$segnalazione->livello_priorita" />
             @endcan
             <x-pa.scadenza :segnalazione="$segnalazione" estesa />
             @if($segnalazione->flag_riservata)

@@ -37,8 +37,7 @@ class CheckSlaViolazioni extends Command
                 // Con il digest attivo l'alert immediato resta solo per le critiche:
                 // il resto confluisce nel riepilogo mattutino.
                 $alertImmediato = ! Impostazione::get('digest_enabled', false)
-                    || (int) $s->livello_priorita === 4
-                    || $s->segnalazione_urgente;
+                    || (int) $s->livello_priorita === 4;
 
                 if ($alertImmediato && $supervisori->isNotEmpty()) {
                     Notification::send($supervisori, new SlaViolazioneNotification($s));

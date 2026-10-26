@@ -18,11 +18,6 @@ class SlaService
     {
         $priorita = $segnalazione->livello_priorita ?? 2;
 
-        // Segnalazione urgente → priorità 4 per lookup SLA
-        if ($segnalazione->segnalazione_urgente) {
-            $priorita = 4;
-        }
-
         $regola = SlaConfigurazione::applicabileA(
             $segnalazione->id_tipologia_segnalazione,
             $segnalazione->id_specializzazione,
@@ -42,14 +37,10 @@ class SlaService
 
     /**
      * Ricalcola la priorità in base all'anzianità della segnalazione.
-     * L'urgente forza priorità 4; altrimenti scala se superata soglia giorni.
+     * Scala di un livello se superata la soglia di giorni.
      */
     public function calcolaPriorita(Segnalazione $segnalazione): int
     {
-        if ($segnalazione->segnalazione_urgente) {
-            return 4;
-        }
-
         $prioritaBase = $segnalazione->livello_priorita ?? 2;
         $sogliaNumerica = (int) Impostazione::get('sla_anzianita_scala_giorni', 30);
 

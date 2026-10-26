@@ -14,7 +14,7 @@
         @switch($colonna)
             @case('priorita')
                 <td class="pa-col-priorita whitespace-nowrap">
-                    <x-pa.prio :livello="$s->livello_priorita" :urgente="(bool) $s->segnalazione_urgente" />
+                    <x-pa.prio :livello="$s->livello_priorita" />
                 </td>
                 @break
 

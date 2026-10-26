@@ -308,7 +308,6 @@ class PopulateDemoData extends Command
                     'id_appalto'                 => $assegnaImpresa ? $appalti->random()->id_appalto : null,
                     'importo_preventivo'         => $assegnaImpresa ? fake()->randomFloat(2, 150, 4500) : 0,
                     'importo_liquidato'          => $stato === SegnalazioneStato::COMPLETATA ? fake()->randomFloat(2, 150, 4500) : 0,
-                    'segnalazione_urgente'       => fake()->boolean(15),
                     'livello_priorita'           => fake()->numberBetween(1, 4),
                     'data_chiusura'              => $stato->isTerminale() ? $dataCreata->clone()->addDays(fake()->numberBetween(1, 30)) : null,
                 ]);

@@ -33,7 +33,7 @@ class ReportController extends Controller
             'aperte'      => $segnalazioni->filter(fn ($s) => ! $s->isChiusa())->count(),
             'chiuse'      => $segnalazioni->filter(fn ($s) => $s->isChiusa())->count(),
             'sla_violato' => $segnalazioni->filter(fn ($s) => $s->sla_violato)->count(),
-            'urgenti'     => $segnalazioni->filter(fn ($s) => $s->segnalazione_urgente)->count(),
+            'critiche'    => $segnalazioni->filter(fn ($s) => (int) $s->livello_priorita === 4)->count(),
         ];
 
         return view('reports.mensile-gestore', compact('segnalazioni', 'kpi', 'mese', 'anno', 'dal', 'al'));

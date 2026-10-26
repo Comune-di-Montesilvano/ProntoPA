@@ -1,4 +1,4 @@
-{{-- Priorità e urgenza: decide il comune (0.8.21). --}}
+{{-- Priorità: decide il comune (0.8.21). --}}
 <x-pa.drawer name="priorita" title="Priorità" :sottotitolo="'#'.$segnalazione->id_segnalazione" :aperto="old('_pannello') === 'priorita'">
     <form method="POST" action="{{ route('segnalazioni.priorita', $segnalazione->id_segnalazione) }}" class="flex flex-1 flex-col">
         @csrf @method('PATCH')
@@ -13,11 +13,6 @@
                     </label>
                 @endforeach
             </fieldset>
-            <input type="hidden" name="segnalazione_urgente" value="0">
-            <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="segnalazione_urgente" value="1" class="rounded border-[var(--slate-300)]" @checked($segnalazione->segnalazione_urgente)>
-                Urgente
-            </label>
             <x-input-error :messages="$errors->get('livello_priorita')" />
         </div>
         <footer class="flex justify-end gap-2 border-t border-[var(--slate-200)] px-6 py-4">
