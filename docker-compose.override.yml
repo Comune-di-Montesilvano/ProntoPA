@@ -37,6 +37,9 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
     image: pronto-pa-dev:local
+    # queue:listen invece di queue:work --max-time: non esce dopo un'ora (in dev
+    # restart "no" non lo riavvierebbe) e ricarica il codice a ogni job.
+    command: php artisan queue:listen --tries=3 --backoff=30,120 --sleep=3
     volumes:
       - ./:/var/www/html
       - ./storage:/var/www/html/storage
@@ -49,6 +52,7 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
     image: pronto-pa-dev:local
+    command: php artisan queue:listen redis-lunghi --queue=lunghi --force --tries=1 --timeout=7200 --sleep=3
     volumes:
       - ./:/var/www/html
       - ./storage:/var/www/html/storage
