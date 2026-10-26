@@ -109,6 +109,7 @@
             </x-pa.card>
 
             @include('segnalazioni.scheda._collegate')
+            @include('segnalazioni.scheda._notifiche')
         </div>
     </div>
 </div>
