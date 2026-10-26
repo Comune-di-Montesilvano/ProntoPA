@@ -9,17 +9,17 @@
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.10",
         "@tailwindcss/vite": "^4.3.3",
-        "alpinejs": "^3.17.4",
+        "alpinejs": "^3.17.5",
         "axios": "^1.20.0",
         "concurrently": "^10.0.6",
         "laravel-vite-plugin": "^3.2.0",
         "postcss": "^8.5.31",
         "tailwindcss": "^4.1.7",
-        "vite": "^8.3.4"
+        "vite": "^8.3.5"
     },
     "dependencies": {
         "@fortawesome/fontawesome-free": "^7.3.1",
-        "chart.js": "^4.5.1",
+        "chart.js": "^4.6.1",
         "leaflet": "^1.9.4"
     }
 }
