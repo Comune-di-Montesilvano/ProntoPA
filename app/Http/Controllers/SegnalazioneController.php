@@ -60,12 +60,14 @@ class SegnalazioneController extends Controller
     {
         $user = auth()->user();
         $segnalazioni = Segnalazione::visibileA($user)
-            ->with(['stato', 'tipologia', 'provenienza', 'plesso'])
+            ->with(['tipologia', 'provenienza', 'plesso'])
+            ->withMax('storicoStati', 'data_registrazione')
             ->aperte()
             ->orderByDesc('data_segnalazione')
             ->paginate(20);
+        $seguite = Segnalazione::idSeguiteDa($user);
 
-        return view('segnalazioni.index', compact('segnalazioni'));
+        return view('segnalazioni.index', compact('segnalazioni', 'seguite'));
     }
 
     // ── Form creazione ────────────────────────────────────────────────────────

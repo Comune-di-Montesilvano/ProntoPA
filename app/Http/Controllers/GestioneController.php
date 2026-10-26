@@ -231,11 +231,7 @@ class GestioneController extends Controller
         return match ($request->get('ordine')) {
             'recenti' => $base->orderByDesc('data_segnalazione'),
             'vecchie' => $base->orderBy('data_segnalazione'),
-            // Più urgenti: scadute (scadenza più vecchia) prima, poi scadenza crescente, poi priorità
-            default   => $base->orderByRaw('data_scadenza_sla IS NULL')
-                ->orderBy('data_scadenza_sla')
-                ->orderByDesc('livello_priorita')
-                ->orderBy('data_segnalazione'),
+            default   => $base->ordinaUrgenti(),
         };
     }
 

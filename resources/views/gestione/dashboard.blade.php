@@ -29,7 +29,8 @@
     <x-slot name="actions">
         <div x-data="{ open: false }" class="relative" @keydown.escape.window="open = false">
             <x-pa.btn x-on:click="open = !open" ::aria-expanded="open">
-                Stampa ed esporta <i class="fas fa-chevron-down text-xs" aria-hidden="true"></i>
+                <span class="sm:hidden" aria-hidden="true"><i class="fas fa-print"></i></span><span class="sr-only sm:hidden">Stampa ed esporta</span><span class="hidden sm:inline">Stampa ed esporta</span>
+                <i class="fas fa-chevron-down text-xs" aria-hidden="true"></i>
             </x-pa.btn>
             <div x-show="open" x-cloak @click.outside="open = false"
                  class="absolute right-0 z-30 mt-1 w-60 rounded-md border border-[var(--slate-200)] bg-white py-1 shadow-lg">
@@ -42,7 +43,7 @@
             </div>
         </div>
         <x-pa.btn variant="primary" :href="route('segnalazioni.create')">
-            <i class="fas fa-plus" aria-hidden="true"></i> Nuova segnalazione
+            <i class="fas fa-plus" aria-hidden="true"></i> <span class="sm:hidden">Nuova</span><span class="hidden sm:inline">Nuova segnalazione</span>
         </x-pa.btn>
     </x-slot>
 
@@ -90,10 +91,10 @@
             <input type="hidden" name="tab" value="{{ $tab }}">
             <div class="flex flex-wrap items-center gap-2">
                 <label for="filtro_q" class="sr-only">Cerca</label>
-                <input type="search" name="q" id="filtro_q" value="{{ $q }}" class="pa-input min-w-[220px] flex-1"
+                <input type="search" name="q" id="filtro_q" value="{{ $q }}" class="pa-input pa-input-auto min-w-[220px] flex-1"
                        placeholder="Cerca per testo, segnalante o numero…">
                 <label for="filtro_ordine" class="sr-only">Ordina</label>
-                <select name="ordine" id="filtro_ordine" class="pa-input w-auto" onchange="this.form.submit()" @disabled($tab === 'chiuse')>
+                <select name="ordine" id="filtro_ordine" class="pa-input pa-input-auto" onchange="this.form.submit()" @disabled($tab === 'chiuse')>
                     <option value="urgenti" @selected($ordine === 'urgenti')>Più urgenti</option>
                     <option value="recenti" @selected($ordine === 'recenti')>Più recenti</option>
                     <option value="vecchie" @selected($ordine === 'vecchie')>Più vecchie</option>

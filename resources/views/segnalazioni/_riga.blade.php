@@ -1,7 +1,7 @@
 {{-- Riga di un elenco di segnalazioni (tabella .pa-elenco, a scheda sotto 768px).
-     Parametri: s, colonne (priorita|segnalazione|stato|assegnata|scadenza|aggiornata|azioni),
+     Parametri: s, colonne (priorita|segnalazione|stato|assegnata|scadenza|aggiornata|affida|azioni),
      lettura ('gestore'|'lavoro'|'segnalante', default gestore), rapide (azioni rapide, opzionale),
-     segui (true = visibile solo per adesione, lettura segnalante). --}}
+     segui (true = visibile solo per adesione, lettura segnalante), membri (caposquadra, colonna affida). --}}
 @php
     $lettura = $lettura ?? 'gestore';
     $stato = $s->statoEnum();
@@ -75,7 +75,28 @@
 
             @case('aggiornata')
                 <td class="pa-col-aggiornata whitespace-nowrap text-sm text-[var(--slate-500)]">
-                    {{ ($s->data_chiusura ?? $s->data_segnalazione)?->format('d/m/Y') }}
+                    @php $ultimo = $s->storico_stati_max_data_registrazione ?? $s->data_chiusura ?? $s->data_segnalazione; @endphp
+                    {{ $ultimo ? \Illuminate\Support\Carbon::parse($ultimo)->format('d/m/Y') : '—' }}
+                </td>
+                @break
+
+            @case('affida')
+                <td class="pa-col-assegnata">
+                    @if(! $s->id_operatore_assegnato && ($membri ?? collect())->isNotEmpty())
+                        <form method="POST" action="{{ route('operaio.smista', $s->id_segnalazione) }}" class="flex gap-2">
+                            @csrf
+                            <label for="membro-{{ $s->id_segnalazione }}" class="sr-only">Affida a</label>
+                            <select name="id_membro" id="membro-{{ $s->id_segnalazione }}" class="pa-input pa-input-auto" required>
+                                <option value="">Affida a…</option>
+                                @foreach($membri as $membro)
+                                    <option value="{{ $membro->id }}">{{ $membro->name }}</option>
+                                @endforeach
+                            </select>
+                            <x-pa.btn type="submit" size="sm">Affida</x-pa.btn>
+                        </form>
+                    @else
+                        <span class="text-sm text-[var(--slate-700)]">{{ $s->operatore?->name ?? '—' }}</span>
+                    @endif
                 </td>
                 @break
 

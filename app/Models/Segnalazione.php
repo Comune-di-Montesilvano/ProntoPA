@@ -203,6 +203,18 @@ class Segnalazione extends Model
         return ! $this->isChiusa() && $this->volteSegnalata() > 1;
     }
 
+    /**
+     * Segnalazioni che l'utente segue per adesione senza esserne l'autore ("Segui" negli elenchi).
+     *
+     * @return list<int>
+     */
+    public static function idSeguiteDa(User $user): array
+    {
+        return AdesioneSegnalazione::where('id_utente', $user->id)
+            ->whereHas('segnalazione', fn ($q) => $q->where('id_utente_segnalazione', '!=', $user->id))
+            ->pluck('id_segnalazione')->map(fn ($id) => (int) $id)->values()->all();
+    }
+
     /** Chi ha il lavoro, per gli elenchi (null = da assegnare). Usa le relazioni già caricate. */
     public function nomeAssegnatario(): ?string
     {
@@ -369,6 +381,15 @@ class Segnalazione extends Model
     public function scopeAperte($query)
     {
         return $query->whereNull('data_chiusura');
+    }
+
+    /** Più urgenti prima: scadute (scadenza più vecchia) prima, poi scadenza crescente, poi priorità. */
+    public function scopeOrdinaUrgenti($query)
+    {
+        return $query->orderByRaw('data_scadenza_sla IS NULL')
+            ->orderBy('data_scadenza_sla')
+            ->orderByDesc('livello_priorita')
+            ->orderBy('data_segnalazione');
     }
 
     public function scopeInEvidenza($query)
