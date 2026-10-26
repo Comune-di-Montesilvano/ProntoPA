@@ -34,22 +34,21 @@ class ModificaPrioritaTest extends TestCase
     private function segnalazione(array $attr = []): Segnalazione
     {
         return Segnalazione::factory()->create(array_merge([
-            'livello_priorita' => 4, 'segnalazione_urgente' => true, 'id_stato_segnalazione' => 1,
+            'livello_priorita' => 4, 'id_stato_segnalazione' => 1,
         ], $attr));
     }
 
-    public function test_gestore_abbassa_priorita_e_toglie_urgente(): void
+    public function test_gestore_abbassa_priorita(): void
     {
         $s = $this->segnalazione();
 
         $this->actingAs($this->gestore)
-            ->patch(route('segnalazioni.priorita', $s), ['livello_priorita' => 2, 'segnalazione_urgente' => '0'])
+            ->patch(route('segnalazioni.priorita', $s), ['livello_priorita' => 2])
             ->assertRedirect(route('segnalazioni.show', $s->id_segnalazione))
             ->assertSessionHasNoErrors();
 
         $s->refresh();
         $this->assertSame(2, (int) $s->livello_priorita);
-        $this->assertFalse((bool) $s->segnalazione_urgente);
 
         $nota = $s->note()->latest('id_nota')->first();
         $this->assertNotNull($nota);
@@ -66,7 +65,7 @@ class ModificaPrioritaTest extends TestCase
         $s = $this->segnalazione(['data_segnalazione' => now()->subHours(10), 'sla_violato' => true]);
 
         $this->actingAs($this->gestore)
-            ->patch(route('segnalazioni.priorita', $s), ['livello_priorita' => 1, 'segnalazione_urgente' => '0']);
+            ->patch(route('segnalazioni.priorita', $s), ['livello_priorita' => 1]);
 
         $s->refresh();
         $this->assertTrue($s->data_scadenza_sla->isFuture());
@@ -78,7 +77,7 @@ class ModificaPrioritaTest extends TestCase
         $s = $this->segnalazione();
 
         $this->actingAs($this->gestore)
-            ->patch(route('segnalazioni.priorita', $s), ['livello_priorita' => 4, 'segnalazione_urgente' => '1']);
+            ->patch(route('segnalazioni.priorita', $s), ['livello_priorita' => 4]);
 
         $this->assertSame(0, $s->note()->count());
     }
@@ -111,7 +110,7 @@ class ModificaPrioritaTest extends TestCase
 
         foreach ([$segnalatore, $operaio, $ditta] as $u) {
             $this->actingAs($u)
-                ->patch(route('segnalazioni.priorita', $s), ['livello_priorita' => 1, 'segnalazione_urgente' => '0'])
+                ->patch(route('segnalazioni.priorita', $s), ['livello_priorita' => 1])
                 ->assertForbidden();
         }
         $this->assertSame(4, (int) $s->fresh()->livello_priorita);

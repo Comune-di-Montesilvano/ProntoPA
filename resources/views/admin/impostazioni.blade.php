@@ -21,6 +21,7 @@
                                     'antivirus'         => 'Scansione allegati',
                                     'spid'              => 'SPID/CIE (scuole)',
                                     'ldap'              => 'Gruppi Active Directory',
+                                    'orario'            => "Orario d'ufficio",
                                     default             => ucfirst($gruppo),
                                 } }}
                             </h3>
@@ -126,8 +127,20 @@
                                     @endif
 
                                     <p class="mt-0.5 text-xs text-gray-400 font-mono">{{ $imp->chiave }}</p>
+                                    <x-input-error :messages="$errors->get('impostazioni.'.$imp->chiave)" class="mt-1" />
                                 </div>
                             @endforeach
+
+                            @if($gruppo === 'orario')
+                                @php($calendario = \App\Services\Sla\CalendarioUfficio::daImpostazioni())
+                                <div class="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                                    <p>Le scadenze SLA contano solo queste ore. Weekend, festivi nazionali (Pasqua e Pasquetta comprese) e patrono sono esclusi; la pausa pranzo non si conta. Se cambi orario o patrono le scadenze delle segnalazioni aperte si ricalcolano.</p>
+                                    <p class="mt-2 font-medium">Festivi {{ now()->year }}</p>
+                                    <p class="mt-0.5 text-xs text-gray-600">
+                                        {{ collect($calendario->festivi(now()->year))->map(fn ($g) => $g->format('d/m/Y'))->implode(' · ') }}
+                                    </p>
+                                </div>
+                            @endif
 
                             @if($gruppo === 'pubblicazione')
                                 <div class="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">

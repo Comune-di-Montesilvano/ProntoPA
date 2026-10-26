@@ -89,6 +89,7 @@ Brand/mappa/email → **Admin → Impostazioni**.
 | `mail_from_address` `mail_from_name` | email |
 | `miur_anagrafe_url` `miur_comune_default` | scuole |
 | `deleghe_max_pendenti` `deleghe_giorni_stop_rifiuto` `deleghe_giorni_scadenza_richiesta` `deleghe_email_giorno_istituto` `deleghe_mesi_validita` `deleghe_giorni_avviso_delegato` | deleghe |
+| `orario_lun`…`orario_dom` (`HH:MM-HH:MM`, vuoto = chiuso) `patrono` (`GG/MM`) | orario |
 
 ```php
 $val = Impostazione::get('ente_nome', 'ProntoPA');
@@ -120,6 +121,7 @@ app/Enums/SegnalazioneStato.php    # fonte di verità sugli stati, vedi sotto
 app/Policies/SegnalazionePolicy.php
 app/Services/
   SegnalazioneWorkflowService  WebhookService  SlaService
+  Sla/CalendarioUfficio  # orario d'ufficio + festivi nazionali (Pasqua calcolata) + patrono: ore/giorni lavorativi
   DedupService     # anti-duplicato: simili per tipologia/plesso/vicinanza + embeddings
   Segnalazioni/  AccorpamentoService (accorpa: allegati/adesioni alla più vecchia, stato 8) · FineLavoriService · DestinatariComune (chi avvisare in comune) · DestinatariAssegnatario (sollecito/assegnazione: delegati ditta+email aziendale, operaio o caposquadra)
   OllamaService    # LLM locale opzionale (titolo auto, triage suggerito, embeddings)
@@ -132,7 +134,7 @@ app/Support/Segnalazioni/  LetturaScheda (gestore|lavoro|segnalante) · Prossimo
 app/Support/Brand.php  # logo ente (file/URL), loghi email inline (cid; logo da URL scaricato in cache storage/framework/cache/brand)
   Scuole/     AnagrafeMiur (indice open data MIUR su disco local, miur/*.json) · SincronizzaScuole (selezione admin + riallineamento, fonte_dati=miur)
   Oidc/       OidcClient (discovery/PKCE/token/id_token/userinfo) · OidcConfig · ClaimsSpid · IdentitaSpid
-app/Jobs/           ScaricaAnagrafeMiur  CreaBackup  EseguiRipristino  CompletaCaricamento  CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
+app/Jobs/           RicalcolaScadenzeSla  ScaricaAnagrafeMiur  CreaBackup  EseguiRipristino  CompletaCaricamento  CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
 app/Http/Middleware/EnsureUserIsActive.php  LimitaAccessoSpid.php
 app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni  ProvaLdap (ldap:prova)  DelegheScadenze (deleghe:scadenze)  DelegheRinnovi (deleghe:rinnovi)  backup:crea · backup:ripristina · backup:pulisci
 ```
@@ -185,6 +187,7 @@ Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella 
 
 - **Scheda e elenchi (v0.9.0, spec `docs/superpowers/specs/2026-10-25-segnalazioni-redesign-design.md`)**: `segnalazioni/show` include `scheda/{lettura}` (lettura da `LetturaScheda::per()`), pannelli laterali in `scheda/pannelli/` (form con `_pannello`, il drawer si riapre su `old('_pannello')` dopo errore di validazione). Elenchi: riga condivisa `segnalazioni/_riga` (param `colonne`), tabella `.pa-elenco` che diventa a scheda sotto 768px; gestione con `ordine` (default `urgenti` = scope `ordinaUrgenti`) e `filtro` rapido. `SegnalazionePolicy::view` = `scopeVisibileA` (una sola regola). Componenti `x-pa.*` e token CSS `.pa-*`: **Font Awesome (`.fas`) non è a layer e batte le utility Tailwind** (`hidden`/`sm:hidden` su un `<i>` non funzionano: avvolgere in uno span).
 
+- **SLA in orario d'ufficio (v0.9.2, spec `docs/superpowers/specs/2026-10-26-sla-orario-ufficio-design.md`)**: scadenza = regola (`sla_configurazioni.unita` `ore`|`giorni`, valore in `ore_target`) contata da `CalendarioUfficio` solo nelle fasce aperte (una per giorno, gruppo impostazioni `orario`); N giorni = chiusura dell'N-esimo giorno lavorativo successivo. "A rischio" in ore lavorative, "superata" in tempo reale. Modifica di regole/orario/patrono → job `RicalcolaScadenzeSla` sulle aperte. Flag urgente rimosso: colonna `segnalazione_urgente` ancora a DB ma mai letta/scritta (test `UrgenteRimossoTest` lo verifica).
 - **Anti-duplicato**: adesioni multiple a una segnalazione esistente + merge a posteriori (`DedupService`, `AdesioneSegnalazione`)
 - **Notifiche ditta** (v0.8.19): assegnazione a impresa → email alle persone delegate attive + email aziendale, dedup case-insensitive; ditta disattivata → nessuna email; link solo a `route('accesso')`.
 - **Squadre**: assegnazione a operatore singolo o squadra, notifica al solo caposquadra

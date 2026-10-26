@@ -12,6 +12,7 @@ use App\Models\Plesso;
 use App\Models\Provenienza;
 use App\Models\Segnalazione;
 use App\Models\Specializzazione;
+use App\Models\SlaConfigurazione;
 use App\Models\StoricoStatoSegnalazione;
 use App\Notifications\NotaDaEsternoNotification;
 use App\Notifications\NuovaNotaSegnalazione;
@@ -95,7 +96,13 @@ class SegnalazioneController extends Controller
         $provenienza_default = $user->id_provenienza;
         $specializzazioni    = Specializzazione::orderBy('descrizione')->get();
 
-        return view('segnalazioni.create', compact('tipologie', 'provenienze', 'plessi', 'provenienza_default', 'specializzazioni'));
+        // Tempo previsto per tipologia (0 = regola valida per tutte) e priorità: il segnalante
+        // non sceglie la specializzazione, contano solo le regole senza.
+        $tempiPrevisti = SlaConfigurazione::whereNull('id_specializzazione')->get()
+            ->groupBy(fn (SlaConfigurazione $r) => (int) $r->id_tipologia_segnalazione)
+            ->map(fn ($regole) => $regole->mapWithKeys(fn (SlaConfigurazione $r) => [$r->livello_priorita => $r->descrizioneTempo()]));
+
+        return view('segnalazioni.create', compact('tipologie', 'provenienze', 'plessi', 'provenienza_default', 'specializzazioni', 'tempiPrevisti'));
     }
 
     // ── Salva nuova segnalazione ───────────────────────────────────────────────
@@ -131,7 +138,6 @@ class SegnalazioneController extends Controller
             'id_provenienza'            => ['required', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
             'latitudine'                => ['nullable', 'numeric'],
             'longitudine'               => ['nullable', 'numeric'],
-            'segnalazione_urgente'      => ['nullable', 'boolean'],
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
             'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
             'ubicazione_tipo'           => $scuola ? ['required', 'integer', 'between:1,4'] : ['nullable', 'integer', 'between:0,4'],
@@ -172,7 +178,6 @@ class SegnalazioneController extends Controller
                 'telefono'               => $perConto && filled($data['telefono_per_conto'] ?? null)
                                                 ? $data['telefono_per_conto'] : $user->telefono,
                 'livello_priorita'       => $data['livello_priorita'] ?? 2,
-                'segnalazione_urgente'   => (bool) ($data['segnalazione_urgente'] ?? false),
                 'id_specializzazione'    => $data['id_specializzazione'] ?? null,
                 'ubicazione_tipo'        => $data['ubicazione_tipo'] ?? null,
             ]
@@ -458,22 +463,18 @@ class SegnalazioneController extends Controller
         $this->authorize('modificaPriorita', $segnalazione);
 
         $data = $request->validate([
-            'livello_priorita'     => ['required', 'integer', 'between:1,4'],
-            'segnalazione_urgente' => ['nullable', 'boolean'],
+            'livello_priorita' => ['required', 'integer', 'between:1,4'],
         ]);
 
-        $prima = $segnalazione->label_priorita . ($segnalazione->segnalazione_urgente ? ', urgente' : '');
+        $prima = $segnalazione->label_priorita;
 
-        $segnalazione->fill([
-            'livello_priorita'     => (int) $data['livello_priorita'],
-            'segnalazione_urgente' => (bool) ($data['segnalazione_urgente'] ?? false),
-        ]);
+        $segnalazione->livello_priorita = (int) $data['livello_priorita'];
 
         if (! $segnalazione->isDirty()) {
             return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione);
         }
 
-        // La scadenza SLA dipende da priorità e urgenza: va ricalcolata sulle aperte.
+        // La scadenza SLA dipende dalla priorità: va ricalcolata sulle aperte.
         if (! $segnalazione->isChiusa()) {
             $scadenza = $this->sla->calcolaScadenza($segnalazione);
             if ($scadenza) {
@@ -484,7 +485,7 @@ class SegnalazioneController extends Controller
 
         $segnalazione->save();
 
-        $dopo = $segnalazione->label_priorita . ($segnalazione->segnalazione_urgente ? ', urgente' : '');
+        $dopo = $segnalazione->label_priorita;
 
         // Traccia interna: chi ha cambiato cosa (non visibile a ditta né sul web).
         $segnalazione->note()->create([

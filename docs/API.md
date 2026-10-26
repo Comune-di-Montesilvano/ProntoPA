@@ -39,7 +39,6 @@ Crea una nuova segnalazione da portale cittadini esterno.
 | `telefono` | string | ❌ | Telefono di contatto, max 50 |
 | `latitudine` | numeric | ❌ | Coordinate GPS |
 | `longitudine` | numeric | ❌ | Coordinate GPS |
-| `segnalazione_urgente` | boolean | ❌ | |
 | `livello_priorita` | integer | ❌ | 1–4 |
 | `id_specializzazione` | integer | ❌ | Deve esistere in `db_specializzazioni` |
 | `ubicazione_tipo` | integer | ❌ | 0–4 |

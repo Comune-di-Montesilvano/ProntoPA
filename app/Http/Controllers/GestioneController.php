@@ -105,7 +105,7 @@ class GestioneController extends Controller
             fputs($handle, "\xEF\xBB\xBF"); // BOM UTF-8 per Excel
             fputcsv($handle, [
                 'ID', 'Data', 'Tipologia', 'Plesso', 'Stato', 'Operatore',
-                'Priorità', 'Specializzazione', 'Urgente',
+                'Priorità', 'Specializzazione',
                 'Importo preventivo', 'Importo liquidato', 'Data chiusura', 'Testo',
             ], ';');
             foreach ($segnalazioni as $s) {
@@ -118,7 +118,6 @@ class GestioneController extends Controller
                     $s->operatore?->name,
                     $s->label_priorita,
                     $s->specializzazione?->descrizione,
-                    $s->segnalazione_urgente ? 'Sì' : 'No',
                     $s->importo_preventivo ? number_format((float) $s->importo_preventivo, 2, ',', '') : '',
                     $s->importo_liquidato  ? number_format((float) $s->importo_liquidato,  2, ',', '') : '',
                     $s->data_chiusura?->format('d/m/Y'),

@@ -15,7 +15,7 @@
         </p>
         <h1 class="m-0 text-2xl font-bold text-[var(--ink)] break-words">{{ $titolo }}</h1>
         <div class="flex flex-wrap items-center gap-2">
-            <x-pa.prio :livello="$segnalazione->livello_priorita" :urgente="$segnalazione->segnalazione_urgente" />
+            <x-pa.prio :livello="$segnalazione->livello_priorita" />
             <x-pa.scadenza :segnalazione="$segnalazione" estesa />
         </div>
     </header>

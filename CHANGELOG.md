@@ -4,6 +4,36 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.2] - 2026-10-26
+
+Le scadenze SLA contano solo l'orario d'ufficio.
+
+### Added
+- Admin → Impostazioni → Orario d'ufficio: orario di apertura per ogni giorno della settimana
+  (default lun/mer/ven 8–14, mar/gio 8–17, sabato e domenica chiuso) e giorno del patrono,
+  con l'elenco dei festivi dell'anno per controllo.
+- Regole SLA in ore lavorative o in giorni lavorativi (N giorni = entro la chiusura
+  dell'N-esimo giorno lavorativo dopo quello della segnalazione).
+- Nel form di segnalazione, scelta la priorità, compare il tempo previsto ("Intervento
+  previsto entro 4 ore lavorative") con l'avvertenza che la priorità la stabilisce l'ufficio,
+  e l'indicazione di chiamare il 112 per i pericoli immediati.
+
+### Changed
+- Scadenze e soglia "a rischio" contano solo le ore di apertura: weekend, festivi nazionali
+  (Pasqua e Pasquetta comprese) e patrono esclusi. "Superata" resta in tempo reale.
+- Cambiando regole SLA, orario o patrono le scadenze delle segnalazioni aperte si ricalcolano.
+
+### Removed
+- Flag "urgente" (form, scheda, elenchi, bot Telegram, CSV, report, API): era un doppione di
+  Critica e prometteva un intervento immediato che il comune non garantisce. Le segnalazioni
+  aperte urgenti diventano Critica; la colonna resta a DB per lo storico. Il campo
+  `segnalazione_urgente` dell'API viene ignorato.
+
+### Note operative
+- Le regole SLA esistenti valgono ora come **ore lavorative**: rivederle in Admin → SLA
+  (es. Critica in ore, Alta 1 giorno lavorativo).
+- Impostare il patrono in Admin → Impostazioni → Orario d'ufficio e verificare l'orario.
+
 ## [0.9.1] - 2026-10-26
 
 ### Fixed

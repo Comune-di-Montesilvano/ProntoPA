@@ -16,6 +16,7 @@ class SlaConfigurazione extends Model
         'id_specializzazione',
         'livello_priorita',
         'ore_target',
+        'unita',
         'ore_warning',
         'descrizione',
     ];
@@ -27,6 +28,16 @@ class SlaConfigurazione extends Model
             'ore_target'       => 'integer',
             'ore_warning'      => 'integer',
         ];
+    }
+
+    /** "4 ore lavorative", "1 giorno lavorativo": il tempo della regola in parole. */
+    public function descrizioneTempo(): string
+    {
+        $n = (int) $this->ore_target;
+
+        return $this->unita === 'giorni'
+            ? ($n === 1 ? '1 giorno lavorativo' : "$n giorni lavorativi")
+            : ($n === 1 ? '1 ora lavorativa' : "$n ore lavorative");
     }
 
     public function tipologia(): BelongsTo

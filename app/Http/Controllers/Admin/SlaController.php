@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\RicalcolaScadenzeSla;
 use App\Models\SlaConfigurazione;
 use App\Models\Specializzazione;
 use App\Models\TipologiaSegnalazione;
@@ -34,8 +35,9 @@ class SlaController extends Controller
     {
         $data = $this->validate($request);
         SlaConfigurazione::create($data);
+        RicalcolaScadenzeSla::dispatch();
 
-        return redirect()->route('admin.sla.index')->with('success', 'Regola SLA creata.');
+        return redirect()->route('admin.sla.index')->with('success', 'Regola SLA creata: scadenze delle segnalazioni aperte in aggiornamento.');
     }
 
     public function edit(SlaConfigurazione $sla): View
@@ -50,15 +52,17 @@ class SlaController extends Controller
     public function update(Request $request, SlaConfigurazione $sla): RedirectResponse
     {
         $sla->update($this->validate($request));
+        RicalcolaScadenzeSla::dispatch();
 
-        return redirect()->route('admin.sla.index')->with('success', 'Regola SLA aggiornata.');
+        return redirect()->route('admin.sla.index')->with('success', 'Regola SLA aggiornata: scadenze delle segnalazioni aperte in aggiornamento.');
     }
 
     public function destroy(SlaConfigurazione $sla): RedirectResponse
     {
         $sla->delete();
+        RicalcolaScadenzeSla::dispatch();
 
-        return redirect()->route('admin.sla.index')->with('success', 'Regola SLA eliminata.');
+        return redirect()->route('admin.sla.index')->with('success', 'Regola SLA eliminata: scadenze delle segnalazioni aperte in aggiornamento.');
     }
 
     private function validate(Request $request): array
@@ -68,6 +72,7 @@ class SlaController extends Controller
             'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
             'livello_priorita'          => ['required', 'integer', 'between:1,4'],
             'ore_target'                => ['required', 'integer', 'min:1'],
+            'unita'                     => ['required', 'in:ore,giorni'],
             'ore_warning'               => ['required', 'integer', 'min:1'],
             'descrizione'               => ['nullable', 'string', 'max:100'],
         ]);

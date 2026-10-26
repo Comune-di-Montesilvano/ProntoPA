@@ -203,7 +203,6 @@
   display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 4px;
   font-size: 11px; font-weight: 700; letter-spacing: .04em; white-space: nowrap;
 }
-.pa-tag-urgente { background: var(--rose); color: #fff; }
 
 .pa-passo { border: 2px solid var(--ente-primary); }
 .pa-passo-rose    { border-color: var(--rose); }

@@ -52,7 +52,6 @@ class Segnalazione extends Model
         'sla_violato',
         'sla_warning_inviato',
         'external_id',
-        'segnalazione_urgente',
         'livello_priorita',
         'id_specializzazione',
         'ubicazione_tipo',
@@ -77,7 +76,6 @@ class Segnalazione extends Model
             'importo_liquidato'      => 'decimal:2',
             'id_utente_segnalazione' => 'integer',
             'id_operatore_assegnato' => 'integer',
-            'segnalazione_urgente'   => 'boolean',
             'livello_priorita'       => 'integer',
             'ubicazione_tipo'        => 'integer',
             'data_scadenza_sla'      => 'datetime',
@@ -407,11 +405,6 @@ class Segnalazione extends Model
     public function scopeCritica($query)
     {
         return $query->where('livello_priorita', 4);
-    }
-
-    public function scopeUrgente($query)
-    {
-        return $query->where('segnalazione_urgente', true);
     }
 
     public function scopeSlaArischio($query)
