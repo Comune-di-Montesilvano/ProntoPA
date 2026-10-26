@@ -1,4 +1,4 @@
-FROM php:8.4-fpm-alpine
+FROM php:8.4-fpm-alpine@sha256:93aa3f61216b73cc6f878235c9772849449f4efc18dfe3d6678eed645076c00d
 
 # System dependencies
 RUN apk add --no-cache \
@@ -39,7 +39,7 @@ RUN apk add --no-cache $PHPIZE_DEPS \
     && apk del $PHPIZE_DEPS
 
 # Composer
-COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2@sha256:b6dcd72ca98fa19d0e5b8476de179859704891fad06dd9e0b96833d4c430a5fc /usr/bin/composer /usr/bin/composer
 
 # PHP config
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/app.ini

@@ -1,67 +1,79 @@
 version: 2
-# Ogni ecosistema: cooldown (attende N giorni dalla pubblicazione prima di proporre
-# l'update — mitiga release appena pubblicate compromesse, più margine sui major) e
-# minor+patch in una sola PR per ecosistema, mergiata da sola a CI verde
-# (dependabot-automerge.yml). Le major restano PR singole, aperte come promemoria.
+# Ogni ecosistema: minor+patch in una sola PR, mergiata da sola a CI verde
+# (dependabot-automerge.yml, che attende anche i controlli di security.yml). Le major
+# restano PR singole, aperte come promemoria per l'upgrade manuale.
+# Controllo giornaliero e nessun cooldown: le correzioni (anche di bug critici non
+# classificati come advisory) arrivano il giorno stesso. Gli advisory di sicurezza passano
+# comunque dai Dependabot security updates (attivi sul repo), indipendenti da questo
+# schedule. Giro alle 01:00 così l'auto-merge chiude prima del rebuild giornaliero di
+# latest (release.yml, 04:30 UTC).
+# Semgrep (dependabot-missing-cooldown) lo segnala su ogni ecosistema: scelta voluta, la
+# difesa dalle release compromesse è a valle (audit + Trivy bloccanti in security.yml,
+# CI completa prima del merge), non un ritardo fisso che rimanda anche le correzioni.
 updates:
-  - package-ecosystem: composer
+  - package-ecosystem: composer  # nosemgrep: package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown
     directory: "/"
     schedule:
-      interval: weekly
+      interval: daily
+      time: "01:00"
+      timezone: Europe/Rome
     open-pull-requests-limit: 10
-    cooldown:
-      default-days: 7
-      semver-major-days: 14
     groups:
       minor-patch:
         update-types: ["minor", "patch"]
 
-  - package-ecosystem: npm
+  - package-ecosystem: npm  # nosemgrep: package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown
     directory: "/"
     schedule:
-      interval: weekly
+      interval: daily
+      time: "01:00"
+      timezone: Europe/Rome
     open-pull-requests-limit: 10
-    cooldown:
-      default-days: 7
-      semver-major-days: 14
     groups:
       minor-patch:
         update-types: ["minor", "patch"]
 
-  - package-ecosystem: github-actions
+  - package-ecosystem: github-actions  # nosemgrep: package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown
     directory: "/"
     schedule:
-      interval: weekly
-    cooldown:
-      default-days: 7
+      interval: daily
+      time: "01:00"
+      timezone: Europe/Rome
     groups:
       minor-patch:
         update-types: ["minor", "patch"]
 
-  # Immagini base FROM: Dockerfile prod (php/composer/nginx) e dev (docker/php).
-  # Salti di php (8.4 → 8.5) li classifica minor ma sono upgrade di runtime:
-  # l'auto-merge li esclude, restano manuali.
-  - package-ecosystem: docker
+  # Immagini base FROM (fissate per digest): Dockerfile prod (php/composer/nginx) e dev
+  # (docker/php). Il digest nuovo dello stesso tag arriva ogni volta che l'immagine
+  # ufficiale viene ripubblicata con patch Alpine. Salti di php (8.4 → 8.5) li classifica
+  # minor ma sono upgrade di runtime: l'auto-merge li esclude, restano manuali.
+  - package-ecosystem: docker  # nosemgrep: package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown
     directories: ["/", "/docker/php"]
     schedule:
-      interval: weekly
-    cooldown:
-      default-days: 7
+      interval: daily
+      time: "01:00"
+      timezone: Europe/Rome
     groups:
       minor-patch:
         update-types: ["minor", "patch"]
 
-  # Servizi dello stack (mariadb, redis): proposti ma mai auto-mergiati, sono dati.
+  # Servizi dello stack (mariadb, redis, nginx dev), fissati per digest. Cambi di
+  # versione di mariadb/redis proposti ma mai auto-mergiati (sono dati), il solo digest sì.
   # ollama/clamav seguono tag mobili (latest/stable), niente da proporre.
-  - package-ecosystem: docker-compose
+  - package-ecosystem: docker-compose  # nosemgrep: package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown
     directory: "/"
     schedule:
-      interval: weekly
-    cooldown:
-      default-days: 7
+      interval: daily
+      time: "01:00"
+      timezone: Europe/Rome
+    groups:
+      minor-patch:
+        update-types: ["minor", "patch"]
     ignore:
       - dependency-name: "ollama/ollama"
       - dependency-name: "clamav/clamav"
-      # Dependabot non distingue LTS da rolling (proporrebbe 12.2, 13.0…):
-      # le nuove LTS le segnala mariadb-lts-check.yml con una issue.
+      - dependency-name: "axllent/mailpit"
+      # Dependabot non distingue LTS da rolling (proporrebbe 12.4, 13.0…): le nuove LTS le
+      # segnala mariadb-lts-check.yml con una issue. Il digest della 12.3 resta aggiornato.
       - dependency-name: "mariadb"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]

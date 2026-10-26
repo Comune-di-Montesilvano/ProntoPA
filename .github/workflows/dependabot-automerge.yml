@@ -1,8 +1,10 @@
 name: Dependabot auto-merge
-# Minor/patch di dependabot: auto-merge (squash) appena i required check sono verdi.
+# Minor/patch di dependabot: auto-merge (squash) appena i required check sono verdi
+# (test, dusk, semgrep e i controlli di security.yml: audit, Trivy fs e immagini).
 # Major: nessuna azione, la PR resta aperta come promemoria per l'upgrade manuale.
-# Eccezione: immagini php/mariadb/redis (es. php 8.4 -> 8.5) — dependabot le classifica
-# minor ma sono upgrade di runtime/dati, restano manuali come le major.
+# Eccezione: cambio di tag delle immagini php/mariadb/redis (es. php 8.4 -> 8.5) —
+# dependabot lo classifica minor ma è un upgrade di runtime/dati, resta manuale come le
+# major. Il solo digest nuovo dello stesso tag (patch Alpine) va in auto-merge.
 #
 # Token GitHub App (secret BOT_CLIENT_ID / BOT_PRIVATE_KEY) invece di GITHUB_TOKEN:
 # merge e update-branch fatti con GITHUB_TOKEN non triggerano altri workflow, quindi la CI
@@ -36,6 +38,9 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Dependabot metadata
         id: meta
@@ -50,12 +55,24 @@ jobs:
           ECOSYSTEM: ${{ steps.meta.outputs.package-ecosystem }}
           DEPS: ${{ steps.meta.outputs.dependency-names }}
           HAS_APP: ${{ secrets.BOT_CLIENT_ID != '' && secrets.BOT_PRIVATE_KEY != '' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
+          set -euo pipefail
           merge=true
           if [[ "$UPDATE_TYPE" == "version-update:semver-major" ]]; then
             merge=false
-          elif [[ "$ECOSYSTEM" == docker* ]] && grep -Eq '(^|[ ,/])(php|mariadb|redis)([ ,:]|$)' <<<"$DEPS"; then
-            merge=false
+          elif [[ "$ECOSYSTEM" == docker* ]]; then
+            # Tag delle immagini runtime prima/dopo, digest esclusi: se coincidono è solo un
+            # digest nuovo dello stesso tag. Dal diff e non dai metadata, che nei gruppi
+            # riportano le versioni di una sola dipendenza.
+            tags() { gh pr diff "$PR_URL" | grep -E "^$1" | grep -oE '(^|[ /])(php|mariadb|redis):[^@[:space:]]+' | tr -d ' /' | sort -u; }
+            prima=$(tags '-[^-]')
+            dopo=$(tags '\+[^+]')
+            if [[ "$prima" != "$dopo" ]]; then
+              echo "Tag runtime cambiati: [$(tr '\n' ' ' <<<"$prima")] -> [$(tr '\n' ' ' <<<"$dopo")]"
+              merge=false
+            fi
           fi
           if [[ "$merge" == "true" && "$HAS_APP" != "true" ]]; then
             echo "::notice::Secret BOT_CLIENT_ID/BOT_PRIVATE_KEY assenti: auto-merge non attivato."

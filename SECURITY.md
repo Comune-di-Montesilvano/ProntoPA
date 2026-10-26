@@ -16,4 +16,15 @@ Solo l'ultima versione taggata (`vX.Y.Z`) riceve fix di sicurezza. Nessun suppor
 
 - Conferma di ricezione entro qualche giorno lavorativo.
 - Nessun bug bounty: il progetto è software libero per la PA, non un prodotto commerciale.
-- Le vulnerabilità nelle dipendenze sono già monitorate automaticamente (Dependabot security updates + Trivy su dipendenze composer/npm ad ogni push/PR + Trivy sulle immagini Docker ad ogni release, risultati nella tab [Security](https://github.com/Comune-di-Montesilvano/ProntoPA/security)).
+- Le vulnerabilità nelle dipendenze sono già monitorate automaticamente (Dependabot security updates e aggiornamenti giornalieri, `composer audit`/`npm audit` e Trivy su dipendenze e immagini Docker a ogni PR, Trivy bloccante prima di ogni pubblicazione; risultati nella tab [Security](https://github.com/Comune-di-Montesilvano/ProntoPA/security)).
+
+## Verifica delle immagini
+
+Le immagini pubblicate su GHCR sono firmate con [cosign](https://docs.sigstore.dev/) (keyless, identità OIDC del workflow di rilascio) e hanno SBOM e provenance SLSA allegate. Prima del deploy:
+
+```bash
+cosign verify \
+  --certificate-identity-regexp 'https://github.com/Comune-di-Montesilvano/ProntoPA/.github/workflows/release.yml@.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/comune-di-montesilvano/pronto-pa:latest
+```

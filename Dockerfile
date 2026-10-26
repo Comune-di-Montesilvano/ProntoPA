@@ -5,7 +5,8 @@
 # Compila PHP extensions isolato dal codice app.
 # Rebuild solo se cambia PHP version o lista extension.
 ############################################
-FROM php:8.4-fpm-alpine AS php-extensions
+# Immagini base fissate per digest: Dependabot (ecosistema docker) aggiorna tag e digest.
+FROM php:8.4-fpm-alpine@sha256:93aa3f61216b73cc6f878235c9772849449f4efc18dfe3d6678eed645076c00d AS php-extensions
 
 # Layer 1: runtime libs — quasi mai cambia, cache molto stabile
 RUN --mount=type=cache,id=apk-${TARGETARCH},target=/var/cache/apk \
@@ -41,7 +42,7 @@ FROM php-extensions AS builder
 RUN --mount=type=cache,id=apk-${TARGETARCH},target=/var/cache/apk \
     apk add nodejs npm
 
-COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2@sha256:b6dcd72ca98fa19d0e5b8476de179859704891fad06dd9e0b96833d4c430a5fc /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
@@ -71,10 +72,10 @@ RUN composer run-script post-autoload-dump \
 # Stage 2: PHP-FPM production image
 # Target: app — base pulita, no Node, no composer, no build tools
 ############################################
-FROM php:8.4-fpm-alpine AS app
+FROM php:8.4-fpm-alpine@sha256:93aa3f61216b73cc6f878235c9772849449f4efc18dfe3d6678eed645076c00d AS app
 
-# Settimana ISO dal workflow: cambia una volta a settimana e invalida il layer,
-# così il rebuild settimanale applica le patch Alpine anche con la cache GHA.
+# Data del giorno dal workflow: cambia una volta al giorno e invalida il layer,
+# così il rebuild giornaliero applica le patch Alpine anche con la cache GHA.
 ARG APK_REFRESH=none
 
 # Runtime libs identici a php-extensions Layer 1
@@ -121,7 +122,7 @@ CMD ["php-fpm"]
 # Stage 3: Nginx + compiled static assets
 # Target: web
 ############################################
-FROM nginx:1.29-alpine AS web
+FROM nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de AS web
 
 ARG APK_REFRESH=none
 RUN echo "apk refresh ${APK_REFRESH}" && apk upgrade --no-cache

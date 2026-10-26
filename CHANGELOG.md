@@ -4,6 +4,28 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.5] - 2026-10-27
+
+### Security
+- Immagini pubblicate solo dopo i controlli: push per digest, scansione Trivy bloccante
+  (anche sui tag di rilascio), firma cosign keyless, SBOM e provenance SLSA allegate; i tag
+  vengono applicati solo a immagine scansionata e firmata. Verifica in `SECURITY.md`.
+- Nuovo workflow `security.yml` (required check): `composer audit`, `npm audit`, Trivy su
+  lockfile, segreti e Dockerfile, Trivy sulle immagini buildate dalla PR. L'auto-merge di
+  Dependabot non porta più CVE su `main`.
+- Stack di produzione con `no-new-privileges` e nessuna capability Linux (`cap_drop: ALL`);
+  nginx, mariadb e redis riaggiungono solo quelle che servono all'avvio. Nessuna azione
+  richiesta: basta "Update the stack".
+- Immagini base (php, composer, nginx) e servizi (mariadb, redis) fissati per digest;
+  composer di build da 2.7 a 2.10. Trivy fissato a v0.76.1.
+- Workflow con permessi espliciti e checkout senza credenziali persistite; OpenSSF Scorecard.
+
+### Changed
+- Dependabot ogni giorno alle 01:00 senza cooldown; il solo digest nuovo delle immagini
+  php/mariadb/redis va in auto-merge, il cambio di versione resta manuale.
+- `latest` ricostruita ogni giorno (04:30 UTC) con patch Alpine e dipendenze fresche, invece
+  che ogni lunedì. Pulizia settimanale delle versioni superate su GHCR.
+
 ## [0.9.4] - 2026-10-27
 
 ### Added

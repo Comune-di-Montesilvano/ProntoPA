@@ -2,9 +2,14 @@ name: Build & Publish Docker Images
 
 # dev branch  → build sempre, tag immagine: "dev"
 # tag v*.*.* → build + tag semver + "latest"
-# lunedì 04:30 UTC → rebuild di main con immagini base e patch Alpine fresche: pubblica
-#   `latest-YYYYMMDD` e promuove `latest` solo se Trivy passa. I tag X.Y.Z / X.Y restano
-#   quelli del rilascio. Saltato se negli ultimi 7 giorni è già uscito un tag.
+# ogni giorno 04:30 UTC (dopo il giro Dependabot delle 01:00) → rebuild di main con
+#   immagini base, dipendenze e patch Alpine fresche: pubblica `latest-YYYYMMDD` e
+#   `latest`. I tag X.Y.Z / X.Y restano quelli del rilascio. Saltato se nelle ultime 24
+#   ore è già uscito un tag.
+#
+# Ogni immagine è pushata solo per digest, scansionata (Trivy, bloccante) e firmata
+# (cosign keyless): solo dopo riceve i tag. Un'immagine con CVE CRITICAL/HIGH correggibili
+# resta un digest orfano (rimosso da ghcr-cleanup.yml), mai raggiungibile da un tag.
 
 on:
   push:
@@ -13,11 +18,11 @@ on:
     tags:
       - "v*.*.*"
   schedule:
-    - cron: "30 4 * * 1"
+    - cron: "30 4 * * *"
   workflow_dispatch:
     inputs:
       rebuild_latest:
-        description: "Rebuild di latest (come lo schedule settimanale, senza skip)"
+        description: "Rebuild di latest (come lo schedule giornaliero, senza skip)"
         type: boolean
         default: false
 
@@ -30,22 +35,28 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   build-and-push:
     name: Build & Push
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
       security-events: write
       actions: read
+      # Firma keyless cosign: certificato emesso da Sigstore sull'identità OIDC del workflow.
+      id-token: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          # Storia + tag: il rebuild settimanale ricava l'ultimo tag vX.Y.Z.
+          persist-credentials: false
+          # Storia + tag: il rebuild giornaliero ricava l'ultimo tag vX.Y.Z.
           fetch-depth: 0
 
       - name: Compute build config
@@ -64,20 +75,20 @@ jobs:
           if [[ "$EVENT_NAME" == "schedule" || "$REBUILD_LATEST" == "true" ]]; then
             auto=true
           fi
-          # Solo lo schedule salta: un tag pubblicato negli ultimi 7 giorni ha già rinfrescato
+          # Solo lo schedule salta: un tag pubblicato nelle ultime 24 ore ha già rinfrescato
           # latest. Le run push sui tag hanno headBranch = nome del tag (vX.Y.Z), quelle su dev no.
           if [[ "$EVENT_NAME" == "schedule" ]]; then
-            since=$(date -u -d '7 days ago' +%F)
+            since=$(date -u -d '24 hours ago' +%FT%TZ)
             recent=$(gh run list -R "$REPO" --workflow release.yml --event push \
               --status success --created ">=$since" --json headBranch \
               -q '[.[] | select(.headBranch | startswith("v"))] | length')
             if [[ "$recent" -gt 0 ]]; then
-              echo "::notice::Tag pubblicato negli ultimi 7 giorni: rebuild settimanale saltato."
+              echo "::notice::Tag pubblicato nelle ultime 24 ore: rebuild giornaliero saltato."
               skip=true
             fi
           fi
           if [[ "$auto" == "true" ]]; then
-            # main coincide con l'ultimo rilascio (bump nella stessa PR), salvo commit solo test/CI.
+            # main coincide con l'ultimo rilascio (bump nella stessa PR), salvo commit solo test/CI/deps.
             version=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo "${GITHUB_SHA::7}")
             build_type=auto
           elif [[ "$REF_TYPE" == "tag" ]]; then
@@ -94,9 +105,9 @@ jobs:
             echo "skip=$skip"
             echo "auto_tag=latest-$(date -u +%Y%m%d)"
             echo "build_date=$(date -u +%F)"
-            # Settimana ISO: invalida il layer `apk upgrade`, altrimenti la cache GHA lo
-            # congela e le patch Alpine non entrano mai.
-            echo "apk_refresh=$(date -u +%G-W%V)"
+            # Data del giorno: invalida una volta al giorno il layer `apk upgrade`,
+            # altrimenti la cache GHA lo congela e le patch Alpine non entrano mai.
+            echo "apk_refresh=$(date -u +%F)"
           } >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
@@ -112,6 +123,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # ── Metadata per entrambe le immagini ───────────────────────────────────
+      # Tag da applicare SOLO dopo scansione e firma (step "Pubblica tag").
 
       - name: Docker metadata (app)
         if: steps.vars.outputs.skip != 'true'
@@ -124,7 +136,7 @@ jobs:
             type=ref,event=branch,enable=${{ steps.vars.outputs.auto != 'true' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' || steps.vars.outputs.auto == 'true' }}
             type=raw,value=${{ steps.vars.outputs.auto_tag }},enable=${{ steps.vars.outputs.auto == 'true' }}
 
       - name: Docker metadata (web)
@@ -138,25 +150,29 @@ jobs:
             type=ref,event=branch,enable=${{ steps.vars.outputs.auto != 'true' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' || steps.vars.outputs.auto == 'true' }}
             type=raw,value=${{ steps.vars.outputs.auto_tag }},enable=${{ steps.vars.outputs.auto == 'true' }}
 
-      # ── Build & push entrambe le immagini in parallelo (bake) ───────────────
+      # ── Build & push per digest di entrambe le immagini (bake) ──────────────
       # Builder stage gira una sola volta; app e web buildate in parallelo.
       # Cache scope separati per target (definiti in docker-bake.hcl).
+      # Nessun tag qui: push-by-digest. Attestazioni nel registry accanto all'immagine:
+      # SBOM (pacchetti contenuti) e provenance SLSA completa (commit, workflow, parametri).
 
       - name: Build & push (bake)
         if: steps.vars.outputs.skip != 'true'
+        id: bake
         uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7
         with:
           files: |
             ./docker-bake.hcl
-            cwd://${{ steps.meta-app.outputs.bake-file-tags }}
             cwd://${{ steps.meta-app.outputs.bake-file-labels }}
-            cwd://${{ steps.meta-web.outputs.bake-file-tags }}
             cwd://${{ steps.meta-web.outputs.bake-file-labels }}
-          push: true
           set: |
+            app.output=type=image,name=${{ env.IMAGE_APP }},push-by-digest=true,name-canonical=true,push=true
+            web.output=type=image,name=${{ env.IMAGE_WEB }},push-by-digest=true,name-canonical=true,push=true
+            *.attest=type=sbom
+            *.attest=type=provenance,mode=max
             *.args.APP_VERSION=${{ steps.vars.outputs.version }}
             *.args.APP_BUILD_TYPE=${{ steps.vars.outputs.build_type }}
             *.args.APP_BUILD_DATE=${{ steps.vars.outputs.build_date }}
@@ -165,49 +181,93 @@ jobs:
         env:
           PLATFORMS: linux/amd64
 
-      # ── Scan immagini pubblicate, risultati su tab Security ─────────────────
-      # Tag/dev: report-only (push già avvenuto), coglie CVE note per triage,
-      # coerente col pattern trivy-fs bloccante già in tests.yml a monte.
-      # Rebuild settimanale: bloccante, `latest` viene promosso solo se passa.
-      # Versione Trivy pinnata: trivy-version-check.yml apre una issue quando ne esce una nuova.
+      - name: Digest delle immagini
+        if: steps.vars.outputs.skip != 'true'
+        id: digest
+        env:
+          METADATA: ${{ steps.bake.outputs.metadata }}
+        run: |
+          set -euo pipefail
+          app=$(jq -r '.app["containerimage.digest"]' <<<"$METADATA")
+          web=$(jq -r '.web["containerimage.digest"]' <<<"$METADATA")
+          for d in "$app" "$web"; do
+            [[ "$d" == sha256:* ]] || { echo "::error::Digest non trovato nei metadata di bake"; exit 1; }
+          done
+          { echo "app=$app"; echo "web=$web"; } >> "$GITHUB_OUTPUT"
+
+      # ── Scan immagini pubblicate per digest, bloccante, risultati su tab Security ─
+      # Le PR passano già dallo stesso controllo (security.yml, trivy-image): qui scatta solo
+      # per CVE pubblicate dopo il merge. Versione Trivy fissata come l'Action: un rilascio
+      # compromesso non entra in automatico, trivy-version-check.yml segnala le nuove.
 
       - name: Trivy scan (app image)
         if: steps.vars.outputs.skip != 'true'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          version: v0.75.0
-          image-ref: ${{ env.IMAGE_APP }}:${{ steps.vars.outputs.auto == 'true' && steps.vars.outputs.auto_tag || steps.meta-app.outputs.version }}
+          version: v0.76.1
+          image-ref: ${{ env.IMAGE_APP }}@${{ steps.digest.outputs.app }}
           format: sarif
           output: trivy-app.sarif
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+          # Senza, con format sarif l'action ignora `severity` ed exit-code scatta su tutto.
           limit-severities-for-sarif: true
-          exit-code: ${{ steps.vars.outputs.auto == 'true' && '1' || '0' }}
+          trivyignores: .trivyignore.yaml
+          exit-code: "1"
 
       - name: Trivy scan (web image)
         if: steps.vars.outputs.skip != 'true'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          version: v0.75.0
-          image-ref: ${{ env.IMAGE_WEB }}:${{ steps.vars.outputs.auto == 'true' && steps.vars.outputs.auto_tag || steps.meta-web.outputs.version }}
+          version: v0.76.1
+          image-ref: ${{ env.IMAGE_WEB }}@${{ steps.digest.outputs.web }}
           format: sarif
           output: trivy-web.sarif
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           limit-severities-for-sarif: true
-          exit-code: ${{ steps.vars.outputs.auto == 'true' && '1' || '0' }}
+          trivyignores: .trivyignore.yaml
+          exit-code: "1"
 
-      # Rebuild settimanale: `latest` punta alle nuove immagini solo DOPO che Trivy le ha
-      # passate entrambe (se uno scan fallisce il job si ferma e latest resta il precedente).
-      - name: Promuovi latest
-        if: steps.vars.outputs.auto == 'true' && steps.vars.outputs.skip != 'true'
+      - name: Installa cosign
+        if: steps.vars.outputs.skip != 'true'
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      # Firma keyless del digest (non del tag, che è mobile). Verifica prima del deploy:
+      # cosign verify --certificate-identity-regexp 'https://github.com/Comune-di-Montesilvano/ProntoPA/.github/workflows/release.yml@.*' \
+      #   --certificate-oidc-issuer https://token.actions.githubusercontent.com ghcr.io/comune-di-montesilvano/pronto-pa:latest
+      - name: Firma immagini (cosign)
+        if: steps.vars.outputs.skip != 'true'
         env:
-          AUTO_TAG: ${{ steps.vars.outputs.auto_tag }}
+          APP_DIGEST: ${{ steps.digest.outputs.app }}
+          WEB_DIGEST: ${{ steps.digest.outputs.web }}
         run: |
           set -euo pipefail
-          for image in "$IMAGE_APP" "$IMAGE_WEB"; do
-            docker buildx imagetools create -t "$image:latest" "$image:$AUTO_TAG"
-          done
+          cosign sign --yes "$IMAGE_APP@$APP_DIGEST"
+          cosign sign --yes "$IMAGE_WEB@$WEB_DIGEST"
+
+      # Solo ora le immagini diventano raggiungibili per tag (indice copiato così com'è,
+      # attestazioni SBOM/provenance comprese).
+      - name: Pubblica tag
+        if: steps.vars.outputs.skip != 'true'
+        env:
+          APP_DIGEST: ${{ steps.digest.outputs.app }}
+          WEB_DIGEST: ${{ steps.digest.outputs.web }}
+          APP_TAGS: ${{ steps.meta-app.outputs.tags }}
+          WEB_TAGS: ${{ steps.meta-web.outputs.tags }}
+        run: |
+          set -euo pipefail
+          pubblica() {
+            local ref="$1" tags="$2" args=()
+            while IFS= read -r t; do
+              [ -n "$t" ] && args+=(-t "$t")
+            done <<<"$tags"
+            [ "${#args[@]}" -gt 0 ] || { echo "::error::Nessun tag da pubblicare per $ref"; exit 1; }
+            docker buildx imagetools create "${args[@]}" "$ref"
+            echo "::notice::$ref → $(tr '\n' ' ' <<<"$tags")"
+          }
+          pubblica "$IMAGE_APP@$APP_DIGEST" "$APP_TAGS"
+          pubblica "$IMAGE_WEB@$WEB_DIGEST" "$WEB_TAGS"
 
       - name: Upload Trivy results (app) to Security tab
         uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
