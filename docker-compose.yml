@@ -74,6 +74,24 @@ x-php-env: &php-env
   OIDC_TIMEOUT: ${OIDC_TIMEOUT:-10}
   PHP_OPCACHE_ENABLE: 1
 
+# Hardening: nessuna escalation di privilegi (setuid/setgid) e nessuna capability Linux.
+# php e worker girano come www (uid 1000) e non ne usano. nginx, mariadb e redis partono
+# come root e scendono al proprio utente: riaggiungono solo le capability che servono.
+x-hardening: &hardening
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+# chown della data dir + cambio utente (gosu/su-exec) all'avvio.
+x-db-caps: &db-caps
+  cap_add:
+    - CHOWN
+    - DAC_OVERRIDE
+    - FOWNER
+    - SETUID
+    - SETGID
+
 x-php-volumes: &php-volumes
   - app_storage:/var/www/html/storage
   - uploads:/var/www/html/storage/app/public
@@ -82,6 +100,15 @@ x-php-volumes: &php-volumes
 services:
 
   nginx:
+    <<: *hardening
+    # Porte 80/443 (NET_BIND_SERVICE), worker come utente nginx (SETUID/SETGID),
+    # chown delle directory di cache all'avvio (CHOWN).
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - NET_BIND_SERVICE
+      - SETUID
+      - SETGID
     image: ghcr.io/comune-di-montesilvano/pronto-pa-web:${IMAGE_TAG:-latest}
     ports:
       - "${HTTP_PORT:-80}:80"
@@ -96,6 +123,7 @@ services:
     restart: unless-stopped
 
   php:
+    <<: *hardening
     image: ghcr.io/comune-di-montesilvano/pronto-pa:${IMAGE_TAG:-latest}
     volumes: *php-volumes
     environment: *php-env
@@ -113,6 +141,7 @@ services:
   # entrypoint svuotato: niente wait-db/migrate/seed qui, se ne occupa solo
   # il servizio "php" — evita race condition di seed concorrenti al boot.
   queue:
+    <<: *hardening
     image: ghcr.io/comune-di-montesilvano/pronto-pa:${IMAGE_TAG:-latest}
     entrypoint: []
     command: php artisan queue:work --tries=3 --backoff=30,120 --sleep=3 --max-time=3600
@@ -132,6 +161,7 @@ services:
   # --force: lavora anche in manutenzione, altrimenti un ripristino ucciso a
   # meta (OOM) non verrebbe mai ripreso e failed() non riporterebbe su l'app.
   queue-lunghi:
+    <<: *hardening
     image: ghcr.io/comune-di-montesilvano/pronto-pa:${IMAGE_TAG:-latest}
     entrypoint: []
     command: php artisan queue:work redis-lunghi --queue=lunghi --force --tries=1 --timeout=7200 --sleep=3 --max-time=3600
@@ -151,6 +181,7 @@ services:
   # partono mai — Laravel richiede una chiamata esterna a schedule:run
   # ogni minuto, non la fa da solo.
   scheduler:
+    <<: *hardening
     image: ghcr.io/comune-di-montesilvano/pronto-pa:${IMAGE_TAG:-latest}
     entrypoint: []
     command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
@@ -168,7 +199,9 @@ services:
   # Le password MariaDB valgono solo alla creazione del volume mariadb_data:
   # su volume esistente sono ignorate (la password si cambia dal DB, non qui).
   mariadb:
-    image: mariadb:12.3
+    <<: [*hardening, *db-caps]
+    # Digest fissato: Dependabot (docker-compose) lo aggiorna dentro la stessa LTS.
+    image: mariadb:12.3@sha256:99c125f103f5d081ebbc9ffe064e63daf7f688ac33a5f7f29af2d7260a96debf
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-}
       MARIADB_DATABASE: ${DB_DATABASE:-segnalazioni}
@@ -189,7 +222,8 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:8.0-alpine
+    <<: [*hardening, *db-caps]
+    image: redis:8.0-alpine@sha256:5f61955be8ab2ccee9372b84ae4d4da2e2b156f87281e3f218544055e7ee04d4
     volumes:
       - redis_data:/data
     networks:

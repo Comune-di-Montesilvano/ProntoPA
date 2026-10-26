@@ -1,0 +1,124 @@
+name: Pulizia immagini ghcr
+# Il rebuild giornaliero (release.yml) lascia su ghcr un tag latest-YYYYMMDD al giorno, e
+# ogni build crea più versioni (indice + immagine + attestazioni SBOM/provenance + firma
+# cosign): quelle sostituite restano senza tag, e un'immagine bocciata da Trivy resta un
+# digest orfano. Qui si tengono:
+#   - ogni versione con un tag diverso da latest-YYYYMMDD e dalle firme (vX.Y.Z, X.Y,
+#     latest, dev);
+#   - gli ultimi KEEP_DAILY tag latest-YYYYMMDD;
+#   - le firme cosign (tag sha256-<digest>[.sig|.att]) delle sole immagini tenute;
+#   - le sotto-versioni (manifest per piattaforma, attestazioni) delle versioni tenute;
+#   - tutto ciò che è nato nelle ultime 6 ore (build in corso: i figli arrivano prima
+#     dell'indice).
+# Il resto viene cancellato. workflow_dispatch parte in dry-run per default.
+on:
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Solo elenco, nessuna cancellazione"
+        type: boolean
+        default: true
+      keep_daily:
+        description: "Tag latest-YYYYMMDD da tenere"
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+  packages: write
+
+# Mai in parallelo con un'altra pulizia (stesse versioni).
+concurrency:
+  group: ghcr-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        pkg: [pronto-pa, pronto-pa-web]
+    env:
+      ORG: comune-di-montesilvano
+      PKG: ${{ matrix.pkg }}
+    steps:
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pulizia ${{ matrix.pkg }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Schedule: sempre reale. Dispatch: secondo l'input (default dry-run).
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          KEEP_DAILY: ${{ inputs.keep_daily || 30 }}
+        run: |
+          set -euo pipefail
+          api="orgs/$ORG/packages/container/$PKG/versions"
+          image="ghcr.io/$ORG/$PKG"
+          firma='^sha256-([0-9a-f]{64})(\.sig|\.att|\.sbom)?$'
+
+          gh api --paginate "$api?per_page=100" \
+            -q '.[] | [.id, .name, .created_at, (.metadata.container.tags | join(","))] | @tsv' > versions.tsv
+          echo "Versioni totali: $(wc -l < versions.tsv)"
+
+          grep -oE '(^|,)latest-[0-9]{8}' <(cut -f4 versions.tsv) | tr -d ',' \
+            | sort -r | head -n "$KEEP_DAILY" > daily-keep.txt || true
+
+          # Versione tenuta + i suoi figli (immagine per piattaforma, attestazioni). Un
+          # manifest singolo non ha .manifests: nessun figlio. Mai `|| true`: se la lettura
+          # fallisce i figli resterebbero fuori da keep.txt e verrebbero cancellati,
+          # rompendo l'immagine taggata — meglio fermare tutto.
+          tieni() {
+            echo "$1" >> keep.txt
+            raw=$(docker buildx imagetools inspect --raw "$image@$1")
+            jq -r '.manifests[]?.digest' <<<"$raw" >> keep.txt
+          }
+
+          : > keep.txt
+          while IFS=$'\t' read -r id digest created tags; do
+            [ -n "$tags" ] || continue
+            keep=false
+            for t in ${tags//,/ }; do
+              if [[ "$t" =~ ^latest-[0-9]{8}$ ]]; then
+                grep -qx "$t" daily-keep.txt && keep=true
+              elif [[ ! "$t" =~ $firma ]]; then
+                keep=true
+              fi
+            done
+            $keep && tieni "$digest"
+          done < versions.tsv
+
+          # Firme cosign: tenute solo se l'immagine firmata resta.
+          while IFS=$'\t' read -r id digest created tags; do
+            for t in ${tags//,/ }; do
+              if [[ "$t" =~ $firma ]] && grep -qx "sha256:${BASH_REMATCH[1]}" keep.txt; then
+                tieni "$digest"
+                break
+              fi
+            done
+          done < versions.tsv
+          sort -u -o keep.txt keep.txt
+
+          cutoff=$(date -u -d '6 hours ago' +%FT%TZ)
+          deleted=0
+          while IFS=$'\t' read -r id digest created tags; do
+            grep -qx "$digest" keep.txt && continue
+            [[ "$created" > "$cutoff" ]] && continue
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "DRY-RUN elimina $id $digest ${tags:-<senza tag>} ($created)"
+            else
+              gh api -X DELETE "$api/$id" >/dev/null
+            fi
+            deleted=$((deleted + 1))
+          done < versions.tsv
+
+          kept=$(( $(wc -l < versions.tsv) - deleted ))
+          echo "::notice::$PKG: $deleted versioni da eliminare, $kept tenute (dry_run=$DRY_RUN)"

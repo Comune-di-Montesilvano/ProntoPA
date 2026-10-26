@@ -20,13 +20,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Confronta versione pinnata con ultima release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COOLDOWN_DAYS: "7"
+          COOLDOWN_DAYS: "3"
         run: |
           set -euo pipefail
-          pinned=$(grep -hoE '^\s+version: v[0-9]+\.[0-9]+\.[0-9]+' .github/workflows/tests.yml .github/workflows/release.yml | awk '{print $2}' | sort -u)
+          pinned=$(grep -hoE '^\s+version: v[0-9]+\.[0-9]+\.[0-9]+' .github/workflows/release.yml .github/workflows/security.yml | awk '{print $2}' | sort -u)
           if [ "$(printf '%s\n' "$pinned" | wc -l)" -ne 1 ] || [ -z "$pinned" ]; then
             echo "::error::Versioni Trivy pinnate incoerenti o assenti: $(echo $pinned)"
             exit 1
@@ -64,9 +66,9 @@ jobs:
           gh issue create --title "$title" --body "$(cat <<EOF
           Disponibile Trivy **$latest** (pubblicata $published). Pinnata nei workflow: **$pinned**.
 
-          Aggiornare l'input \`version:\` dei 3 step \`aquasecurity/trivy-action\`:
-          - \`.github/workflows/tests.yml\` (scan filesystem)
-          - \`.github/workflows/release.yml\` (scan immagini app e web)
+          Aggiornare l'input \`version:\` di tutti gli step \`aquasecurity/trivy-action\`:
+          - \`.github/workflows/release.yml\` (scan immagini pubblicate app e web)
+          - \`.github/workflows/security.yml\` (scan filesystem e immagini delle PR)
 
           Release notes: https://github.com/aquasecurity/trivy/releases/tag/$latest
 

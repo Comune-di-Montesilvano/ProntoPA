@@ -1,0 +1,12 @@
+# Eccezioni Trivy: solo falsi positivi verificati, mai CVE reali ignorate alla cieca.
+# Ognuna motivata e limitata per percorso. Usato da security.yml e release.yml.
+# Rivalutare quando la causa sottostante cambia (nuova versione dipendenza/immagine base).
+misconfigurations:
+  - id: DS-0025
+    paths:
+      - "Dockerfile"
+    statement: >-
+      `apk add` senza --no-cache solo negli stage php-extensions e builder, che usano una
+      cache mount BuildKit (--mount=type=cache su /var/cache/apk): la cache non entra nei
+      layer e quegli stage non finiscono nelle immagini pubblicate. Gli stage app e web
+      usano --no-cache.
