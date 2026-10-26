@@ -15,6 +15,11 @@ Laravel 13 · PHP 8.4-FPM · Nginx · MariaDB 12.3 LTS · Redis · Blade+Tailwin
 
 ```bash
 cp .env.example .env
+# vendor/ e node_modules/ stanno in volumi Docker (dev_vendor, dev_node_modules), non sull'host:
+# il bind mount da Windows/WSL2 rendeva ogni pagina lenta (~5 s). Da rifare solo con volumi nuovi.
+MSYS_NO_PATHCONV=1 docker compose run --rm --no-deps --entrypoint "" --user root php chown www:www vendor node_modules
+MSYS_NO_PATHCONV=1 docker compose run --rm --no-deps --entrypoint "" php composer install
+MSYS_NO_PATHCONV=1 docker compose run --rm --no-deps --entrypoint "" php npm ci
 MSYS_NO_PATHCONV=1 docker compose up -d
 MSYS_NO_PATHCONV=1 docker compose exec php php artisan key:generate
 MSYS_NO_PATHCONV=1 docker compose exec php php artisan migrate --seed
@@ -44,7 +49,9 @@ docker compose exec php npm run build
 docker compose exec php composer run analyse   # larastan, baseline in phpstan-baseline.neon
 ```
 
-**Dopo `git pull`/merge**: se `composer.json` è cambiato, `composer install` — vendor/ non tracciato, "Class not found" spesso è solo questo, non un bug.
+**Dopo `git pull`/merge**: se `composer.json` è cambiato, `docker compose exec php composer install` (sempre nel container: il `vendor/` dell'host non è quello usato dall'app, resta solo per l'editor e può essere vecchio) — "Class not found" spesso è solo questo, non un bug. Stesso discorso per `package.json` → `npm ci` nel container.
+
+**Worker dev**: `queue`/`queue-lunghi` girano con `queue:listen` (override dev), non `queue:work --max-time`: con `restart: "no"` morivano dopo un'ora lasciando backup/ripristini "in coda" per sempre.
 
 **Gotcha Docker dev**: `docker compose restart php` da solo → nginx tiene l'IP upstream vecchio (risolto una volta sola all'avvio) → 502. Riavvia anche `nginx`, o l'intero stack.
 
