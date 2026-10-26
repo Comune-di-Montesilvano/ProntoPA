@@ -319,17 +319,12 @@ Validazione e regole restano quelle di `SegnalazioneWorkflowService`.
 
 ## 11. Rilasci
 
-Ogni rilascio è patch, PR unica con CHANGELOG + `publiccode.yml`, test TDD, suite completa.
-
-1. **0.8.23 — Fondamenta + scheda**: componenti `pa/*`, regola di visibilità unica (policy =
-   scope) con operaio e partecipanti, scheda nelle tre letture, prossimo passo, Attività,
-   avvisi al comune sulle note di ditta/segnalante, Sollecita, pannello azioni.
-2. **0.8.24 — Accorpa e Collega** (§7), con migrazione nulla (colonne esistenti) e rimozione di
-   "Segna come duplicata"/"Unisci duplicato".
-3. **0.8.25 — Elenco gestore** (§8).
-4. **0.8.26 — Elenchi segnalatore, ditta, operaio** con i componenti comuni.
-
-Se 0.8.23 risulta troppo grande in fase di piano, si separa il pannello azioni in un rilascio a sé.
+Decisione del committente (in fase di piano): tutto in un unico rilascio **0.9.0** (minor, non
+più quattro patch), PR unica con CHANGELOG + `publiccode.yml`, test TDD, suite completa.
+Contenuto: fondamenta e scheda nelle tre letture, prossimo passo, Attività, avvisi al comune,
+Sollecita, Fine lavori, pannello azioni, Accorpa e Collega (§7, nessuna migrazione: colonne
+esistenti) con rimozione di "Segna come duplicata"/"Unisci duplicato", elenco gestore (§8),
+elenchi segnalatore/ditta/operaio.
 
 ## 12. Lasciato al costruttore
 

@@ -4,6 +4,49 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.0] - 2026-10-26
+
+Nuova interfaccia delle segnalazioni: una sola scheda letta in tre modi (comune, chi fa il
+lavoro, chi ha segnalato) con il "prossimo passo" in evidenza, ed elenchi ridisegnati.
+
+### Added
+- Scheda segnalazione rifatta: in alto il prossimo passo con le azioni giuste per chi guarda
+  (es. "Da smistare: conferma priorità e assegna", "Edil Adriatica deve chiudere il lavoro: è
+  in ritardo di 3 giorni"), avanzamento, attività unica (note, cambi di stato, foto) e un solo
+  campo per scrivere. Le azioni con dati (assegna, chiudi, sospendi, preventivo, accorpa,
+  collega, sollecita) si aprono in un pannello laterale con domande guidate.
+- Lettura "lavoro" per ditte e operai: comunica fine lavori (ore, materiali, foto,
+  descrizione), naviga verso il luogo, chiama il referente, scrivi al comune.
+- Lettura "segnalante": stato in parole semplici, i nomi interni non compaiono, si può
+  scrivere al comune (il comune riceve un avviso) invece di aprire una nuova segnalazione.
+- Accorpa: una segnalazione già presente viene unita alla più vecchia, che risulta
+  "Segnalata N volte"; chi ha segnalato la segue da lì e riceve un avviso, insieme a chi ha
+  il lavoro.
+- Collega a precedente: per un guasto che si ripresenta la nuova segnalazione resta aperta e
+  mostra la riparazione precedente (quando, da chi, dopo quanti giorni).
+- Sollecita: email a chi ha il lavoro (persone delegate della ditta e indirizzo aziendale,
+  operaio o caposquadra), registrata nell'attività.
+- Elenco gestione: ordinamento "più urgenti" (tempo massimo superato prima, poi scadenza e
+  priorità), riquadri "Da guardare", filtri rapidi (tempo superato, entro 24 h, sollecitate,
+  ricorrenti), etichette dei filtri attivi, colonna Scadenza, righe a scheda sul telefono.
+
+### Changed
+- Gestione: una sola barra di viste con conteggio al posto di card e linguette; i filtri
+  restano applicati cambiando vista; stampa ed esportazioni in un unico menu.
+- Elenchi di segnalatori, ditte e operai con gli stessi componenti e colonne per ruolo; chi
+  segue una segnalazione per adesione la vede con l'etichetta "Segui".
+- Visibilità della scheda allineata agli elenchi: chi ha aderito a una segnalazione può aprirla.
+
+### Fixed
+- "Chiudi" dalla scheda falliva la validazione del rapportino anche con i dati inseriti.
+- Operaio: 403 aprendo la scheda di un lavoro della propria squadra.
+- Portale ditta: le segnalazioni su appalti scaduti sparivano dall'elenco.
+- Le note scritte da ditta o segnalante non avvisavano nessuno in comune.
+- "Unisci duplicato" lasciava la nuova segnalazione persa e quella vecchia invariata.
+
+### Removed
+- "Segna come duplicata" e "Unisci duplicato", sostituiti da Accorpa.
+
 ## [0.8.22] - 2026-10-25
 
 ### Security

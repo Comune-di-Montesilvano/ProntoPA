@@ -114,12 +114,14 @@ app/Policies/SegnalazionePolicy.php
 app/Services/
   SegnalazioneWorkflowService  WebhookService  SlaService
   DedupService     # anti-duplicato: simili per tipologia/plesso/vicinanza + embeddings
+  Segnalazioni/  AccorpamentoService (accorpa: allegati/adesioni alla più vecchia, stato 8) · FineLavoriService · DestinatariComune (chi avvisare in comune) · DestinatariAssegnatario (sollecito/assegnazione: delegati ditta+email aziendale, operaio o caposquadra)
   OllamaService    # LLM locale opzionale (titolo auto, triage suggerito, embeddings)
   TelegramBotService
   Backup/     dump logico JSONL · archivio ZIP AES-256 · BackupService (crea/retention) · RipristinoService (con rollback)
   Directory/  Directory (interfaccia) · LdapRecordDirectory (AD reale) · MockDirectory · NullDirectory
   Auth/       LdapLoginService · MappaGruppiLdap · NormalizzaUsernameAd · SpidLoginService
   Deleghe/    DelegaService (scuole: richiesta, decisione segreteria, pre-delega, rinnovo, scadenze) · DelegaImpresaService (ditte: predelega CF→impresa, revoca, disattiva ditta, allinea ruolo)
+app/Support/Segnalazioni/  LetturaScheda (gestore|lavoro|segnalante) · ProssimoPasso · Attivita (feed per lettura, nomi interni nascosti al segnalante) · Scadenza (SLA in parole) · CaricaAllegati
 app/Support/Brand.php  # logo ente (file/URL), loghi email inline (cid; logo da URL scaricato in cache storage/framework/cache/brand)
   Scuole/     AnagrafeMiur (indice open data MIUR su disco local, miur/*.json) · SincronizzaScuole (selezione admin + riallineamento, fonte_dati=miur)
   Oidc/       OidcClient (discovery/PKCE/token/id_token/userinfo) · OidcConfig · ClaimsSpid · IdentitaSpid
@@ -168,11 +170,13 @@ Fonte di verità: `app/Enums/SegnalazioneStato.php` (int-backed enum, **non** un
 
 1=Nuova 2=In carico 3=Assegnata a operatore 4=Assegnata a impresa 5=Preventivo in attesa 6=Sospesa 7=Completata† 8=Duplicata† 9=Annullata† 10=Archiviata† († = `isTerminale()`)
 
-Azioni: assegna impresa/operatore/squadra · chiudi · invia/accetta preventivo · proponi chiusura (con rapportino fotografico) · archivia · sospendi · riapri · unisci a duplicato
+Azioni: assegna impresa/operatore/squadra · chiudi · invia/accetta preventivo · comunica fine lavori (ditta/operaio, foto `fase=dopo`: poi "Chiudi" non richiede il rapportino) · archivia · sospendi · riapri · sollecita · accorpa (sostituisce "segna duplicata"/"unisci", v0.9) · collega a precedente (guasto ricorrente, `id_segnalazione_correlata`, resta aperta)
 
 Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella `stati_segnalazioni` (model `StoricoStatoSegnalazione`, alimenta i KPI)
 
 ## Funzionalità v0.6+
+
+- **Scheda e elenchi (v0.9.0, spec `docs/superpowers/specs/2026-10-25-segnalazioni-redesign-design.md`)**: `segnalazioni/show` include `scheda/{lettura}` (lettura da `LetturaScheda::per()`), pannelli laterali in `scheda/pannelli/` (form con `_pannello`, il drawer si riapre su `old('_pannello')` dopo errore di validazione). Elenchi: riga condivisa `segnalazioni/_riga` (param `colonne`), tabella `.pa-elenco` che diventa a scheda sotto 768px; gestione con `ordine` (default `urgenti` = scope `ordinaUrgenti`) e `filtro` rapido. `SegnalazionePolicy::view` = `scopeVisibileA` (una sola regola). Componenti `x-pa.*` e token CSS `.pa-*`: **Font Awesome (`.fas`) non è a layer e batte le utility Tailwind** (`hidden`/`sm:hidden` su un `<i>` non funzionano: avvolgere in uno span).
 
 - **Anti-duplicato**: adesioni multiple a una segnalazione esistente + merge a posteriori (`DedupService`, `AdesioneSegnalazione`)
 - **Notifiche ditta** (v0.8.19): assegnazione a impresa → email alle persone delegate attive + email aziendale, dedup case-insensitive; ditta disattivata → nessuna email; link solo a `route('accesso')`.
