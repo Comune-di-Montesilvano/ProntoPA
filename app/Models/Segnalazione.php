@@ -51,6 +51,7 @@ class Segnalazione extends Model
         'data_scadenza_sla',
         'sla_violato',
         'sla_warning_inviato',
+        'avviso_inattivita_at',
         'external_id',
         'livello_priorita',
         'id_specializzazione',
@@ -81,6 +82,7 @@ class Segnalazione extends Model
             'data_scadenza_sla'      => 'datetime',
             'sla_violato'            => 'boolean',
             'sla_warning_inviato'    => 'boolean',
+            'avviso_inattivita_at'   => 'datetime',
             'triage_suggerito'       => 'array',
             'embedding'              => 'array',
         ];
@@ -150,6 +152,11 @@ class Segnalazione extends Model
             ->orderByDesc('created_at');
     }
 
+    public function notifiche(): HasMany
+    {
+        return $this->hasMany(NotificaSegnalazione::class, 'id_segnalazione', 'id_segnalazione');
+    }
+
     public function adesioni(): HasMany
     {
         return $this->hasMany(AdesioneSegnalazione::class, 'id_segnalazione', 'id_segnalazione')
@@ -187,6 +194,20 @@ class Segnalazione extends Model
     public function isChiusa(): bool
     {
         return $this->data_chiusura !== null;
+    }
+
+    /** Momento dell'ultima cosa fatta da qualcuno: nota, cambio di stato, allegato, adesione. */
+    public function ultimaAttivita(): Carbon
+    {
+        $momenti = array_filter([
+            $this->data_segnalazione,
+            $this->note()->max('data'),
+            $this->storicoStati()->max('data_registrazione'),
+            $this->allegati()->max('created_at'),
+            $this->adesioni()->max('created_at'),
+        ]);
+
+        return collect($momenti)->map(fn ($m) => Carbon::parse($m))->max();
     }
 
     /** Quante persone hanno segnalato lo stesso guasto: chi l'ha aperta più le adesioni (anche da accorpamento). */

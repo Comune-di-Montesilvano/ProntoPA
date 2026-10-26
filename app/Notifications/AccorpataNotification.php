@@ -27,6 +27,12 @@ class AccorpataNotification extends Notification implements ShouldQueue
         public readonly string $variante,
     ) {}
 
+    /** @return list<int> per TracciaNotificaInviata */
+    public function segnalazioniTracciate(): array
+    {
+        return [$this->destinazione->id_segnalazione, $this->nuova->id_segnalazione];
+    }
+
     /** @return list<string> */
     public function via(object $notifiable): array
     {
