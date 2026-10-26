@@ -24,7 +24,7 @@
             @endcan
             <x-pa.scadenza :segnalazione="$segnalazione" estesa />
             @if($segnalazione->flag_riservata)
-                <x-pa.pill tono="slate">🔒 Riservata</x-pa.pill>
+                <x-pa.pill tono="slate"><i class="fas fa-lock" aria-hidden="true"></i> Riservata</x-pa.pill>
             @endif
             @if($segnalazione->isSollecitata())
                 <x-pa.pill tono="amber">Segnalata {{ $segnalazione->volteSegnalata() }} volte</x-pa.pill>

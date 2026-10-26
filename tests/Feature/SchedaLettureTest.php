@@ -155,6 +155,43 @@ class SchedaLettureTest extends TestCase
             ->assertSee('Gli allegati li vede chiunque apra la segnalazione');
     }
 
+    public function test_operaio_non_sceglie_chi_vede_la_sua_nota(): void
+    {
+        $this->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class, \Illuminate\Routing\Middleware\ThrottleRequests::class]);
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 3, 'id_operatore_assegnato' => $this->operaio->id]);
+
+        $this->actingAs($this->operaio)->post(route('segnalazioni.nota', $s->id_segnalazione), [
+            'testo' => 'Serve un pezzo di ricambio', 'visibile_web' => 1, 'visibile_impresa' => 1,
+        ])->assertRedirect();
+
+        $nota = NotaSegnalazione::where('id_segnalazione', $s->id_segnalazione)->firstOrFail();
+        $this->assertFalse((bool) $nota->visibile_web);
+        $this->assertFalse((bool) $nota->visibile_impresa);
+    }
+
+    public function test_nota_operaio_avvisa_il_comune(): void
+    {
+        $this->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class, \Illuminate\Routing\Middleware\ThrottleRequests::class]);
+        \Illuminate\Support\Facades\Notification::fake();
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 3, 'id_operatore_assegnato' => $this->operaio->id]);
+
+        $this->actingAs($this->operaio)->post(route('segnalazioni.nota', $s->id_segnalazione), ['testo' => 'Manca il pezzo'])
+            ->assertRedirect();
+
+        \Illuminate\Support\Facades\Notification::assertSentTo($this->gestore, \App\Notifications\NotaDaEsternoNotification::class);
+    }
+
+    public function test_riservata_con_icona_non_emoji(): void
+    {
+        $this->s->update(['flag_riservata' => true]);
+
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee('Riservata')
+            ->assertSee('fa-lock', false)
+            ->assertDontSee('🔒');
+    }
+
     public function test_scheda_non_contiene_vecchie_linguette(): void
     {
         $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))

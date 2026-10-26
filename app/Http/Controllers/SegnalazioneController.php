@@ -367,12 +367,13 @@ class SegnalazioneController extends Controller
             ...CaricaAllegati::regole(),
         ], CaricaAllegati::messaggi());
 
-        // Chi scrive da fuori non sceglie a chi arriva: la ditta parla al comune (e ai suoi),
-        // il segnalante al comune. Solo il comune decide la visibilità.
+        // Solo il comune decide la visibilità: la ditta parla al comune (e ai suoi),
+        // il segnalante al comune, l'operaio lascia note interne.
         $utente = auth()->user();
         [$web, $impresa] = match (true) {
             $utente->hasRole('impresa')                  => [false, true],
             LetturaScheda::per($utente) === 'segnalante' => [true, false],
+            LetturaScheda::per($utente) === 'lavoro'     => [false, false],
             default => [(bool) ($data['visibile_web'] ?? false), (bool) ($data['visibile_impresa'] ?? false)],
         };
 
@@ -588,6 +589,10 @@ class SegnalazioneController extends Controller
                 9,
                 soloSeAttivo: false,
             );
+            // I simili sono cercati su tutte le aperte: si propone solo ciò che chi accorpa può vedere.
+            $visibili = Segnalazione::visibileA($request->user())
+                ->whereKey($candidati->pluck('id_segnalazione'))->pluck('id_segnalazione')->all();
+            $candidati = $candidati->whereIn('id_segnalazione', $visibili);
         } else {
             $candidati = Segnalazione::visibileA($request->user())
                 ->aperte()
@@ -651,10 +656,7 @@ class SegnalazioneController extends Controller
 
     private function notificaNota(Segnalazione $segnalazione, NotaSegnalazione $nota): void
     {
-        if (! $nota->visibile_impresa && ! $nota->visibile_web) {
-            return;
-        }
-
+        // Niente uscita anticipata sulle note interne: quelle dell'operaio vanno comunque al comune.
         $notification = new NuovaNotaSegnalazione($segnalazione, $nota);
         $attoreId = auth()->id();
 
