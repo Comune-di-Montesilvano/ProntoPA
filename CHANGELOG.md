@@ -4,6 +4,29 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.3] - 2026-10-27
+
+Segnalazioni ferme: avviso e archiviazione automatica; il segnalante può sollecitare.
+
+### Added
+- Admin → SLA, per ogni regola: dopo quanti giorni lavorativi senza aggiornamenti una
+  segnalazione è "ferma" e dopo quanti, dall'avviso, viene archiviata. Vale in tutti gli stati
+  aperti, anche quando è affidata a ditta o operaio; le sospese sono escluse.
+- Avviso per email a chi ha aperto la segnalazione e a chi ce l'ha in carico (persone delegate ed
+  email della ditta, operaio o caposquadra, gestore assegnato), con la data di archiviazione; ai
+  supervisori un riepilogo giornaliero di avvisate e archiviate. Qualsiasi nota, cambio di stato,
+  allegato o sollecito azzera il conteggio. La scheda mostra "verrà archiviata il …".
+- Archiviazione automatica con nota "Archiviata per inattività" ed email; si può riaprire.
+- Sollecito del segnalante: chi ha aperto la segnalazione, quando il tempo previsto è superato o
+  è ferma, la sollecita dalla scheda (uno ogni 3 giorni lavorativi). Arriva a chi ha il lavoro, o
+  al comune se non è ancora affidata.
+- Comando giornaliero `segnalazioni:inattivita` (07:15).
+
+### Note operative
+- La funzione parte spenta: impostare le soglie in Admin → SLA (suggeriti Critica 2 + 5,
+  Alta 5 + 10, Media 15 + 15, Bassa 30 + 15 giorni lavorativi). Al primo giro partono gli avvisi
+  per tutte le segnalazioni già ferme.
+
 ## [0.9.2] - 2026-10-26
 
 Le scadenze SLA contano solo l'orario d'ufficio.

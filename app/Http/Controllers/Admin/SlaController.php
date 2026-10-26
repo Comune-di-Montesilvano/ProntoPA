@@ -74,6 +74,8 @@ class SlaController extends Controller
             'ore_target'                => ['required', 'integer', 'min:1'],
             'unita'                     => ['required', 'in:ore,giorni'],
             'ore_warning'               => ['required', 'integer', 'min:1'],
+            'giorni_avviso_inattivita'        => ['nullable', 'integer', 'min:1', 'max:365'],
+            'giorni_archiviazione_inattivita' => ['nullable', 'integer', 'min:1', 'max:365'],
             'descrizione'               => ['nullable', 'string', 'max:100'],
         ]);
     }

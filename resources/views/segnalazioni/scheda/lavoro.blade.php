@@ -21,6 +21,7 @@
     </header>
 
     @include('segnalazioni.scheda._prossimo-passo', ['grande' => true])
+    @include('segnalazioni.scheda._inattivita')
 
     @if(auth()->user()->hasRole('operaio') && ($segnalazione->squadraAssegnata || $segnalazione->id_operatore_assegnato))
         <x-pa.card titolo="Chi ci lavora">

@@ -429,6 +429,38 @@ class SegnalazioneController extends Controller
             ->with('success', 'Sollecito inviato.');
     }
 
+    /** Chi ha aperto sollecita chi ha il lavoro (o il comune, se non è ancora affidata). */
+    public function sollecitoSegnalante(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('sollecitaComeSegnalante', $segnalazione);
+
+        $data = $request->validate(['testo' => ['nullable', 'string', 'max:2000']]);
+        $testo = 'Sollecito: '.(trim((string) ($data['testo'] ?? '')) ?: "il problema c'è ancora, chiedo un aggiornamento.");
+        $utente = $request->user();
+
+        $segnalazione->note()->create([
+            'testo'            => $testo,
+            'id_utente'        => $utente->id,
+            'visibile_web'     => true,
+            'visibile_impresa' => (bool) $segnalazione->id_appalto,
+        ]);
+
+        $notifica = new SollecitoNotification($segnalazione, $testo, dalSegnalante: true);
+        $destinatari = DestinatariAssegnatario::per($segnalazione, $utente);
+        if ($destinatari['utenti']->isEmpty() && $destinatari['email'] === []) {
+            $destinatari['utenti'] = DestinatariComune::per($segnalazione, $utente);
+        }
+        if ($destinatari['utenti']->isNotEmpty()) {
+            Notification::send($destinatari['utenti'], $notifica);
+        }
+        foreach ($destinatari['email'] as $email) {
+            Notification::route('mail', $email)->notify($notifica);
+        }
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Sollecito inviato.');
+    }
+
     // ── Stampa scheda ────────────────────────────────────────────────────────
 
     public function stampa(Segnalazione $segnalazione): View

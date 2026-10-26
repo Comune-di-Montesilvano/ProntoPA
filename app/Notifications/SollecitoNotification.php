@@ -11,7 +11,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
 
-/** Il comune chiede a chi ha il lavoro (ditta, operaio, caposquadra) un aggiornamento. */
+/** Il comune, o chi ha aperto la segnalazione, chiede a chi ha il lavoro un aggiornamento. */
 class SollecitoNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
@@ -20,6 +20,7 @@ class SollecitoNotification extends Notification implements ShouldQueue
     public function __construct(
         public readonly Segnalazione $segnalazione,
         public readonly string $testo,
+        public readonly bool $dalSegnalante = false,
     ) {}
 
     /** @return list<string> */
@@ -35,7 +36,9 @@ class SollecitoNotification extends Notification implements ShouldQueue
         $interno = $notifiable instanceof User && ! $notifiable->hasRole('impresa');
 
         return $this->baseMailMessage("Sollecito sulla segnalazione #{$id}")
-            ->line("Il comune chiede un aggiornamento sulla segnalazione #{$id}.")
+            ->line($this->dalSegnalante
+                ? "Chi ha aperto la segnalazione #{$id} chiede un aggiornamento."
+                : "Il comune chiede un aggiornamento sulla segnalazione #{$id}.")
             ->line(Str::limit($this->testo, 500))
             ->action($interno ? 'Apri segnalazione' : 'Accedi con SPID o CIE', $interno ? route('segnalazioni.show', $id) : route('accesso'))
             ->salutation('ProntoPA');

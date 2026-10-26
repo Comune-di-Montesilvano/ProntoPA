@@ -27,6 +27,8 @@
         @endif
     </section>
 
+    @include('segnalazioni.scheda._inattivita')
+
     @include('segnalazioni.scheda._avanzamento')
 
     <x-pa.card titolo="Messaggi con il comune">
