@@ -66,7 +66,10 @@ jobs:
             # Tag delle immagini runtime prima/dopo, digest esclusi: se coincidono è solo un
             # digest nuovo dello stesso tag. Dal diff e non dai metadata, che nei gruppi
             # riportano le versioni di una sola dipendenza.
-            tags() { gh pr diff "$PR_URL" | grep -E "^$1" | grep -oE '(^|[ /])(php|mariadb|redis):[^@[:space:]]+' | tr -d ' /' | sort -u; }
+            # Diff scaricato a parte: se gh fallisce lo step si ferma. Nessuna riga runtime
+            # (es. solo nginx) non è un errore: `|| true` contro pipefail.
+            diff=$(gh pr diff "$PR_URL")
+            tags() { { grep -E "^$1" <<<"$diff" | grep -oE '(^|[ /])(php|mariadb|redis):[^@[:space:]]+' | tr -d ' /' | sort -u; } || true; }
             prima=$(tags '-[^-]')
             dopo=$(tags '\+[^+]')
             if [[ "$prima" != "$dopo" ]]; then
