@@ -116,7 +116,7 @@ jobs:
 
       - name: Log in to GHCR
         if: steps.vars.outputs.skip != 'true'
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -270,14 +270,14 @@ jobs:
           pubblica "$IMAGE_WEB@$WEB_DIGEST" "$WEB_TAGS"
 
       - name: Upload Trivy results (app) to Security tab
-        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         if: always() && steps.vars.outputs.skip != 'true' && hashFiles('trivy-app.sarif') != ''
         with:
           sarif_file: trivy-app.sarif
           category: trivy-app
 
       - name: Upload Trivy results (web) to Security tab
-        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         if: always() && steps.vars.outputs.skip != 'true' && hashFiles('trivy-web.sarif') != ''
         with:
           sarif_file: trivy-web.sarif
