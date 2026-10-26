@@ -7,7 +7,8 @@ version: 2
 # Cooldown: una release compromessa (malware in un pacchetto npm/composer o in una Action)
 # nelle prime ore non ha advisory, quindi audit e Trivy non la vedono; di solito viene
 # scoperta e ritirata in pochi giorni. 7 giorni (soglia della regola Semgrep
-# dependabot-missing-cooldown), 14 sulle major (manuali). Sulle immagini Docker costa poco:
+# dependabot-missing-cooldown), 14 sulle major di composer/npm (manuali; gli altri
+# ecosistemi non supportano semver-major-days). Sulle immagini Docker costa poco:
 # il rebuild giornaliero rifà comunque `apk upgrade`. I security updates di Dependabot
 # (attivi sul repo) non hanno cooldown: le correzioni di CVE arrivano subito.
 updates:
@@ -47,7 +48,6 @@ updates:
       timezone: Europe/Rome
     cooldown:
       default-days: 7
-      semver-major-days: 14
     groups:
       minor-patch:
         update-types: ["minor", "patch"]
@@ -64,7 +64,6 @@ updates:
       timezone: Europe/Rome
     cooldown:
       default-days: 7
-      semver-major-days: 14
     groups:
       minor-patch:
         update-types: ["minor", "patch"]
@@ -80,7 +79,6 @@ updates:
       timezone: Europe/Rome
     cooldown:
       default-days: 7
-      semver-major-days: 14
     groups:
       minor-patch:
         update-types: ["minor", "patch"]
