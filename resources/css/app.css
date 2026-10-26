@@ -221,3 +221,32 @@
 
 .pa-tappa-bar.sospesa { background: var(--amber); }
 .pa-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Elenco segnalazioni: tabella su desktop, righe a scheda sotto 768px (niente scroll orizzontale) */
+.pa-elenco { width: 100%; border-collapse: collapse; font-size: 14px; }
+.pa-elenco th {
+  text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; color: var(--slate-500);
+  background: var(--slate-50); border-bottom: 1px solid var(--slate-200); white-space: nowrap;
+}
+.pa-elenco td { padding: 12px; border-bottom: 1px solid var(--slate-100); vertical-align: top; }
+.pa-elenco tbody tr:hover { background: var(--slate-50); }
+.pa-elenco-titolo { font-weight: 600; color: var(--slate-900); text-decoration: none; }
+.pa-elenco-titolo:hover { color: var(--ente-primary); text-decoration: underline; }
+.pa-elenco-meta { margin-top: 2px; font-size: 13px; color: var(--slate-500); }
+.pa-vista { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: var(--radius-md);
+  font-size: 14px; font-weight: 600; color: var(--slate-600); white-space: nowrap; text-decoration: none; }
+.pa-vista:hover { background: var(--slate-100); }
+.pa-vista.attiva { background: var(--ente-primary-100); color: var(--ente-primary); }
+.pa-vista-conteggio { font-size: 12px; font-weight: 700; color: inherit; opacity: .75; }
+@media (max-width: 767px) {
+  .pa-elenco thead { display: none; }
+  .pa-elenco tr { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px 12px;
+    padding: 12px 4px; border-bottom: 1px solid var(--slate-100); }
+  .pa-elenco td { display: block; padding: 0; border: 0; }
+  .pa-elenco td.pa-col-segnalazione { grid-column: 1 / 3; grid-row: 1; }
+  .pa-elenco td.pa-col-azioni { grid-column: 3; grid-row: 1; align-self: start; }
+  .pa-elenco td.pa-col-stato { grid-column: 1; grid-row: 2; }
+  .pa-elenco td.pa-col-scadenza, .pa-elenco td.pa-col-aggiornata { grid-column: 2 / -1; grid-row: 2; }
+  .pa-elenco td.pa-col-priorita { grid-column: 1; grid-row: 3; }
+  .pa-elenco td.pa-col-assegnata { grid-column: 2 / -1; grid-row: 3; font-size: 13px; }
+}

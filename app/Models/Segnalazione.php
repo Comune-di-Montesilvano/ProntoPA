@@ -95,6 +95,7 @@ class Segnalazione extends Model
         return $this->belongsTo(User::class, 'id_utente_segnalazione');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function operatore(): BelongsTo
     {
         return $this->belongsTo(User::class, 'id_operatore_assegnato');
@@ -121,6 +122,7 @@ class Segnalazione extends Model
         return $this->belongsTo(Plesso::class, 'id_plesso', 'id_plesso');
     }
 
+    /** @return BelongsTo<Appalto, $this> */
     public function appalto(): BelongsTo
     {
         return $this->belongsTo(Appalto::class, 'id_appalto', 'id_appalto');
@@ -156,6 +158,7 @@ class Segnalazione extends Model
             ->orderByDesc('created_at');
     }
 
+    /** @return BelongsTo<Squadra, $this> */
     public function squadraAssegnata(): BelongsTo
     {
         return $this->belongsTo(Squadra::class, 'id_squadra_assegnata', 'id_squadra');
@@ -198,6 +201,20 @@ class Segnalazione extends Model
     public function isSollecitata(): bool
     {
         return ! $this->isChiusa() && $this->volteSegnalata() > 1;
+    }
+
+    /** Chi ha il lavoro, per gli elenchi (null = da assegnare). Usa le relazioni già caricate. */
+    public function nomeAssegnatario(): ?string
+    {
+        if ($this->statoEnum() !== SegnalazioneStato::ASSEGNATA_OPERATORE && $this->id_appalto) {
+            return $this->appalto->impresa->ragione_sociale ?? 'Ditta';
+        }
+
+        if ($this->id_squadra_assegnata) {
+            return trim('Squadra '.($this->squadraAssegnata->nome ?? ''));
+        }
+
+        return $this->operatore?->name;
     }
 
     /** Guasto che si ripresenta: collegata a una riparazione precedente già chiusa. */

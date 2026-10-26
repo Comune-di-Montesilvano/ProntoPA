@@ -20,6 +20,10 @@ class GestioneController extends Controller
         'in_gestione' => 'In gestione', 'evidenza' => 'In evidenza', 'chiuse' => 'Chiuse',
     ];
 
+    private const ORDINI = ['urgenti', 'recenti', 'vecchie'];
+
+    private const FILTRI_RAPIDI = ['scadute', 'entro24h', 'sollecitate', 'ricorrenti'];
+
     private const STATI_IN_CARICO = [SegnalazioneStato::IN_CARICO, SegnalazioneStato::SOSPESA];
 
     private const STATI_IN_GESTIONE = [
@@ -41,9 +45,12 @@ class GestioneController extends Controller
         $dataA            = $request->get('data_a');
         $livelloPriorita  = $request->get('livello_priorita');
         $idSpecializzazione = $request->get('id_specializzazione');
+        $ordine = in_array($request->get('ordine'), self::ORDINI, true) ? $request->get('ordine') : 'urgenti';
+        $filtro = in_array($request->get('filtro'), self::FILTRI_RAPIDI, true) ? $request->get('filtro') : null;
 
         $segnalazioni = $this->elencoFiltrato($request)
-            ->with(['tipologia', 'operatore', 'provenienza', 'plesso'])
+            ->with(['tipologia', 'operatore', 'provenienza', 'plesso', 'squadraAssegnata', 'appalto.impresa'])
+            ->withCount('adesioni')
             ->paginate(30);
 
         // Conteggi (senza filtro ricerca per non distorcere i badge)
@@ -55,8 +62,9 @@ class GestioneController extends Controller
             'in_gestione' => (clone $baseCount)->aperte()->whereIn('id_stato_segnalazione', self::valori(self::STATI_IN_GESTIONE))->count(),
             'aperte'      => (clone $baseCount)->aperte()->count(),
             'chiuse'      => (clone $baseCount)->whereNotNull('data_chiusura')->count(),
-            'sla_rischio' => (clone $baseCount)->aperte()->slaArischio()->count(),
-            'sla_violato' => (clone $baseCount)->aperte()->slaViolato()->count(),
+            // "Da guardare": stessi criteri dei filtri rapidi
+            'scadute'     => self::filtroRapido(clone $baseCount, 'scadute')->count(),
+            'entro24h'    => self::filtroRapido(clone $baseCount, 'entro24h')->count(),
         ];
 
         $tipologie        = TipologiaSegnalazione::orderBy('descrizione')->get();
@@ -79,7 +87,7 @@ class GestioneController extends Controller
             'segnalazioni', 'tab', 'conteggi',
             'q', 'idTipologia', 'idProvenienza',
             'idOperatore', 'dataDa', 'dataA', 'livelloPriorita', 'idSpecializzazione',
-            'tipologie', 'provenienze', 'specializzazioni', 'operatori',
+            'ordine', 'filtro', 'tipologie', 'provenienze', 'specializzazioni', 'operatori',
             'azioniRapidePerSegnalazione', 'filtri'
         ));
     }
@@ -202,13 +210,47 @@ class GestioneController extends Controller
             $base->whereDate('data_segnalazione', '<=', $request->get('data_a'));
         }
 
-        return match ($request->get('tab', 'aperte')) {
-            'nuove'       => $base->where('id_stato_segnalazione', SegnalazioneStato::NUOVA->value)->orderByDesc('data_segnalazione'),
-            'evidenza'    => $base->inEvidenza()->orderByDesc('data_segnalazione'),
-            'in_carico'   => $base->aperte()->whereIn('id_stato_segnalazione', self::valori(self::STATI_IN_CARICO))->orderByDesc('data_segnalazione'),
-            'in_gestione' => $base->aperte()->whereIn('id_stato_segnalazione', self::valori(self::STATI_IN_GESTIONE))->orderByDesc('data_segnalazione'),
-            'chiuse'      => $base->whereNotNull('data_chiusura')->orderByDesc('data_chiusura'),
-            default       => $base->aperte()->orderByDesc('data_segnalazione'),
+        if (in_array($request->get('filtro'), self::FILTRI_RAPIDI, true)) {
+            self::filtroRapido($base, $request->get('filtro'));
+        }
+
+        $tab = $request->get('tab', 'aperte');
+        match ($tab) {
+            'nuove'       => $base->where('id_stato_segnalazione', SegnalazioneStato::NUOVA->value),
+            'evidenza'    => $base->inEvidenza(),
+            'in_carico'   => $base->aperte()->whereIn('id_stato_segnalazione', self::valori(self::STATI_IN_CARICO)),
+            'in_gestione' => $base->aperte()->whereIn('id_stato_segnalazione', self::valori(self::STATI_IN_GESTIONE)),
+            'chiuse'      => $base->whereNotNull('data_chiusura'),
+            default       => $base->aperte(),
+        };
+
+        if ($tab === 'chiuse') {
+            return $base->orderByDesc('data_chiusura');
+        }
+
+        return match ($request->get('ordine')) {
+            'recenti' => $base->orderByDesc('data_segnalazione'),
+            'vecchie' => $base->orderBy('data_segnalazione'),
+            // Più urgenti: scadute (scadenza più vecchia) prima, poi scadenza crescente, poi priorità
+            default   => $base->orderByRaw('data_scadenza_sla IS NULL')
+                ->orderBy('data_scadenza_sla')
+                ->orderByDesc('livello_priorita')
+                ->orderBy('data_segnalazione'),
+        };
+    }
+
+    /**
+     * @param  Builder<Segnalazione>  $query
+     * @return Builder<Segnalazione>
+     */
+    private static function filtroRapido(Builder $query, string $filtro): Builder
+    {
+        return match ($filtro) {
+            'scadute'     => $query->aperte()->where('data_scadenza_sla', '<', now()),
+            'entro24h'    => $query->aperte()->whereBetween('data_scadenza_sla', [now(), now()->addDay()]),
+            'sollecitate' => $query->aperte()->has('adesioni'),
+            'ricorrenti'  => $query->whereNotNull('id_segnalazione_correlata'),
+            default       => $query,
         };
     }
 
@@ -217,7 +259,7 @@ class GestioneController extends Controller
     {
         return array_filter($request->only([
             'tab', 'q', 'id_tipologia', 'id_provenienza', 'id_operatore',
-            'data_da', 'data_a', 'livello_priorita', 'id_specializzazione',
+            'data_da', 'data_a', 'livello_priorita', 'id_specializzazione', 'ordine', 'filtro',
         ]), fn ($v) => $v !== null && $v !== '');
     }
 

@@ -34,6 +34,7 @@ class ColonnaSedeTest extends TestCase
             ->assertOk()->assertSee('>Sede<', false)->assertSee('MONTESILVANO-VIA DANTE')->assertSee($icona);
 
         $this->actingAs($gestore)->get(route('gestione.dashboard'))
-            ->assertOk()->assertSee('>Sede<', false)->assertSee('MONTESILVANO-VIA DANTE')->assertDontSee('>Provenienza</th>', false);
+            // Elenco gestore: la sede sta sotto il titolo (niente colonna dedicata)
+            ->assertOk()->assertSee('MONTESILVANO-VIA DANTE')->assertSee('PEAA03701R')->assertSee($icona)->assertDontSee('>Provenienza</th>', false);
     }
 }

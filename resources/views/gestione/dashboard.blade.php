@@ -1,329 +1,223 @@
+@php
+    $viste = [
+        'nuove' => 'Da smistare', 'aperte' => 'Aperte', 'in_carico' => 'In carico',
+        'in_gestione' => 'In lavorazione', 'evidenza' => 'In evidenza', 'chiuse' => 'Chiuse',
+    ];
+    $filtriRapidi = [
+        'scadute' => 'Tempo massimo superato', 'entro24h' => 'Scadono entro 24 h',
+        'sollecitate' => 'Sollecitate', 'ricorrenti' => 'Ricorrenti',
+    ];
+    $priorita = [1 => 'Bassa', 2 => 'Media', 3 => 'Alta', 4 => 'Critica'];
+    $senza = fn (string ...$chiavi) => route('gestione.dashboard', array_diff_key($filtri, array_flip($chiavi)));
+
+    // Etichette dei filtri attivi, ognuna con il link che la toglie
+    $attivi = [];
+    if ($q !== '') { $attivi[] = ['Cerca: '.$q, $senza('q')]; }
+    if ($filtro) { $attivi[] = [$filtriRapidi[$filtro], $senza('filtro')]; }
+    if ($idTipologia) { $attivi[] = ['Tipologia: '.($tipologie->firstWhere('id_tipologia_segnalazione', $idTipologia)?->descrizione ?? $idTipologia), $senza('id_tipologia')]; }
+    if ($idProvenienza) { $attivi[] = ['Provenienza: '.($provenienze->firstWhere('id_provenienza', $idProvenienza)?->descrizione ?? $idProvenienza), $senza('id_provenienza')]; }
+    if ($idOperatore) { $attivi[] = ['Operatore: '.($operatori->firstWhere('id', $idOperatore)?->name ?? $idOperatore), $senza('id_operatore')]; }
+    if ($livelloPriorita) { $attivi[] = ['Priorità: '.($priorita[(int) $livelloPriorita] ?? $livelloPriorita), $senza('livello_priorita')]; }
+    if ($idSpecializzazione) { $attivi[] = ['Specializzazione: '.($specializzazioni->firstWhere('id_specializzazione', $idSpecializzazione)?->descrizione ?? $idSpecializzazione), $senza('id_specializzazione')]; }
+    if ($dataDa) { $attivi[] = ['Dal '.\Illuminate\Support\Carbon::parse($dataDa)->format('d/m/Y'), $senza('data_da')]; }
+    if ($dataA) { $attivi[] = ['Al '.\Illuminate\Support\Carbon::parse($dataA)->format('d/m/Y'), $senza('data_a')]; }
+    $pannelloAperto = $idTipologia || $idProvenienza || $idOperatore || $livelloPriorita || $idSpecializzazione || $dataDa || $dataA;
+@endphp
+
 <x-app-layout>
-    <x-slot name="header">Gestione Segnalazioni</x-slot>
+    <x-slot name="header">Segnalazioni</x-slot>
     <x-slot name="actions">
-        <a href="{{ route('gestione.stampa', $filtri) }}"
-           target="_blank"
-           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
-            Stampa lista
-        </a>
-        <a href="{{ route('gestione.stampa-schede', $filtri) }}"
-           target="_blank"
-           title="Tutte le schede dell'elenco filtrato, una per pagina"
-           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
-            Stampa schede ({{ $segnalazioni->total() }})
-        </a>
-        <a href="{{ route('gestione.export-csv', $filtri) }}"
-           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
-            Esporta CSV
-        </a>
-        <a href="{{ route('gestione.reports.mensile', ['mese' => now()->month, 'anno' => now()->year]) }}"
-           target="_blank"
-           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
-            Report mese
-        </a>
-        <a href="{{ route('segnalazioni.create') }}"
-           class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
-            + Nuova
-        </a>
+        <div x-data="{ open: false }" class="relative" @keydown.escape.window="open = false">
+            <x-pa.btn x-on:click="open = !open" ::aria-expanded="open">
+                Stampa ed esporta <i class="fas fa-chevron-down text-xs" aria-hidden="true"></i>
+            </x-pa.btn>
+            <div x-show="open" x-cloak @click.outside="open = false"
+                 class="absolute right-0 z-30 mt-1 w-60 rounded-md border border-[var(--slate-200)] bg-white py-1 shadow-lg">
+                <a href="{{ route('gestione.stampa', $filtri) }}" target="_blank" class="block px-4 py-2 text-sm text-[var(--slate-700)] hover:bg-[var(--slate-50)]">Stampa lista</a>
+                <a href="{{ route('gestione.stampa-schede', $filtri) }}" target="_blank" title="Tutte le schede dell'elenco filtrato, una per pagina"
+                   class="block px-4 py-2 text-sm text-[var(--slate-700)] hover:bg-[var(--slate-50)]">Stampa schede ({{ $segnalazioni->total() }})</a>
+                <a href="{{ route('gestione.export-csv', $filtri) }}" class="block px-4 py-2 text-sm text-[var(--slate-700)] hover:bg-[var(--slate-50)]">Esporta CSV</a>
+                <a href="{{ route('gestione.reports.mensile', ['mese' => now()->month, 'anno' => now()->year]) }}" target="_blank"
+                   class="block px-4 py-2 text-sm text-[var(--slate-700)] hover:bg-[var(--slate-50)]">Report del mese</a>
+            </div>
+        </div>
+        <x-pa.btn variant="primary" :href="route('segnalazioni.create')">
+            <i class="fas fa-plus" aria-hidden="true"></i> Nuova segnalazione
+        </x-pa.btn>
     </x-slot>
 
-    {{-- KPI cards --}}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
-        @foreach([
-            ['tab' => 'nuove',       'label' => 'Nuove',       'color' => 'text-sky-600',    'bg' => 'bg-sky-50'],
-            ['tab' => 'aperte',     'label' => 'Aperte',      'color' => 'text-blue-600',   'bg' => 'bg-blue-50'],
-            ['tab' => 'in_carico',   'label' => 'In carico',   'color' => 'text-indigo-600', 'bg' => 'bg-indigo-50'],
-            ['tab' => 'in_gestione', 'label' => 'In gestione', 'color' => 'text-purple-600', 'bg' => 'bg-purple-50'],
-            ['tab' => 'evidenza',    'label' => 'In evidenza', 'color' => 'text-yellow-600', 'bg' => 'bg-yellow-50'],
-            ['tab' => 'chiuse',      'label' => 'Chiuse',      'color' => 'text-green-600',  'bg' => 'bg-green-50'],
-        ] as $card)
-            <a href="{{ route('gestione.dashboard', ['tab' => $card['tab']]) }}"
-               class="{{ $tab === $card['tab'] ? 'ring-2 ring-blue-400' : '' }}
-                      {{ $card['bg'] }} rounded-xl p-4 text-center hover:shadow-sm transition">
-                <div class="text-2xl font-bold {{ $card['color'] }}">{{ $conteggi[$card['tab']] }}</div>
-                <div class="text-xs text-gray-500 mt-0.5 uppercase tracking-wide">{{ $card['label'] }}</div>
-            </a>
-        @endforeach
-    </div>
+    <div class="flex flex-col gap-4">
+        <p class="m-0 text-[var(--slate-600)]">
+            {{ $conteggi['aperte'] }} {{ $conteggi['aperte'] === 1 ? 'aperta' : 'aperte' }},
+            di cui {{ $conteggi['nuove'] }} da smistare
+        </p>
 
-    {{-- KPI SLA --}}
-    @if($conteggi['sla_rischio'] > 0 || $conteggi['sla_violato'] > 0)
-    <div class="grid grid-cols-2 gap-3 mb-5">
-        @if($conteggi['sla_violato'] > 0)
-        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-            <div class="text-2xl font-bold text-red-600">{{ $conteggi['sla_violato'] }}</div>
-            <div class="text-xs text-red-500 mt-0.5 uppercase tracking-wide font-semibold">SLA Violati</div>
-        </div>
-        @endif
-        @if($conteggi['sla_rischio'] > 0)
-        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
-            <div class="text-2xl font-bold text-yellow-600">{{ $conteggi['sla_rischio'] }}</div>
-            <div class="text-xs text-yellow-600 mt-0.5 uppercase tracking-wide font-semibold">SLA a Rischio</div>
-        </div>
-        @endif
-    </div>
-    @endif
-
-    {{-- Ricerca e filtri --}}
-    <form method="GET" action="{{ route('gestione.dashboard') }}"
-          class="bg-white shadow-sm rounded-xl px-4 py-3 mb-4 flex flex-wrap gap-2 items-end">
-        <input type="hidden" name="tab" value="{{ $tab }}">
-
-        <div class="flex-1 min-w-[180px]">
-            <label for="filtro_q" class="block text-xs text-gray-500 mb-1">Cerca</label>
-            <input type="text" name="q" id="filtro_q" value="{{ $q }}"
-                   placeholder="Testo, segnalante, n° segnalazione…"
-                   class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
-        </div>
-
-        <div class="min-w-[160px]">
-            <label for="filtro_id_tipologia" class="block text-xs text-gray-500 mb-1">Tipologia</label>
-            <select name="id_tipologia" id="filtro_id_tipologia"
-                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
-                <option value="">— Tutte —</option>
-                @foreach($tipologie as $t)
-                    <option value="{{ $t->id_tipologia_segnalazione }}"
-                        {{ $idTipologia == $t->id_tipologia_segnalazione ? 'selected' : '' }}>
-                        {{ $t->descrizione }}
-                    </option>
+        {{-- Da guardare: riquadri cliccabili = filtri, nascosti se a zero --}}
+        @php
+            $daGuardare = array_filter([
+                ['n' => $conteggi['scadute'], 'testo' => 'tempo massimo superato', 'tono' => 'rose',
+                 'url' => route('gestione.dashboard', ['tab' => 'aperte', 'filtro' => 'scadute']), 'attivo' => $filtro === 'scadute'],
+                ['n' => $conteggi['entro24h'], 'testo' => 'scadono entro 24 h', 'tono' => 'amber',
+                 'url' => route('gestione.dashboard', ['tab' => 'aperte', 'filtro' => 'entro24h']), 'attivo' => $filtro === 'entro24h'],
+                ['n' => $conteggi['nuove'], 'testo' => 'nuove da smistare', 'tono' => 'primary',
+                 'url' => route('gestione.dashboard', ['tab' => 'nuove']), 'attivo' => $tab === 'nuove' && ! $filtro],
+            ], fn ($r) => $r['n'] > 0);
+        @endphp
+        @if($daGuardare)
+            <section aria-label="Da guardare" class="grid gap-3 sm:grid-cols-3">
+                @foreach($daGuardare as $r)
+                    <a href="{{ $r['url'] }}"
+                       class="pa-card flex items-baseline gap-2 px-4 py-3 no-underline hover:shadow-md {{ $r['attivo'] ? 'ring-2 ring-[var(--ente-primary)]' : '' }}">
+                        <span class="text-2xl font-bold pa-testo-{{ $r['tono'] }}">{{ $r['n'] }}</span>
+                        <span class="text-sm text-[var(--slate-700)]">{{ $r['testo'] }}</span>
+                    </a>
                 @endforeach
-            </select>
-        </div>
-
-        <div class="min-w-[160px]">
-            <label for="filtro_id_provenienza" class="block text-xs text-gray-500 mb-1">Provenienza</label>
-            <select name="id_provenienza" id="filtro_id_provenienza"
-                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
-                <option value="">— Tutte —</option>
-                @foreach($provenienze as $p)
-                    <option value="{{ $p->id_provenienza }}"
-                        {{ $idProvenienza == $p->id_provenienza ? 'selected' : '' }}>
-                        {{ $p->descrizione }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <div class="min-w-[140px]">
-            <label for="filtro_id_operatore" class="block text-xs text-gray-500 mb-1">Operatore</label>
-            <select name="id_operatore" id="filtro_id_operatore"
-                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
-                <option value="">— Tutti —</option>
-                @foreach($operatori as $op)
-                    <option value="{{ $op->id }}" {{ $idOperatore == $op->id ? 'selected' : '' }}>
-                        {{ $op->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <div class="min-w-[120px]">
-            <label for="filtro_livello_priorita" class="block text-xs text-gray-500 mb-1">Priorità</label>
-            <select name="livello_priorita" id="filtro_livello_priorita"
-                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
-                <option value="">— Tutte —</option>
-                <option value="1" {{ $livelloPriorita == 1 ? 'selected' : '' }}>Bassa</option>
-                <option value="2" {{ $livelloPriorita == 2 ? 'selected' : '' }}>Media</option>
-                <option value="3" {{ $livelloPriorita == 3 ? 'selected' : '' }}>Alta</option>
-                <option value="4" {{ $livelloPriorita == 4 ? 'selected' : '' }}>Critica</option>
-            </select>
-        </div>
-
-        @if($specializzazioni->isNotEmpty())
-        <div class="min-w-[140px]">
-            <label for="filtro_id_specializzazione" class="block text-xs text-gray-500 mb-1">Specializzazione</label>
-            <select name="id_specializzazione" id="filtro_id_specializzazione"
-                    class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
-                <option value="">— Tutte —</option>
-                @foreach($specializzazioni as $sp)
-                    <option value="{{ $sp->id_specializzazione }}" {{ $idSpecializzazione == $sp->id_specializzazione ? 'selected' : '' }}>
-                        {{ $sp->descrizione }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+            </section>
         @endif
 
-        <div class="min-w-[120px]">
-            <label for="filtro_data_da" class="block text-xs text-gray-500 mb-1">Dal</label>
-            <input type="date" name="data_da" id="filtro_data_da" value="{{ $dataDa }}"
-                   class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
-        </div>
-
-        <div class="min-w-[120px]">
-            <label for="filtro_data_a" class="block text-xs text-gray-500 mb-1">Al</label>
-            <input type="date" name="data_a" id="filtro_data_a" value="{{ $dataA }}"
-                   class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
-        </div>
-
-        <div class="flex gap-2">
-            <button type="submit"
-                    class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700 transition">
-                Cerca
-            </button>
-            @if($q || $idTipologia || $idProvenienza || $idOperatore || $dataDa || $dataA || $livelloPriorita || $idSpecializzazione)
-                <a href="{{ route('gestione.dashboard', ['tab' => $tab]) }}"
-                   class="px-4 py-2 bg-gray-100 text-gray-600 text-xs font-semibold rounded-md hover:bg-gray-200 transition">
-                    Reset
-                </a>
-            @endif
-        </div>
-    </form>
-
-    {{-- Tab strip --}}
-    <div class="border-b border-gray-200 mb-4">
-        <nav class="-mb-px flex space-x-5">
-            @foreach([
-                'nuove'       => 'Nuove',
-                'aperte'      => 'Aperte',
-                'in_carico'   => 'In carico',
-                'in_gestione' => 'In gestione',
-                'evidenza'    => 'In evidenza',
-                'chiuse'      => 'Chiuse',
-            ] as $key => $label)
-                <a href="{{ route('gestione.dashboard', array_filter(['tab' => $key, 'q' => $q, 'id_tipologia' => $idTipologia, 'id_provenienza' => $idProvenienza])) }}"
-                   class="{{ $tab === $key
-                       ? 'border-blue-500 text-blue-600'
-                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}
-                       whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm">
-                    {{ $label }}
+        {{-- Viste con conteggio: conservano ricerca, filtri e ordinamento --}}
+        <nav aria-label="Viste" class="flex gap-1 overflow-x-auto border-b border-[var(--slate-200)] pb-2">
+            @foreach($viste as $chiave => $etichetta)
+                <a href="{{ route('gestione.dashboard', ['tab' => $chiave] + $filtri) }}"
+                   class="pa-vista {{ $tab === $chiave ? 'attiva' : '' }}" @if($tab === $chiave) aria-current="page" @endif>
+                    {{ $etichetta }} <span class="pa-vista-conteggio">{{ $conteggi[$chiave] }}</span>
                 </a>
             @endforeach
         </nav>
-    </div>
 
-    {{-- Table --}}
-    <div class="bg-white shadow-sm rounded-xl overflow-hidden">
-        @if($segnalazioni->isEmpty())
-            <div class="p-10 text-center text-gray-400 text-sm">Nessuna segnalazione in questa sezione.</div>
-        @else
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-100 text-sm">
-                    <thead class="bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+        {{-- Ricerca, ordinamento e pannello filtri --}}
+        <form method="GET" action="{{ route('gestione.dashboard') }}" class="flex flex-col gap-3">
+            <input type="hidden" name="tab" value="{{ $tab }}">
+            <div class="flex flex-wrap items-center gap-2">
+                <label for="filtro_q" class="sr-only">Cerca</label>
+                <input type="search" name="q" id="filtro_q" value="{{ $q }}" class="pa-input min-w-[220px] flex-1"
+                       placeholder="Cerca per testo, segnalante o numero…">
+                <label for="filtro_ordine" class="sr-only">Ordina</label>
+                <select name="ordine" id="filtro_ordine" class="pa-input w-auto" onchange="this.form.submit()" @disabled($tab === 'chiuse')>
+                    <option value="urgenti" @selected($ordine === 'urgenti')>Più urgenti</option>
+                    <option value="recenti" @selected($ordine === 'recenti')>Più recenti</option>
+                    <option value="vecchie" @selected($ordine === 'vecchie')>Più vecchie</option>
+                </select>
+                <x-pa.btn type="submit" variant="primary">Cerca</x-pa.btn>
+            </div>
+
+            <details class="pa-card px-4 py-3" @if($pannelloAperto) open @endif>
+                <summary class="cursor-pointer text-sm font-semibold text-[var(--slate-700)]">
+                    <i class="fas fa-sliders-h mr-1" aria-hidden="true"></i> Filtri
+                </summary>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="pa-field">
+                        <label for="filtro_filtro" class="pa-field-label">Mostra solo</label>
+                        <select name="filtro" id="filtro_filtro" class="pa-input">
+                            <option value="">Tutte</option>
+                            @foreach($filtriRapidi as $valore => $etichetta)
+                                <option value="{{ $valore }}" @selected($filtro === $valore)>{{ $etichetta }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="pa-field">
+                        <label for="filtro_id_tipologia" class="pa-field-label">Tipologia</label>
+                        <select name="id_tipologia" id="filtro_id_tipologia" class="pa-input">
+                            <option value="">Tutte</option>
+                            @foreach($tipologie as $t)
+                                <option value="{{ $t->id_tipologia_segnalazione }}" @selected($idTipologia == $t->id_tipologia_segnalazione)>{{ $t->descrizione }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="pa-field">
+                        <label for="filtro_id_provenienza" class="pa-field-label">Provenienza</label>
+                        <select name="id_provenienza" id="filtro_id_provenienza" class="pa-input">
+                            <option value="">Tutte</option>
+                            @foreach($provenienze as $p)
+                                <option value="{{ $p->id_provenienza }}" @selected($idProvenienza == $p->id_provenienza)>{{ $p->descrizione }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="pa-field">
+                        <label for="filtro_id_operatore" class="pa-field-label">Operatore</label>
+                        <select name="id_operatore" id="filtro_id_operatore" class="pa-input">
+                            <option value="">Tutti</option>
+                            @foreach($operatori as $op)
+                                <option value="{{ $op->id }}" @selected($idOperatore == $op->id)>{{ $op->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="pa-field">
+                        <label for="filtro_livello_priorita" class="pa-field-label">Priorità</label>
+                        <select name="livello_priorita" id="filtro_livello_priorita" class="pa-input">
+                            <option value="">Tutte</option>
+                            @foreach($priorita as $valore => $etichetta)
+                                <option value="{{ $valore }}" @selected($livelloPriorita == $valore)>{{ $etichetta }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @if($specializzazioni->isNotEmpty())
+                        <div class="pa-field">
+                            <label for="filtro_id_specializzazione" class="pa-field-label">Specializzazione</label>
+                            <select name="id_specializzazione" id="filtro_id_specializzazione" class="pa-input">
+                                <option value="">Tutte</option>
+                                @foreach($specializzazioni as $sp)
+                                    <option value="{{ $sp->id_specializzazione }}" @selected($idSpecializzazione == $sp->id_specializzazione)>{{ $sp->descrizione }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+                    <div class="pa-field">
+                        <label for="filtro_data_da" class="pa-field-label">Segnalate dal</label>
+                        <input type="date" name="data_da" id="filtro_data_da" value="{{ $dataDa }}" class="pa-input">
+                    </div>
+                    <div class="pa-field">
+                        <label for="filtro_data_a" class="pa-field-label">Al</label>
+                        <input type="date" name="data_a" id="filtro_data_a" value="{{ $dataA }}" class="pa-input">
+                    </div>
+                </div>
+                <div class="mt-3 flex justify-end">
+                    <x-pa.btn type="submit" variant="primary" size="sm">Applica filtri</x-pa.btn>
+                </div>
+            </details>
+        </form>
+
+        @if($attivi)
+            <div class="flex flex-wrap items-center gap-2" aria-label="Filtri attivi">
+                @foreach($attivi as [$etichetta, $url])
+                    <a href="{{ $url }}" class="pa-pill pa-pill-primary no-underline" title="Togli questo filtro">
+                        {{ $etichetta }} <i class="fas fa-times" aria-hidden="true"></i><span class="sr-only">(togli)</span>
+                    </a>
+                @endforeach
+                <a href="{{ route('gestione.dashboard', ['tab' => $tab]) }}" class="text-sm font-semibold text-[var(--ente-primary)]">Azzera</a>
+            </div>
+        @endif
+
+        <div class="pa-card overflow-hidden">
+            @if($segnalazioni->isEmpty())
+                <p class="m-0 p-10 text-center text-sm text-[var(--slate-500)]">Nessuna segnalazione in questa vista.</p>
+            @else
+                <table class="pa-elenco">
+                    <thead>
                         <tr>
-                            <th class="px-3 py-3 text-left w-8"></th>
-                            <th class="px-3 py-3 text-left w-10">#</th>
-                            <th class="px-3 py-3 text-left w-16">Priorità</th>
-                            <th class="px-3 py-3 text-left">Tipologia</th>
-                            <th class="px-3 py-3 text-left">Descrizione</th>
-                            <th class="px-3 py-3 text-left">Data</th>
-                            <th class="px-3 py-3 text-left">Sede</th>
-                            <th class="px-3 py-3 text-left">Operatore</th>
-                            <th class="px-3 py-3 text-left">Stato</th>
-                            <th class="px-3 py-3 text-left">Visibilita</th>
-                            <th class="px-3 py-3"></th>
-                            <th class="px-3 py-3"></th>
+                            <th scope="col">Priorità</th>
+                            <th scope="col">Segnalazione</th>
+                            <th scope="col">Stato</th>
+                            <th scope="col">Assegnata a</th>
+                            <th scope="col">Scadenza</th>
+                            <th scope="col"><span class="sr-only">Azioni</span></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-50">
+                    <tbody>
                         @foreach($segnalazioni as $s)
-                            <tr class="hover:bg-gray-50 transition-colors {{ $s->flag_evidenza ? 'bg-yellow-50/40' : '' }}">
-                                {{-- Toggle evidenza --}}
-                                <td class="px-3 py-3 text-center">
-                                    @can('update', $s)
-                                        <form method="POST"
-                                              action="{{ route('segnalazioni.evidenza', $s->id_segnalazione) }}">
-                                            @csrf
-                                            <button type="submit"
-                                                    title="{{ $s->flag_evidenza ? 'Rimuovi da evidenza' : 'Metti in evidenza' }}"
-                                                    class="{{ $s->flag_evidenza ? 'text-yellow-400 hover:text-gray-300' : 'text-gray-200 hover:text-yellow-400' }} text-base transition leading-none">
-                                                ★
-                                            </button>
-                                        </form>
-                                    @else
-                                        @if($s->flag_evidenza)
-                                            <span class="text-yellow-400 text-base leading-none">★</span>
-                                        @endif
-                                    @endcan
-                                </td>
-                                <td class="px-3 py-3 text-gray-400 font-mono text-xs">{{ $s->id_segnalazione }}</td>
-                                <td class="px-3 py-3">
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium {{ $s->badge_priorita_class }}">
-                                        {{ $s->label_priorita }}
-                                    </span>
-                                    @if($s->segnalazione_urgente)
-                                        <span class="ml-1 text-red-500 font-bold text-xs" title="Urgente">!</span>
-                                    @endif
-                                </td>
-                                <td class="px-3 py-3 text-gray-600 max-w-[160px] truncate whitespace-nowrap"><i class="{{ $s->tipologia?->icona ?? 'fas fa-circle' }} w-4 mr-1.5 text-center text-blue-600" aria-hidden="true"></i>{{ $s->tipologia?->descrizione ?? '—' }}</td>
-                                <td class="px-3 py-3 text-gray-800 max-w-xs truncate font-medium">
-                                    {{ $s->titolo_generato ?? Str::limit($s->testo_segnalazione, 70) }}
-                                    @if($s->titolo_generato)<span class="ml-1 text-purple-400 text-xs">AI</span>@endif
-                                </td>
-                                <td class="px-3 py-3 text-gray-400 whitespace-nowrap text-xs">{{ $s->data_segnalazione?->format('d/m/Y') }}</td>
-                                <td class="px-3 py-3 text-xs max-w-[180px]">
-                                    @if($s->plesso)
-                                        <span class="text-gray-700" title="{{ $s->plesso->dettagli() }}">{{ $s->plesso->nome }}</span>
-                                    @else
-                                        <span class="text-gray-400">{{ $s->provenienza?->descrizione ?? '—' }}</span>
-                                    @endif
-                                </td>
-                                <td class="px-3 py-3 text-gray-500 text-xs">{{ $s->operatore?->name ?? '—' }}</td>
-                                <td class="px-3 py-3">
-                                    <span class="{{ $s->statoEnum()->badgeClass() }} inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
-                                        {{ $s->statoEnum()->label() }}
-                                    </span>
-                                </td>
-                                <td class="px-3 py-3">
-                                    @can('update', $s)
-                                        <form method="POST"
-                                              action="{{ route('segnalazioni.toggle-riservata', $s->id_segnalazione) }}">
-                                            @csrf @method('PATCH')
-                                            <button type="submit"
-                                                    title="{{ $s->flag_riservata ? 'Rendi pubblica' : 'Rendi riservata' }}"
-                                                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition {{ $s->flag_riservata ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200' }}">
-                                                {{ $s->flag_riservata ? 'Riservata' : 'Pubblica' }}
-                                            </button>
-                                        </form>
-                                    @else
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium {{ $s->flag_riservata ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700' }}">
-                                            {{ $s->flag_riservata ? 'Riservata' : 'Pubblica' }}
-                                        </span>
-                                    @endcan
-                                </td>
-                                <td class="px-2 py-2 text-right">
-                                    @php $rapide = $azioniRapidePerSegnalazione[$s->id_segnalazione] ?? collect(); @endphp
-                                    @if ($rapide->isNotEmpty())
-                                        <div x-data="{ open: false, posX: 0, posY: 0 }" class="inline-block text-left">
-                                            <button type="button"
-                                                    @click="const r = $el.getBoundingClientRect(); posX = r.right; posY = r.bottom; open = !open"
-                                                    class="rounded p-1 text-gray-500 hover:bg-gray-100" title="Azioni rapide">⋮</button>
-                                            <template x-teleport="body">
-                                                <div x-show="open" x-cloak @click.outside="open = false"
-                                                     class="fixed z-50 w-48 rounded-md border border-gray-200 bg-white shadow-lg"
-                                                     :style="`top: ${posY + 4}px; left: ${posX - 192}px`">
-                                                    @foreach ($rapide as $azione)
-                                                        <form method="POST" action="{{ route('segnalazioni.azione', $s->id_segnalazione) }}"
-                                                              onsubmit="return confirm({{ \Illuminate\Support\Js::from('Eseguire: ' . $azione->descrizione . '?') }});">
-                                                            @csrf
-                                                            <input type="hidden" name="id_azione" value="{{ $azione->id_azione }}">
-                                                            <button type="submit"
-                                                                    class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
-                                                                {{ $azione->descrizione }}
-                                                            </button>
-                                                        </form>
-                                                    @endforeach
-                                                </div>
-                                            </template>
-                                        </div>
-                                    @endif
-                                </td>
-                                <td class="px-3 py-3 text-right">
-                                    <a href="{{ route('segnalazioni.show', $s->id_segnalazione) }}"
-                                       class="text-blue-600 hover:text-blue-800 text-xs font-medium">
-                                        Apri &rarr;
-                                    </a>
-                                </td>
-                            </tr>
+                            @include('segnalazioni._riga', [
+                                'colonne' => ['priorita', 'segnalazione', 'stato', 'assegnata', 'scadenza', 'azioni'],
+                                'rapide' => $azioniRapidePerSegnalazione[$s->id_segnalazione] ?? collect(),
+                            ])
                         @endforeach
                     </tbody>
                 </table>
-            </div>
-            @if($segnalazioni->hasPages())
-                <div class="px-4 py-3 border-t border-gray-100">
-                    {{ $segnalazioni->withQueryString()->links() }}
-                </div>
+                @if($segnalazioni->hasPages())
+                    <div class="border-t border-[var(--slate-100)] px-4 py-3">
+                        {{ $segnalazioni->withQueryString()->links() }}
+                    </div>
+                @endif
             @endif
-        @endif
+        </div>
     </div>
 </x-app-layout>
