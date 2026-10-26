@@ -18,6 +18,8 @@ class SlaConfigurazione extends Model
         'ore_target',
         'unita',
         'ore_warning',
+        'giorni_avviso_inattivita',
+        'giorni_archiviazione_inattivita',
         'descrizione',
     ];
 
@@ -27,6 +29,8 @@ class SlaConfigurazione extends Model
             'livello_priorita' => 'integer',
             'ore_target'       => 'integer',
             'ore_warning'      => 'integer',
+            'giorni_avviso_inattivita'        => 'integer',
+            'giorni_archiviazione_inattivita' => 'integer',
         ];
     }
 

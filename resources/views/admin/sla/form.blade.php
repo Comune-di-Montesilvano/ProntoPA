@@ -95,6 +95,33 @@
                         <x-input-error :messages="$errors->get('ore_warning')" class="mt-1" />
                     </div>
 
+                    <fieldset class="rounded-md border border-gray-200 p-4">
+                        <legend class="px-1 text-sm font-medium text-gray-700">Segnalazioni ferme (giorni lavorativi, vuoto = spento)</legend>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <x-input-label for="giorni_avviso_inattivita" value="Avviso dopo" />
+                                <input type="number" id="giorni_avviso_inattivita" name="giorni_avviso_inattivita" min="1" max="365"
+                                       value="{{ old('giorni_avviso_inattivita', $regola->giorni_avviso_inattivita) }}"
+                                       placeholder="{{ [1 => 30, 2 => 15, 3 => 5, 4 => 2][$regola->livello_priorita ?? 2] ?? 15 }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
+                                <x-input-error :messages="$errors->get('giorni_avviso_inattivita')" class="mt-1" />
+                            </div>
+                            <div>
+                                <x-input-label for="giorni_archiviazione_inattivita" value="Archiviata dopo l'avviso" />
+                                <input type="number" id="giorni_archiviazione_inattivita" name="giorni_archiviazione_inattivita" min="1" max="365"
+                                       value="{{ old('giorni_archiviazione_inattivita', $regola->giorni_archiviazione_inattivita) }}"
+                                       placeholder="{{ [1 => 15, 2 => 15, 3 => 10, 4 => 5][$regola->livello_priorita ?? 2] ?? 15 }}"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
+                                <x-input-error :messages="$errors->get('giorni_archiviazione_inattivita')" class="mt-1" />
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs text-gray-400">
+                            Senza note, cambi di stato, allegati o solleciti per questi giorni, chi ha aperto, chi ha in carico (anche la ditta) e i supervisori
+                            ricevono un avviso; se poi nessuno aggiorna la segnalazione viene archiviata. Le sospese sono escluse.
+                            Valori suggeriti: Critica 2 + 5, Alta 5 + 10, Media 15 + 15, Bassa 30 + 15.
+                        </p>
+                    </fieldset>
+
                     <div>
                         <x-input-label for="descrizione" value="Descrizione (opzionale)" />
                         <input type="text" id="descrizione" name="descrizione" maxlength="100"

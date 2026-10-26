@@ -27,6 +27,7 @@
                         <th class="px-4 py-3 text-left">Priorità</th>
                         <th class="px-4 py-3 text-left">Tempo massimo</th>
                         <th class="px-4 py-3 text-left">A rischio da</th>
+                        <th class="px-4 py-3 text-left">Se ferma</th>
                         <th class="px-4 py-3 text-left">Descrizione</th>
                         <th class="px-4 py-3"></th>
                     </tr>
@@ -45,6 +46,13 @@
                             </td>
                             <td class="px-4 py-3 text-gray-700">{{ $r->descrizioneTempo() }}</td>
                             <td class="px-4 py-3 text-gray-500">{{ $r->ore_warning }} h lav.</td>
+                            <td class="px-4 py-3 text-gray-500 text-xs">
+                                @if($r->giorni_avviso_inattivita)
+                                    avviso dopo {{ $r->giorni_avviso_inattivita }} g lav.{{ $r->giorni_archiviazione_inattivita ? ', archiviata dopo altri '.$r->giorni_archiviazione_inattivita : '' }}
+                                @else
+                                    —
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-gray-500 text-xs">{{ $r->descrizione ?? '—' }}</td>
                             <td class="px-4 py-3 text-right flex gap-2 justify-end">
                                 <a href="{{ route('admin.sla.edit', $r->id_sla) }}"

@@ -5,6 +5,8 @@ namespace App\Policies;
 use App\Enums\SegnalazioneStato;
 use App\Models\Segnalazione;
 use App\Models\User;
+use App\Services\Sla\CalendarioUfficio;
+use Illuminate\Support\Carbon;
 
 class SegnalazionePolicy
 {
@@ -95,6 +97,33 @@ class SegnalazionePolicy
                 SegnalazioneStato::ASSEGNATA_OPERATORE, SegnalazioneStato::ASSEGNATA_IMPRESA, SegnalazioneStato::PREVENTIVO_IN_ATTESA,
             ], true)
             && $this->modificaPriorita($user, $segnalazione);
+    }
+
+    /**
+     * Chi ha aperto la segnalazione sollecita se è in ritardo o ferma (avviso di inattività),
+     * al massimo una volta ogni 3 giorni lavorativi. Le sospese le ha fermate il comune.
+     */
+    public function sollecitaComeSegnalante(User $user, Segnalazione $segnalazione): bool
+    {
+        if ($segnalazione->isChiusa()
+            || $user->id !== $segnalazione->id_utente_segnalazione
+            || $segnalazione->statoEnum() === SegnalazioneStato::SOSPESA
+            || ! ($segnalazione->data_scadenza_sla instanceof \DateTimeInterface && $segnalazione->data_scadenza_sla < now()
+                || $segnalazione->avviso_inattivita_at)
+        ) {
+            return false;
+        }
+
+        $ultimo = $segnalazione->note()
+            ->where('id_utente', $user->id)
+            ->where('testo', 'like', 'Sollecito%')
+            ->max('data');
+        if (! $ultimo) {
+            return true;
+        }
+        $prossimo = CalendarioUfficio::daImpostazioni()->aggiungiGiorniLavorativi(Carbon::parse($ultimo), 3);
+
+        return $prossimo === null || $prossimo->isPast();
     }
 
     /** Il comune accorpa una segnalazione aperta a un'altra già esistente. */

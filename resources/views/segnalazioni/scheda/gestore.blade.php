@@ -22,6 +22,7 @@
 <div class="flex flex-col gap-5">
     @include('segnalazioni.scheda._testata')
     @include('segnalazioni.scheda._prossimo-passo')
+    @include('segnalazioni.scheda._inattivita')
 
     <div class="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:grid-rows-[auto_1fr]">
         {{-- Chi ci lavora: sotto il prossimo passo anche su telefono --}}
