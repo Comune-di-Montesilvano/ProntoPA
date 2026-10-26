@@ -68,6 +68,7 @@ class SlaController extends Controller
             'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
             'livello_priorita'          => ['required', 'integer', 'between:1,4'],
             'ore_target'                => ['required', 'integer', 'min:1'],
+            'unita'                     => ['required', 'in:ore,giorni'],
             'ore_warning'               => ['required', 'integer', 'min:1'],
             'descrizione'               => ['nullable', 'string', 'max:100'],
         ]);

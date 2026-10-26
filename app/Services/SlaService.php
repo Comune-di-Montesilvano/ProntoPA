@@ -5,12 +5,13 @@ namespace App\Services;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Models\SlaConfigurazione;
+use App\Services\Sla\CalendarioUfficio;
 use Carbon\Carbon;
 
 class SlaService
 {
     /**
-     * Calcola la data di scadenza SLA per una segnalazione.
+     * Calcola la data di scadenza SLA per una segnalazione, contando solo l'orario d'ufficio.
      * Restituisce null se nessuna regola è configurata.
      */
     public function calcolaScadenza(Segnalazione $segnalazione): ?Carbon
@@ -32,7 +33,11 @@ class SlaService
             return null;
         }
 
-        return $segnalazione->data_segnalazione->addHours($regola->ore_target);
+        $calendario = CalendarioUfficio::daImpostazioni();
+
+        return $regola->unita === 'giorni'
+            ? $calendario->aggiungiGiorniLavorativi($segnalazione->data_segnalazione, $regola->ore_target)
+            : $calendario->aggiungiOreLavorative($segnalazione->data_segnalazione, $regola->ore_target);
     }
 
     /**
@@ -59,7 +64,7 @@ class SlaService
     }
 
     /**
-     * Segnalazione a rischio = scadenza entro ore_warning dal momento attuale.
+     * Segnalazione a rischio = mancano al massimo ore_warning ore lavorative alla scadenza.
      */
     public function isArischio(Segnalazione $segnalazione): bool
     {
@@ -80,8 +85,8 @@ class SlaService
 
         $oreWarning = $regola?->ore_warning ?? 24;
 
-        return $segnalazione->data_scadenza_sla->diffInHours(now(), false) >= -$oreWarning
-            && ! $this->isViolato($segnalazione);
+        return ! $this->isViolato($segnalazione)
+            && CalendarioUfficio::daImpostazioni()->oreLavorativeTra(now(), $segnalazione->data_scadenza_sla) <= $oreWarning;
     }
 
     /**

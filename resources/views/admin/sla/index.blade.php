@@ -25,8 +25,8 @@
                         <th class="px-4 py-3 text-left">Tipologia</th>
                         <th class="px-4 py-3 text-left">Specializzazione</th>
                         <th class="px-4 py-3 text-left">Priorità</th>
-                        <th class="px-4 py-3 text-left">Ore target</th>
-                        <th class="px-4 py-3 text-left">Ore warning</th>
+                        <th class="px-4 py-3 text-left">Tempo massimo</th>
+                        <th class="px-4 py-3 text-left">A rischio da</th>
                         <th class="px-4 py-3 text-left">Descrizione</th>
                         <th class="px-4 py-3"></th>
                     </tr>
@@ -43,8 +43,8 @@
                                     {{ $labels[$r->livello_priorita] ?? $r->livello_priorita }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-gray-700">{{ $r->ore_target }}h</td>
-                            <td class="px-4 py-3 text-gray-500">{{ $r->ore_warning }}h</td>
+                            <td class="px-4 py-3 text-gray-700">{{ $r->descrizioneTempo() }}</td>
+                            <td class="px-4 py-3 text-gray-500">{{ $r->ore_warning }} h lav.</td>
                             <td class="px-4 py-3 text-gray-500 text-xs">{{ $r->descrizione ?? '—' }}</td>
                             <td class="px-4 py-3 text-right flex gap-2 justify-end">
                                 <a href="{{ route('admin.sla.edit', $r->id_sla) }}"
