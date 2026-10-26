@@ -220,6 +220,22 @@ class AccorpaTest extends TestCase
         $this->assertNotContains($altrove->id_segnalazione, $ids);
     }
 
+    public function test_candidati_automatici_solo_tra_quelle_visibili(): void
+    {
+        $gestore = User::factory()->create(['supervisore_segnalazioni' => false]);
+        $gestore->assignRole('gestore');
+        $posto = ['latitudine' => 42.5, 'longitudine' => 14.1, 'id_tipologia_segnalazione' => 1];
+        $sua = Segnalazione::factory()->create($posto + ['id_operatore_assegnato' => $gestore->id]);
+        $altrui = Segnalazione::factory()->create($posto);
+        $nuova = Segnalazione::factory()->create($posto + ['id_operatore_assegnato' => $gestore->id]);
+
+        $ids = collect($this->actingAs($gestore)->getJson(route('segnalazioni.candidati-accorpa', $nuova))
+            ->assertOk()->json())->pluck('id');
+
+        $this->assertContains($sua->id_segnalazione, $ids);
+        $this->assertNotContains($altrui->id_segnalazione, $ids);
+    }
+
     public function test_candidati_cerca_per_numero(): void
     {
         $cercata = Segnalazione::factory()->create();

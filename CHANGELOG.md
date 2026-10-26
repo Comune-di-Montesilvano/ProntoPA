@@ -4,6 +4,15 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.1] - 2026-10-26
+
+### Fixed
+- Accorpa: le proposte automatiche mostravano anche segnalazioni che chi accorpa non può
+  vedere (solo il titolo; accorparle era comunque vietato). Ora si propone solo ciò che è visibile.
+- Le note dell'operaio restano sempre interne al comune anche con una richiesta costruita a
+  mano, e ora avvisano il comune come quelle di ditta e segnalante.
+- Scheda: "Riservata" con icona invece dell'emoji.
+
 ## [0.9.0] - 2026-10-26
 
 Nuova interfaccia delle segnalazioni: una sola scheda letta in tre modi (comune, chi fa il
