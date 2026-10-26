@@ -24,6 +24,8 @@ services:
     image: pronto-pa-dev:local
     volumes:
       - ./:/var/www/html
+      - dev_vendor:/var/www/html/vendor
+      - dev_node_modules:/var/www/html/node_modules
       - ./storage:/var/www/html/storage
       - ./public/storage:/var/www/html/public/storage
       - ./backups:/var/www/html/backups
@@ -42,6 +44,7 @@ services:
     command: php artisan queue:listen --tries=3 --backoff=30,120 --sleep=3
     volumes:
       - ./:/var/www/html
+      - dev_vendor:/var/www/html/vendor
       - ./storage:/var/www/html/storage
       - ./public/storage:/var/www/html/public/storage
       - ./backups:/var/www/html/backups
@@ -55,6 +58,7 @@ services:
     command: php artisan queue:listen redis-lunghi --queue=lunghi --force --tries=1 --timeout=7200 --sleep=3
     volumes:
       - ./:/var/www/html
+      - dev_vendor:/var/www/html/vendor
       - ./storage:/var/www/html/storage
       - ./public/storage:/var/www/html/public/storage
       - ./backups:/var/www/html/backups
@@ -67,6 +71,7 @@ services:
     image: pronto-pa-dev:local
     volumes:
       - ./:/var/www/html
+      - dev_vendor:/var/www/html/vendor
       - ./storage:/var/www/html/storage
       - ./public/storage:/var/www/html/public/storage
       - ./backups:/var/www/html/backups
@@ -114,3 +119,11 @@ services:
     ports:
       - "3310:3310"
     restart: "no"
+
+# vendor/ e node_modules/ restano dentro Linux, non sul disco host: con il bind
+# mount da Windows (WSL2) ogni file letto attraversa il ponte e una pagina
+# Laravel, che carica centinaia di file da vendor/, impiegava ~5 s.
+# Dopo il primo avvio (o un nuovo volume): composer install e npm ci nel container.
+volumes:
+  dev_vendor:
+  dev_node_modules:
