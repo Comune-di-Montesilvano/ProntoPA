@@ -319,7 +319,6 @@ class TelegramWebhookController extends Controller
         $segnalazioni = Segnalazione::visibileA($user)
             ->with(['stato', 'tipologia'])
             ->aperte()
-            ->orderByDesc('segnalazione_urgente')
             ->orderByDesc('livello_priorita')
             ->limit(10)
             ->get();
@@ -331,11 +330,9 @@ class TelegramWebhookController extends Controller
 
         $lines = ['Segnalazioni per priorità:'];
         foreach ($segnalazioni as $s) {
-            $urgenza = $s->segnalazione_urgente ? ' 🚨' : '';
             $lines[] = sprintf(
-                '[%s%s] #%d — %s',
+                '[%s] #%d — %s',
                 $s->label_priorita,
-                $urgenza,
                 $s->id_segnalazione,
                 Str::limit($s->tipologia?->descrizione ?? $s->testo_segnalazione, 40)
             );
@@ -384,9 +381,6 @@ class TelegramWebhookController extends Controller
         $lines = ['Lavori per priorità:'];
         foreach ($segnalazioni as $s) {
             $prioritaStr = $s->label_priorita;
-            if ($s->segnalazione_urgente) {
-                $prioritaStr .= ' (URGENTE)';
-            }
             $lines[] = sprintf(
                 "• #%d - %s\n  Stato: %s | Priorità: %s",
                 $s->id_segnalazione,

@@ -21,7 +21,6 @@
         .badge-alta { color: #d97706; }
         .badge-media { color: #2563eb; }
         .badge-bassa { color: #6b7280; }
-        .tag-urgente { background: #fee2e2; color: #b91c1c; padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: bold; }
         .footer { margin-top: 20px; font-size: 10px; color: #9ca3af; text-align: right; }
         @media print {
             body { padding: 10px; }
@@ -48,7 +47,7 @@
         <div class="kpi-box"><div class="kpi-value" style="color:#2563eb">{{ $kpi['aperte'] }}</div><div class="kpi-label">Aperte</div></div>
         <div class="kpi-box"><div class="kpi-value" style="color:#16a34a">{{ $kpi['chiuse'] }}</div><div class="kpi-label">Chiuse</div></div>
         <div class="kpi-box"><div class="kpi-value" style="color:#b91c1c">{{ $kpi['sla_violato'] }}</div><div class="kpi-label">SLA violato</div></div>
-        <div class="kpi-box"><div class="kpi-value" style="color:#d97706">{{ $kpi['urgenti'] }}</div><div class="kpi-label">Urgenti</div></div>
+        <div class="kpi-box"><div class="kpi-value" style="color:#d97706">{{ $kpi['critiche'] }}</div><div class="kpi-label">Critiche</div></div>
     </div>
 
     @if($segnalazioni->isEmpty())
@@ -79,7 +78,6 @@
                 <td>{{ $s->stato?->descrizione ?? '—' }}</td>
                 <td>
                     <span class="badge-{{ strtolower($s->label_priorita) }}">{{ $s->label_priorita }}</span>
-                    @if($s->segnalazione_urgente) <span class="tag-urgente">U</span> @endif
                 </td>
             </tr>
             @endforeach

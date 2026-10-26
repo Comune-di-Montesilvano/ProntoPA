@@ -115,12 +115,22 @@ AI opzionale on-premise (Ollama, profilo Docker `ai`), sempre asincrona (job in 
 
 ---
 
+## Redesign segnalazioni ✅ (tag 0.9.0)
+
+Spec: [`docs/superpowers/specs/2026-10-25-segnalazioni-redesign-design.md`](docs/superpowers/specs/2026-10-25-segnalazioni-redesign-design.md)
+
+- Scheda nelle tre letture con prossimo passo, attività unica, pannelli laterali ✅
+- Accorpa (sostituisce duplicata/unisci), Collega a precedente, Sollecita, Fine lavori ✅
+- Elenco gestore (più urgenti, filtri rapidi, viste con conteggio) ed elenchi per ruolo ✅
+
+---
+
 ## v1.1 — Hardening ✅ (tag 0.6.3)
 
 Spec: [`docs/superpowers/specs/2026-08-17-v11-hardening-design.md`](docs/superpowers/specs/2026-08-17-v11-hardening-design.md)
 
 - Password policy coerente, Dependabot, alert job falliti, 2FA TOTP, ClamAV allegati, Dusk in CI ✅
-- Retention GDPR → spostata in 0.9.0 (attende decisione ente)
+- Retention GDPR → spostata in 0.9.x (attende decisione ente)
 - Staging → spostato in 1.0.0 (attende infrastruttura)
 
 ---
@@ -133,4 +143,4 @@ Spec: [`docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md`](docs/
 - Fase 2a — Scuole via SPID/CIE (pa-sso-proxy), completa profilo, verifica email ✅ (0.7.0)
 - Anagrafe scuole MIUR (prerequisito deleghe) ✅
 - Fase 2b — Deleghe confermate dalla segreteria, rinnovo annuale, visibilità per delega ✅ (0.8.0)
-- Fase 3 — Cutover: disattivazione segnalatori legacy, fine fallback username locale 📋 → **0.9.0**
+- Fase 3 — Cutover: disattivazione segnalatori legacy, fine fallback username locale 📋 → **0.9.x**

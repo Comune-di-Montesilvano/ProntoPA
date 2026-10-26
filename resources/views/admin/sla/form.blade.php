@@ -63,21 +63,36 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <x-input-label for="ore_target" value="Ore target *" />
+                            <x-input-label for="ore_target" value="Tempo massimo *" />
                             <input type="number" id="ore_target" name="ore_target" min="1" required
                                    value="{{ old('ore_target', $regola->ore_target) }}"
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500 @error('ore_target') border-red-500 @enderror">
-                            <p class="mt-1 text-xs text-gray-400">Ore entro cui chiudere</p>
                             <x-input-error :messages="$errors->get('ore_target')" class="mt-1" />
                         </div>
                         <div>
-                            <x-input-label for="ore_warning" value="Ore warning *" />
-                            <input type="number" id="ore_warning" name="ore_warning" min="1" required
-                                   value="{{ old('ore_warning', $regola->ore_warning) }}"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500 @error('ore_warning') border-red-500 @enderror">
-                            <p class="mt-1 text-xs text-gray-400">Ore prima della scadenza per alert</p>
-                            <x-input-error :messages="$errors->get('ore_warning')" class="mt-1" />
+                            <x-input-label for="unita" value="Unità *" />
+                            <select id="unita" name="unita" required
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500 @error('unita') border-red-500 @enderror">
+                                @foreach(['ore' => 'Ore lavorative', 'giorni' => 'Giorni lavorativi'] as $val => $label)
+                                    <option value="{{ $val }}" {{ old('unita', $regola->unita ?? 'ore') === $val ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('unita')" class="mt-1" />
                         </div>
+                    </div>
+                    <p class="-mt-3 text-xs text-gray-400">
+                        Si conta solo l'orario d'ufficio (weekend, festivi e patrono esclusi), impostato in
+                        <a href="{{ route('admin.impostazioni.index') }}" class="underline">Impostazioni → Orario d'ufficio</a>.
+                        N giorni lavorativi = entro la chiusura dell'N-esimo giorno lavorativo dopo quello della segnalazione.
+                    </p>
+
+                    <div>
+                        <x-input-label for="ore_warning" value="Avviso a rischio (ore lavorative) *" />
+                        <input type="number" id="ore_warning" name="ore_warning" min="1" required
+                               value="{{ old('ore_warning', $regola->ore_warning) }}"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500 @error('ore_warning') border-red-500 @enderror">
+                        <p class="mt-1 text-xs text-gray-400">Ore lavorative prima della scadenza in cui la segnalazione risulta a rischio</p>
+                        <x-input-error :messages="$errors->get('ore_warning')" class="mt-1" />
                     </div>
 
                     <div>

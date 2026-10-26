@@ -128,8 +128,8 @@
                     <x-input-error :messages="$errors->get('id_plesso')" class="mt-1" />
                 </div>
 
-                {{-- Priorità / Urgenza --}}
-                <div x-data="{ priorita: {{ old('livello_priorita', 2) }} }">
+                {{-- Priorità e tempo previsto (indicativo: la priorità la decide l'ufficio) --}}
+                <div x-data="{ priorita: {{ (int) old('livello_priorita', 2) }}, tempi: @js($tempiPrevisti) }">
                     <x-input-label value="Priorità" />
                     <input type="hidden" name="livello_priorita" :value="priorita">
                     <div class="mt-2 flex flex-wrap gap-2">
@@ -145,12 +145,15 @@
                             </button>
                         @endforeach
                     </div>
-                    <label class="mt-3 inline-flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" name="segnalazione_urgente" value="1"
-                               {{ old('segnalazione_urgente') ? 'checked' : '' }}
-                               class="rounded border-gray-300 text-red-600 focus:ring-red-500">
-                        <span class="text-sm font-semibold text-red-600">Segnalazione urgente (richiede intervento immediato)</span>
-                    </label>
+                    <template x-if="tempi[tipologiaId]?.[priorita] ?? tempi[0]?.[priorita]">
+                        <p class="mt-3 text-sm text-gray-700">
+                            Intervento previsto entro <strong x-text="tempi[tipologiaId]?.[priorita] ?? tempi[0]?.[priorita]"></strong>.
+                        </p>
+                    </template>
+                    <p class="mt-1 text-xs text-gray-500">La priorità definitiva la stabilisce l'ufficio.</p>
+                    <p class="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                        Per pericoli immediati (incendio, fuga di gas, crolli) chiama il 112: il comune interviene in orario d'ufficio.
+                    </p>
                     <x-input-error :messages="$errors->get('livello_priorita')" class="mt-1" />
                 </div>
 

@@ -15,6 +15,11 @@ Laravel 13 · PHP 8.4-FPM · Nginx · MariaDB 12.3 LTS · Redis · Blade+Tailwin
 
 ```bash
 cp .env.example .env
+# vendor/ e node_modules/ stanno in volumi Docker (dev_vendor, dev_node_modules), non sull'host:
+# il bind mount da Windows/WSL2 rendeva ogni pagina lenta (~5 s). Da rifare solo con volumi nuovi.
+MSYS_NO_PATHCONV=1 docker compose run --rm --no-deps --entrypoint "" --user root php chown www:www vendor node_modules
+MSYS_NO_PATHCONV=1 docker compose run --rm --no-deps --entrypoint "" php composer install
+MSYS_NO_PATHCONV=1 docker compose run --rm --no-deps --entrypoint "" php npm ci
 MSYS_NO_PATHCONV=1 docker compose up -d
 MSYS_NO_PATHCONV=1 docker compose exec php php artisan key:generate
 MSYS_NO_PATHCONV=1 docker compose exec php php artisan migrate --seed
@@ -44,7 +49,9 @@ docker compose exec php npm run build
 docker compose exec php composer run analyse   # larastan, baseline in phpstan-baseline.neon
 ```
 
-**Dopo `git pull`/merge**: se `composer.json` è cambiato, `composer install` — vendor/ non tracciato, "Class not found" spesso è solo questo, non un bug.
+**Dopo `git pull`/merge**: se `composer.json` è cambiato, `docker compose exec php composer install` (sempre nel container: il `vendor/` dell'host non è quello usato dall'app, resta solo per l'editor e può essere vecchio) — "Class not found" spesso è solo questo, non un bug. Stesso discorso per `package.json` → `npm ci` nel container.
+
+**Worker dev**: `queue`/`queue-lunghi` girano con `queue:listen` (override dev), non `queue:work --max-time`: con `restart: "no"` morivano dopo un'ora lasciando backup/ripristini "in coda" per sempre.
 
 **Gotcha Docker dev**: `docker compose restart php` da solo → nginx tiene l'IP upstream vecchio (risolto una volta sola all'avvio) → 502. Riavvia anche `nginx`, o l'intero stack.
 
@@ -82,6 +89,7 @@ Brand/mappa/email → **Admin → Impostazioni**.
 | `mail_from_address` `mail_from_name` | email |
 | `miur_anagrafe_url` `miur_comune_default` | scuole |
 | `deleghe_max_pendenti` `deleghe_giorni_stop_rifiuto` `deleghe_giorni_scadenza_richiesta` `deleghe_email_giorno_istituto` `deleghe_mesi_validita` `deleghe_giorni_avviso_delegato` | deleghe |
+| `orario_lun`…`orario_dom` (`HH:MM-HH:MM`, vuoto = chiuso) `patrono` (`GG/MM`) | orario |
 
 ```php
 $val = Impostazione::get('ente_nome', 'ProntoPA');
@@ -113,17 +121,20 @@ app/Enums/SegnalazioneStato.php    # fonte di verità sugli stati, vedi sotto
 app/Policies/SegnalazionePolicy.php
 app/Services/
   SegnalazioneWorkflowService  WebhookService  SlaService
+  Sla/CalendarioUfficio  # orario d'ufficio + festivi nazionali (Pasqua calcolata) + patrono: ore/giorni lavorativi
   DedupService     # anti-duplicato: simili per tipologia/plesso/vicinanza + embeddings
+  Segnalazioni/  AccorpamentoService (accorpa: allegati/adesioni alla più vecchia, stato 8) · FineLavoriService · DestinatariComune (chi avvisare in comune) · DestinatariAssegnatario (sollecito/assegnazione: delegati ditta+email aziendale, operaio o caposquadra)
   OllamaService    # LLM locale opzionale (titolo auto, triage suggerito, embeddings)
   TelegramBotService
   Backup/     dump logico JSONL · archivio ZIP AES-256 · BackupService (crea/retention) · RipristinoService (con rollback)
   Directory/  Directory (interfaccia) · LdapRecordDirectory (AD reale) · MockDirectory · NullDirectory
   Auth/       LdapLoginService · MappaGruppiLdap · NormalizzaUsernameAd · SpidLoginService
   Deleghe/    DelegaService (scuole: richiesta, decisione segreteria, pre-delega, rinnovo, scadenze) · DelegaImpresaService (ditte: predelega CF→impresa, revoca, disattiva ditta, allinea ruolo)
+app/Support/Segnalazioni/  LetturaScheda (gestore|lavoro|segnalante) · ProssimoPasso · Attivita (feed per lettura, nomi interni nascosti al segnalante) · Scadenza (SLA in parole) · CaricaAllegati
 app/Support/Brand.php  # logo ente (file/URL), loghi email inline (cid; logo da URL scaricato in cache storage/framework/cache/brand)
   Scuole/     AnagrafeMiur (indice open data MIUR su disco local, miur/*.json) · SincronizzaScuole (selezione admin + riallineamento, fonte_dati=miur)
   Oidc/       OidcClient (discovery/PKCE/token/id_token/userinfo) · OidcConfig · ClaimsSpid · IdentitaSpid
-app/Jobs/           ScaricaAnagrafeMiur  CreaBackup  EseguiRipristino  CompletaCaricamento  CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
+app/Jobs/           RicalcolaScadenzeSla  ScaricaAnagrafeMiur  CreaBackup  EseguiRipristino  CompletaCaricamento  CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
 app/Http/Middleware/EnsureUserIsActive.php  LimitaAccessoSpid.php
 app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni  ProvaLdap (ldap:prova)  DelegheScadenze (deleghe:scadenze)  DelegheRinnovi (deleghe:rinnovi)  backup:crea · backup:ripristina · backup:pulisci
 ```
@@ -168,12 +179,15 @@ Fonte di verità: `app/Enums/SegnalazioneStato.php` (int-backed enum, **non** un
 
 1=Nuova 2=In carico 3=Assegnata a operatore 4=Assegnata a impresa 5=Preventivo in attesa 6=Sospesa 7=Completata† 8=Duplicata† 9=Annullata† 10=Archiviata† († = `isTerminale()`)
 
-Azioni: assegna impresa/operatore/squadra · chiudi · invia/accetta preventivo · proponi chiusura (con rapportino fotografico) · archivia · sospendi · riapri · unisci a duplicato
+Azioni: assegna impresa/operatore/squadra · chiudi · invia/accetta preventivo · comunica fine lavori (ditta/operaio, foto `fase=dopo`: poi "Chiudi" non richiede il rapportino) · archivia · sospendi · riapri · sollecita · accorpa (sostituisce "segna duplicata"/"unisci", v0.9) · collega a precedente (guasto ricorrente, `id_segnalazione_correlata`, resta aperta)
 
 Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella `stati_segnalazioni` (model `StoricoStatoSegnalazione`, alimenta i KPI)
 
 ## Funzionalità v0.6+
 
+- **Scheda e elenchi (v0.9.0, spec `docs/superpowers/specs/2026-10-25-segnalazioni-redesign-design.md`)**: `segnalazioni/show` include `scheda/{lettura}` (lettura da `LetturaScheda::per()`), pannelli laterali in `scheda/pannelli/` (form con `_pannello`, il drawer si riapre su `old('_pannello')` dopo errore di validazione). Elenchi: riga condivisa `segnalazioni/_riga` (param `colonne`), tabella `.pa-elenco` che diventa a scheda sotto 768px; gestione con `ordine` (default `urgenti` = scope `ordinaUrgenti`) e `filtro` rapido. `SegnalazionePolicy::view` = `scopeVisibileA` (una sola regola). Componenti `x-pa.*` e token CSS `.pa-*`: **Font Awesome (`.fas`) non è a layer e batte le utility Tailwind** (`hidden`/`sm:hidden` su un `<i>` non funzionano: avvolgere in uno span).
+
+- **SLA in orario d'ufficio (v0.9.2, spec `docs/superpowers/specs/2026-10-26-sla-orario-ufficio-design.md`)**: scadenza = regola (`sla_configurazioni.unita` `ore`|`giorni`, valore in `ore_target`) contata da `CalendarioUfficio` solo nelle fasce aperte (una per giorno, gruppo impostazioni `orario`); N giorni = chiusura dell'N-esimo giorno lavorativo successivo. "A rischio" in ore lavorative, "superata" in tempo reale. Modifica di regole/orario/patrono → job `RicalcolaScadenzeSla` sulle aperte. Flag urgente rimosso: colonna `segnalazione_urgente` ancora a DB ma mai letta/scritta (test `UrgenteRimossoTest` lo verifica).
 - **Anti-duplicato**: adesioni multiple a una segnalazione esistente + merge a posteriori (`DedupService`, `AdesioneSegnalazione`)
 - **Notifiche ditta** (v0.8.19): assegnazione a impresa → email alle persone delegate attive + email aziendale, dedup case-insensitive; ditta disattivata → nessuna email; link solo a `route('accesso')`.
 - **Squadre**: assegnazione a operatore singolo o squadra, notifica al solo caposquadra

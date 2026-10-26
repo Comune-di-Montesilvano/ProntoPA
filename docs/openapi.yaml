@@ -148,7 +148,6 @@ components:
         telefono: { type: string, maxLength: 50, nullable: true }
         latitudine: { type: number, nullable: true }
         longitudine: { type: number, nullable: true }
-        segnalazione_urgente: { type: boolean, nullable: true }
         livello_priorita: { type: integer, minimum: 1, maximum: 4, nullable: true }
         id_specializzazione: { type: integer, nullable: true, description: "Deve esistere in db_specializzazioni" }
         ubicazione_tipo: { type: integer, minimum: 0, maximum: 4, nullable: true }

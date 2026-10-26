@@ -22,6 +22,7 @@ class Appalto extends Model
         ];
     }
 
+    /** @return BelongsTo<Impresa, $this> */
     public function impresa(): BelongsTo
     {
         return $this->belongsTo(Impresa::class, 'id_impresa', 'id_impresa');

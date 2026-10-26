@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Squadra;
+use Illuminate\Support\Carbon;
 
 class Segnalazione extends Model
 {
@@ -51,7 +52,6 @@ class Segnalazione extends Model
         'sla_violato',
         'sla_warning_inviato',
         'external_id',
-        'segnalazione_urgente',
         'livello_priorita',
         'id_specializzazione',
         'ubicazione_tipo',
@@ -76,7 +76,6 @@ class Segnalazione extends Model
             'importo_liquidato'      => 'decimal:2',
             'id_utente_segnalazione' => 'integer',
             'id_operatore_assegnato' => 'integer',
-            'segnalazione_urgente'   => 'boolean',
             'livello_priorita'       => 'integer',
             'ubicazione_tipo'        => 'integer',
             'data_scadenza_sla'      => 'datetime',
@@ -94,6 +93,7 @@ class Segnalazione extends Model
         return $this->belongsTo(User::class, 'id_utente_segnalazione');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function operatore(): BelongsTo
     {
         return $this->belongsTo(User::class, 'id_operatore_assegnato');
@@ -114,11 +114,13 @@ class Segnalazione extends Model
         return $this->belongsTo(Provenienza::class, 'id_provenienza', 'id_provenienza');
     }
 
+    /** @return BelongsTo<Plesso, $this> */
     public function plesso(): BelongsTo
     {
         return $this->belongsTo(Plesso::class, 'id_plesso', 'id_plesso');
     }
 
+    /** @return BelongsTo<Appalto, $this> */
     public function appalto(): BelongsTo
     {
         return $this->belongsTo(Appalto::class, 'id_appalto', 'id_appalto');
@@ -154,6 +156,7 @@ class Segnalazione extends Model
             ->orderByDesc('created_at');
     }
 
+    /** @return BelongsTo<Squadra, $this> */
     public function squadraAssegnata(): BelongsTo
     {
         return $this->belongsTo(Squadra::class, 'id_squadra_assegnata', 'id_squadra');
@@ -184,6 +187,84 @@ class Segnalazione extends Model
     public function isChiusa(): bool
     {
         return $this->data_chiusura !== null;
+    }
+
+    /** Quante persone hanno segnalato lo stesso guasto: chi l'ha aperta più le adesioni (anche da accorpamento). */
+    public function volteSegnalata(): int
+    {
+        return 1 + (int) ($this->adesioni_count ?? $this->adesioni()->count());
+    }
+
+    /** Ancora aperta e segnalata da più persone: va trattata con più urgenza. */
+    public function isSollecitata(): bool
+    {
+        return ! $this->isChiusa() && $this->volteSegnalata() > 1;
+    }
+
+    /**
+     * Segnalazioni che l'utente segue per adesione senza esserne l'autore ("Segui" negli elenchi).
+     *
+     * @return list<int>
+     */
+    public static function idSeguiteDa(User $user): array
+    {
+        return AdesioneSegnalazione::where('id_utente', $user->id)
+            ->whereHas('segnalazione', fn ($q) => $q->where('id_utente_segnalazione', '!=', $user->id))
+            ->pluck('id_segnalazione')->map(fn ($id) => (int) $id)->values()->all();
+    }
+
+    /** Chi ha il lavoro, per gli elenchi (null = da assegnare). Usa le relazioni già caricate. */
+    public function nomeAssegnatario(): ?string
+    {
+        if ($this->statoEnum() !== SegnalazioneStato::ASSEGNATA_OPERATORE && $this->id_appalto) {
+            return $this->appalto->impresa->ragione_sociale ?? 'Ditta';
+        }
+
+        if ($this->id_squadra_assegnata) {
+            return trim('Squadra '.($this->squadraAssegnata->nome ?? ''));
+        }
+
+        return $this->operatore?->name;
+    }
+
+    /** Guasto che si ripresenta: collegata a una riparazione precedente già chiusa. */
+    public function isRicorrente(): bool
+    {
+        return (bool) $this->id_segnalazione_correlata;
+    }
+
+    /**
+     * La riparazione precedente di un guasto ricorrente: quando è stata chiusa,
+     * da chi (ditta o operaio) e quanti giorni prima di questa segnalazione.
+     *
+     * @return array{id: int, chiusa_il: Carbon, da: string, giorni: int}|null
+     */
+    public function riparazionePrecedente(): ?array
+    {
+        $precedente = $this->isRicorrente() ? self::find($this->id_segnalazione_correlata) : null;
+
+        if ($precedente === null || $precedente->data_chiusura === null) {
+            return null;
+        }
+
+        $chiusaIl = Carbon::parse($precedente->data_chiusura);
+        $idImpresa = $precedente->id_appalto ? Appalto::whereKey($precedente->id_appalto)->value('id_impresa') : null;
+        $da = ($idImpresa ? Impresa::whereKey($idImpresa)->value('ragione_sociale') : null)
+            ?? ($precedente->id_operatore_assegnato ? User::whereKey($precedente->id_operatore_assegnato)->value('name') : null)
+            ?? '—';
+
+        return [
+            'id' => (int) $precedente->id_segnalazione,
+            'chiusa_il' => $chiusaIl,
+            'da' => (string) $da,
+            'giorni' => (int) $chiusaIl->copy()->startOfDay()->diffInDays(Carbon::parse($this->data_segnalazione ?? now())->startOfDay()),
+        ];
+    }
+
+    /** Ditta o operaio hanno già mandato le foto del lavoro finito. */
+    public function haFineLavori(): bool
+    {
+        return $this->allegati()->where('fase', 'dopo')->exists();
     }
 
     public function statoEnum(): SegnalazioneStato
@@ -277,7 +358,8 @@ class Segnalazione extends Model
                 return $query->whereRaw('1 = 0');
             }
 
-            return $query->whereIn('id_plesso', Delega::plessiCopertiDa($user));
+            return $query->where(fn ($q) => $q->whereIn('id_plesso', Delega::plessiCopertiDa($user))
+                ->orWhereHas('adesioni', fn ($a) => $a->where('id_utente', $user->id)));
         }
 
         // Segnalatore scuola: vede tutte le segnalazioni dei plessi del suo istituto
@@ -285,16 +367,27 @@ class Segnalazione extends Model
         if ($profilo && $profilo->limita_istituto && $profilo->id_istituto) {
             $plessoIds = Plesso::where('id_istituto', $profilo->id_istituto)
                                ->pluck('id_plesso');
-            return $query->whereIn('id_plesso', $plessoIds);
+            return $query->where(fn ($q) => $q->whereIn('id_plesso', $plessoIds)
+                ->orWhereHas('adesioni', fn ($a) => $a->where('id_utente', $user->id)));
         }
 
-        // Segnalatore generico (URP, interni): solo proprie
-        return $query->where('id_utente_segnalazione', $user->id);
+        // Segnalatore generico (URP, interni): proprie e quelle a cui partecipa (adesione/accorpamento)
+        return $query->where(fn ($q) => $q->where('id_utente_segnalazione', $user->id)
+            ->orWhereHas('adesioni', fn ($a) => $a->where('id_utente', $user->id)));
     }
 
     public function scopeAperte($query)
     {
         return $query->whereNull('data_chiusura');
+    }
+
+    /** Più urgenti prima: scadute (scadenza più vecchia) prima, poi scadenza crescente, poi priorità. */
+    public function scopeOrdinaUrgenti($query)
+    {
+        return $query->orderByRaw('data_scadenza_sla IS NULL')
+            ->orderBy('data_scadenza_sla')
+            ->orderByDesc('livello_priorita')
+            ->orderBy('data_segnalazione');
     }
 
     public function scopeInEvidenza($query)
@@ -312,11 +405,6 @@ class Segnalazione extends Model
     public function scopeCritica($query)
     {
         return $query->where('livello_priorita', 4);
-    }
-
-    public function scopeUrgente($query)
-    {
-        return $query->where('segnalazione_urgente', true);
     }
 
     public function scopeSlaArischio($query)

@@ -21,7 +21,7 @@ class OperaioDashboardController extends Controller
             'chiuse' => Segnalazione::where('id_operatore_assegnato', $user->id)
                 ->whereNotNull('data_chiusura')
                 ->whereDate('data_chiusura', '>=', now()->subMonth())
-                ->with(['stato', 'tipologia', 'plesso'])
+                ->with(['tipologia', 'plesso'])
                 ->orderByDesc('data_chiusura')
                 ->paginate(15),
             'squadra' => Segnalazione::whereIn(
@@ -29,15 +29,13 @@ class OperaioDashboardController extends Controller
                     $user->squadreGuidate()->pluck('id_squadra')
                 )
                 ->aperte()
-                ->with(['stato', 'tipologia', 'plesso', 'operatore'])
-                ->orderByDesc('livello_priorita')
-                ->orderBy('data_segnalazione')
+                ->with(['tipologia', 'plesso', 'operatore'])
+                ->ordinaUrgenti()
                 ->paginate(15),
             default => Segnalazione::where('id_operatore_assegnato', $user->id)
                 ->aperte()
-                ->with(['stato', 'tipologia', 'plesso'])
-                ->orderBy('livello_priorita', 'desc')
-                ->orderBy('data_segnalazione')
+                ->with(['tipologia', 'plesso'])
+                ->ordinaUrgenti()
                 ->paginate(15),
         };
 
@@ -141,12 +139,18 @@ class OperaioDashboardController extends Controller
                                     ->whereNotNull('data_chiusura')
                                     ->whereDate('data_chiusura', '>=', now()->startOfMonth())
                                     ->count(),
-            'tempo_medio_gg' => round(
-                Segnalazione::where('id_operatore_assegnato', $userId)
-                    ->whereNotNull('data_chiusura')
-                    ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, data_segnalazione, data_chiusura) / 24) as v')
-                    ->value('v') ?? 0
-            ),
+            'tempo_medio_gg' => $this->giorniMediChiusura($userId),
         ];
+    }
+
+    /** Giorni medi tra segnalazione e chiusura, calcolati in PHP (TIMESTAMPDIFF non è portabile). */
+    private function giorniMediChiusura(int $userId): int
+    {
+        $durate = Segnalazione::where('id_operatore_assegnato', $userId)
+            ->whereNotNull('data_chiusura')
+            ->get(['data_segnalazione', 'data_chiusura'])
+            ->map(fn (Segnalazione $s) => $s->data_segnalazione?->diffInHours($s->data_chiusura) / 24);
+
+        return (int) round($durate->avg() ?? 0);
     }
 }

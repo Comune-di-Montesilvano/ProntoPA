@@ -12,10 +12,12 @@ class SegnalatoreDashboardController extends Controller
         $user = auth()->user();
 
         $segnalazioni = Segnalazione::visibileA($user)
-            ->with(['stato', 'tipologia', 'plesso'])
+            ->with(['tipologia', 'plesso'])
+            ->withMax('storicoStati', 'data_registrazione')
             ->orderByDesc('data_segnalazione')
             ->paginate(20);
+        $seguite = Segnalazione::idSeguiteDa($user);
 
-        return view('segnalatore.dashboard', compact('segnalazioni'));
+        return view('segnalatore.dashboard', compact('segnalazioni', 'seguite'));
     }
 }

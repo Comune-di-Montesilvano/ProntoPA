@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Services\Sla\CalendarioUfficio;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -52,6 +53,13 @@ class ImpostazioniSeeder extends Seeder
                 'tipo'        => 'url',
                 'gruppo'      => 'brand',
                 'descrizione' => 'URL del sito web dell\'ente (usato nei link footer)',
+            ],
+            [
+                'chiave'      => 'etichetta_ufficio_segnalante',
+                'valore'      => 'Ufficio manutenzioni',
+                'tipo'        => 'text',
+                'gruppo'      => 'brand',
+                'descrizione' => 'Come compare il personale del comune a chi ha segnalato (i nomi interni non vengono mostrati)',
             ],
 
             // Email
@@ -159,7 +167,7 @@ class ImpostazioniSeeder extends Seeder
                 'valore'      => '1',
                 'tipo'        => 'boolean',
                 'gruppo'      => 'notifiche_telegram',
-                'descrizione' => 'Notifica Telegram per segnalazioni in stato critico/urgente',
+                'descrizione' => 'Notifica Telegram per segnalazioni a priorità critica',
             ],
             [
                 'chiave'      => 'telegram_notifica_sla_warning',
@@ -391,6 +399,7 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'deleghe',
                 'descrizione' => 'Giorni prima della scadenza in cui avvisare il delegato se la segreteria non ha confermato',
             ],
+            ...$this->orario(),
         ];
 
         // Rilanciabile a ogni avvio: aggiunge le chiavi nuove (es. dopo un
@@ -415,5 +424,30 @@ class ImpostazioniSeeder extends Seeder
                 'updated_at' => now(),
             ]));
         }
+    }
+
+    /** Orario d'ufficio (scadenze SLA): una fascia per giorno, vuota = chiuso. */
+    private function orario(): array
+    {
+        $nomi = ['lun' => 'Lunedì', 'mar' => 'Martedì', 'mer' => 'Mercoledì', 'gio' => 'Giovedì', 'ven' => 'Venerdì', 'sab' => 'Sabato', 'dom' => 'Domenica'];
+        $righe = [];
+        foreach (CalendarioUfficio::ORARIO_DEFAULT as $giorno => $fascia) {
+            $righe[] = [
+                'chiave'      => "orario_$giorno",
+                'valore'      => $fascia,
+                'tipo'        => 'text',
+                'gruppo'      => 'orario',
+                'descrizione' => "{$nomi[$giorno]}: orario di apertura (es. 08:00-14:00), vuoto = chiuso",
+            ];
+        }
+        $righe[] = [
+            'chiave'      => 'patrono',
+            'valore'      => '',
+            'tipo'        => 'text',
+            'gruppo'      => 'orario',
+            'descrizione' => 'Giorno del santo patrono (GG/MM, es. 13/06): ufficio chiuso, non conta per le scadenze',
+        ];
+
+        return $righe;
     }
 }
