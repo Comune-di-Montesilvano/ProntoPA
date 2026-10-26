@@ -22,8 +22,10 @@ class DedupService
         ?float $lng = null,
         ?string $testo = null,
         int    $limite = 5,
+        bool   $soloSeAttivo = true,
     ): Collection {
-        if (! Impostazione::get('adesioni_enabled', false)) {
+        // L'accorpamento dalla scheda funziona anche con le adesioni pubbliche spente.
+        if ($soloSeAttivo && ! Impostazione::get('adesioni_enabled', false)) {
             return collect();
         }
 

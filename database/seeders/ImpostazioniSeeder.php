@@ -53,6 +53,13 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'brand',
                 'descrizione' => 'URL del sito web dell\'ente (usato nei link footer)',
             ],
+            [
+                'chiave'      => 'etichetta_ufficio_segnalante',
+                'valore'      => 'Ufficio manutenzioni',
+                'tipo'        => 'text',
+                'gruppo'      => 'brand',
+                'descrizione' => 'Come compare il personale del comune a chi ha segnalato (i nomi interni non vengono mostrati)',
+            ],
 
             // Email
             [

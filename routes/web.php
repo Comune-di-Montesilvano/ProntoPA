@@ -88,14 +88,22 @@ Route::middleware('auth')->group(function () {
     Route::post('segnalazioni/{segnalazione}/adesioni', [AdesioniSegnalazioniController::class, 'store'])
         ->name('segnalazioni.adesioni.store');
 
-    Route::post('segnalazioni/{segnalazione}/unisci', [SegnalazioneController::class, 'unisci'])
-        ->name('segnalazioni.unisci');
+    Route::post('segnalazioni/{segnalazione}/accorpa', [SegnalazioneController::class, 'accorpa'])
+        ->name('segnalazioni.accorpa');
+    Route::get('segnalazioni/{segnalazione}/candidati-accorpa', [SegnalazioneController::class, 'candidatiAccorpa'])
+        ->name('segnalazioni.candidati-accorpa');
+    Route::get('segnalazioni/{segnalazione}/candidati-collega', [SegnalazioneController::class, 'candidatiCollega'])
+        ->name('segnalazioni.candidati-collega');
 
     Route::post('segnalazioni/{segnalazione}/azione', [SegnalazioneController::class, 'eseguiAzione'])
         ->name('segnalazioni.azione');
 
     Route::post('segnalazioni/{segnalazione}/nota', [SegnalazioneController::class, 'aggiungiNota'])
         ->name('segnalazioni.nota');
+    Route::post('segnalazioni/{segnalazione}/sollecita', [SegnalazioneController::class, 'sollecita'])
+        ->name('segnalazioni.sollecita');
+    Route::post('segnalazioni/{segnalazione}/fine-lavori', [SegnalazioneController::class, 'fineLavori'])
+        ->name('segnalazioni.fine-lavori');
 
     Route::post('segnalazioni/{segnalazione}/evidenza', [SegnalazioneController::class, 'toggleEvidenza'])
         ->name('segnalazioni.evidenza');

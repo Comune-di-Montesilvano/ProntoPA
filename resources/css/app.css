@@ -98,6 +98,7 @@
   border-radius: var(--radius-sm); padding: 10px 12px;
   outline: none; transition: border-color .12s, box-shadow .12s; width: 100%;
 }
+.pa-input-auto { width: auto; }
 .pa-input:focus, .pa-textarea:focus, .pa-select:focus {
   border-color: var(--ente-primary-600);
   box-shadow: var(--shadow-focus);
@@ -172,3 +173,81 @@
 .border-brand      { border-color: var(--ente-primary); }
 .bg-brand-light    { background-color: var(--ente-primary-50); }
 .kpi-icon          { background-color: var(--ente-primary-100); color: var(--ente-primary); }
+
+/* ─────────────────────────────────────────────────────
+   Segnalazioni (v0.9): toni, etichette, pannelli
+   ───────────────────────────────────────────────────── */
+.pa-btn-outline { background: #fff; color: var(--slate-700); border-color: var(--slate-300); }
+.pa-btn-outline:hover { background: var(--slate-50); }
+.pa-btn-danger { background: #fff; color: var(--rose); border-color: var(--rose-100); }
+.pa-btn-danger:hover { background: var(--rose-100); }
+
+.pa-testo-slate   { color: var(--slate-600); }
+.pa-testo-primary { color: var(--ente-primary); }
+.pa-testo-violet  { color: var(--violet); }
+.pa-testo-amber   { color: var(--amber-600); }
+.pa-testo-emerald { color: var(--emerald); }
+.pa-testo-rose    { color: var(--rose); }
+
+.pa-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.pa-dot-1 { background: var(--slate-300); }
+.pa-dot-2 { background: var(--slate-500); }
+.pa-dot-3 { background: var(--amber); }
+.pa-dot-4 { background: var(--rose); }
+
+.pa-sezione-titolo {
+  font-size: 13px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--slate-500); margin: 0;
+}
+.pa-tag {
+  display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: .04em; white-space: nowrap;
+}
+.pa-tag-urgente { background: var(--rose); color: #fff; }
+
+.pa-passo { border: 2px solid var(--ente-primary); }
+.pa-passo-rose    { border-color: var(--rose); }
+.pa-passo-amber   { border-color: var(--amber); }
+.pa-passo-slate   { border-color: var(--slate-300); }
+
+.pa-tappa-bar { display: block; height: 5px; border-radius: 3px; background: var(--slate-200); }
+.pa-tappa-bar.fatta { background: var(--ente-primary); }
+
+.pa-drawer-overlay { position: fixed; inset: 0; background: rgba(20, 23, 31, .42); z-index: 40; }
+.pa-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100%); z-index: 50;
+  background: #fff; box-shadow: -8px 0 40px rgba(20, 23, 31, .18);
+  display: flex; flex-direction: column;
+}
+
+.pa-tappa-bar.sospesa { background: var(--amber); }
+.pa-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Elenco segnalazioni: tabella su desktop, righe a scheda sotto 768px (niente scroll orizzontale) */
+.pa-elenco { width: 100%; border-collapse: collapse; font-size: 14px; }
+.pa-elenco th {
+  text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; color: var(--slate-500);
+  background: var(--slate-50); border-bottom: 1px solid var(--slate-200); white-space: nowrap;
+}
+.pa-elenco td { padding: 12px; border-bottom: 1px solid var(--slate-100); vertical-align: top; }
+.pa-elenco tbody tr:hover { background: var(--slate-50); }
+.pa-elenco-titolo { font-weight: 600; color: var(--slate-900); text-decoration: none; }
+.pa-elenco-titolo:hover { color: var(--ente-primary); text-decoration: underline; }
+.pa-elenco-meta { margin-top: 2px; font-size: 13px; color: var(--slate-500); }
+.pa-vista { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: var(--radius-md);
+  font-size: 14px; font-weight: 600; color: var(--slate-600); white-space: nowrap; text-decoration: none; }
+.pa-vista:hover { background: var(--slate-100); }
+.pa-vista.attiva { background: var(--ente-primary-100); color: var(--ente-primary); }
+.pa-vista-conteggio { font-size: 12px; font-weight: 700; color: inherit; opacity: .75; }
+@media (max-width: 767px) {
+  .pa-elenco thead { display: none; }
+  .pa-elenco tr { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px 12px;
+    padding: 12px 4px; border-bottom: 1px solid var(--slate-100); }
+  .pa-elenco td { display: block; padding: 0; border: 0; }
+  .pa-elenco td.pa-col-segnalazione { grid-column: 1 / 3; grid-row: 1; }
+  .pa-elenco td.pa-col-azioni { grid-column: 3; grid-row: 1; align-self: start; }
+  .pa-elenco td.pa-col-stato { grid-column: 1; grid-row: 2; }
+  .pa-elenco td.pa-col-scadenza, .pa-elenco td.pa-col-aggiornata { grid-column: 2 / -1; grid-row: 2; }
+  .pa-elenco td.pa-col-priorita { grid-column: 1; grid-row: 3; }
+  .pa-elenco td.pa-col-assegnata { grid-column: 2 / -1; grid-row: 3; font-size: 13px; }
+}

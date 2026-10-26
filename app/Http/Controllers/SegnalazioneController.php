@@ -13,7 +13,19 @@ use App\Models\Provenienza;
 use App\Models\Segnalazione;
 use App\Models\Specializzazione;
 use App\Models\StoricoStatoSegnalazione;
+use App\Notifications\NotaDaEsternoNotification;
 use App\Notifications\NuovaNotaSegnalazione;
+use App\Notifications\SollecitoNotification;
+use App\Services\Segnalazioni\AccorpamentoService;
+use App\Services\Segnalazioni\DestinatariAssegnatario;
+use App\Services\Segnalazioni\DestinatariComune;
+use App\Services\Segnalazioni\FineLavoriService;
+use App\Models\Appalto;
+use App\Models\Squadra;
+use App\Support\Segnalazioni\Attivita;
+use App\Support\Segnalazioni\CaricaAllegati;
+use App\Support\Segnalazioni\ProssimoPasso;
+use App\Support\Segnalazioni\LetturaScheda;
 use App\Jobs\CalcolaEmbeddingSegnalazione;
 use App\Jobs\GeneraTitoloSegnalazione;
 use App\Jobs\SuggerisciTriageSegnalazione;
@@ -48,12 +60,14 @@ class SegnalazioneController extends Controller
     {
         $user = auth()->user();
         $segnalazioni = Segnalazione::visibileA($user)
-            ->with(['stato', 'tipologia', 'provenienza', 'plesso'])
+            ->with(['tipologia', 'provenienza', 'plesso'])
+            ->withMax('storicoStati', 'data_registrazione')
             ->aperte()
             ->orderByDesc('data_segnalazione')
             ->paginate(20);
+        $seguite = Segnalazione::idSeguiteDa($user);
 
-        return view('segnalazioni.index', compact('segnalazioni'));
+        return view('segnalazioni.index', compact('segnalazioni', 'seguite'));
     }
 
     // ── Form creazione ────────────────────────────────────────────────────────
@@ -226,16 +240,42 @@ class SegnalazioneController extends Controller
             'adesioni.utente',
         ]);
 
-        $azioniDisponibili = $this->workflow->getAzioniDisponibili($segnalazione, auth()->user());
-        $operatori = User::where('gestore_segnalazioni', true)
-            ->orWhere('amministratore', true)
-            ->orderBy('name')
-            ->get();
+        $utente = auth()->user();
+        $lettura = LetturaScheda::per($utente);
+        $azioniDisponibili = $utente->can('update', $segnalazione)
+            ? $this->workflow->getAzioniDisponibili($segnalazione, $utente)
+            : collect();
+        $prossimoPasso = ProssimoPasso::per($segnalazione, $utente);
+        $attivita = Attivita::per($segnalazione, $utente);
 
         $fotoPrima = $segnalazione->allegati->where('fase', 'prima');
         $fotoDopo = $segnalazione->allegati->where('fase', 'dopo');
 
-        return view('segnalazioni.show', compact('segnalazione', 'azioniDisponibili', 'operatori', 'fotoPrima', 'fotoDopo'));
+        // Dati dei pannelli di assegnazione: servono solo alla lettura del comune.
+        $operatori = collect();
+        $squadre = collect();
+        $appaltiValidi = collect();
+        if ($lettura === 'gestore') {
+            $operatori = User::where(fn ($q) => $q->where('gestore_segnalazioni', true)
+                    ->orWhere('amministratore', true)
+                    ->orWhereHas('roles', fn ($r) => $r->whereIn('name', ['operaio', 'gestore', 'admin'])))
+                ->where(fn ($q) => $q->whereNull('attivo')->orWhere('attivo', true))
+                ->orderBy('name')
+                ->get();
+            if (Impostazione::get('squadre_enabled', false)) {
+                $squadre = Squadra::where('attiva', true)->orderBy('nome')->get();
+            }
+            $appaltiValidi = Appalto::where('valido', true)->with('impresa')->orderBy('descrizione')->get();
+            $gruppo = TipologiaSegnalazione::whereKey($segnalazione->id_tipologia_segnalazione)->value('id_gruppo');
+            if ($gruppo && $appaltiValidi->contains('id_gruppo', $gruppo)) {
+                $appaltiValidi = $appaltiValidi->where('id_gruppo', $gruppo)->values();
+            }
+        }
+
+        return view('segnalazioni.show', compact(
+            'segnalazione', 'lettura', 'prossimoPasso', 'attivita', 'azioniDisponibili',
+            'operatori', 'squadre', 'appaltiValidi', 'fotoPrima', 'fotoDopo',
+        ));
     }
 
     // ── Esegui azione workflow ────────────────────────────────────────────────
@@ -253,7 +293,6 @@ class SegnalazioneController extends Controller
             'id_appalto'                => ['nullable', 'integer', 'exists:appalti,id_appalto'],
             'id_squadra'                => ['nullable', 'integer', 'exists:squadre,id_squadra'],
             'nota'                      => ['nullable', 'string', 'max:2000'],
-            'id_segnalazione_madre'     => ['nullable', 'integer', 'exists:segnalazioni,id_segnalazione'],
             'id_segnalazione_correlata' => ['nullable', 'integer', 'exists:segnalazioni,id_segnalazione'],
         ];
 
@@ -262,25 +301,17 @@ class SegnalazioneController extends Controller
         }
 
         if ($azione->codice === 'chiudi') {
-            $rules['ore_lavoro'] = ['required', 'numeric', 'min:0'];
-            $rules['materiali']  = ['required', 'string', 'max:1000'];
-            $rules['nota']       = ['required', 'string', 'max:2000'];
-
-            $maxSizeMb      = (int) Impostazione::get('allegati_max_size_mb', 10);
-            $maxPerRequest  = (int) Impostazione::get('allegati_max_per_request', 5);
-            $mimeConsentiti = array_filter(
-                array_map('trim', explode(',', Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png')))
-            );
-
-            $rules['allegati']   = ['required', 'array', 'min:1', 'max:' . $maxPerRequest];
-            $rules['allegati.*'] = [
-                'file',
-                'max:' . ($maxSizeMb * 1024),
-                'mimetypes:' . implode(',', $mimeConsentiti),
-            ];
+            // Se ditta/operaio hanno già mandato il rapportino con le foto, il comune chiude e basta.
+            $giaRendicontata = $segnalazione->haFineLavori();
+            $obbligo = $giaRendicontata ? 'nullable' : 'required';
+            $rules['ore_lavoro'] = [$obbligo, 'numeric', 'min:0'];
+            $rules['materiali']  = [$obbligo, 'string', 'max:1000'];
+            $rules['nota']       = [$obbligo, 'string', 'max:2000'];
+            $rules += CaricaAllegati::regole(obbligatori: ! $giaRendicontata);
         }
 
         $data = $request->validate($rules, [
+            ...CaricaAllegati::messaggi(),
             'allegati.required' => 'Devi caricare almeno una foto dell\'intervento per proporre la chiusura.',
             'allegati.min' => 'Devi caricare almeno una foto dell\'intervento per proporre la chiusura.',
         ]);
@@ -293,31 +324,34 @@ class SegnalazioneController extends Controller
         );
 
         if ($request->hasFile('allegati') && $azione->codice === 'chiudi') {
-            $disk = Impostazione::get('allegati_storage_disk', 'local');
-            $user = auth()->user();
-
-            foreach ($request->file('allegati') as $file) {
-                $ext      = $file->getClientOriginalExtension();
-                $filename = Str::uuid() . ($ext ? '.' . $ext : '');
-                $path     = $file->storeAs(
-                    'allegati/' . $segnalazione->id_segnalazione,
-                    $filename,
-                    $disk
-                );
-                AllegatoSegnalazione::create([
-                    'id_segnalazione'     => $segnalazione->id_segnalazione,
-                    'percorso'            => $path,
-                    'tipo'                => $file->getMimeType(),
-                    'nome_originale'      => $file->getClientOriginalName(),
-                    'dimensione'          => $file->getSize(),
-                    'id_utente_creazione' => $user->id,
-                    'fase'                => 'dopo',
-                ]);
-            }
+            CaricaAllegati::salva($segnalazione, $request->file('allegati'), auth()->user(), 'dopo');
         }
 
         return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
             ->with('success', 'Azione eseguita.');
+    }
+
+    // ── Fine lavori (ditta, operaio) ──────────────────────────────────────────
+
+    public function fineLavori(Request $request, Segnalazione $segnalazione, FineLavoriService $servizio): RedirectResponse
+    {
+        $this->authorize('comunicaFineLavori', $segnalazione);
+
+        $data = $request->validate([
+            'ore_lavoro' => ['nullable', 'numeric', 'min:0'],
+            'materiali'  => ['nullable', 'string', 'max:1000'],
+            'nota'       => ['required', 'string', 'max:2000'],
+            ...CaricaAllegati::regole(obbligatori: true),
+        ], [
+            ...CaricaAllegati::messaggi(),
+            'allegati.required' => 'Serve almeno una foto del lavoro finito.',
+            'allegati.min'      => 'Serve almeno una foto del lavoro finito.',
+        ]);
+
+        $servizio->comunica($segnalazione, auth()->user(), $data, $request->file('allegati'));
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Fine lavori comunicata al comune.');
     }
 
     // ── Aggiungi nota ─────────────────────────────────────────────────────────
@@ -330,20 +364,63 @@ class SegnalazioneController extends Controller
             'testo'            => ['required', 'string', 'max:2000'],
             'visibile_web'     => ['boolean'],
             'visibile_impresa' => ['boolean'],
-        ]);
+            ...CaricaAllegati::regole(),
+        ], CaricaAllegati::messaggi());
+
+        // Chi scrive da fuori non sceglie a chi arriva: la ditta parla al comune (e ai suoi),
+        // il segnalante al comune. Solo il comune decide la visibilità.
+        $utente = auth()->user();
+        [$web, $impresa] = match (true) {
+            $utente->hasRole('impresa')                  => [false, true],
+            LetturaScheda::per($utente) === 'segnalante' => [true, false],
+            default => [(bool) ($data['visibile_web'] ?? false), (bool) ($data['visibile_impresa'] ?? false)],
+        };
 
         $nota = $segnalazione->note()->create([
             'testo'            => $data['testo'],
-            'id_utente'        => auth()->id(),
-            'visibile_web'     => $data['visibile_web'] ?? false,
-            'visibile_impresa' => $data['visibile_impresa'] ?? false,
+            'id_utente'        => $utente->id,
+            'visibile_web'     => $web,
+            'visibile_impresa' => $impresa,
         ]);
+
+        if ($request->hasFile('allegati')) {
+            CaricaAllegati::salva($segnalazione, $request->file('allegati'), $utente);
+        }
 
         $this->notificaNota($segnalazione, $nota);
 
         return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
             ->with('success', 'Nota aggiunta.')
             ->withFragment('note');
+    }
+
+    // ── Sollecito a chi ha il lavoro ──────────────────────────────────────────
+
+    public function sollecita(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('sollecita', $segnalazione);
+
+        $data = $request->validate(['testo' => ['nullable', 'string', 'max:2000']]);
+        $testo = 'Sollecito: '.(trim((string) ($data['testo'] ?? '')) ?: 'aggiornare sullo stato del lavoro.');
+
+        $segnalazione->note()->create([
+            'testo'            => $testo,
+            'id_utente'        => auth()->id(),
+            'visibile_web'     => false,
+            'visibile_impresa' => (bool) $segnalazione->id_appalto,
+        ]);
+
+        $destinatari = DestinatariAssegnatario::per($segnalazione, auth()->user());
+        $notifica = new SollecitoNotification($segnalazione, $testo);
+        if ($destinatari['utenti']->isNotEmpty()) {
+            Notification::send($destinatari['utenti'], $notifica);
+        }
+        foreach ($destinatari['email'] as $email) {
+            Notification::route('mail', $email)->notify($notifica);
+        }
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Sollecito inviato.');
     }
 
     // ── Stampa scheda ────────────────────────────────────────────────────────
@@ -473,84 +550,103 @@ class SegnalazioneController extends Controller
         })->values());
     }
 
-    // ── Unisci duplicato a un'altra segnalazione ──────────────────────────────
+    // ── Accorpa a una segnalazione già aperta sullo stesso guasto ─────────────
 
-    public function unisci(Request $request, Segnalazione $segnalazione): RedirectResponse
+    public function accorpa(Request $request, Segnalazione $segnalazione, AccorpamentoService $servizio): RedirectResponse
     {
-        $this->authorize('update', $segnalazione);
+        $this->authorize('accorpa', $segnalazione);
 
         $data = $request->validate([
             'id_destinazione' => ['required', 'integer', 'exists:segnalazioni,id_segnalazione'],
         ]);
 
-        $destinazione = Segnalazione::findOrFail($data['id_destinazione']);
+        $destinazione = $servizio->destinazioneEffettiva(Segnalazione::findOrFail($data['id_destinazione']));
+        // Chi accorpa deve poter gestire anche la segnalazione che riceve.
+        $this->authorize('modificaPriorita', $destinazione);
 
-        // Il gestore deve poter operare anche sulla destinazione, non solo sul duplicato
-        $this->authorize('update', $destinazione);
-
-        if ($destinazione->id_segnalazione === $segnalazione->id_segnalazione) {
-            return back()->withErrors(['id_destinazione' => 'Impossibile unire una segnalazione a sé stessa.']);
-        }
-        if ($destinazione->isChiusa()) {
-            return back()->withErrors(['id_destinazione' => 'La segnalazione di destinazione è chiusa.']);
-        }
-        if ($segnalazione->isChiusa()) {
-            return back()->withErrors(['id_destinazione' => 'La segnalazione corrente è già chiusa.']);
-        }
-
-        $user = $request->user();
-
-        DB::transaction(function () use ($segnalazione, $destinazione, $user) {
-            // 1. Allegati del duplicato → destinazione
-            $segnalazione->allegati()->update([
-                'id_segnalazione' => $destinazione->id_segnalazione,
-            ]);
-
-            // 2. Adesioni del duplicato → destinazione
-            $segnalazione->adesioni()->update([
-                'id_segnalazione' => $destinazione->id_segnalazione,
-            ]);
-
-            // 3. Il segnalante del duplicato diventa adesione della destinazione
-            $destinazione->adesioni()->create([
-                'id_utente'  => $segnalazione->id_utente_segnalazione ?: $user->id,
-                'segnalante' => $segnalazione->segnalante,
-                'telefono'   => $segnalazione->telefono,
-                'email'      => $segnalazione->email,
-            ]);
-
-            // 4. Chiudi il duplicato come Duplicata
-            $segnalazione->update([
-                'id_stato_segnalazione' => SegnalazioneStato::DUPLICATA->value,
-                'data_chiusura'         => now(),
-            ]);
-
-            StoricoStatoSegnalazione::create([
-                'id_segnalazione'       => $segnalazione->id_segnalazione,
-                'id_stato_segnalazione' => SegnalazioneStato::DUPLICATA->value,
-                'id_utente'             => $user->id,
-                'id_utente_collegato'   => 0,
-                'id_appalto'            => 0,
-            ]);
-
-            // 5. Note di tracciamento su entrambe
-            $segnalazione->note()->create([
-                'testo'            => "Unita alla segnalazione #{$destinazione->id_segnalazione} come duplicato.",
-                'id_utente'        => $user->id,
-                'visibile_web'     => false,
-                'visibile_impresa' => false,
-            ]);
-            $destinazione->note()->create([
-                'testo'            => "Assorbita la segnalazione duplicata #{$segnalazione->id_segnalazione}.",
-                'id_utente'        => $user->id,
-                'visibile_web'     => false,
-                'visibile_impresa' => false,
-            ]);
-        });
+        $destinazione = $servizio->accorpa($segnalazione, $destinazione, $request->user());
 
         return redirect()
             ->route('segnalazioni.show', $destinazione->id_segnalazione)
-            ->with('success', "Segnalazione #{$segnalazione->id_segnalazione} unita alla #{$destinazione->id_segnalazione}.");
+            ->with('success', "Segnalazione #{$segnalazione->id_segnalazione} accorpata alla #{$destinazione->id_segnalazione}.");
+    }
+
+    /** Candidati per l'accorpamento: simili per luogo e tipologia, o ricerca per numero/testo. */
+    public function candidatiAccorpa(Request $request, Segnalazione $segnalazione, DedupService $dedup): JsonResponse
+    {
+        $this->authorize('accorpa', $segnalazione);
+
+        $q = trim((string) $request->query('q', ''));
+
+        if ($q === '') {
+            $candidati = $dedup->trovaSimili(
+                (int) $segnalazione->id_tipologia_segnalazione,
+                $segnalazione->id_plesso ? (int) $segnalazione->id_plesso : null,
+                $segnalazione->latitudine !== null ? (float) $segnalazione->latitudine : null,
+                $segnalazione->longitudine !== null ? (float) $segnalazione->longitudine : null,
+                $segnalazione->testo_segnalazione,
+                9,
+                soloSeAttivo: false,
+            );
+        } else {
+            $candidati = Segnalazione::visibileA($request->user())
+                ->aperte()
+                ->where(fn ($w) => ctype_digit($q)
+                    ? $w->where('id_segnalazione', (int) $q)
+                    : $w->where('testo_segnalazione', 'like', '%'.$q.'%')->orWhere('titolo_generato', 'like', '%'.$q.'%'))
+                ->with(['stato', 'plesso'])
+                ->orderByDesc('data_segnalazione')
+                ->limit(10)
+                ->get();
+        }
+
+        return response()->json(self::candidatiJson($candidati, $segnalazione));
+    }
+
+    /** Candidati per "Collega a precedente": riparazioni chiuse negli ultimi 24 mesi, stessa sede e tipologia. */
+    public function candidatiCollega(Request $request, Segnalazione $segnalazione): JsonResponse
+    {
+        $this->authorize('update', $segnalazione);
+
+        $q = trim((string) $request->query('q', ''));
+        $query = Segnalazione::visibileA($request->user())
+            ->whereNotNull('data_chiusura')
+            ->where('id_stato_segnalazione', SegnalazioneStato::COMPLETATA->value)
+            ->with(['stato', 'plesso']);
+
+        if ($q === '') {
+            $query->where('id_tipologia_segnalazione', $segnalazione->id_tipologia_segnalazione)
+                ->where('data_chiusura', '>=', now()->subMonths(24));
+            if ($segnalazione->id_plesso) {
+                $query->where('id_plesso', $segnalazione->id_plesso);
+            }
+        } else {
+            $query->where(fn ($w) => ctype_digit($q)
+                ? $w->where('id_segnalazione', (int) $q)
+                : $w->where('testo_segnalazione', 'like', '%'.$q.'%')->orWhere('titolo_generato', 'like', '%'.$q.'%'));
+        }
+
+        return response()->json(self::candidatiJson($query->orderByDesc('data_chiusura')->limit(9)->get(), $segnalazione));
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Segnalazione>  $candidati
+     * @return list<array{id: int, titolo: string, sede: ?string, stato: string, data: ?string}>
+     */
+    private static function candidatiJson(\Illuminate\Support\Collection $candidati, Segnalazione $esclusa): array
+    {
+        return $candidati
+            ->reject(fn (Segnalazione $s) => $s->id_segnalazione === $esclusa->id_segnalazione)
+            ->take(8)
+            ->map(fn (Segnalazione $s) => [
+                'id'     => $s->id_segnalazione,
+                'titolo' => (string) ($s->titolo_generato ?: Str::limit((string) $s->testo_segnalazione, 80)),
+                'sede'   => $s->plesso?->etichetta(),
+                'stato'  => $s->statoEnum()->etichetta(),
+                'data'   => $s->data_segnalazione?->format('d/m/Y'),
+            ])
+            ->values()
+            ->all();
     }
 
     private function notificaNota(Segnalazione $segnalazione, NotaSegnalazione $nota): void
@@ -580,6 +676,17 @@ class SegnalazioneController extends Controller
         if ($nota->visibile_web && $segnalazione->id_utente_segnalazione && $segnalazione->id_utente_segnalazione !== $attoreId) {
             $segnalatore = User::find($segnalazione->id_utente_segnalazione);
             $segnalatore?->notify($notification);
+        }
+
+        $attore = auth()->user();
+        if ($attore && LetturaScheda::per($attore) !== 'gestore') {
+            $mittente = $attore->hasRole('impresa')
+                ? ($attore->impresa->ragione_sociale ?? $attore->name)
+                : $attore->name;
+            $comune = DestinatariComune::per($segnalazione, $attore);
+            if ($comune->isNotEmpty()) {
+                Notification::send($comune, new NotaDaEsternoNotification($segnalazione, $nota, (string) $mittente));
+            }
         }
     }
 

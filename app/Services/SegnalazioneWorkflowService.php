@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\SegnalazioneStato;
 use App\Events\SegnalazionePublishedAutomatically;
 use App\Jobs\InviaWebhookOutbound;
+use App\Services\Segnalazioni\DestinatariAssegnatario;
 use App\Models\Azione;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
@@ -66,7 +67,6 @@ class SegnalazioneWorkflowService
      *   id_operatore?: int,
      *   id_appalto?: int,
      *   nota?: string,
-     *   id_segnalazione_madre?: int,   (richiesto per segna_duplicata)
      *   id_segnalazione_correlata?: int (per collega)
      * }
      *
@@ -201,28 +201,6 @@ class SegnalazioneWorkflowService
             $update['importo_preventivo'] = $params['importo_preventivo'];
         }
 
-        // Gestione DUPLICATA: imposta la segnalazione madre
-        if ($azione->codice === 'segna_duplicata') {
-            $idMadre = (int) ($params['id_segnalazione_madre'] ?? 0);
-            if (! $idMadre) {
-                throw ValidationException::withMessages([
-                    'id_segnalazione_madre' => 'Seleziona la segnalazione madre.',
-                ]);
-            }
-            if ($idMadre === $segnalazione->id_segnalazione) {
-                throw ValidationException::withMessages([
-                    'id_segnalazione_madre' => 'Non puoi marcare una segnalazione come duplicata di se stessa.',
-                ]);
-            }
-            $madre = Segnalazione::find($idMadre);
-            if (! $madre || $madre->statoEnum() === SegnalazioneStato::DUPLICATA) {
-                throw ValidationException::withMessages([
-                    'id_segnalazione_madre' => 'La segnalazione madre non è valida.',
-                ]);
-            }
-            $update['id_segnalazione_madre'] = $idMadre;
-        }
-
         // Motivazione obbligatoria per ANNULLATA
         if ($azione->codice === 'annulla' && empty($params['nota'])) {
             throw ValidationException::withMessages([
@@ -299,6 +277,11 @@ class SegnalazioneWorkflowService
             return false;
         }
 
+        // Sostituita da "Accorpa" (AccorpamentoService): la riga resta in db_azioni per lo storico.
+        if ($azione->codice === 'segna_duplicata') {
+            return false;
+        }
+
         // Segnalazione chiusa: solo riapri applicabile
         if ($segnalazione->data_chiusura && $azione->codice !== 'riapri') {
             return false;
@@ -351,27 +334,15 @@ class SegnalazioneWorkflowService
         }
 
         if ($azione->flag_appalto && $segnalazione->id_appalto) {
-            $appalto = $segnalazione->appalto()->first();
-            $impresa = $appalto?->id_impresa ? \App\Models\Impresa::find($appalto->id_impresa) : null;
+            // Delegati attivi + email aziendale; ditta disattivata: nessuno.
+            $destinatari = DestinatariAssegnatario::per($segnalazione);
 
-            // Ditta disattivata: nessuno ha accesso, nessuna email.
-            if ($impresa !== null && $impresa->attiva !== false) {
-                $destinatari = User::role('impresa')
-                    ->where('id_impresa', $impresa->id_impresa)
-                    ->get()
-                    ->filter(fn (User $user) => $user->attivo !== false);
-
-                if ($destinatari->isNotEmpty()) {
-                    Notification::send($destinatari, new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
-                }
-
-                // Anche l'email aziendale, se non coincide con quella di un delegato.
-                $emailDitta = mb_strtolower(trim((string) $impresa->email));
-                $giaAvvisata = $destinatari->contains(fn (User $u) => mb_strtolower(trim((string) $u->email)) === $emailDitta);
-                if ($emailDitta !== '' && ! $giaAvvisata) {
-                    Notification::route('mail', $emailDitta)
-                        ->notify(new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
-                }
+            if ($destinatari['utenti']->isNotEmpty()) {
+                Notification::send($destinatari['utenti'], new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
+            }
+            foreach ($destinatari['email'] as $email) {
+                Notification::route('mail', $email)
+                    ->notify(new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
             }
 
             return;

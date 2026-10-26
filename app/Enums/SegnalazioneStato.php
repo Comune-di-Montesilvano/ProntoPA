@@ -54,4 +54,53 @@ enum SegnalazioneStato: int
             self::ARCHIVIATA           => 'bg-gray-200 text-gray-600',
         };
     }
+
+    /** Tono del linguaggio visivo ProntoPA (token in resources/css/app.css). */
+    public function tono(): string
+    {
+        return match($this) {
+            self::IN_CARICO                                   => 'primary',
+            self::ASSEGNATA_OPERATORE, self::ASSEGNATA_IMPRESA => 'violet',
+            self::PREVENTIVO_IN_ATTESA, self::SOSPESA         => 'amber',
+            self::COMPLETATA                                  => 'emerald',
+            default                                           => 'slate',
+        };
+    }
+
+    /** Etichetta mostrata: come label(), ma la duplicata è "Accorpata". */
+    public function etichetta(): string
+    {
+        return $this === self::DUPLICATA ? 'Accorpata' : $this->label();
+    }
+
+    /**
+     * Frase in linguaggio semplice per chi ha segnalato.
+     *
+     * @return array{titolo: string, dettaglio: string}
+     */
+    public function fraseSegnalante(): array
+    {
+        return match($this) {
+            self::NUOVA     => ['titolo' => 'Ricevuta', 'dettaglio' => 'Il comune la esaminerà a breve.'],
+            self::IN_CARICO => ['titolo' => 'Presa in carico', 'dettaglio' => "Il comune sta organizzando l'intervento."],
+            self::ASSEGNATA_OPERATORE, self::ASSEGNATA_IMPRESA, self::PREVENTIVO_IN_ATTESA
+                            => ['titolo' => 'Ci stiamo lavorando', 'dettaglio' => 'Ti avviseremo quando il lavoro sarà chiuso.'],
+            self::SOSPESA    => ['titolo' => 'In attesa', 'dettaglio' => 'Il lavoro è momentaneamente sospeso.'],
+            self::COMPLETATA => ['titolo' => 'Risolta', 'dettaglio' => 'Se il problema persiste, scrivici qui sotto.'],
+            self::DUPLICATA  => ['titolo' => 'Già in lavorazione', 'dettaglio' => 'Era già stata segnalata: segui gli aggiornamenti nella segnalazione collegata.'],
+            self::ANNULLATA  => ['titolo' => 'Chiusa senza intervento', 'dettaglio' => 'La segnalazione è stata chiusa senza intervento.'],
+            self::ARCHIVIATA => ['titolo' => 'Archiviata', 'dettaglio' => 'La segnalazione è stata archiviata.'],
+        };
+    }
+
+    /** Tappa della barra di avanzamento: 1 ricevuta, 2 presa in carico, 3 in lavorazione, 4 chiusa. */
+    public function tappa(): int
+    {
+        return match($this) {
+            self::NUOVA     => 1,
+            self::IN_CARICO => 2,
+            self::ASSEGNATA_OPERATORE, self::ASSEGNATA_IMPRESA, self::PREVENTIVO_IN_ATTESA, self::SOSPESA => 3,
+            default         => 4,
+        };
+    }
 }

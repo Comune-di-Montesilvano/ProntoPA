@@ -82,7 +82,14 @@ Montesilvano (infanzia, primarie, medie, comprensivi).
 
 Spec: [`2026-10-08-v080-anagrafe-miur-deleghe-design.md`](docs/superpowers/specs/2026-10-08-v080-anagrafe-miur-deleghe-design.md).
 
-### 0.9.0 — Cutover (~2 giorni di sviluppo)
+### 0.9.0 — Redesign segnalazioni ✅
+
+Scheda unica nelle tre letture (comune, lavoro, segnalante) con il prossimo passo, Accorpa e
+Collega, Sollecita, Fine lavori, elenchi ridisegnati. Numero 0.9.0 scelto dal committente;
+il cutover slitta a 0.9.x. Spec:
+[`2026-10-25-segnalazioni-redesign-design.md`](docs/superpowers/specs/2026-10-25-segnalazioni-redesign-design.md).
+
+### 0.9.x — Cutover (~2 giorni di sviluppo)
 
 Release candidate per il go-live.
 

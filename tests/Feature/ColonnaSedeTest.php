@@ -31,9 +31,10 @@ class ColonnaSedeTest extends TestCase
         $icona = $s->tipologia?->icona ?? 'fas fa-circle';
 
         $this->actingAs($segnalatore)->get(route('segnalazioni.index'))
-            ->assertOk()->assertSee('>Sede<', false)->assertSee('MONTESILVANO-VIA DANTE')->assertSee($icona);
+            ->assertOk()->assertSee('MONTESILVANO-VIA DANTE')->assertSee($icona);
 
         $this->actingAs($gestore)->get(route('gestione.dashboard'))
-            ->assertOk()->assertSee('>Sede<', false)->assertSee('MONTESILVANO-VIA DANTE')->assertDontSee('>Provenienza</th>', false);
+            // Elenco gestore: la sede sta sotto il titolo (niente colonna dedicata)
+            ->assertOk()->assertSee('MONTESILVANO-VIA DANTE')->assertSee('PEAA03701R')->assertSee($icona)->assertDontSee('>Provenienza</th>', false);
     }
 }

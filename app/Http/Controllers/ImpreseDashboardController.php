@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SegnalazioneStato;
 use App\Models\Appalto;
 use App\Models\Segnalazione;
 use Illuminate\Http\Request;
@@ -23,10 +24,9 @@ class ImpreseDashboardController extends Controller
             ->with('gruppo')
             ->get();
 
-        $appaltiIds = $appaltiAttivi->pluck('id_appalto');
-
-        $base = Segnalazione::whereIn('id_appalto', $appaltiIds)
-            ->with(['stato', 'tipologia', 'plesso.istituto', 'appalto']);
+        // Tutti i lavori della ditta, anche su appalti scaduti (stessa visibilità della scheda)
+        $base = Segnalazione::visibileA($user)
+            ->with(['tipologia', 'plesso.istituto', 'appalto']);
 
         if ($dataDa) {
             $base->whereDate('data_segnalazione', '>=', $dataDa);
@@ -37,29 +37,32 @@ class ImpreseDashboardController extends Controller
 
         $segnalazioni = match ($tab) {
             'preventivo' => (clone $base)->aperte()
-                ->whereHas('stato', fn ($q) => $q->where('in_carico', true))
-                ->orderByDesc('data_segnalazione')
+                ->where('id_stato_segnalazione', SegnalazioneStato::PREVENTIVO_IN_ATTESA->value)
+                ->ordinaUrgenti()
                 ->paginate(20),
             'completate' => (clone $base)->whereNotNull('data_chiusura')
                 ->orderByDesc('data_chiusura')
                 ->paginate(20),
             default => (clone $base)->aperte()
-                ->orderBy('livello_priorita', 'desc')
-                ->orderByDesc('data_segnalazione')
+                ->ordinaUrgenti()
                 ->paginate(20),
         };
 
+        $conteggi = [
+            'lavorazione' => (clone $base)->aperte()->count(),
+            'preventivo'  => (clone $base)->aperte()->where('id_stato_segnalazione', SegnalazioneStato::PREVENTIVO_IN_ATTESA->value)->count(),
+            'completate'  => (clone $base)->whereNotNull('data_chiusura')->count(),
+        ];
+
         $kpi = [
             'appalti_attivi'     => $appaltiAttivi->count(),
-            'segnalazioni_aperte'=> (clone $base)->aperte()->count(),
+            'segnalazioni_aperte'=> $conteggi['lavorazione'],
             'importo_affidato'   => $appaltiAttivi->sum('importo_appalto'),
-            'importo_liquidato'  => Segnalazione::whereIn('id_appalto', $appaltiIds)
-                                        ->whereNotNull('data_chiusura')
-                                        ->sum('importo_liquidato'),
+            'importo_liquidato'  => (clone $base)->whereNotNull('data_chiusura')->sum('importo_liquidato'),
         ];
 
         return view('imprese.dashboard', compact(
-            'segnalazioni', 'appaltiAttivi', 'kpi', 'tab', 'dataDa', 'dataA'
+            'segnalazioni', 'appaltiAttivi', 'kpi', 'conteggi', 'tab', 'dataDa', 'dataA'
         ));
     }
 }
