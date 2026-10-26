@@ -33,4 +33,10 @@
 
         <x-pa.btn type="submit" variant="primary" size="sm" class="ml-auto">{{ $comune ? 'Pubblica nota' : 'Invia al comune' }}</x-pa.btn>
     </div>
+    @if($comune)
+        {{-- Gli allegati non hanno una visibilità propria: la scelta qui sopra vale solo per il testo. --}}
+        <p class="pa-field-help m-0" :class="foto ? 'pa-testo-amber font-semibold' : ''">
+            Gli allegati li vede chiunque apra la segnalazione, anche se la nota è solo per il comune.
+        </p>
+    @endif
 </form>

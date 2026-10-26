@@ -147,6 +147,14 @@ class SchedaLettureTest extends TestCase
             ->assertDontSee(route('segnalazioni.priorita', $s->id_segnalazione), false);
     }
 
+    public function test_composer_comune_avvisa_che_gli_allegati_sono_visibili_a_tutti(): void
+    {
+        // Gli allegati non hanno visibilità propria: una nota interna con allegato espone il file.
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee('Gli allegati li vede chiunque apra la segnalazione');
+    }
+
     public function test_scheda_non_contiene_vecchie_linguette(): void
     {
         $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
