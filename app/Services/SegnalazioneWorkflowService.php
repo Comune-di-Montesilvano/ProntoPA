@@ -372,16 +372,14 @@ class SegnalazioneWorkflowService
 
         $notification = new SegnalazioneStatoCambiato($segnalazione, $azione, $attore);
 
-        if ($segnalazione->id_operatore_assegnato &&
-            $segnalazione->id_operatore_assegnato !== $attore->id
-        ) {
-            User::find($segnalazione->id_operatore_assegnato)?->notify($notification);
-        }
-
-        if ($segnalazione->id_utente_segnalazione &&
-            $segnalazione->id_utente_segnalazione !== $attore->id
-        ) {
-            User::find($segnalazione->id_utente_segnalazione)?->notify($notification);
+        // Gli account disattivati (es. segnalatori legacy) non ricevono più email: non potrebbero aprire il link.
+        foreach (array_unique([$segnalazione->id_operatore_assegnato, $segnalazione->id_utente_segnalazione]) as $idUtente) {
+            if ($idUtente && $idUtente !== $attore->id) {
+                $utente = User::find($idUtente);
+                if ($utente && $utente->attivo !== false) {
+                    $utente->notify($notification);
+                }
+            }
         }
 
         if ($segnalazione->id_appalto) {

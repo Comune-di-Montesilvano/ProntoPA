@@ -1,6 +1,6 @@
 # ProntoPA — Roadmap
 
-> Aggiornata al 2026-10-08 (`main` @ `68af61c`, ultima release `v0.7.2`).
+> Aggiornata al 2026-10-27 (ultima release `v0.9.7`). **In produzione nell'ente.**
 > Punto di vista: ufficio tecnico di una PA italiana che coordina le manutenzioni
 > tra segnalatori (scuole, URP, uffici), imprese esterne e operai interni.
 >
@@ -39,16 +39,15 @@ adempimenti PA a posto. Non prima.
 | 0.6.0–0.6.2 | mag 2026 | Adozione: URP "per conto di", anti-duplicato + adesioni + merge, digest gestori, azioni rapide, squadre. Ditte e canali: rapportino fotografico, magic link, Telegram esteso, preventivi tracciati. AI locale opzionale (Ollama): titolo, triage suggerito, dedup semantico. KPI, export XLSX, fascicolo PDF |
 | 0.6.3 | set 2026 | Hardening: Dependabot, Trivy bloccante, Action pinnate, 2FA TOTP, ClamAV sugli allegati, Dusk in CI, alert job falliti |
 | 0.7.0–0.7.2 | ott 2026 | Identità fase 1+2a: login AD con ruoli dai gruppi, ditte email+2FA via email, SPID/CIE via pa-sso-proxy (solo accesso + verifica email), rimozione wizard, `publiccode.yml`, demo, OpenAPI, servizi `queue`/`scheduler`, Sentry |
-| *Unreleased* | | `ldaprecord` 3→4 (semantica TLS cambiata), `php-jwt` 6→7 |
+| 0.8.x | ott 2026 | Deleghe scuole, anagrafe MIUR, backup/ripristino, `/login` solo AD, ditte via SPID con delega (account `locale` disattivati, mai cancellati) |
+| 0.9.0–0.9.7 | ott 2026 | Redesign segnalazioni, SLA in orario d'ufficio, segnalazioni ferme, notifiche tracciate, pipeline di sicurezza, priorità visibile |
 
 ---
 
 ## 3. Cosa manca, in ordine
 
-Non siamo in produzione: nessuna release intermedia urgente. Gli
-aggiornamenti in *Unreleased* (`ldaprecord` 4, `php-jwt` 7) escono con la 0.8.0
-(AD già verificato in un altro ambiente; resta lo smoke SPID contro il proxy
-reale prima del go-live).
+**In produzione da fine ottobre 2026.** Ogni modifica ora tocca dati e utenti
+reali: migrazioni additive, cambi di comportamento annunciati nel CHANGELOG.
 
 ### 0.8.0 — Deleghe scuole (fase 2b, ~3–5 giorni di sviluppo)
 
@@ -89,24 +88,27 @@ Collega, Sollecita, Fine lavori, elenchi ridisegnati. Numero 0.9.0 scelto dal co
 il cutover slitta a 0.9.x. Spec:
 [`2026-10-25-segnalazioni-redesign-design.md`](docs/superpowers/specs/2026-10-25-segnalazioni-redesign-design.md).
 
-### 0.9.x — Cutover (~2 giorni di sviluppo)
+### 0.9.x — Cutover
 
-Release candidate per il go-live.
+Il cutover vero è già avvenuto in 0.8.19: account `locale` (segnalatori
+legacy, ditte, admin storici) disattivati da migration, **mai cancellati**:
+le loro segnalazioni restano con autore, storico e allegati, visibili alle
+scuole tramite delega sul plesso. Dalla 0.9.7 non ricevono più email.
 
-- [ ] `utenze:cutover` (dry-run di default): disattiva segnalatori legacy,
-      report utenti `locale` non ditta, ditte con email mancante/duplicata,
-      istituti senza email; forza 2FA email sulle ditte senza
-- [ ] Rimozione `/register` e `accounts:annual-check` (oggi schedulato in
-      `bootstrap/app.php`, gli altri comandi stanno in `routes/console.php`:
-      unificare in un posto solo)
+- [x] Disattivazione account `locale` (migration 0.8.19)
+- [x] Rimozione `/register` e `accounts:annual-check`
+- [ ] `utenze:report` (solo lettura): account `locale` ancora attivi, istituti
+      attivi senza email, ditte attive senza persone delegate o senza email
+      aziendale. Utile come controllo periodico, non più bloccante
 - [ ] Retention GDPR (H6 in spec hardening): implementazione 1 giorno,
       *serve la decisione dell'ente sui tempi*
 
-### 1.0.0 — Go-live
+### 1.0.0 — Consolidamento
 
-- [ ] Pilota con 2–3 scuole: pre-deleghe da admin, giro completo richiesta → segreteria → segnalazione
-- [ ] `utenze:cutover` reale in finestra concordata
-- [ ] Staging (anche solo un secondo stack Portainer con AD/SPID di test) prima del cutover
+Il go-live è avvenuto (fine ottobre 2026). La 1.0.0 chiude la fase di avvio:
+
+- [ ] Primo giro reale di deleghe scuole verificato (richiesta → segreteria → segnalazione)
+- [ ] Staging (anche solo un secondo stack Portainer con AD/SPID di test) per provare le release prima di prod
 - [ ] Spec v1.2 da "bozza" a "approvata", CLAUDE.md/README allineati
 
 ---
@@ -130,18 +132,14 @@ Lo sviluppo che manca è di pochi giorni; i tempi del go-live li dettano queste 
 
 ## 5. Rischi aperti
 
-- **Canale scuole fermo fino a 0.8.0.** Chi entra con SPID resta sulla pagina
-  d'attesa. Non bloccante finché non siamo in produzione, ma 0.8.0 è il
-  percorso critico del go-live.
-- **Nessuno staging**: SPID è testabile solo con mock o contro il proxy
-  reale. Il cutover sui segnalatori legacy è poco critico (dati legacy non
-  vincolanti), ma va lanciato prima in dry-run.
+- **Nessuno staging** con prod già attiva: SPID è testabile solo con mock o
+  contro il proxy reale, le release vanno direttamente in produzione.
 - **Email alle segreterie**: tutto il modello deleghe regge sul fatto che la
   casella `<codmecc>@istruzione.it` venga letta. Il rinnovo annuale senza
   risposta fa scadere le deleghe: prevedere un sollecito via telefono/URP
   nei primi mesi e monitorare le deleghe scadute.
 - **Recapito email**: le email partono dall'ente verso `istruzione.it`;
-  verificare SPF/DKIM del mittente prima del go-live, o finiscono in spam.
+  verificare SPF/DKIM del mittente, o finiscono in spam.
 - **PHPStan locale vs CI** diverso (vedi CLAUDE.md): ogni modifica al
   baseline va verificata su CI.
 

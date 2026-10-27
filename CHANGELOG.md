@@ -4,6 +4,17 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.7] - 2026-10-27
+
+### Fixed
+- Gli account disattivati (segnalatori legacy `locale`) non ricevono più l'email di cambio
+  stato delle loro vecchie segnalazioni: il link portava a un login dove non possono entrare.
+  Le segnalazioni restano intatte e visibili alle scuole tramite delega sul plesso. Allineato
+  al resto delle notifiche, che già escludevano i disattivati.
+
+### Changed
+- Roadmap aggiornata: ProntoPA è in produzione, il cutover è avvenuto in 0.8.19.
+
 ## [0.9.6] - 2026-10-27
 
 ### Changed
