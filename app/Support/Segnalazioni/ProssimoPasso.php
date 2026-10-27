@@ -75,6 +75,7 @@ class ProssimoPasso
                     $titolo = 'Da smistare: conferma priorità e assegna';
                     $this->azione($azioni, 1, 'Prendi in carico', primaria: true);
                     $this->pannelloAssegna($azioni, 'Assegna…');
+                    $this->pannelloPriorita($azioni);
                     if (Gate::forUser($this->u)->allows('accorpa', $this->s)) {
                         $azioni[] = ['tipo' => 'pannello', 'etichetta' => 'Accorpa a…', 'pannello' => 'accorpa', 'primaria' => false];
                     }
@@ -82,6 +83,7 @@ class ProssimoPasso
                 case SegnalazioneStato::IN_CARICO:
                     $titolo = 'Da assegnare';
                     $this->pannelloAssegna($azioni, 'Assegna…', primaria: true);
+                    $this->pannelloPriorita($azioni);
                     break;
                 case SegnalazioneStato::ASSEGNATA_OPERATORE:
                 case SegnalazioneStato::ASSEGNATA_IMPRESA:
@@ -109,9 +111,7 @@ class ProssimoPasso
 
         if ($this->s->isSollecitata()) {
             $titolo = 'Segnalata '.$this->s->volteSegnalata().' volte · '.$titolo;
-            if (Gate::forUser($this->u)->allows('modificaPriorita', $this->s)) {
-                $azioni[] = ['tipo' => 'pannello', 'etichetta' => 'Alza priorità', 'pannello' => 'priorita', 'primaria' => false];
-            }
+            $this->pannelloPriorita($azioni);
         }
 
         return ['tono' => $this->tonoScadenza(), 'titolo' => $titolo, 'sottotitolo' => $sottotitolo, 'azioni' => $azioni];
@@ -196,6 +196,16 @@ class ProssimoPasso
     {
         if ($this->disponibile(2) || $this->disponibile(3)) {
             $azioni[] = ['tipo' => 'pannello', 'etichetta' => $etichetta, 'pannello' => 'assegna', 'primaria' => $primaria];
+        }
+    }
+
+    /** @param  list<AzionePasso>  $azioni */
+    private function pannelloPriorita(array &$azioni): void
+    {
+        $etichetta = $this->s->isSollecitata() ? 'Alza priorità' : 'Priorità…';
+        $presente = collect($azioni)->contains(fn (array $a) => ($a['pannello'] ?? null) === 'priorita');
+        if (! $presente && Gate::forUser($this->u)->allows('modificaPriorita', $this->s)) {
+            $azioni[] = ['tipo' => 'pannello', 'etichetta' => $etichetta, 'pannello' => 'priorita', 'primaria' => false];
         }
     }
 

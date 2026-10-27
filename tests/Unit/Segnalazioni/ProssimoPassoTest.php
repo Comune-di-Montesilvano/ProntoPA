@@ -61,6 +61,7 @@ class ProssimoPassoTest extends TestCase
         $this->assertSame('Da smistare: conferma priorità e assegna', $passo['titolo']);
         $this->assertSame('Prendi in carico', $this->primaria($passo));
         $this->assertContains('Accorpa a…', $this->etichette($passo));
+        $this->assertContains('Priorità…', $this->etichette($passo));
         $this->assertSame('primary', $passo['tono']);
     }
 
@@ -70,6 +71,18 @@ class ProssimoPassoTest extends TestCase
 
         $this->assertSame('Da assegnare', $passo['titolo']);
         $this->assertSame('Assegna…', $this->primaria($passo));
+        $this->assertContains('Priorità…', $this->etichette($passo));
+    }
+
+    public function test_priorita_nel_passo_solo_a_chi_la_decide(): void
+    {
+        $impresa = Impresa::create(['ragione_sociale' => 'Ditta']);
+        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa]);
+        $ditta->assignRole('impresa');
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 4, 'id_appalto' => $appalto->id_appalto]);
+
+        $this->assertNotContains('Priorità…', $this->etichette(ProssimoPasso::per($s, $ditta)));
     }
 
     public function test_gestore_operaio_in_ritardo(): void

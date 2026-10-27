@@ -299,7 +299,15 @@ class SegnalazioneController extends Controller
             'id_squadra'                => ['nullable', 'integer', 'exists:squadre,id_squadra'],
             'nota'                      => ['nullable', 'string', 'max:2000'],
             'id_segnalazione_correlata' => ['nullable', 'integer', 'exists:segnalazioni,id_segnalazione'],
+            'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
         ];
+
+        // Il pannello Assegna fissa anche la priorità: permesso controllato prima,
+        // dopo l'assegnazione un gestore non supervisore potrebbe non averlo più.
+        $cambiaPriorita = $request->filled('livello_priorita');
+        if ($cambiaPriorita) {
+            $this->authorize('modificaPriorita', $segnalazione);
+        }
 
         if ($azione->flag_preventivo) {
             $rules['importo_preventivo'] = ['required', 'numeric', 'min:0'];
@@ -327,6 +335,10 @@ class SegnalazioneController extends Controller
             auth()->user(),
             $data
         );
+
+        if ($cambiaPriorita) {
+            $this->applicaPriorita($segnalazione->refresh(), (int) $data['livello_priorita']);
+        }
 
         if ($request->hasFile('allegati') && $azione->codice === 'chiudi') {
             CaricaAllegati::salva($segnalazione, $request->file('allegati'), auth()->user(), 'dopo');
@@ -498,12 +510,23 @@ class SegnalazioneController extends Controller
             'livello_priorita' => ['required', 'integer', 'between:1,4'],
         ]);
 
+        if (! $this->applicaPriorita($segnalazione, (int) $data['livello_priorita'])) {
+            return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione);
+        }
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Priorità aggiornata.');
+    }
+
+    /** Cambia la priorità, ricalcola la scadenza SLA e lascia la traccia interna. False se non cambia nulla. */
+    private function applicaPriorita(Segnalazione $segnalazione, int $livello): bool
+    {
         $prima = $segnalazione->label_priorita;
 
-        $segnalazione->livello_priorita = (int) $data['livello_priorita'];
+        $segnalazione->livello_priorita = $livello;
 
         if (! $segnalazione->isDirty()) {
-            return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione);
+            return false;
         }
 
         // La scadenza SLA dipende dalla priorità: va ricalcolata sulle aperte.
@@ -527,8 +550,7 @@ class SegnalazioneController extends Controller
             'visibile_impresa' => false,
         ]);
 
-        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
-            ->with('success', 'Priorità aggiornata.');
+        return true;
     }
 
     // ── Toggle riservata ──────────────────────────────────────────────────────
