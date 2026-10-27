@@ -16,8 +16,10 @@
             <x-pa.pill :tono="$stato->tono()">{{ $stato->etichetta() }}</x-pa.pill>
             @can('modificaPriorita', $segnalazione)
                 <button type="button" x-data x-on:click="$dispatch('apri-pannello', 'priorita')"
-                        class="rounded-md px-1.5 py-0.5 hover:bg-[var(--slate-100)]" title="Cambia priorità">
+                        class="inline-flex items-center gap-1 rounded-md border border-dashed border-[var(--slate-300)] px-1.5 py-0.5 hover:bg-[var(--slate-100)]"
+                        title="Cambia priorità" aria-label="Cambia priorità">
                     <x-pa.prio :livello="$segnalazione->livello_priorita" />
+                    <span class="text-xs text-[var(--slate-500)]"><i class="fas fa-pen" aria-hidden="true"></i></span>
                 </button>
             @else
                 <x-pa.prio :livello="$segnalazione->livello_priorita" />

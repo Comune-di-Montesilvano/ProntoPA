@@ -128,6 +128,76 @@ class ModificaPrioritaTest extends TestCase
         $this->assertSame(1, (int) $sua->fresh()->livello_priorita);
     }
 
+    public function test_assegna_fissa_anche_la_priorita(): void
+    {
+        SlaConfigurazione::create(['livello_priorita' => 4, 'ore_target' => 4, 'ore_warning' => 1]);
+        SlaConfigurazione::create(['livello_priorita' => 1, 'ore_target' => 240, 'ore_warning' => 24]);
+        $operaio = User::factory()->create();
+        $operaio->assignRole('operaio');
+        $s = $this->segnalazione(['id_stato_segnalazione' => 2, 'data_segnalazione' => now()->subHours(10), 'sla_violato' => true]);
+
+        $this->actingAs($this->gestore)->post(route('segnalazioni.azione', $s), [
+            'id_azione' => 2, 'id_operatore' => $operaio->id, 'livello_priorita' => 1,
+        ])->assertSessionHasNoErrors()->assertRedirect(route('segnalazioni.show', $s->id_segnalazione));
+
+        $s->refresh();
+        $this->assertSame(3, $s->statoEnum()->value);
+        $this->assertSame($operaio->id, $s->id_operatore_assegnato);
+        $this->assertSame(1, (int) $s->livello_priorita);
+        $this->assertTrue($s->data_scadenza_sla->isFuture());
+        $this->assertTrue($s->note()->where('testo', 'like', 'Priorità modificata:%')->exists());
+    }
+
+    public function test_assegna_senza_cambio_priorita_nessuna_nota(): void
+    {
+        $operaio = User::factory()->create();
+        $operaio->assignRole('operaio');
+        $s = $this->segnalazione(['id_stato_segnalazione' => 2]);
+
+        $this->actingAs($this->gestore)->post(route('segnalazioni.azione', $s), [
+            'id_azione' => 2, 'id_operatore' => $operaio->id, 'livello_priorita' => 4,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(3, $s->fresh()->statoEnum()->value);
+        $this->assertFalse($s->note()->where('testo', 'like', 'Priorità modificata:%')->exists());
+    }
+
+    public function test_assegna_priorita_non_valida_non_assegna(): void
+    {
+        $operaio = User::factory()->create();
+        $operaio->assignRole('operaio');
+        $s = $this->segnalazione(['id_stato_segnalazione' => 2]);
+
+        $this->actingAs($this->gestore)->post(route('segnalazioni.azione', $s), [
+            'id_azione' => 2, 'id_operatore' => $operaio->id, 'livello_priorita' => 9,
+        ])->assertSessionHasErrors('livello_priorita');
+
+        $this->assertSame(2, $s->fresh()->statoEnum()->value);
+    }
+
+    public function test_impresa_non_cambia_priorita_via_azione(): void
+    {
+        $impresa = Impresa::create(['ragione_sociale' => 'Ditta']);
+        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'email_verified_at' => now()]);
+        $ditta->assignRole('impresa');
+        $s = $this->segnalazione(['id_appalto' => $appalto->id_appalto, 'id_stato_segnalazione' => 4]);
+
+        $this->actingAs($ditta)->post(route('segnalazioni.azione', $s), [
+            'id_azione' => 4, 'nota' => 'pausa', 'livello_priorita' => 1,
+        ])->assertForbidden();
+
+        $this->assertSame(4, (int) $s->fresh()->livello_priorita);
+    }
+
+    public function test_pannello_assegna_mostra_priorita(): void
+    {
+        $s = $this->segnalazione(['id_stato_segnalazione' => 2]);
+
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $s))
+            ->assertOk()->assertSee('Priorità…')->assertSee('Cambiandola si ricalcola la scadenza.');
+    }
+
     public function test_scheda_mostra_modulo_solo_a_chi_puo(): void
     {
         $s = $this->segnalazione();

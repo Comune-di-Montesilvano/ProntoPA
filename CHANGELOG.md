@@ -4,6 +4,15 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.6] - 2026-10-27
+
+### Changed
+- Priorità più facile da cambiare nella scheda: azione "Priorità…" nel prossimo passo delle
+  segnalazioni nuove e in carico, badge in testata con l'icona di modifica, scelta della
+  priorità direttamente nel pannello Assegna (la scadenza si ricalcola e resta la nota
+  interna "Priorità modificata"). Prima, su una segnalazione nuova, l'unica strada visibile
+  era assegnarla.
+
 ## [0.9.5] - 2026-10-27
 
 ### Security

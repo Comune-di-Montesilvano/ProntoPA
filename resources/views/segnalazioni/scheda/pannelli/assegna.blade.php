@@ -89,6 +89,23 @@
                 </div>
             @endif
 
+            @can('modificaPriorita', $segnalazione)
+                @php $prioritaIniziale = (int) (old('_pannello') === 'assegna' ? old('livello_priorita', $segnalazione->livello_priorita ?: 2) : ($segnalazione->livello_priorita ?: 2)); @endphp
+                <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
+                    <legend class="pa-field-label mb-1">Priorità</legend>
+                    <div class="flex flex-wrap gap-3">
+                        @foreach([1 => 'Bassa', 2 => 'Media', 3 => 'Alta', 4 => 'Critica'] as $val => $label)
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="radio" name="livello_priorita" value="{{ $val }}" @checked($prioritaIniziale === $val)>
+                                <x-pa.prio :livello="$val" />
+                            </label>
+                        @endforeach
+                    </div>
+                    <p class="pa-field-help">Cambiandola si ricalcola la scadenza.</p>
+                    <x-input-error :messages="$errors->get('livello_priorita')" />
+                </fieldset>
+            @endcan
+
             <div class="pa-field">
                 <label for="assegna-nota" class="pa-field-label">Nota per chi riceve il lavoro (facoltativa)</label>
                 <textarea id="assegna-nota" name="nota" rows="3" maxlength="2000" class="pa-textarea">{{ old('_pannello') === 'assegna' ? old('nota') : '' }}</textarea>
