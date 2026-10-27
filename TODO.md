@@ -143,4 +143,4 @@ Spec: [`docs/superpowers/specs/2026-09-30-v12-identita-accessi-design.md`](docs/
 - Fase 2a — Scuole via SPID/CIE (pa-sso-proxy), completa profilo, verifica email ✅ (0.7.0)
 - Anagrafe scuole MIUR (prerequisito deleghe) ✅
 - Fase 2b — Deleghe confermate dalla segreteria, rinnovo annuale, visibilità per delega ✅ (0.8.0)
-- Fase 3 — Cutover: disattivazione segnalatori legacy, fine fallback username locale 📋 → **0.9.x**
+- Fase 3 — Cutover: account `locale` disattivati (mai cancellati), fine fallback username locale ✅ (0.8.19); niente email ai disattivati ✅ (0.9.7)
