@@ -6,7 +6,7 @@
 # Rebuild solo se cambia PHP version o lista extension.
 ############################################
 # Immagini base fissate per digest: Dependabot (ecosistema docker) aggiorna tag e digest.
-FROM php:8.4-fpm-alpine@sha256:93aa3f61216b73cc6f878235c9772849449f4efc18dfe3d6678eed645076c00d AS php-extensions
+FROM php:8.5-fpm-alpine@sha256:4c2818074ec49f6abe46620f3965e0cb75bc3a5f2b417edd1aacaba6f091c40e AS php-extensions
 
 # Layer 1: runtime libs — quasi mai cambia, cache molto stabile
 RUN --mount=type=cache,id=apk-${TARGETARCH},target=/var/cache/apk \
@@ -72,7 +72,7 @@ RUN composer run-script post-autoload-dump \
 # Stage 2: PHP-FPM production image
 # Target: app — base pulita, no Node, no composer, no build tools
 ############################################
-FROM php:8.4-fpm-alpine@sha256:93aa3f61216b73cc6f878235c9772849449f4efc18dfe3d6678eed645076c00d AS app
+FROM php:8.5-fpm-alpine@sha256:4c2818074ec49f6abe46620f3965e0cb75bc3a5f2b417edd1aacaba6f091c40e AS app
 
 # Data del giorno dal workflow: cambia una volta al giorno e invalida il layer,
 # così il rebuild giornaliero applica le patch Alpine anche con la cache GHA.
@@ -122,7 +122,7 @@ CMD ["php-fpm"]
 # Stage 3: Nginx + compiled static assets
 # Target: web
 ############################################
-FROM nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de AS web
+FROM nginx:1.31-alpine@sha256:785835ea65db4bba6f021acc0f3be91b0fef76a53fe41f8588c6698d2aed0606 AS web
 
 ARG APK_REFRESH=none
 RUN echo "apk refresh ${APK_REFRESH}" && apk upgrade --no-cache
