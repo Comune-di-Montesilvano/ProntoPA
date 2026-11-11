@@ -13,6 +13,14 @@
         </div>
     @endif
 
+    @unless(\App\Models\Impostazione::get('squadre_enabled', false))
+        <div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+            Le squadre sono disattivate: puoi crearle, ma non compaiono tra le scelte di assegnazione.
+            Attivale in <a href="{{ route('admin.impostazioni.index') }}" class="underline font-medium">Impostazioni ente</a>
+            (gruppo "squadre", "Abilita la gestione squadre di operai").
+        </div>
+    @endunless
+
     <div class="bg-white shadow-sm rounded-xl overflow-hidden">
         @if($squadre->isEmpty())
             <div class="p-10 text-center text-gray-400 text-sm">
