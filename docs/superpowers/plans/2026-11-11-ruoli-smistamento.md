@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Tre PR, ognuna patch con bump `publiccode.yml` `softwareVersion` + `CHANGELOG.md` `## [X.Y.Z] - data` nella stessa PR: Fase A = 0.9.9, Fase B = 0.9.10, Fase C = 0.9.11.
+- Tre PR, ognuna patch con bump `publiccode.yml` `softwareVersion` + `CHANGELOG.md` `## [X.Y.Z] - data` nella stessa PR: Fase A = 0.9.10, Fase B = 0.9.11, Fase C = 0.9.12 (0.9.9 usata dal fix organizzazioni).
 - Comandi sempre nel container: `MSYS_NO_PATHCONV=1 docker compose exec -T php php artisan test --filter=<Nome>`; a fine fase suite completa `php artisan test` + `composer run analyse`.
 - Feature test POST su rotte `web`: `$this->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class, \Illuminate\Routing\Middleware\ThrottleRequests::class])`.
 - Migration additive, nome `2026_11_11_00000N_<descrizione>.php`.
@@ -33,14 +33,14 @@
 
 ---
 
-## Fase A — Tipologie dei gestori, visibilità, orfane, organizzazione (0.9.9)
+## Fase A — Tipologie dei gestori, visibilità, orfane, organizzazione (0.9.10)
 
 Branch: `feat/ruoli-smistamento` (contiene già lo spec).
 
-### Task A1: Modello copertura
+### Task 1 (A1): Modello copertura
 
 **Files:**
-- Create: `database/migrations/2026_11_11_000001_create_gestori_tipologie_table.php`
+- Create: `database/migrations/2026_11_11_000002_create_gestori_tipologie_table.php`
 - Create: `app/Services/Segnalazioni/CoperturaTipologie.php`
 - Modify: `app/Models/User.php` (fillable, casts, relazione)
 - Test: `tests/Feature/CoperturaTipologieTest.php`
@@ -68,7 +68,7 @@ Branch: `feat/ruoli-smistamento` (contiene già lo spec).
 - [ ] **Step 4:** Run → PASS.
 - [ ] **Step 5:** Commit `feat(gestori): copertura tipologie per gestore`.
 
-### Task A2: Visibilità e azioni del gestore per tipologia
+### Task 2 (A2): Visibilità e azioni del gestore per tipologia
 
 **Files:**
 - Modify: `app/Models/Segnalazione.php:361-369` (`scopeVisibileA`, ramo gestore)
@@ -93,7 +93,7 @@ Branch: `feat/ruoli-smistamento` (contiene già lo spec).
 - [ ] **Step 4:** Run filtro + `--filter=Segnalazione` (regressioni visibilità) → PASS.
 - [ ] **Step 5:** Commit `feat(gestori): visibilità e azioni per tipologia`.
 
-### Task A3: Area "Organizzazione" (squadre + tipologie gestori) per admin e supervisore
+### Task 3 (A3): Area "Organizzazione" (squadre + tipologie gestori) per admin e supervisore
 
 **Files:**
 - Modify: `app/Providers/AppServiceProvider.php` (Gate)
@@ -128,20 +128,20 @@ Branch: `feat/ruoli-smistamento` (contiene già lo spec).
 - [ ] **Step 4:** Run `--filter='TipologieGestori|Squadre'` → PASS.
 - [ ] **Step 5:** Commit `feat(organizzazione): squadre e tipologie per supervisore`.
 
-### Task A4: Chiusura fase A
+### Task 4 (A4): Chiusura fase A
 
 - [ ] Suite completa + `composer run analyse` verdi.
-- [ ] `publiccode.yml` 0.9.9, CHANGELOG `## [0.9.9]` (Added: tipologie per gestore, area Organizzazione, alert orfane; Changed: gestori esistenti partono con "tutte le tipologie", squadre spostate in Organizzazione).
+- [ ] `publiccode.yml` 0.9.10, CHANGELOG `## [0.9.10]` (Added: tipologie per gestore, area Organizzazione, alert orfane; Changed: gestori esistenti partono con "tutte le tipologie", squadre spostate in Organizzazione).
 - [ ] CLAUDE.md: tabella ruoli (gestore = tipologie), architettura (`Organizzazione/`, `CoperturaTipologie`).
-- [ ] Commit, push, PR, CI verde, merge squash, tag `v0.9.9`, `gh run watch` su release.
+- [ ] Commit, push, PR, CI verde, merge squash, tag `v0.9.10`, `gh run watch` su release.
 
 ---
 
-## Fase B — Avvisi email (0.9.10)
+## Fase B — Avvisi email (0.9.11)
 
 Branch nuovo da `main` aggiornato: `feat/avvisi-tipologia`.
 
-### Task B1: Avviso nuova segnalazione / riclassificata
+### Task 5 (B1): Avviso nuova segnalazione / riclassificata
 
 **Files:**
 - Create: `app/Notifications/NuovaSegnalazioneNotification.php`
@@ -173,7 +173,7 @@ Branch nuovo da `main` aggiornato: `feat/avvisi-tipologia`.
 - [ ] **Step 4:** Run filtro + `--filter=Segnalazione` → PASS.
 - [ ] **Step 5:** Commit `feat(avvisi): email ai gestori per nuove segnalazioni`.
 
-### Task B2: Avvisi SLA per tipologia, admin esclusi
+### Task 6 (B2): Avvisi SLA per tipologia, admin esclusi
 
 **Files:**
 - Modify: `app/Console/Commands/CheckSlaViolazioni.php`
@@ -193,19 +193,19 @@ Branch nuovo da `main` aggiornato: `feat/avvisi-tipologia`.
 - [ ] **Step 4:** Run filtro + test SLA esistenti → PASS (adeguare quelli che assumevano admin/digest, citandolo nel commit).
 - [ ] **Step 5:** Commit `feat(sla): avvisi ai gestori della tipologia, admin esclusi`.
 
-### Task B3: Chiusura fase B
+### Task 7 (B3): Chiusura fase B
 
-- [ ] Suite + analyse verdi; 0.9.10 + CHANGELOG (Added avviso nuova/riclassificata; Changed SLA scaduto sempre immediato, admin esclusi; Fixed supervisori disattivati avvisati).
+- [ ] Suite + analyse verdi; 0.9.11 + CHANGELOG (Added avviso nuova/riclassificata; Changed SLA scaduto sempre immediato, admin esclusi; Fixed supervisori disattivati avvisati).
 - [ ] CLAUDE.md (funzionalità: avvisi per tipologia).
-- [ ] PR → merge → tag `v0.9.10` → release verde.
+- [ ] PR → merge → tag `v0.9.11` → release verde.
 
 ---
 
-## Fase C — Pre-registrazione utenti AD (0.9.11)
+## Fase C — Pre-registrazione utenti AD (0.9.12)
 
 Branch: `feat/preregistrazione-ad`.
 
-### Task C1: `Directory::cerca`
+### Task 8 (C1): `Directory::cerca`
 
 **Files:**
 - Create: `app/Services/Directory/EsitoRicerca.php`
@@ -226,7 +226,7 @@ Branch: `feat/preregistrazione-ad`.
 - [ ] **Step 2:** Run → FAIL. **Step 3:** Implementare. **Step 4:** Run `--filter='MockDirectoryCerca|PasswordNonNeiLog|Ldap'` → PASS.
 - [ ] **Step 5:** Commit `feat(ad): ricerca utente con credenziali dell'admin`.
 
-### Task C2: Pagina pre-registrazione (solo admin)
+### Task 9 (C2): Pagina pre-registrazione (solo admin)
 
 **Files:**
 - Create: `app/Http/Controllers/Admin/PreregistrazioneController.php`, `app/Services/Auth/PreregistrazioneAd.php`, `resources/views/admin/utenti/preregistra.blade.php`
@@ -255,7 +255,7 @@ Branch: `feat/preregistrazione-ad`.
 - [ ] **Step 2:** Run → FAIL. **Step 3:** Implementare. **Step 4:** Run → PASS.
 - [ ] **Step 5:** Commit `feat(utenti): pre-registrazione utenti AD`.
 
-### Task C3: Aggancio al primo login
+### Task 10 (C3): Aggancio al primo login
 
 **Files:**
 - Modify: `app/Services/Auth/LdapLoginService.php:55-70` (`sincronizza`)
@@ -273,8 +273,8 @@ Branch: `feat/preregistrazione-ad`.
 - [ ] **Step 2:** Run → FAIL. **Step 3:** Implementare. **Step 4:** Run `--filter='Login|Ldap'` → PASS.
 - [ ] **Step 5:** Commit `feat(auth): aggancio account pre-registrati al primo login`.
 
-### Task C4: Chiusura fase C
+### Task 11 (C4): Chiusura fase C
 
-- [ ] Suite + analyse verdi; 0.9.11 + CHANGELOG.
+- [ ] Suite + analyse verdi; 0.9.12 + CHANGELOG.
 - [ ] CLAUDE.md: sezione Accesso (pre-registrazione, aggancio per username dei pre-registrati, utenti mock `mock.nuovo.*`), riga `Directory::cerca`.
-- [ ] PR → merge → tag `v0.9.11` → release verde.
+- [ ] PR → merge → tag `v0.9.12` → release verde.
