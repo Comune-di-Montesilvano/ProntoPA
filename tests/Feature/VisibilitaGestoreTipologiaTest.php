@@ -109,6 +109,26 @@ class VisibilitaGestoreTipologiaTest extends TestCase
         $this->assertSame([$s->id_segnalazione], $this->visibili($b));
     }
 
+    /** Il limite di 50 vale per il gestore, non per l'elenco globale: le sue non spariscono dietro le altre. */
+    public function test_digest_limite_applicato_dopo_il_filtro_tipologia(): void
+    {
+        \Illuminate\Support\Facades\Cache::flush();
+        Impostazione::set('digest_enabled', true);
+        Impostazione::set('digest_skip_weekend', false);
+        Notification::fake();
+
+        $g = $this->gestore([1]);
+        for ($i = 0; $i < 51; $i++) {
+            $this->nuova(3, ['livello_priorita' => 4]);
+        }
+        $mia = $this->nuova(1, ['livello_priorita' => 1]);
+
+        $this->artisan('digest:invia')->assertExitCode(0);
+
+        Notification::assertSentTo($g, DigestGestoreNotification::class,
+            fn (DigestGestoreNotification $n) => $n->nonAssegnateIds === [$mia->id_segnalazione]);
+    }
+
     public function test_digest_non_assegnate_filtrate_per_tipologia(): void
     {
         \Illuminate\Support\Facades\Cache::flush();
