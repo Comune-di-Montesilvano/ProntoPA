@@ -4,6 +4,15 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.8] - 2026-11-11
+
+### Fixed
+- La pagina Squadre era raggiungibile solo scrivendo l'indirizzo a mano: ora c'è la voce
+  "Squadre" nel menu Amministrazione e nel pannello admin.
+- Se le squadre sono disattivate (impostazione "Abilita la gestione squadre di operai",
+  spenta di default) la pagina Squadre lo dice e rimanda alle Impostazioni: prima si potevano
+  creare squadre che poi non comparivano tra le scelte di assegnazione.
+
 ## [0.9.7] - 2026-10-27
 
 ### Fixed

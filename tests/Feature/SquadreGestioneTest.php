@@ -106,4 +106,26 @@ class SquadreGestioneTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    public function test_squadre_raggiungibili_dal_menu_admin(): void
+    {
+        $this->actingAs($this->admin())->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee(route('admin.squadre.index'), false);
+    }
+
+    public function test_avviso_se_squadre_disattivate(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->get(route('admin.squadre.index'))
+            ->assertOk()
+            ->assertDontSee('Le squadre sono disattivate');
+
+        Impostazione::set('squadre_enabled', false);
+
+        $this->actingAs($admin)->get(route('admin.squadre.index'))
+            ->assertOk()
+            ->assertSee('Le squadre sono disattivate');
+    }
 }
