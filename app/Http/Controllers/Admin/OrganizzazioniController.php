@@ -50,9 +50,11 @@ class OrganizzazioniController extends Controller
             'domini_email_istituzionali' => ['nullable', 'string', 'max:255'],
             'recapiti'              => ['nullable', 'string', 'max:50'],
             'attivo'                => ['nullable', 'boolean'],
+            'richieste_delega_spid' => ['nullable', 'boolean'],
         ]);
 
         $data['attivo'] = (bool) ($data['attivo'] ?? false);
+        $data['richieste_delega_spid'] = (bool) ($data['richieste_delega_spid'] ?? false);
         $data['fonte_dati'] = 'manuale';
 
         Istituto::create($data);
@@ -86,6 +88,7 @@ class OrganizzazioniController extends Controller
             'domini_email_istituzionali' => ['nullable', 'string', 'max:255'],
             'recapiti'              => ['nullable', 'string', 'max:50'],
             'attivo'                => ['nullable', 'boolean'],
+            'richieste_delega_spid' => ['nullable', 'boolean'],
         ];
 
         // validate() restituisce solo le chiavi validate: i campi MIUR inviati vengono scartati.
@@ -96,6 +99,7 @@ class OrganizzazioniController extends Controller
         $data = $request->validate($regole);
 
         $data['attivo'] = (bool) ($data['attivo'] ?? false);
+        $data['richieste_delega_spid'] = (bool) ($data['richieste_delega_spid'] ?? false);
 
         $organizzazione->update($data);
 
