@@ -14,7 +14,9 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
   aspettare il loro primo accesso), aggiorna nome, email e ruolo, riattiva chi rientra e
   **disattiva chi è uscito dai gruppi o è disabilitato/eliminato in AD** (niente più email a chi
   non lavora più su ProntoPA). Account e storico restano.
-- Protezioni: se AD non risponde o i gruppi risultano vuoti non cambia nulla; se il giro
+- Protezioni: se AD non risponde, i gruppi risultano vuoti o **un gruppo configurato non
+  esiste** non cambia nulla (un gruppo che non usate, es. URP: svuotate la sua variabile
+  `LDAP_GRUPPO_*` nello stack, altrimenti la sync segnala l'errore ogni notte); se il giro
   disattiverebbe più della metà degli utenti di dominio si blocca e chiede conferma
   ("Sincronizza comunque"). Esito dell'ultimo giro in Admin → Utenti; se la notturna non riesce
   gli amministratori ricevono un'email.

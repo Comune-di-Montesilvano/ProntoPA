@@ -177,6 +177,24 @@ final class LdapRecordDirectory implements Directory
         ]);
     }
 
+    /**
+     * Gruppi configurati (non vuoti) che la ricerca non ha trovato, in maiuscolo.
+     *
+     * @param  list<string>  $configurati
+     * @param  list<string>  $trovati
+     * @return list<string>
+     */
+    public static function gruppiMancanti(array $configurati, array $trovati): array
+    {
+        $norm = fn (string $g): string => mb_strtoupper(trim($g));
+        $trovati = array_map($norm, $trovati);
+
+        return array_values(array_filter(
+            array_map($norm, $configurati),
+            fn (string $g): bool => $g !== '' && ! in_array($g, $trovati, true),
+        ));
+    }
+
     public static function disabilitato(?string $userAccountControl): bool
     {
         return $userAccountControl !== null && ((int) $userAccountControl & self::UAC_DISABILITATO) !== 0;
@@ -208,11 +226,14 @@ final class LdapRecordDirectory implements Directory
 
         /** @var array<string, array{0: array<string, array<int, string>>, 1: list<string>}> $perGuid */
         $perGuid = [];
+        $configurati = array_map('strval', array_values((array) ($this->config['gruppi'] ?? config('ldap.gruppi'))));
+        /** @var list<string> $trovati */
+        $trovati = [];
 
         try {
             $this->bindServizio($connection, (string) $this->config['sync']['username'], (string) $this->config['sync']['password']);
 
-            foreach ((array) ($this->config['gruppi'] ?? config('ldap.gruppi')) as $nomeGruppo) {
+            foreach ($configurati as $nomeGruppo) {
                 $nomeGruppo = trim((string) $nomeGruppo);
                 if ($nomeGruppo === '') {
                     continue;
@@ -225,14 +246,16 @@ final class LdapRecordDirectory implements Directory
                     ->first();
 
                 if (! $gruppo) {
-                    Log::warning('Sync AD: gruppo non trovato', ['gruppo' => $nomeGruppo]);
-
+                    // Gruppo rinominato/assente/fuori dal base DN: i suoi membri sparirebbero
+                    // dall'elenco e verrebbero disattivati. Errore dopo il giro (gruppiMancanti).
                     continue;
                 }
+                $trovati[] = $nomeGruppo;
 
                 $dnGruppo = $gruppo['distinguishedname'][0];
 
-                // isCritical: se il paging fallisce eccezione, mai un elenco troncato.
+                // isCritical marca il controllo di paging come critico verso il server;
+                // gli errori di ldap_search arrivano come \ErrorException (catch sotto).
                 /** @var list<array<string, array<int, string>>> $utenti */
                 $utenti = $connection->query()
                     ->rawFilter('(&(objectCategory=person)(objectClass=user)(memberOf:'.self::IN_CHAIN.':='.ldap_escape($dnGruppo, '', LDAP_ESCAPE_FILTER).'))')
@@ -248,10 +271,22 @@ final class LdapRecordDirectory implements Directory
                     $perGuid[$guid][1][] = $nomeGruppo;
                 }
             }
+        } catch (DirectoryNonDisponibile $e) {
+            throw $e;
         } catch (LdapRecordException $e) {
             throw new DirectoryNonDisponibile('Active Directory non raggiungibile: '.$e->getMessage(), 0, $e);
+        } catch (\Throwable $e) {
+            // ldap_search() emette warning convertiti in \ErrorException, non LdapRecordException.
+            throw new DirectoryNonDisponibile('Errore nella lettura dei gruppi da Active Directory: '.$e->getMessage(), 0, $e);
         } finally {
             $connection->disconnect();
+        }
+
+        $mancanti = self::gruppiMancanti($configurati, $trovati);
+        if ($mancanti !== []) {
+            throw new DirectoryNonDisponibile(sprintf(
+                'Gruppi non trovati in Active Directory: %s. Crea il gruppo sotto LDAP_BASE_DN, oppure svuota la variabile LDAP_GRUPPO_* corrispondente se non lo usi. Nessun utente modificato.',
+                implode(', ', $mancanti)));
         }
 
         $membri = [];

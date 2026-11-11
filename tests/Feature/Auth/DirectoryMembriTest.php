@@ -50,6 +50,13 @@ class DirectoryMembriTest extends TestCase
         $this->assertTrue($dir->syncConfigurata());
     }
 
+    public function test_gruppo_configurato_non_trovato_e_un_errore(): void
+    {
+        $this->assertSame(['PRONTOPA_URP'], LdapRecordDirectory::gruppiMancanti(
+            ['PRONTOPA_GESTORI', ' prontopa_urp ', ''], ['prontopa_gestori']));
+        $this->assertSame([], LdapRecordDirectory::gruppiMancanti(['PRONTOPA_GESTORI', ''], ['PRONTOPA_GESTORI']));
+    }
+
     public function test_bit_account_disabilitato(): void
     {
         $this->assertTrue(LdapRecordDirectory::disabilitato('514'));

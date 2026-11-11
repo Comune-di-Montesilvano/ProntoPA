@@ -19,6 +19,9 @@ final class FakeDirectory implements Directory
 
     public bool $sync = true;
 
+    /** Lanciata da membriGruppi(): simula errori grezzi di ldap_search. */
+    public ?\Throwable $errore = null;
+
     public ?string $motivo = null;
 
     /** Bind tentati: ognuno con password errata conterebbe verso il blocco account di AD. */
@@ -63,6 +66,9 @@ final class FakeDirectory implements Directory
     {
         if ($this->nonDisponibile || ! $this->sync) {
             throw new DirectoryNonDisponibile('Directory di test non disponibile');
+        }
+        if ($this->errore !== null) {
+            throw $this->errore;
         }
 
         return array_values(array_filter($this->membri, fn (DirectoryIdentity $m) => $m->groups !== []));

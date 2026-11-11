@@ -280,6 +280,21 @@ class SincronizzaUtentiAdTest extends TestCase
         Notification::assertSentTo($admin, SyncAdFallitaNotification::class);
     }
 
+    public function test_errore_imprevisto_salva_fallita_e_avvisa(): void
+    {
+        $admin = $this->utenteLdap('capo', [], 'admin');
+        $this->dir->errore = new \ErrorException('ldap_search(): Search: Operations error');
+
+        $this->artisan('ldap:sincronizza')->assertFailed();
+
+        $esito = app(SincronizzaUtentiAd::class)->ultimoEsito();
+        $this->assertNotNull($esito);
+        $this->assertSame('fallita', $esito->stato);
+        $this->assertStringContainsString('Operations error', (string) $esito->motivo);
+        $this->assertTrue((bool) $admin->fresh()->attivo);
+        Notification::assertSentTo($admin, SyncAdFallitaNotification::class);
+    }
+
     public function test_comando_spento_senza_configurazione(): void
     {
         $this->dir->sync = false;

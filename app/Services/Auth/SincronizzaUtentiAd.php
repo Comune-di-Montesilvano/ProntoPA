@@ -46,6 +46,10 @@ final class SincronizzaUtentiAd
 
         try {
             $esito = $this->giro($forza, $prova);
+        } catch (\Throwable $e) {
+            // Mai un fallimento silenzioso: esito salvato e admin avvisati (transazione già annullata).
+            report($e);
+            $esito = EsitoSyncAd::fallita('Errore imprevisto: '.$e->getMessage().' Nessun utente modificato.');
         } finally {
             $lock->release();
         }
