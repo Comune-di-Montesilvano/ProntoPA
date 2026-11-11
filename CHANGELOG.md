@@ -4,6 +4,16 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.10] - 2026-11-11
+
+### Changed
+- Organizzazioni: la spunta "Ente attivo per registrazioni" è divisa in due.
+  **Attiva** = l'ente è usabile (sedi, segnalazioni, deleghe assegnate dall'amministratore).
+  **Accetta richieste di delega via SPID/CIE** = le persone esterne la trovano e chiedono
+  una delega da sole. Per gli enti senza richieste (es. asili nido comunali) le deleghe si
+  danno solo da Admin → Deleghe → predelega. Le nuove organizzazioni create a mano partono
+  senza richieste SPID; quelle esistenti e le scuole dall'anagrafe MIUR restano come prima.
+
 ## [0.9.9] - 2026-11-11
 
 ### Fixed
