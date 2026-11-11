@@ -57,6 +57,30 @@ class CoperturaTipologieTest extends TestCase
         $this->assertFalse($this->copertura->orfane()->contains('id_tipologia_segnalazione', $nuova->id_tipologia_segnalazione));
     }
 
+    public function test_admin_con_tipologie_copre_solo_quelle_mai_tutte(): void
+    {
+        $admin = User::factory()->create(['amministratore' => true, 'attivo' => true, 'gestore_tutte_tipologie' => true]);
+        $admin->assignRole('admin');
+        $admin->tipologieGestite()->sync([5]);
+
+        $this->assertTrue($this->copertura->gestoriDi(5)->contains('id', $admin->id));
+        $this->assertFalse($this->copertura->gestoriDi(1)->contains('id', $admin->id));
+        $this->assertFalse($this->copertura->orfane()->contains('id_tipologia_segnalazione', 5));
+        $this->assertTrue($this->copertura->orfane()->contains('id_tipologia_segnalazione', 1));
+    }
+
+    public function test_admin_senza_tipologie_o_disattivato_non_copre(): void
+    {
+        $admin = User::factory()->create(['amministratore' => true, 'attivo' => true]);
+        $admin->assignRole('admin');
+        $spento = User::factory()->create(['amministratore' => true, 'attivo' => false]);
+        $spento->assignRole('admin');
+        $spento->tipologieGestite()->sync([5]);
+
+        $this->assertTrue($this->copertura->gestoriDi(5)->isEmpty());
+        $this->assertTrue($this->copertura->orfane()->contains('id_tipologia_segnalazione', 5));
+    }
+
     public function test_supervisore_non_conta_come_copertura(): void
     {
         $this->gestore([1], attributi: ['supervisore_segnalazioni' => true]);

@@ -68,6 +68,22 @@ class TipologieGestoriTest extends TestCase
             ->pluck('tipologie_segnalazioni.id_tipologia_segnalazione')->map(fn ($id) => (int) $id)->all());
     }
 
+    public function test_admin_in_elenco_con_sole_tipologie_esplicite(): void
+    {
+        $admin = $this->utente('admin', ['amministratore' => true, 'name' => 'Admin Telefonia']);
+
+        $this->actingAs($this->supervisore())->get(route('organizzazione.tipologie-gestori.index'))
+            ->assertSee('Admin Telefonia');
+        $this->get(route('organizzazione.tipologie-gestori.edit', $admin))->assertOk()
+            ->assertDontSee('Tutte le tipologie, anche quelle aggiunte in futuro');
+
+        $this->put(route('organizzazione.tipologie-gestori.update', $admin), ['tutte' => 1, 'tipologie' => [2]])
+            ->assertRedirect(route('organizzazione.tipologie-gestori.index'));
+
+        $this->assertFalse((bool) $admin->fresh()->gestore_tutte_tipologie);
+        $this->assertSame([2], $admin->tipologieGestite()->pluck('tipologie_segnalazioni.id_tipologia_segnalazione')->map(fn ($id) => (int) $id)->all());
+    }
+
     public function test_non_si_modificano_supervisori(): void
     {
         $altro = $this->supervisore();

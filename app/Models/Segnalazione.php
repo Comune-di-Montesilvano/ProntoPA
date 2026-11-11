@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\SegnalazioneStato;
+use App\Observers\SegnalazioneObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,9 +12,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Squadra;
 use Illuminate\Support\Carbon;
 
+#[ObservedBy(SegnalazioneObserver::class)]
 class Segnalazione extends Model
 {
     use HasFactory;
+
+    /** true = niente email ai gestori su creazione/riclassificazione (dati demo). */
+    public static bool $silenziaAvvisi = false;
 
     protected $table      = 'segnalazioni';
     protected $primaryKey = 'id_segnalazione';
