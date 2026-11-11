@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">Gestione Squadre</x-slot>
     <x-slot name="actions">
-        <a href="{{ route('admin.squadre.create') }}"
+        <a href="{{ route('organizzazione.squadre.create') }}"
            class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
             + Nuova squadra
         </a>
@@ -16,8 +16,12 @@
     @unless(\App\Models\Impostazione::get('squadre_enabled', false))
         <div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
             Le squadre sono disattivate: puoi crearle, ma non compaiono tra le scelte di assegnazione.
-            Attivale in <a href="{{ route('admin.impostazioni.index') }}" class="underline font-medium">Impostazioni ente</a>
-            (gruppo "squadre", "Abilita la gestione squadre di operai").
+            @if(auth()->user()->isAdmin() || auth()->user()->hasRole('admin'))
+                Attivale in <a href="{{ route('admin.impostazioni.index') }}" class="underline font-medium">Impostazioni ente</a>
+                (gruppo "squadre", "Abilita la gestione squadre di operai").
+            @else
+                Chiedi all'amministratore di attivarle.
+            @endif
         </div>
     @endunless
 
@@ -51,9 +55,9 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-right flex gap-2 justify-end">
-                                <a href="{{ route('admin.squadre.edit', $s->id_squadra) }}"
+                                <a href="{{ route('organizzazione.squadre.edit', $s->id_squadra) }}"
                                    class="text-blue-600 hover:text-blue-800 text-xs font-medium">Modifica</a>
-                                <form method="POST" action="{{ route('admin.squadre.destroy', $s->id_squadra) }}"
+                                <form method="POST" action="{{ route('organizzazione.squadre.destroy', $s->id_squadra) }}"
                                       onsubmit="return confirm('Disattivare questa squadra?')">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-medium">Disattiva</button>

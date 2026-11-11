@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">{{ $squadra->id_squadra ? 'Modifica squadra' : 'Nuova squadra' }}</x-slot>
     <x-slot name="actions">
-        <a href="{{ route('admin.squadre.index') }}"
+        <a href="{{ route('organizzazione.squadre.index') }}"
            class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
             Annulla
         </a>
@@ -10,7 +10,7 @@
     <div class="max-w-xl">
         <div class="bg-white shadow-sm rounded-xl p-6">
             <form method="POST"
-                  action="{{ $squadra->id_squadra ? route('admin.squadre.update', $squadra->id_squadra) : route('admin.squadre.store') }}">
+                  action="{{ $squadra->id_squadra ? route('organizzazione.squadre.update', $squadra->id_squadra) : route('organizzazione.squadre.store') }}">
                 @csrf
                 @if($squadra->id_squadra) @method('PUT') @endif
 
