@@ -231,7 +231,7 @@ jobs:
 
       - name: Installa cosign
         if: steps.vars.outputs.skip != 'true'
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
 
       # Firma keyless del digest (non del tag, che è mobile). Verifica prima del deploy:
       # cosign verify --certificate-identity-regexp 'https://github.com/Comune-di-Montesilvano/ProntoPA/.github/workflows/release.yml@.*' \
@@ -270,14 +270,14 @@ jobs:
           pubblica "$IMAGE_WEB@$WEB_DIGEST" "$WEB_TAGS"
 
       - name: Upload Trivy results (app) to Security tab
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
         if: always() && steps.vars.outputs.skip != 'true' && hashFiles('trivy-app.sarif') != ''
         with:
           sarif_file: trivy-app.sarif
           category: trivy-app
 
       - name: Upload Trivy results (web) to Security tab
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
         if: always() && steps.vars.outputs.skip != 'true' && hashFiles('trivy-web.sarif') != ''
         with:
           sarif_file: trivy-web.sarif
