@@ -21,6 +21,8 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
   ricevono più, salvo per le tipologie di cui sono gestori.
 - **SLA a rischio**: avviso ai gestori della tipologia (ai supervisori solo se la tipologia
   non ha gestori).
+- Se non c'è nessun supervisore attivo, gli avvisi che spetterebbero ai supervisori vanno
+  agli amministratori, così nessuna segnalazione resta senza destinatari.
 
 ### Fixed
 - Gli avvisi SLA arrivavano anche a supervisori con account disattivato.

@@ -74,6 +74,19 @@ class CoperturaTipologie
             ->get();
     }
 
+    /**
+     * Admin attivi con email: ultima rete quando non c'è nessun supervisore.
+     *
+     * @return Collection<int, User>
+     */
+    public function amministratori(): Collection
+    {
+        return User::query()->where(self::conRuolo('admin'))
+            ->where(fn (Builder $q) => $q->where('attivo', true)->orWhereNull('attivo'))
+            ->where(self::conEmail(...))
+            ->get();
+    }
+
     /** Backfill del rilascio: i gestori già in servizio partono con "tutte le tipologie". */
     public static function abilitaTutteAiGestoriEsistenti(): int
     {

@@ -112,6 +112,16 @@ class AvvisiSlaTipologiaTest extends TestCase
         Notification::assertNotSentTo($this->admin, SlaWarningNotification::class);
     }
 
+    public function test_scaduto_senza_supervisori_ripiega_sugli_admin(): void
+    {
+        $this->supervisore->update(['attivo' => false]);
+        $this->segnalazione(5);
+
+        $this->artisan('sla:check')->assertSuccessful();
+
+        Notification::assertSentTo($this->admin, SlaViolazioneNotification::class);
+    }
+
     public function test_supervisore_disattivato_non_riceve(): void
     {
         $this->supervisore->update(['attivo' => false]);

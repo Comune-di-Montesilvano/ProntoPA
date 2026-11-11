@@ -85,6 +85,16 @@ class AvvisoNuovaSegnalazioneTest extends TestCase
         Notification::assertSentTo($sup, NuovaSegnalazioneNotification::class);
     }
 
+    public function test_orfana_senza_supervisori_ripiega_sugli_admin(): void
+    {
+        $admin = User::factory()->create(['attivo' => true, 'amministratore' => true]);
+        $admin->assignRole('admin');
+
+        Segnalazione::factory()->create(['id_tipologia_segnalazione' => 1]);
+
+        Notification::assertSentTo($admin, NuovaSegnalazioneNotification::class);
+    }
+
     public function test_chi_crea_non_riceve(): void
     {
         $a = $this->gestore([1]);

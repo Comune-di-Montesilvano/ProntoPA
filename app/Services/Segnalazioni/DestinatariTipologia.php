@@ -5,6 +5,7 @@ namespace App\Services\Segnalazioni;
 use App\Models\Segnalazione;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * A chi mandare gli avvisi di una segnalazione in base alla sua tipologia
@@ -35,7 +36,7 @@ class DestinatariTipologia
      */
     public function perSlaScaduto(Segnalazione $s): Collection
     {
-        return $this->gestori($s)->concat($this->copertura->supervisori())->unique('id')->values();
+        return $this->gestori($s)->concat($this->responsabili($s))->unique('id')->values();
     }
 
     /**
@@ -61,7 +62,30 @@ class DestinatariTipologia
     {
         $gestori = $this->gestori($s);
 
-        return ($gestori->isNotEmpty() ? $gestori : collect($this->copertura->supervisori()->all()))
+        return ($gestori->isNotEmpty() ? $gestori : $this->responsabili($s))
             ->unique('id')->values();
+    }
+
+    /**
+     * Supervisori; se non ce n'è nessuno gli admin, perché una segnalazione non
+     * resti senza destinatari (enti piccoli senza gruppo supervisori).
+     *
+     * @return Collection<int, User>
+     */
+    private function responsabili(Segnalazione $s): Collection
+    {
+        $supervisori = collect($this->copertura->supervisori()->all());
+        if ($supervisori->isNotEmpty()) {
+            return $supervisori;
+        }
+
+        $admin = collect($this->copertura->amministratori()->all());
+        if ($admin->isEmpty()) {
+            Log::warning('Avvisi segnalazione: nessun destinatario (né gestori, né supervisori, né admin con email)', [
+                'id_segnalazione' => $s->id_segnalazione,
+            ]);
+        }
+
+        return $admin;
     }
 }
