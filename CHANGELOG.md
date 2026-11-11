@@ -4,6 +4,33 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.14] - 2026-11-11
+
+### Added
+- **Sincronizzazione utenti da Active Directory** con un account di servizio in sola lettura
+  (`LDAP_SYNC_USERNAME` / `LDAP_SYNC_PASSWORD`, da aggiungere allo stack). Ogni notte alle 05:30,
+  e su richiesta con "Sincronizza ora" in Admin → Utenti, ProntoPA legge i membri dei gruppi
+  `PRONTOPA_*`: crea gli account (i gestori compaiono subito in "Tipologie dei gestori", senza
+  aspettare il loro primo accesso), aggiorna nome, email e ruolo, riattiva chi rientra e
+  **disattiva chi è uscito dai gruppi o è disabilitato/eliminato in AD** (niente più email a chi
+  non lavora più su ProntoPA). Account e storico restano.
+- Protezioni: se AD non risponde o i gruppi risultano vuoti non cambia nulla; se il giro
+  disattiverebbe più della metà degli utenti di dominio si blocca e chiede conferma
+  ("Sincronizza comunque"). Esito dell'ultimo giro in Admin → Utenti; se la notturna non riesce
+  gli amministratori ricevono un'email.
+- `php artisan ldap:prova --sync`: verifica l'account di servizio e conta i membri per gruppo,
+  senza scrivere. `php artisan ldap:sincronizza --prova` mostra cosa cambierebbe.
+
+### Changed
+- Utenti di dominio: attivazione e disattivazione le decide solo AD (tolti il pulsante
+  "Disattiva" e la casella "Account attivo" per questi account). Per bloccare qualcuno lo si
+  toglie dai gruppi `PRONTOPA_*`. Gli account SPID restano disattivabili a mano.
+- Un gestore che in AD passa a un altro ruolo perde le tipologie assegnate (se diventa
+  amministratore tiene quelle esplicite, non "tutte"). Se viene solo disattivato le ritrova
+  al rientro.
+
+Senza le due nuove variabili tutto funziona come prima (utenti allineati solo al login).
+
 ## [0.9.13] - 2026-11-11
 
 ### Added

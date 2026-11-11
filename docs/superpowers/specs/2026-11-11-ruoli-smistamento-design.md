@@ -1,6 +1,9 @@
 # Ruoli e smistamento: categorie dei gestori, avvisi, pre-registrazione AD
 
-Data: 2026-11-11 · Stato: bozza da approvare · Release prevista: patch 0.9.x (vedi memoria versioning)
+Data: 2026-11-11 · Stato: fasi A (0.9.11) e B (0.9.13) rilasciate · Release prevista: patch 0.9.x (vedi memoria versioning)
+
+> **G5 / pre-registrazione AD superata**: sostituita dalla sincronizzazione automatica con account di servizio
+> (0.9.14, `2026-11-11-sync-ad-design.md`). Le parti su pre-registrazione qui sotto restano solo come storico.
 
 ## Perché
 
