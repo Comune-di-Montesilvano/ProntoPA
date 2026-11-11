@@ -43,6 +43,7 @@ class TriageSuggeritoTest extends TestCase
 
         $this->actingAs($user)->post(route('segnalazioni.store'), [
             'id_tipologia_segnalazione' => 1,
+            'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Infiltrazione d\'acqua dal tetto aula 3',
             'id_provenienza'            => 1,
         ]);
@@ -53,6 +54,7 @@ class TriageSuggeritoTest extends TestCase
     public function test_job_salva_triage_suggerito(): void
     {
         $segnalazione = Segnalazione::factory()->create([
+            'titolo'             => 'Titolo di prova',
             'testo_segnalazione' => 'Infiltrazione d\'acqua dal tetto',
         ]);
 

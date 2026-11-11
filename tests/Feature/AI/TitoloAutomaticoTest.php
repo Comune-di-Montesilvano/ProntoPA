@@ -26,7 +26,7 @@ class TitoloAutomaticoTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    public function test_creazione_dispatcha_job_se_ai_abilitata(): void
+    public function test_form_con_titolo_scritto_non_dispatcha_job(): void
     {
         Queue::fake();
         Impostazione::set('ai_enabled', true);
@@ -36,11 +36,29 @@ class TitoloAutomaticoTest extends TestCase
 
         $this->actingAs($user)->post(route('segnalazioni.store'), [
             'id_tipologia_segnalazione' => 1,
+            'titolo'                    => 'Perdita rubinetto docce',
             'testo_segnalazione'        => 'Perdita acqua dal rubinetto bagno docce piano terra',
             'id_provenienza'            => 1,
         ]);
 
-        Queue::assertPushed(GeneraTitoloSegnalazione::class);
+        Queue::assertNotPushed(GeneraTitoloSegnalazione::class);
+    }
+
+    public function test_api_senza_titolo_dispatcha_job_se_ai_abilitata(): void
+    {
+        Queue::fake();
+        Impostazione::set('ai_enabled', true);
+
+        $user = User::factory()->create();
+        $user->assignRole('segnalatore');
+        $this->actingAs($user);
+
+        $base = ['id_tipologia_segnalazione' => 1, 'testo_segnalazione' => 'Perdita acqua dal rubinetto', 'id_provenienza' => 1, 'force' => true];
+        $this->postJson('/api/segnalazioni', $base + ['titolo' => 'Rubinetto'])->assertCreated();
+        Queue::assertNotPushed(GeneraTitoloSegnalazione::class);
+
+        $this->postJson('/api/segnalazioni', $base)->assertCreated();
+        Queue::assertPushed(GeneraTitoloSegnalazione::class, 1);
     }
 
     public function test_creazione_non_dispatcha_job_se_ai_disabilitata(): void
@@ -53,6 +71,7 @@ class TitoloAutomaticoTest extends TestCase
 
         $this->actingAs($user)->post(route('segnalazioni.store'), [
             'id_tipologia_segnalazione' => 1,
+            'titolo'                    => 'Prova',
             'testo_segnalazione'        => 'Test disabilitato',
             'id_provenienza'            => 1,
         ]);
@@ -66,6 +85,7 @@ class TitoloAutomaticoTest extends TestCase
 
         $segnalazione = Segnalazione::factory()->create([
             'testo_segnalazione' => 'Perdita acqua dal rubinetto bagno docce piano terra',
+            'titolo'             => null,
         ]);
 
         $mockOllama = $this->createMock(OllamaService::class);
@@ -74,7 +94,7 @@ class TitoloAutomaticoTest extends TestCase
 
         (new GeneraTitoloSegnalazione($segnalazione->id_segnalazione))->handle($mockOllama);
 
-        $this->assertSame('Perdita rubinetto bagno piano terra', $segnalazione->fresh()->titolo_generato);
+        $this->assertSame('Perdita rubinetto bagno piano terra', $segnalazione->fresh()->titolo);
     }
 
     public function test_job_non_sovrascrive_titolo_se_risposta_vuota(): void
@@ -83,7 +103,7 @@ class TitoloAutomaticoTest extends TestCase
 
         $segnalazione = Segnalazione::factory()->create([
             'testo_segnalazione' => 'Test testo',
-            'titolo_generato'    => null,
+            'titolo'             => null,
         ]);
 
         $mockOllama = $this->createMock(OllamaService::class);
@@ -92,6 +112,6 @@ class TitoloAutomaticoTest extends TestCase
 
         (new GeneraTitoloSegnalazione($segnalazione->id_segnalazione))->handle($mockOllama);
 
-        $this->assertNull($segnalazione->fresh()->titolo_generato);
+        $this->assertNull($segnalazione->fresh()->titolo);
     }
 }

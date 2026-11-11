@@ -31,6 +31,7 @@ class SegnalazionePerContoTest extends TestCase
 
         $this->actingAs($urp)->post(route('segnalazioni.store'), [
             'id_tipologia_segnalazione' => 1,
+            'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Buca pericolosa in via Verdi, segnalata al telefono',
             'id_provenienza'            => 1,
             'segnalante_per_conto'      => 'Mario Rossi',
@@ -53,6 +54,7 @@ class SegnalazionePerContoTest extends TestCase
 
         $this->actingAs($segnalatore)->post(route('segnalazioni.store'), [
             'id_tipologia_segnalazione' => 1,
+            'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Tentativo di spoofing segnalante',
             'id_provenienza'            => 1,
             'segnalante_per_conto'      => 'Falso Nome',
@@ -73,6 +75,7 @@ class SegnalazionePerContoTest extends TestCase
 
         $response = $this->actingAs($urp)->post(route('segnalazioni.store'), [
             'id_tipologia_segnalazione' => 1,
+            'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Telefonata in serie',
             'id_provenienza'            => 1,
             'salva_e_nuova'             => '1',

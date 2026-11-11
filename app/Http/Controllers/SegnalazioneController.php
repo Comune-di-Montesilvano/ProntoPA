@@ -133,6 +133,7 @@ class SegnalazioneController extends Controller
 
         $data = $request->validate([
             'id_tipologia_segnalazione' => ['required', 'integer', 'exists:tipologie_segnalazioni,id_tipologia_segnalazione'],
+            'titolo'                    => ['required', 'string', 'max:100'],
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
             'id_plesso'                 => $regolePlesso,
             'id_provenienza'            => ['required', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
@@ -156,6 +157,8 @@ class SegnalazioneController extends Controller
             'id_plesso.in'                 => 'Puoi segnalare solo per i plessi coperti dalle tue deleghe.',
             'ubicazione_tipo.required'     => 'Indica dove si trova il problema.',
             'ubicazione_tipo.between'      => 'Indica dove si trova il problema.',
+            'titolo.required'              => 'Scrivi un titolo breve.',
+            'titolo.max'                   => 'Il titolo può avere al massimo 100 caratteri.',
         ]);
 
         $user = auth()->user();
@@ -213,7 +216,9 @@ class SegnalazioneController extends Controller
         }
 
         if (Impostazione::get('ai_enabled', false)) {
-            GeneraTitoloSegnalazione::dispatch($segnalazione->id_segnalazione);
+            if (blank($segnalazione->titolo)) {
+                GeneraTitoloSegnalazione::dispatch($segnalazione->id_segnalazione);
+            }
             SuggerisciTriageSegnalazione::dispatch($segnalazione->id_segnalazione);
             CalcolaEmbeddingSegnalazione::dispatch($segnalazione->id_segnalazione);
         }
@@ -502,6 +507,24 @@ class SegnalazioneController extends Controller
 
     // ── Priorità (decisa dal comune) ──────────────────────────────────────────
 
+    /** Il comune corregge il titolo (stessa regola della priorità: non ditte né segnalanti). */
+    public function aggiornaTitolo(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('modificaPriorita', $segnalazione);
+
+        $data = $request->validate([
+            'titolo' => ['required', 'string', 'max:100'],
+        ], [
+            'titolo.required' => 'Scrivi un titolo breve.',
+            'titolo.max' => 'Il titolo può avere al massimo 100 caratteri.',
+        ]);
+
+        $segnalazione->update(['titolo' => trim($data['titolo'])]);
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Titolo aggiornato.');
+    }
+
     public function aggiornaPriorita(Request $request, Segnalazione $segnalazione): RedirectResponse
     {
         $this->authorize('modificaPriorita', $segnalazione);
@@ -653,7 +676,7 @@ class SegnalazioneController extends Controller
                 ->aperte()
                 ->where(fn ($w) => ctype_digit($q)
                     ? $w->where('id_segnalazione', (int) $q)
-                    : $w->where('testo_segnalazione', 'like', '%'.$q.'%')->orWhere('titolo_generato', 'like', '%'.$q.'%'))
+                    : $w->where('testo_segnalazione', 'like', '%'.$q.'%')->orWhere('titolo', 'like', '%'.$q.'%'))
                 ->with(['stato', 'plesso'])
                 ->orderByDesc('data_segnalazione')
                 ->limit(10)
@@ -683,7 +706,7 @@ class SegnalazioneController extends Controller
         } else {
             $query->where(fn ($w) => ctype_digit($q)
                 ? $w->where('id_segnalazione', (int) $q)
-                : $w->where('testo_segnalazione', 'like', '%'.$q.'%')->orWhere('titolo_generato', 'like', '%'.$q.'%'));
+                : $w->where('testo_segnalazione', 'like', '%'.$q.'%')->orWhere('titolo', 'like', '%'.$q.'%'));
         }
 
         return response()->json(self::candidatiJson($query->orderByDesc('data_chiusura')->limit(9)->get(), $segnalazione));
@@ -700,7 +723,7 @@ class SegnalazioneController extends Controller
             ->take(8)
             ->map(fn (Segnalazione $s) => [
                 'id'     => $s->id_segnalazione,
-                'titolo' => (string) ($s->titolo_generato ?: Str::limit((string) $s->testo_segnalazione, 80)),
+                'titolo' => $s->titoloLeggibile(80),
                 'sede'   => $s->plesso?->etichetta(),
                 'stato'  => $s->statoEnum()->etichetta(),
                 'data'   => $s->data_segnalazione?->format('d/m/Y'),

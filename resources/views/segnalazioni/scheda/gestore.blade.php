@@ -135,7 +135,7 @@
 @if($disponibile('annulla')) @include('segnalazioni.scheda.pannelli.annulla') @endif
 @if($disponibile('collega')) @include('segnalazioni.scheda.pannelli.collega') @endif
 @if($disponibile('presenta_preventivo')) @include('segnalazioni.scheda.pannelli.preventivo') @endif
-@can('modificaPriorita', $segnalazione) @include('segnalazioni.scheda.pannelli.priorita') @endcan
+@can('modificaPriorita', $segnalazione) @include('segnalazioni.scheda.pannelli.priorita') @include('segnalazioni.scheda.pannelli.titolo') @endcan
 @can('sollecita', $segnalazione) @include('segnalazioni.scheda.pannelli.sollecita') @endcan
 @can('accorpa', $segnalazione) @include('segnalazioni.scheda.pannelli.accorpa') @endcan
 @foreach($generiche as $azione)

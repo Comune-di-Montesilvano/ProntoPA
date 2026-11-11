@@ -56,7 +56,7 @@ class RiepilogoInattivitaNotification extends Notification implements ShouldQueu
 
     private function riga(Segnalazione $s): string
     {
-        $titolo = $s->titolo_generato ?: Str::limit((string) $s->testo_segnalazione, 70);
+        $titolo = $s->titoloLeggibile(70);
 
         return "- [#{$s->id_segnalazione}](".route('segnalazioni.show', $s->id_segnalazione).") {$titolo}";
     }

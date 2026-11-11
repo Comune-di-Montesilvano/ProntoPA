@@ -4,6 +4,16 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.12] - 2026-11-11
+
+### Added
+- Titolo della segnalazione: campo breve (max 100 caratteri) obbligatorio nel form per
+  tutti (comune, scuole, URP), mostrato in elenchi, scheda e riepiloghi al posto
+  dell'inizio del testo. Gestori e supervisori lo correggono dalla scheda (matita accanto
+  al titolo). Via API resta facoltativo: se manca lo propone l'assistente AI (se attivo),
+  che non sovrascrive mai un titolo scritto. I titoli già generati dall'AI diventano il
+  titolo della segnalazione; le segnalazioni senza continuano a mostrare l'inizio del testo.
+
 ## [0.9.11] - 2026-11-11
 
 ### Added

@@ -57,7 +57,7 @@ class Segnalazione extends Model
         'id_specializzazione',
         'ubicazione_tipo',
         'id_squadra_assegnata',
-        'titolo_generato',
+        'titolo',
         'triage_suggerito',
         'embedding',
     ];
@@ -190,6 +190,14 @@ class Segnalazione extends Model
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /** Titolo da mostrare: quello scritto (o generato dall'AI), altrimenti l'inizio del testo. */
+    public function titoloLeggibile(int $limite = 90): string
+    {
+        return filled($this->titolo)
+            ? (string) $this->titolo
+            : \Illuminate\Support\Str::limit((string) $this->testo_segnalazione, $limite);
+    }
 
     public function isChiusa(): bool
     {
