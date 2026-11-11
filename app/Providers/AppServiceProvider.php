@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
+use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Notifications\Messages\MailMessage;
 use App\Policies\SegnalazionePolicy;
@@ -39,6 +40,15 @@ class AppServiceProvider extends ServiceProvider
     {
         // Un solo punto per tutti i metodi di accesso (AD, SPID):
         // la sessione ricorda a quale ripristino appartiene (InvalidaSessioniDopoRipristino).
+        // Squadre e tipologie dei gestori: admin e supervisori (il dirigente sa chi fa cosa).
+        Gate::define('gestisci-organizzazione', fn (User $user): bool => $user->isAdmin()
+            || $user->hasRole('admin')
+            || ($user->hasRole('gestore') && $user->isSupervisore()));
+
+        // Utenti di dominio: attivo/disattivo lo decide AD (sync e login), mai a mano.
+        Gate::define('cambia-attivo-utente', fn (User $attore, User $utente): bool => ! $attore->is($utente)
+            && $utente->auth_source !== 'ldap');
+
         Event::listen(Login::class, function (): void {
             session()->put('ripristino_id', Impostazione::ripristinoId());
         });

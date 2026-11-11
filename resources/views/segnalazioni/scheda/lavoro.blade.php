@@ -1,6 +1,6 @@
 {{-- Lettura lavoro (ditta, operaio): ordine di lavoro pensato per il telefono. --}}
 @php
-    $titolo = $segnalazione->titolo_generato ?: \Illuminate\Support\Str::limit((string) $segnalazione->testo_segnalazione, 90);
+    $titolo = $segnalazione->titoloLeggibile(90);
     $assegnazione = $segnalazione->storicoStati
         ->filter(fn ($e) => in_array((int) $e->id_stato_segnalazione, [3, 4], true))
         ->sortBy('data_registrazione')->first();

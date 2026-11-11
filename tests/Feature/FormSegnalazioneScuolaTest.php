@@ -38,6 +38,7 @@ class FormSegnalazioneScuolaTest extends TestCase
     {
         return array_merge([
             'id_tipologia_segnalazione' => 1,
+            'titolo'             => 'Titolo di prova',
             'testo_segnalazione' => 'Perdita acqua bagno',
             'id_plesso' => $this->plesso,
             'id_specializzazione' => 1,
@@ -83,7 +84,7 @@ class FormSegnalazioneScuolaTest extends TestCase
         $interno->assignRole('segnalatore');
 
         $this->actingAs($interno)->post(route('segnalazioni.store'), [
-            'id_tipologia_segnalazione' => 1, 'testo_segnalazione' => 'Lampione spento', 'id_provenienza' => 3,
+            'id_tipologia_segnalazione' => 1, 'titolo' => 'Titolo di prova', 'testo_segnalazione' => 'Lampione spento', 'id_provenienza' => 3,
         ])->assertSessionHasNoErrors();
 
         $this->assertSame(1, (int) Segnalazione::latest('id_segnalazione')->first()->id_provenienza);
@@ -95,7 +96,7 @@ class FormSegnalazioneScuolaTest extends TestCase
         $gestore->assignRole('gestore');
 
         $this->actingAs($gestore)->post(route('segnalazioni.store'), [
-            'id_tipologia_segnalazione' => 1, 'testo_segnalazione' => 'Buca in strada', 'id_provenienza' => 4,
+            'id_tipologia_segnalazione' => 1, 'titolo' => 'Titolo di prova', 'testo_segnalazione' => 'Buca in strada', 'id_provenienza' => 4,
         ])->assertSessionHasNoErrors();
 
         $this->assertSame(4, (int) Segnalazione::latest('id_segnalazione')->first()->id_provenienza);

@@ -140,6 +140,7 @@ components:
       required: [id_tipologia_segnalazione, testo_segnalazione, id_provenienza]
       properties:
         id_tipologia_segnalazione: { type: integer, description: "Deve esistere in tipologie_segnalazioni" }
+        titolo: { type: string, maxLength: 100, nullable: true, description: "Titolo breve; se assente lo propone l'assistente AI (se attivo), altrimenti si mostra l'inizio del testo" }
         testo_segnalazione: { type: string, maxLength: 2000 }
         id_provenienza: { type: integer, description: "Deve esistere in provenienze_segnalazioni" }
         id_plesso: { type: integer, nullable: true }

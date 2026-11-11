@@ -24,12 +24,24 @@ class Istituto extends Model
         'domini_email_istituzionali',
         'fonte_dati',
         'attivo',
+        'richieste_delega_spid',
         'recapiti',
     ];
 
     public function plessi(): HasMany
     {
         return $this->hasMany(Plesso::class, 'id_istituto', 'id_istituto');
+    }
+
+    protected function casts(): array
+    {
+        return ['attivo' => 'boolean', 'richieste_delega_spid' => 'boolean'];
+    }
+
+    /** Le persone esterne (SPID/CIE) possono trovarlo e chiedere una delega da sole. */
+    public function accettaRichiesteSpid(): bool
+    {
+        return $this->attivo && $this->richieste_delega_spid;
     }
 
     public function isMiur(): bool

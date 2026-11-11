@@ -94,7 +94,7 @@ class InattivitaTest extends TestCase
         $this->esegui();
 
         $this->assertNull($s->fresh()->avviso_inattivita_at);
-        Notification::assertNothingSent();
+        $this->nessunAvvisoInattivita();
     }
 
     public function test_avviso_scaduto_archivia(): void
@@ -131,7 +131,7 @@ class InattivitaTest extends TestCase
         $this->esegui();
 
         $this->assertNull($s->fresh()->data_chiusura);
-        Notification::assertNothingSent();
+        $this->nessunAvvisoInattivita();
     }
 
     public function test_attivita_dopo_avviso_lo_azzera(): void
@@ -156,7 +156,7 @@ class InattivitaTest extends TestCase
 
         $this->assertNull($bassa->fresh()->avviso_inattivita_at);
         $this->assertNull($sospesa->fresh()->avviso_inattivita_at);
-        Notification::assertNothingSent();
+        $this->nessunAvvisoInattivita();
     }
 
     public function test_scheda_mostra_data_di_archiviazione(): void
@@ -184,5 +184,13 @@ class InattivitaTest extends TestCase
         $r = SlaConfigurazione::where('livello_priorita', 3)->firstOrFail();
         $this->assertSame(5, (int) $r->giorni_avviso_inattivita);
         $this->assertSame(10, (int) $r->giorni_archiviazione_inattivita);
+    }
+
+    /** Le email "nuova segnalazione" ai gestori (observer) non c'entrano con l'inattività. */
+    private function nessunAvvisoInattivita(): void
+    {
+        foreach ([InattivitaNotification::class, RiepilogoInattivitaNotification::class, ArchiviataInattivitaNotification::class] as $tipo) {
+            Notification::assertSentTimes($tipo, 0);
+        }
     }
 }

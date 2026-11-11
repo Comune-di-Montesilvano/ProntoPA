@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\GeneraTitoloSegnalazione;
 use App\Models\ApiLog;
+use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Models\StatoSegnalazione;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +23,7 @@ class SegnalazioneApiController extends Controller
     {
         $data = $request->validate([
             'id_tipologia_segnalazione' => ['required', 'integer', 'exists:tipologie_segnalazioni,id_tipologia_segnalazione'],
+            'titolo'                    => ['nullable', 'string', 'max:100'],
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
             'id_provenienza'            => ['required', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
             'id_plesso'                 => ['nullable', 'integer', 'exists:plessi,id_plesso'],
@@ -64,6 +67,11 @@ class SegnalazioneApiController extends Controller
             'latitudine'             => $data['latitudine'] ?? 0,
             'longitudine'            => $data['longitudine'] ?? 0,
         ]));
+
+        // Senza titolo dal portale lo propone l'assistente AI, se attivo.
+        if (blank($segnalazione->titolo) && Impostazione::get('ai_enabled', false)) {
+            GeneraTitoloSegnalazione::dispatch($segnalazione->id_segnalazione);
+        }
 
         ApiLog::logInbound(
             endpoint: '/api/segnalazioni',

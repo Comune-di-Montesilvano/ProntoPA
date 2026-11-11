@@ -62,6 +62,7 @@ class AllegatiSegnalazioniTest extends TestCase
 
         $this->actingAs($user)->post(route('segnalazioni.store'), [
             'id_tipologia_segnalazione' => 1,
+            'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Lampione spento via Roma',
             'id_provenienza'            => 1,
             'allegati'                  => [UploadedFile::fake()->image('foto.jpg')],
@@ -79,6 +80,7 @@ class AllegatiSegnalazioniTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('segnalazioni.store'), [
             'id_tipologia_segnalazione' => 1,
+            'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Perdita acqua bagno secondo piano',
             'id_provenienza'            => 1,
             'allegati'                  => [
@@ -105,6 +107,7 @@ class AllegatiSegnalazioniTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('segnalazioni.store'), [
             'id_tipologia_segnalazione' => 1,
+            'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Test mime',
             'id_provenienza'            => 1,
             'allegati'                  => [

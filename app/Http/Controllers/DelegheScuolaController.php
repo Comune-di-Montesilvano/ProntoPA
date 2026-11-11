@@ -22,6 +22,7 @@ class DelegheScuolaController extends Controller
         $q = trim((string) $request->query('q', ''));
         $istituti = $q === '' ? collect() : Istituto::query()
             ->where('attivo', true)
+            ->where('richieste_delega_spid', true)
             ->whereHas('plessi')
             ->where(fn ($w) => $w->where('descrizione', 'like', "%{$q}%")->orWhere('codice_meccanografico', 'like', "%{$q}%"))
             ->orderBy('descrizione')
@@ -38,7 +39,7 @@ class DelegheScuolaController extends Controller
     public function create(Request $request, Istituto $istituto): View
     {
         abort_unless($request->user()->isSpid(), 403);
-        abort_unless($istituto->attivo && $istituto->plessi()->exists(), 404);
+        abort_unless($istituto->accettaRichiesteSpid() && $istituto->plessi()->exists(), 404);
 
         return view('scuola.deleghe.create', [
             'istituto' => $istituto,
@@ -50,6 +51,7 @@ class DelegheScuolaController extends Controller
     {
         $user = $request->user();
         abort_unless($user->isSpid(), 403);
+        abort_unless($istituto->accettaRichiesteSpid(), 404);
 
         $data = $request->validate([
             'tutto' => ['nullable', 'boolean'],

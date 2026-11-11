@@ -3,17 +3,21 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SincronizzaUtentiAdJob;
 use App\Models\Profilo;
 use App\Models\Provenienza;
 use App\Models\User;
+use App\Services\Auth\SincronizzaUtentiAd;
+use App\Services\Directory\Directory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class UtentiController extends Controller
 {
-    public function index(): View
+    public function index(Directory $directory, SincronizzaUtentiAd $sync): View
     {
         $mostraDisattivati = request()->boolean('mostra_disattivati');
 
@@ -25,7 +29,20 @@ class UtentiController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        return view('admin.utenti.index', compact('utenti', 'mostraDisattivati'));
+        return view('admin.utenti.index', [
+            'utenti' => $utenti,
+            'mostraDisattivati' => $mostraDisattivati,
+            'syncConfigurata' => $directory->syncConfigurata(),
+            'esitoSync' => $sync->ultimoEsito(),
+        ]);
+    }
+
+    /** "Sincronizza ora": in coda, l'esito compare qui al termine. */
+    public function sincronizza(Request $request): RedirectResponse
+    {
+        SincronizzaUtentiAdJob::dispatch($request->boolean('forza'));
+
+        return back()->with('success', 'Sincronizzazione con Active Directory avviata: ricarica la pagina tra poco per vedere l\'esito.');
     }
 
     /*
@@ -60,7 +77,10 @@ class UtentiController extends Controller
         // Persona di una ditta: ruolo e impresa li governa DelegaImpresaService.
         $ditta = $utente->hasRole('impresa');
 
-        if ($utente->is(auth()->user()) && ! ($data['attivo'] ?? false)) {
+        // Utenti di dominio: attivo lo decide AD (sync e login).
+        $attivoDaAd = $utente->auth_source === 'ldap';
+
+        if (! $attivoDaAd && $utente->is(auth()->user()) && ! ($data['attivo'] ?? false)) {
             return back()
                 ->withErrors(['attivo' => 'Non puoi disattivare il tuo account.'])
                 ->withInput();
@@ -77,7 +97,9 @@ class UtentiController extends Controller
             $utente->gestore_segnalazioni     = $data['ruolo'] === 'gestore';
             $utente->supervisore_segnalazioni = ($data['ruolo'] === 'gestore') && ($data['supervisore'] ?? false);
         }
-        $utente->attivo                    = (bool) ($data['attivo'] ?? false);
+        if (! $attivoDaAd) {
+            $utente->attivo = (bool) ($data['attivo'] ?? false);
+        }
 
         $utente->save();
         if (! $ditta) {
@@ -93,6 +115,7 @@ class UtentiController extends Controller
         if ($utente->is(auth()->user())) {
             return back()->with('error', 'Non puoi modificare lo stato del tuo account.');
         }
+        Gate::authorize('cambia-attivo-utente', $utente);
 
         $utente->update(['attivo' => ! $utente->attivo]);
 

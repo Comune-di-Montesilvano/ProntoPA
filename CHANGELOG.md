@@ -4,6 +4,116 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.14] - 2026-11-11
+
+### Added
+- **Sincronizzazione utenti da Active Directory** con un account di servizio in sola lettura
+  (`LDAP_SYNC_USERNAME` / `LDAP_SYNC_PASSWORD`, da aggiungere allo stack). Ogni notte alle 05:30,
+  e su richiesta con "Sincronizza ora" in Admin → Utenti, ProntoPA legge i membri dei gruppi
+  `PRONTOPA_*`: crea gli account (i gestori compaiono subito in "Tipologie dei gestori", senza
+  aspettare il loro primo accesso), aggiorna nome, email e ruolo, riattiva chi rientra e
+  **disattiva chi è uscito dai gruppi o è disabilitato/eliminato in AD** (niente più email a chi
+  non lavora più su ProntoPA). Account e storico restano.
+- Protezioni: se AD non risponde, i gruppi risultano vuoti o **un gruppo configurato non
+  esiste** non cambia nulla (un gruppo che non usate, es. URP: svuotate la sua variabile
+  `LDAP_GRUPPO_*` nello stack, altrimenti la sync segnala l'errore ogni notte); se il giro
+  disattiverebbe più della metà degli utenti di dominio si blocca e chiede conferma
+  ("Sincronizza comunque"). Esito dell'ultimo giro in Admin → Utenti; se la notturna non riesce
+  gli amministratori ricevono un'email.
+- `php artisan ldap:prova --sync`: verifica l'account di servizio e conta i membri per gruppo,
+  senza scrivere. `php artisan ldap:sincronizza --prova` mostra cosa cambierebbe.
+
+### Changed
+- Utenti di dominio: attivazione e disattivazione le decide solo AD (tolti il pulsante
+  "Disattiva" e la casella "Account attivo" per questi account). Per bloccare qualcuno lo si
+  toglie dai gruppi `PRONTOPA_*`. Gli account SPID restano disattivabili a mano.
+- Un gestore che in AD passa a un altro ruolo perde le tipologie assegnate (se diventa
+  amministratore tiene quelle esplicite, non "tutte"). Se viene solo disattivato le ritrova
+  al rientro.
+
+Senza le due nuove variabili tutto funziona come prima (utenti allineati solo al login).
+
+## [0.9.13] - 2026-11-11
+
+### Added
+- **Email "nuova segnalazione"** ai gestori della tipologia, da qualsiasi canale (web, API,
+  Telegram, per conto). Se la tipologia non ha gestori arriva ai supervisori. Anche quando
+  una segnalazione cambia tipologia ("riclassificata"). Chi l'ha creata o spostata non la
+  riceve; i dati demo (`artisan demo`) non mandano email.
+- Un **amministratore può essere anche gestore** di alcune tipologie (Organizzazione →
+  Tipologie dei gestori): copre quelle tipologie e ne riceve gli avvisi. Agli
+  amministratori non si assegna "tutte le tipologie".
+
+### Changed
+- **SLA scaduto**: avviso ai gestori della tipologia e ai supervisori, sempre subito (anche
+  con il digest mattutino attivo, prima solo per le critiche). Gli amministratori non lo
+  ricevono più, salvo per le tipologie di cui sono gestori.
+- **SLA a rischio**: avviso ai gestori della tipologia (ai supervisori solo se la tipologia
+  non ha gestori).
+- Se non c'è nessun supervisore attivo, gli avvisi che spetterebbero ai supervisori vanno
+  agli amministratori, così nessuna segnalazione resta senza destinatari.
+
+### Fixed
+- Gli avvisi SLA arrivavano anche a supervisori con account disattivato.
+
+## [0.9.12] - 2026-11-11
+
+### Added
+- Titolo della segnalazione: campo breve (max 100 caratteri) obbligatorio nel form per
+  tutti (comune, scuole, URP), mostrato in elenchi, scheda e riepiloghi al posto
+  dell'inizio del testo. Gestori e supervisori lo correggono dalla scheda (matita accanto
+  al titolo). Via API resta facoltativo: se manca lo propone l'assistente AI (se attivo),
+  che non sovrascrive mai un titolo scritto. I titoli già generati dall'AI diventano il
+  titolo della segnalazione; le segnalazioni senza continuano a mostrare l'inizio del testo.
+
+## [0.9.11] - 2026-11-11
+
+### Added
+- **Tipologie dei gestori**: ogni gestore si occupa di alcune tipologie (es. impianti) o di
+  tutte. Vede e smista le segnalazioni delle sue tipologie, anche quelle nuove da smistare;
+  più gestori sulla stessa tipologia vedono tutti tutto. Riapertura ed eliminazione allegati
+  restano ai supervisori.
+- Nuova area **Organizzazione** (amministratori e supervisori): Tipologie dei gestori e
+  Squadre.
+- Avviso **tipologie senza gestore**: nella pagina delle tipologie, nella dashboard del
+  supervisore e nella scheda della segnalazione. Le loro segnalazioni arrivano solo ai
+  supervisori.
+
+### Changed
+- I gestori già in servizio partono con "tutte le tipologie": vedono e gestiscono tutte le
+  segnalazioni, non più solo quelle assegnate a loro. Restringetele da Organizzazione →
+  Tipologie dei gestori.
+- Le squadre si spostano da Amministrazione a Organizzazione (`/organizzazione/squadre`).
+- Digest mattutino: le segnalazioni da smistare arrivano anche ai gestori, filtrate per le
+  loro tipologie.
+
+## [0.9.10] - 2026-11-11
+
+### Changed
+- Organizzazioni: la spunta "Ente attivo per registrazioni" è divisa in due.
+  **Attiva** = l'ente è usabile (sedi, segnalazioni, deleghe assegnate dall'amministratore).
+  **Accetta richieste di delega via SPID/CIE** = le persone esterne la trovano e chiedono
+  una delega da sole. Per gli enti senza richieste (es. asili nido comunali) le deleghe si
+  danno solo da Admin → Deleghe → predelega. Le nuove organizzazioni create a mano partono
+  senza richieste SPID; quelle esistenti e le scuole dall'anagrafe MIUR restano come prima.
+
+## [0.9.9] - 2026-11-11
+
+### Fixed
+- Creare un'organizzazione senza codice meccanografico (es. asili nido comunali, uffici)
+  dava errore 500: la colonna era obbligatoria nel database pur essendo facoltativa nel
+  form. Ora è facoltativa anche a DB, come già per le sedi; i codici vuoti esistenti
+  diventano "nessun codice".
+
+## [0.9.8] - 2026-11-11
+
+### Fixed
+- La pagina Squadre era raggiungibile solo scrivendo l'indirizzo a mano: ora c'è la voce
+  "Squadre" nel menu Amministrazione e nel pannello admin.
+- Se le squadre sono disattivate (impostazione "Abilita la gestione squadre di operai",
+  spenta di default) la pagina Squadre lo dice e rimanda alle Impostazioni: prima si potevano
+  creare squadre che poi non comparivano tra le scelte di assegnazione.
+
 ## [0.9.7] - 2026-10-27
 
 ### Fixed

@@ -22,6 +22,7 @@ class NotificaSegnalazione extends Model
         'ImpresaAssegnataNotification'     => 'Affidata alla ditta',
         'InattivitaNotification'           => 'Avviso di inattività',
         'NotaDaEsternoNotification'        => 'Nuovo messaggio',
+        'NuovaSegnalazioneNotification'    => 'Nuova segnalazione (gestori)',
         'NuovaNotaSegnalazione'            => 'Nuova nota',
         'OperatoreAssegnatoNotification'   => 'Assegnata a operatore',
         'RiepilogoInattivitaNotification'  => 'Riepilogo inattività (supervisori)',

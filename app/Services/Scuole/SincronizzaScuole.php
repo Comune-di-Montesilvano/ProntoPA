@@ -38,7 +38,7 @@ class SincronizzaScuole
         return DB::transaction(function () use ($dati, $sediMiur, $codiciSedi) {
             $esito = ['creati' => [], 'aggiornati' => [], 'adottati' => [], 'non_selezionati' => []];
 
-            $istituto = Istituto::conCodice($dati['codice'])->first() ?? new Istituto(['attivo' => true]);
+            $istituto = Istituto::conCodice($dati['codice'])->first() ?? new Istituto(['attivo' => true, 'richieste_delega_spid' => true]);
             $istituto->fill($this->campiIstituto($dati))->save();
 
             foreach ($codiciSedi as $codice) {

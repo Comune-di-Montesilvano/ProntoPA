@@ -100,6 +100,9 @@ class TracciaNotificheTest extends TestCase
 
     public function test_scheda_senza_notifiche_lo_dice(): void
     {
+        // Toglie l'avviso "nuova segnalazione" mandato al supervisore alla creazione.
+        \App\Models\NotificaSegnalazione::query()->delete();
+
         $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
             ->assertOk()
             ->assertSee('Nessuna notifica inviata');

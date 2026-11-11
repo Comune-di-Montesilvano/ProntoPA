@@ -14,6 +14,13 @@ return [
     'tls_skip_verify' => (bool) env('LDAP_TLS_SKIP_VERIFY', false),
     'timeout' => (int) env('LDAP_TIMEOUT', 5),
 
+    // Account di servizio in sola lettura per la sincronizzazione utenti
+    // (ldap:sincronizza). Vuoti = sync spenta, utenti allineati solo al login.
+    'sync' => [
+        'username' => env('LDAP_SYNC_USERNAME'),
+        'password' => env('LDAP_SYNC_PASSWORD'),
+    ],
+
     // Gruppi AD → ruolo ProntoPA (precedenza in quest'ordine). In env e non
     // in Impostazioni: servono già al primo login, prima che esista un admin.
     'gruppi' => [

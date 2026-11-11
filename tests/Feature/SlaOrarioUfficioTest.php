@@ -39,6 +39,7 @@ class SlaOrarioUfficioTest extends TestCase
         $user->assignRole('segnalatore');
         $this->actingAs($user)->post(route('segnalazioni.store'), [
             'id_tipologia_segnalazione' => 1,
+            'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Perdita acqua dal rubinetto',
             'id_provenienza'            => 1,
             'livello_priorita'          => 2,

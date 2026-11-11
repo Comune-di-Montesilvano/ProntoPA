@@ -2,7 +2,7 @@
 @use('App\Enums\SegnalazioneStato')
 @php
     $stato = $segnalazione->statoEnum();
-    $titolo = $segnalazione->titolo_generato ?: \Illuminate\Support\Str::limit((string) $segnalazione->testo_segnalazione, 90);
+    $titolo = $segnalazione->titoloLeggibile(90);
     $puoScrivere = ! in_array($stato, [SegnalazioneStato::ARCHIVIATA, SegnalazioneStato::DUPLICATA, SegnalazioneStato::ANNULLATA], true);
     $madre = $stato === SegnalazioneStato::DUPLICATA ? $segnalazione->segnalazioneMadre : null;
     $ultimaRisposta = $attivita->first(fn ($v) => $v['tipo'] === 'nota' && $v['autore'] !== 'Tu');

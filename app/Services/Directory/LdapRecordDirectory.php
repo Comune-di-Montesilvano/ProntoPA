@@ -9,17 +9,23 @@ use LdapRecord\Models\Attributes\Guid;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Active Directory reale. Bind con le credenziali dell'utente (nessun
- * account di servizio), poi lettura attributi e gruppi annidati via
- * LDAP_MATCHING_RULE_IN_CHAIN (1.2.840.113556.1.4.1941).
+ * Active Directory reale. Login: bind con le credenziali dell'utente, poi
+ * lettura attributi e gruppi annidati via LDAP_MATCHING_RULE_IN_CHAIN
+ * (1.2.840.113556.1.4.1941). Sync: bind con l'account di servizio in sola
+ * lettura (config ldap.sync) ed elenco dei membri dei gruppi ProntoPA.
  */
 final class LdapRecordDirectory implements Directory
 {
     /** LDAP_INVALID_CREDENTIALS: su AD anche account disabilitato/scaduto/bloccato. */
     private const ERRORE_CREDENZIALI = 49;
 
+    /** userAccountControl ACCOUNTDISABLE. */
+    private const UAC_DISABILITATO = 0x2;
+
+    private const IN_CHAIN = '1.2.840.113556.1.4.1941';
+
     /**
-     * @param  array{host: string, port: int, base_dn: ?string, user_dn_template: string, starttls: bool, tls_skip_verify: bool, timeout: int}  $config
+     * @param  array{host: string, port: int, base_dn: ?string, user_dn_template: string, starttls: bool, tls_skip_verify: bool, timeout: int, sync?: array{username: ?string, password: ?string}, gruppi?: array<string, ?string>}  $config
      */
     public function __construct(private readonly array $config) {}
 
@@ -90,22 +96,7 @@ final class LdapRecordDirectory implements Directory
             return null;
         }
 
-        $endpoint = self::endpoint($this->config['host'], $this->config['port']);
-
-        $connection = new Connection([
-            'hosts' => [$endpoint['host']],
-            'port' => $endpoint['port'],
-            'base_dn' => (string) $this->config['base_dn'],
-            // LdapRecord v4: use_tls = ldaps://, use_starttls = upgrade su ldap://
-            'use_tls' => $endpoint['ssl'],
-            'use_starttls' => $this->config['starttls'],
-            'timeout' => $this->config['timeout'],
-            'follow_referrals' => false,
-            'options' => [
-                LDAP_OPT_X_TLS_REQUIRE_CERT => $this->config['tls_skip_verify'] ? LDAP_OPT_X_TLS_NEVER : LDAP_OPT_X_TLS_HARD,
-                LDAP_OPT_NETWORK_TIMEOUT => $this->config['timeout'],
-            ],
-        ]);
+        $connection = $this->connessione();
 
         $bindDn = self::bindDn($this->config['user_dn_template'], $username);
         [$attributo, $valore] = self::filtroIdentita($this->config['user_dn_template'], $username);
@@ -164,5 +155,152 @@ final class LdapRecordDirectory implements Directory
             email: $entry['mail'][0] ?? null,
             groups: array_values(array_filter(array_map(fn ($g) => $g['cn'][0] ?? null, $gruppi))),
         );
+    }
+
+    private function connessione(): Connection
+    {
+        $endpoint = self::endpoint($this->config['host'], $this->config['port']);
+
+        return new Connection([
+            'hosts' => [$endpoint['host']],
+            'port' => $endpoint['port'],
+            'base_dn' => (string) $this->config['base_dn'],
+            // LdapRecord v4: use_tls = ldaps://, use_starttls = upgrade su ldap://
+            'use_tls' => $endpoint['ssl'],
+            'use_starttls' => $this->config['starttls'],
+            'timeout' => $this->config['timeout'],
+            'follow_referrals' => false,
+            'options' => [
+                LDAP_OPT_X_TLS_REQUIRE_CERT => $this->config['tls_skip_verify'] ? LDAP_OPT_X_TLS_NEVER : LDAP_OPT_X_TLS_HARD,
+                LDAP_OPT_NETWORK_TIMEOUT => $this->config['timeout'],
+            ],
+        ]);
+    }
+
+    /**
+     * Gruppi configurati (non vuoti) che la ricerca non ha trovato, in maiuscolo.
+     *
+     * @param  list<string>  $configurati
+     * @param  list<string>  $trovati
+     * @return list<string>
+     */
+    public static function gruppiMancanti(array $configurati, array $trovati): array
+    {
+        $norm = fn (string $g): string => mb_strtoupper(trim($g));
+        $trovati = array_map($norm, $trovati);
+
+        return array_values(array_filter(
+            array_map($norm, $configurati),
+            fn (string $g): bool => $g !== '' && ! in_array($g, $trovati, true),
+        ));
+    }
+
+    public static function disabilitato(?string $userAccountControl): bool
+    {
+        return $userAccountControl !== null && ((int) $userAccountControl & self::UAC_DISABILITATO) !== 0;
+    }
+
+    public function syncConfigurata(): bool
+    {
+        return filled($this->config['sync']['username'] ?? null) && filled($this->config['sync']['password'] ?? null);
+    }
+
+    /** Bind dell'account di servizio: qui ogni rifiuto è un errore di configurazione. */
+    public function bindServizio(Connection $connection, string $utente, #[\SensitiveParameter] string $password): void
+    {
+        try {
+            $connection->auth()->bind($utente, $password);
+        } catch (BindException $e) {
+            throw new DirectoryNonDisponibile(sprintf('Bind dell\'account di servizio "%s" rifiutato: %s',
+                $utente, $e->getDetailedError()?->getDiagnosticMessage() ?: $e->getMessage()), 0, $e);
+        }
+    }
+
+    public function membriGruppi(): array
+    {
+        if (! $this->syncConfigurata()) {
+            throw new DirectoryNonDisponibile('Account di servizio non configurato (LDAP_SYNC_USERNAME / LDAP_SYNC_PASSWORD).');
+        }
+
+        $connection = $this->connessione();
+
+        /** @var array<string, array{0: array<string, array<int, string>>, 1: list<string>}> $perGuid */
+        $perGuid = [];
+        $configurati = array_map('strval', array_values((array) ($this->config['gruppi'] ?? config('ldap.gruppi'))));
+        /** @var list<string> $trovati */
+        $trovati = [];
+
+        try {
+            $this->bindServizio($connection, (string) $this->config['sync']['username'], (string) $this->config['sync']['password']);
+
+            foreach ($configurati as $nomeGruppo) {
+                $nomeGruppo = trim((string) $nomeGruppo);
+                if ($nomeGruppo === '') {
+                    continue;
+                }
+
+                /** @var array<string, array<int, string>>|null $gruppo */
+                $gruppo = $connection->query()
+                    ->rawFilter('(&(objectClass=group)(cn='.ldap_escape($nomeGruppo, '', LDAP_ESCAPE_FILTER).'))')
+                    ->select(['distinguishedname'])
+                    ->first();
+
+                if (! $gruppo) {
+                    // Gruppo rinominato/assente/fuori dal base DN: i suoi membri sparirebbero
+                    // dall'elenco e verrebbero disattivati. Errore dopo il giro (gruppiMancanti).
+                    continue;
+                }
+                $trovati[] = $nomeGruppo;
+
+                $dnGruppo = $gruppo['distinguishedname'][0];
+
+                // isCritical marca il controllo di paging come critico verso il server;
+                // gli errori di ldap_search arrivano come \ErrorException (catch sotto).
+                /** @var list<array<string, array<int, string>>> $utenti */
+                $utenti = $connection->query()
+                    ->rawFilter('(&(objectCategory=person)(objectClass=user)(memberOf:'.self::IN_CHAIN.':='.ldap_escape($dnGruppo, '', LDAP_ESCAPE_FILTER).'))')
+                    ->select(['objectguid', 'samaccountname', 'displayname', 'mail', 'useraccountcontrol'])
+                    ->paginate(500, true);
+
+                foreach ($utenti as $u) {
+                    if (empty($u['objectguid'][0]) || empty($u['samaccountname'][0])) {
+                        continue;
+                    }
+                    $guid = (new Guid($u['objectguid'][0]))->getValue();
+                    $perGuid[$guid] ??= [$u, []];
+                    $perGuid[$guid][1][] = $nomeGruppo;
+                }
+            }
+        } catch (DirectoryNonDisponibile $e) {
+            throw $e;
+        } catch (LdapRecordException $e) {
+            throw new DirectoryNonDisponibile('Active Directory non raggiungibile: '.$e->getMessage(), 0, $e);
+        } catch (\Throwable $e) {
+            // ldap_search() emette warning convertiti in \ErrorException, non LdapRecordException.
+            throw new DirectoryNonDisponibile('Errore nella lettura dei gruppi da Active Directory: '.$e->getMessage(), 0, $e);
+        } finally {
+            $connection->disconnect();
+        }
+
+        $mancanti = self::gruppiMancanti($configurati, $trovati);
+        if ($mancanti !== []) {
+            throw new DirectoryNonDisponibile(sprintf(
+                'Gruppi non trovati in Active Directory: %s. Crea il gruppo sotto LDAP_BASE_DN, oppure svuota la variabile LDAP_GRUPPO_* corrispondente se non lo usi. Nessun utente modificato.',
+                implode(', ', $mancanti)));
+        }
+
+        $membri = [];
+        foreach ($perGuid as $guid => [$u, $gruppi]) {
+            $membri[] = new DirectoryIdentity(
+                guid: (string) $guid,
+                username: $u['samaccountname'][0],
+                name: $u['displayname'][0] ?? $u['samaccountname'][0],
+                email: $u['mail'][0] ?? null,
+                groups: array_values(array_unique($gruppi)),
+                abilitato: ! self::disabilitato($u['useraccountcontrol'][0] ?? null),
+            );
+        }
+
+        return $membri;
     }
 }

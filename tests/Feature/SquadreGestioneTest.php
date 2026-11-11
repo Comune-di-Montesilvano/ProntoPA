@@ -47,13 +47,13 @@ class SquadreGestioneTest extends TestCase
         $membro = User::factory()->create();
         $membro->assignRole('operaio');
 
-        $response = $this->actingAs($this->admin())->post(route('admin.squadre.store'), [
+        $response = $this->actingAs($this->admin())->post(route('organizzazione.squadre.store'), [
             'nome'            => 'Squadra Idraulica',
             'id_caposquadra'  => $capo->id,
             'membri'          => [$capo->id, $membro->id],
         ]);
 
-        $response->assertRedirect(route('admin.squadre.index'));
+        $response->assertRedirect(route('organizzazione.squadre.index'));
 
         $squadra = Squadra::where('nome', 'Squadra Idraulica')->first();
         $this->assertNotNull($squadra);
@@ -105,5 +105,27 @@ class SquadreGestioneTest extends TestCase
         );
 
         $response->assertForbidden();
+    }
+
+    public function test_squadre_raggiungibili_dal_menu_admin(): void
+    {
+        $this->actingAs($this->admin())->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee(route('organizzazione.squadre.index'), false);
+    }
+
+    public function test_avviso_se_squadre_disattivate(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->get(route('organizzazione.squadre.index'))
+            ->assertOk()
+            ->assertDontSee('Le squadre sono disattivate');
+
+        Impostazione::set('squadre_enabled', false);
+
+        $this->actingAs($admin)->get(route('organizzazione.squadre.index'))
+            ->assertOk()
+            ->assertSee('Le squadre sono disattivate');
     }
 }

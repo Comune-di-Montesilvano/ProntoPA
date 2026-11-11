@@ -11,8 +11,58 @@
                     Mostra disattivati
                 </label>
             </form>
+            @if($syncConfigurata)
+                <form method="POST" action="{{ route('admin.utenti.sincronizza') }}" class="inline">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-medium hover:bg-blue-700">
+                        <span><i class="fas fa-rotate" aria-hidden="true"></i></span> Sincronizza ora
+                    </button>
+                </form>
+            @endif
         </div>
     </x-slot>
+
+    @if($syncConfigurata)
+        @php
+            $coloreSync = match ($esitoSync?->stato) {
+                'ok' => 'border-green-200 bg-green-50 text-green-900',
+                'bloccata' => 'border-amber-300 bg-amber-50 text-amber-900',
+                'fallita' => 'border-red-200 bg-red-50 text-red-900',
+                default => 'border-gray-200 bg-gray-50 text-gray-700',
+            };
+        @endphp
+        <div class="mb-4 px-4 py-3 border rounded-lg text-sm {{ $coloreSync }}">
+            <p class="m-0">
+                <strong>Sincronizzazione con Active Directory</strong>
+                (ogni notte alle 05:30; gli utenti di dominio sono attivati e disattivati solo da AD).
+            </p>
+            @if($esitoSync === null)
+                <p class="m-0 mt-1">Nessuna sincronizzazione eseguita finora.</p>
+            @else
+                <p class="m-0 mt-1">
+                    Ultimo giro {{ $esitoSync->quando->timezone(config('app.timezone'))->format('d/m/Y H:i') }}:
+                    @if($esitoSync->ok())
+                        {{ $esitoSync->creati }} creati · {{ $esitoSync->aggiornati }} aggiornati ·
+                        {{ $esitoSync->riattivati }} riattivati · {{ $esitoSync->disattivati }} disattivati
+                        @if($esitoSync->senzaEmail || $esitoSync->usernameOccupati)
+                            · saltati: {{ $esitoSync->senzaEmail }} senza email, {{ $esitoSync->usernameOccupati }} con username già usato
+                        @endif
+                    @else
+                        {{ $esitoSync->stato === 'bloccata' ? 'bloccato' : 'non riuscito' }}.
+                        {{ $esitoSync->motivo }}
+                    @endif
+                </p>
+                @if($esitoSync->stato === 'bloccata')
+                    <form method="POST" action="{{ route('admin.utenti.sincronizza') }}" class="mt-2"
+                          onsubmit="return confirm('Verranno disattivati {{ $esitoSync->daDisattivare }} utenti di dominio. Continuare?')">
+                        @csrf
+                        <input type="hidden" name="forza" value="1">
+                        <button type="submit" class="px-3 py-1.5 rounded-md bg-amber-600 text-white text-xs font-medium hover:bg-amber-700">Sincronizza comunque</button>
+                    </form>
+                @endif
+            @endif
+        </div>
+    @endif
 
     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
         <div class="overflow-x-auto">
@@ -65,7 +115,9 @@
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <a href="{{ route('admin.utenti.edit', $u->id) }}"
                                    class="text-blue-600 hover:text-blue-800 font-medium text-xs mr-3">Modifica</a>
-                                @if($u->id !== auth()->id())
+                                @if($u->auth_source === 'ldap')
+                                    <span class="text-gray-400 text-xs" title="Attivazione decisa dai gruppi di Active Directory">Gestito da AD</span>
+                                @elseif($u->id !== auth()->id())
                                         <form method="POST" action="{{ route('admin.utenti.toggle-attivo', $u->id) }}" class="inline"
                                               onsubmit="return confirm('{{ $u->attivo !== false ? 'Disattivare' : 'Riattivare' }} l\'utente {{ addslashes($u->username) }}?')">
                                             @csrf @method('PATCH')

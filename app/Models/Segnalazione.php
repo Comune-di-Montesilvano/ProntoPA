@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\SegnalazioneStato;
+use App\Observers\SegnalazioneObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,9 +12,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Squadra;
 use Illuminate\Support\Carbon;
 
+#[ObservedBy(SegnalazioneObserver::class)]
 class Segnalazione extends Model
 {
     use HasFactory;
+
+    /** true = niente email ai gestori su creazione/riclassificazione (dati demo). */
+    public static bool $silenziaAvvisi = false;
 
     protected $table      = 'segnalazioni';
     protected $primaryKey = 'id_segnalazione';
@@ -57,7 +63,7 @@ class Segnalazione extends Model
         'id_specializzazione',
         'ubicazione_tipo',
         'id_squadra_assegnata',
-        'titolo_generato',
+        'titolo',
         'triage_suggerito',
         'embedding',
     ];
@@ -190,6 +196,14 @@ class Segnalazione extends Model
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /** Titolo da mostrare: quello scritto (o generato dall'AI), altrimenti l'inizio del testo. */
+    public function titoloLeggibile(int $limite = 90): string
+    {
+        return filled($this->titolo)
+            ? (string) $this->titolo
+            : \Illuminate\Support\Str::limit((string) $this->testo_segnalazione, $limite);
+    }
 
     public function isChiusa(): bool
     {
@@ -362,9 +376,18 @@ class Segnalazione extends Model
             if ($user->isSupervisore()) {
                 return $query;
             }
+            if ($user->gestore_tutte_tipologie && $user->hasRole('gestore')) {
+                return $query;
+            }
+
+            // Le sue + quelle delle tipologie di cui si occupa (anche nuove, da smistare).
             return $query->where(function ($q) use ($user) {
                 $q->where('id_operatore_assegnato', $user->id)
                   ->orWhere('id_utente_segnalazione', $user->id);
+
+                if ($user->hasRole('gestore')) {
+                    $q->orWhereIn('id_tipologia_segnalazione', $user->tipologieGestite()->select('tipologie_segnalazioni.id_tipologia_segnalazione'));
+                }
             });
         }
 

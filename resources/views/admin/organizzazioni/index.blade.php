@@ -42,6 +42,9 @@
                                 <td class="px-4 py-3">
                                     @if($org->attivo ?? true)
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Attivo</span>
+                                        @unless($org->richieste_delega_spid)
+                                            <span class="block mt-1 text-xs text-gray-500">deleghe solo da admin</span>
+                                        @endunless
                                     @else
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">Disattivo</span>
                                     @endif

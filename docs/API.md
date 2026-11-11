@@ -31,6 +31,7 @@ Crea una nuova segnalazione da portale cittadini esterno.
 | Campo | Tipo | Obbligatorio | Note |
 |---|---|---|---|
 | `id_tipologia_segnalazione` | integer | ✅ | Deve esistere in `tipologie_segnalazioni` |
+| `titolo` | string | — | Max 100 caratteri. Se assente lo propone l'assistente AI (se attivo), altrimenti si mostra l'inizio del testo |
 | `testo_segnalazione` | string | ✅ | Max 2000 caratteri |
 | `id_provenienza` | integer | ✅ | Deve esistere in `provenienze_segnalazioni` |
 | `id_plesso` | integer | ❌ | Sede/plesso scolastico |

@@ -27,8 +27,33 @@ final class MockDirectory implements Directory
             return null;
         }
 
-        $gruppo = self::UTENTI[$username];
+        return $this->identita($username, self::UTENTI[$username]);
+    }
 
+    public function motivoUltimoRifiuto(): string
+    {
+        return 'Mock: utente sconosciuto o password diversa dallo username.';
+    }
+
+    public function syncConfigurata(): bool
+    {
+        return true;
+    }
+
+    public function membriGruppi(): array
+    {
+        $membri = [];
+        foreach (self::UTENTI as $username => $gruppo) {
+            if ($gruppo !== null) {
+                $membri[] = $this->identita($username, $gruppo);
+            }
+        }
+
+        return $membri;
+    }
+
+    private function identita(string $username, ?string $gruppo): DirectoryIdentity
+    {
         return new DirectoryIdentity(
             guid: $this->guid($username),
             username: $username,
@@ -36,11 +61,6 @@ final class MockDirectory implements Directory
             email: $username.'@mock.local',
             groups: $gruppo !== null ? [$gruppo] : [],
         );
-    }
-
-    public function motivoUltimoRifiuto(): string
-    {
-        return 'Mock: utente sconosciuto o password diversa dallo username.';
     }
 
     private function guid(string $username): string

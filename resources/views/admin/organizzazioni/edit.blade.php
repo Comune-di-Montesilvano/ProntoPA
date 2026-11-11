@@ -118,12 +118,20 @@
                     <x-input-error :messages="$errors->get('domini_email_istituzionali')" class="mt-1" />
                     <p class="mt-1 text-xs text-gray-500">Separare i domini con spazio, virgola o punto e virgola.</p>
                 </div>
-                <div class="flex items-end">
-                    <label for="attivo" class="inline-flex items-center gap-2">
+                <div class="space-y-3">
+                    <label for="attivo" class="flex items-start gap-2">
                         <input id="attivo" name="attivo" type="checkbox" value="1"
-                               class="rounded border-gray-300 text-blue-600 shadow-sm"
+                               class="mt-0.5 rounded border-gray-300 text-blue-600 shadow-sm"
                                {{ old('attivo', $organizzazione->attivo ?? true) ? 'checked' : '' }}>
-                        <span class="text-sm text-gray-700">Ente attivo per registrazioni</span>
+                        <span class="text-sm text-gray-700">Attiva
+                            <span class="block text-xs text-gray-500">Usabile per sedi, segnalazioni e deleghe assegnate dall'amministratore.</span></span>
+                    </label>
+                    <label for="richieste_delega_spid" class="flex items-start gap-2">
+                        <input id="richieste_delega_spid" name="richieste_delega_spid" type="checkbox" value="1"
+                               class="mt-0.5 rounded border-gray-300 text-blue-600 shadow-sm"
+                               {{ old('richieste_delega_spid', $organizzazione->richieste_delega_spid ?? true) ? 'checked' : '' }}>
+                        <span class="text-sm text-gray-700">Accetta richieste di delega via SPID/CIE
+                            <span class="block text-xs text-gray-500">Le persone esterne la trovano e chiedono una delega, approvata dalla segreteria via email. Spenta: deleghe solo dall'amministratore (Deleghe → predelega).</span></span>
                     </label>
                 </div>
             </div>

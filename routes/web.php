@@ -13,7 +13,8 @@ use App\Http\Controllers\Admin\ProfiliController;
 use App\Http\Controllers\Admin\ProvenienzaController;
 use App\Http\Controllers\Admin\SediController;
 use App\Http\Controllers\Admin\SlaController;
-use App\Http\Controllers\Admin\SquadreController;
+use App\Http\Controllers\Organizzazione\SquadreController;
+use App\Http\Controllers\Organizzazione\TipologieGestoriController;
 use App\Http\Controllers\Admin\UtentiController;
 use App\Http\Controllers\AdesioniSegnalazioniController;
 use App\Http\Controllers\AllegatiSegnalazioniController;
@@ -118,6 +119,8 @@ Route::middleware('auth')->group(function () {
 
     Route::patch('segnalazioni/{segnalazione}/priorita', [SegnalazioneController::class, 'aggiornaPriorita'])
         ->name('segnalazioni.priorita');
+    Route::patch('segnalazioni/{segnalazione}/titolo', [SegnalazioneController::class, 'aggiornaTitolo'])
+        ->name('segnalazioni.titolo');
 
     Route::patch('segnalazioni/{segnalazione}/toggle-riservata', [SegnalazioneController::class, 'toggleRiservata'])
         ->name('segnalazioni.toggle-riservata');
@@ -173,6 +176,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     Route::patch('utenti/{utente}/attivo', [UtentiController::class, 'toggleAttivo'])
         ->name('utenti.toggle-attivo');
+    Route::post('utenti/sincronizza', [UtentiController::class, 'sincronizza'])
+        ->name('utenti.sincronizza');
 
     Route::resource('utenti', UtentiController::class)
         ->except(['show', 'create', 'store'])
@@ -225,10 +230,17 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('sla', SlaController::class)
         ->except(['show'])
         ->parameters(['sla' => 'sla']);
+});
 
+// ── Organizzazione (admin + supervisori): squadre e tipologie dei gestori ─────
+Route::middleware(['auth', 'can:gestisci-organizzazione'])->prefix('organizzazione')->name('organizzazione.')->group(function () {
     Route::resource('squadre', SquadreController::class)
         ->except(['show'])
         ->parameters(['squadre' => 'squadra']);
+
+    Route::get('tipologie-gestori', [TipologieGestoriController::class, 'index'])->name('tipologie-gestori.index');
+    Route::get('tipologie-gestori/{utente}', [TipologieGestoriController::class, 'edit'])->name('tipologie-gestori.edit');
+    Route::put('tipologie-gestori/{utente}', [TipologieGestoriController::class, 'update'])->name('tipologie-gestori.update');
 });
 
 // ── Operaio ───────────────────────────────────────────────────────────────────
