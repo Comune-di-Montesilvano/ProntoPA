@@ -5,11 +5,12 @@
     </x-slot>
 
     <form method="POST" action="{{ route('organizzazione.tipologie-gestori.update', $utente) }}"
-          x-data="{ tutte: {{ old('tutte', $utente->gestore_tutte_tipologie) ? 'true' : 'false' }} }"
+          x-data="{ tutte: {{ $puoTutte && old('tutte', $utente->gestore_tutte_tipologie) ? 'true' : 'false' }} }"
           class="flex flex-col gap-4">
         @csrf
         @method('PUT')
 
+        @if($puoTutte)
         <x-pa.card>
             <label class="flex items-start gap-2">
                 <input type="hidden" name="tutte" value="0">
@@ -17,6 +18,11 @@
                 <span class="text-sm text-[var(--ink)] font-medium">Tutte le tipologie, anche quelle aggiunte in futuro</span>
             </label>
         </x-pa.card>
+        @else
+        <x-pa.card>
+            <p class="m-0 text-sm text-[var(--slate-600)]">Amministratore: vede già tutte le segnalazioni. Le tipologie scelte qui servono a ricevere gli avvisi (nuove segnalazioni, tempi) e a non lasciarle senza gestore.</p>
+        </x-pa.card>
+        @endif
 
         <div x-show="!tutte" class="flex flex-col gap-4">
             @foreach($tipologie->groupBy(fn ($t) => $t->gruppo?->descrizione ?? 'Senza gruppo') as $gruppo => $voci)

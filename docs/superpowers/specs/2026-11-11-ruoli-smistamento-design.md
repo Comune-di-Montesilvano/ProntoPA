@@ -116,8 +116,12 @@ riapertura (`SegnalazioneWorkflowService` ~292) ed eliminazione allegati
   `where(supervisore)->orWhere(amministratore)->where(attivo)` include supervisori
   disattivati (precedenza `orWhere`). Destinatari SLA da centralizzare in un servizio
   tipo `DestinatariComune` (es. `Services/Segnalazioni/DestinatariTipologia`).
-- *Da decidere (vedi domande aperte):* gli admin continuano a ricevere gli SLA scaduti
-  come oggi?
+- Admin esclusi dagli avvisi **salvo admin con tipologie** (decisione committente
+  2026-11-11: un admin può essere anche gestore di alcune tipologie, es. rete
+  telefonica/dati). Nella pagina Tipologie dei gestori compaiono anche gli admin attivi;
+  un admin con tipologie esplicite conta nella copertura (`CoperturaTipologie`: tipologia
+  non orfana) e riceve nuove/SLA scaduti/a rischio solo per quelle. Niente "tutte" per gli
+  admin. Vedono già tutto, nessun cambio di visibilità.
 
 ### Tipologie orfane: alert
 

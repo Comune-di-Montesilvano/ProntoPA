@@ -4,6 +4,29 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.13] - 2026-11-11
+
+### Added
+- **Email "nuova segnalazione"** ai gestori della tipologia, da qualsiasi canale (web, API,
+  Telegram, per conto). Se la tipologia non ha gestori arriva ai supervisori. Anche quando
+  una segnalazione cambia tipologia ("riclassificata"). Chi l'ha creata o spostata non la
+  riceve; i dati demo (`artisan demo`) non mandano email.
+- Un **amministratore può essere anche gestore** di alcune tipologie (Organizzazione →
+  Tipologie dei gestori): copre quelle tipologie e ne riceve gli avvisi. Agli
+  amministratori non si assegna "tutte le tipologie".
+
+### Changed
+- **SLA scaduto**: avviso ai gestori della tipologia e ai supervisori, sempre subito (anche
+  con il digest mattutino attivo, prima solo per le critiche). Gli amministratori non lo
+  ricevono più, salvo per le tipologie di cui sono gestori.
+- **SLA a rischio**: avviso ai gestori della tipologia (ai supervisori solo se la tipologia
+  non ha gestori).
+- Se non c'è nessun supervisore attivo, gli avvisi che spetterebbero ai supervisori vanno
+  agli amministratori, così nessuna segnalazione resta senza destinatari.
+
+### Fixed
+- Gli avvisi SLA arrivavano anche a supervisori con account disattivato.
+
 ## [0.9.12] - 2026-11-11
 
 ### Added

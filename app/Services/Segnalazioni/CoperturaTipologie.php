@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\DB;
  * copertura solo se attivo e raggiungibile via email: altrimenti l'avviso
  * non arriverebbe a nessuno e la tipologia va trattata come orfana
  * (segnalazioni ai supervisori).
+ *
+ * Un admin conta come gestore solo delle tipologie assegnategli esplicitamente
+ * (mai "tutte"): es. l'admin che segue anche la rete telefonica/dati.
  */
 class CoperturaTipologie
 {
@@ -45,7 +48,7 @@ class CoperturaTipologie
         }
 
         $coperte = DB::table('gestori_tipologie')
-            ->whereIn('id_utente', $this->gestoriAttivi()->where(self::conEmail(...))->select('users.id'))
+            ->whereIn('id_utente', $this->coprenti()->where(self::conEmail(...))->select('users.id'))
             ->distinct()
             ->pluck('id_tipologia_segnalazione');
 
@@ -64,8 +67,21 @@ class CoperturaTipologie
     /** @return Collection<int, User> */
     public function supervisori(): Collection
     {
-        return User::role('gestore')
+        return User::query()->where(self::conRuolo('gestore'))
             ->where('supervisore_segnalazioni', true)
+            ->where(fn (Builder $q) => $q->where('attivo', true)->orWhereNull('attivo'))
+            ->where(self::conEmail(...))
+            ->get();
+    }
+
+    /**
+     * Admin attivi con email: ultima rete quando non c'è nessun supervisore.
+     *
+     * @return Collection<int, User>
+     */
+    public function amministratori(): Collection
+    {
+        return User::query()->where(self::conRuolo('admin'))
             ->where(fn (Builder $q) => $q->where('attivo', true)->orWhereNull('attivo'))
             ->where(self::conEmail(...))
             ->get();
@@ -90,6 +106,17 @@ class CoperturaTipologie
             ->update(['gestore_tutte_tipologie' => true]);
     }
 
+    /**
+     * Filtro per ruolo che non esplode se il ruolo non esiste ancora
+     * (lo scope role() di Spatie lancia RoleDoesNotExist).
+     *
+     * @return \Closure(Builder<User>): Builder<User>
+     */
+    private static function conRuolo(string $ruolo): \Closure
+    {
+        return fn (Builder $q) => $q->whereHas('roles', fn (Builder $r) => $r->where('name', $ruolo));
+    }
+
     /** @param Builder<User> $q */
     private static function conEmail(Builder $q): void
     {
@@ -99,16 +126,30 @@ class CoperturaTipologie
     /** @return Builder<User> */
     private function gestoriAttivi(): Builder
     {
-        return User::role('gestore')
+        return User::query()->where(self::conRuolo('gestore'))
             ->where('supervisore_segnalazioni', false)
             ->where(fn (Builder $q) => $q->where('attivo', true)->orWhereNull('attivo'));
+    }
+
+    /**
+     * Gestori non supervisori e admin, attivi: chi può coprire tipologie.
+     *
+     * @return Builder<User>
+     */
+    private function coprenti(): Builder
+    {
+        return User::query()
+            ->where(fn (Builder $q) => $q->where('attivo', true)->orWhereNull('attivo'))
+            ->where(fn (Builder $q) => $q
+                ->where(fn (Builder $g) => $g->where(self::conRuolo('gestore'))->where('supervisore_segnalazioni', false))
+                ->orWhere(fn (Builder $a) => $a->where(self::conRuolo('admin'))));
     }
 
     /** @return Builder<User> */
     private function gestoriCheCoprono(int $idTipologia): Builder
     {
-        return $this->gestoriAttivi()->where(fn (Builder $q) => $q
-            ->where('gestore_tutte_tipologie', true)
+        return $this->coprenti()->where(fn (Builder $q) => $q
+            ->where(fn (Builder $g) => $g->where(self::conRuolo('gestore'))->where('gestore_tutte_tipologie', true))
             ->orWhereHas('tipologieGestite', fn (Builder $t) => $t->whereKey($idTipologia)));
     }
 }

@@ -8,14 +8,16 @@
 
         <p class="m-0 text-sm text-[var(--slate-600)]">
             Ogni gestore vede, smista e riceve gli avvisi delle segnalazioni delle sue tipologie.
-            I supervisori vedono tutto e non compaiono qui.
+            I supervisori vedono tutto e non compaiono qui. I gestori arrivano dal gruppo di dominio
+            dei gestori e compaiono dopo il loro primo accesso; gli amministratori compaiono per poter
+            seguire anche alcune tipologie.
         </p>
 
         @include('organizzazione._orfane')
 
         <x-pa.card titolo="Per gestore">
             @if($gestori->isEmpty())
-                <p class="m-0 text-sm text-[var(--slate-500)]">Nessun gestore attivo.</p>
+                <p class="m-0 text-sm text-[var(--slate-500)]">Nessun gestore attivo: aggiungi le persone al gruppo di dominio dei gestori e fai loro fare il primo accesso.</p>
             @else
                 <table class="min-w-full divide-y divide-gray-100 text-sm">
                     <tbody class="divide-y divide-gray-50">
@@ -23,12 +25,15 @@
                             <tr>
                                 <td class="py-2 pr-4 font-medium text-[var(--ink)] align-top">
                                     {{ $g->name }}
+                                    @if($g->hasRole('admin'))
+                                        <span class="text-xs font-normal text-[var(--slate-500)]">(amministratore)</span>
+                                    @endif
                                     @if(blank($g->email))
                                         <span class="block text-xs font-normal text-amber-700">senza email: non riceve avvisi</span>
                                     @endif
                                 </td>
                                 <td class="py-2 pr-4 text-[var(--slate-700)]">
-                                    @if($g->gestore_tutte_tipologie)
+                                    @if($g->gestore_tutte_tipologie && ! $g->hasRole('admin'))
                                         Tutte le tipologie
                                     @elseif($g->tipologieGestite->isEmpty())
                                         <span class="text-amber-700">Nessuna tipologia</span>

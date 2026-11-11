@@ -57,15 +57,21 @@ class PopulateDemoData extends Command
 
         $this->pulisciDemoPrecedente();
 
-        DB::transaction(function () {
-            [$istituti, $plessi] = $this->creaIstitutiEPlessi();
-            $imprese              = $this->creaImprese();
-            $utenti                = $this->creaUtenti($istituti, $imprese);
-            $this->creaSquadra($utenti);
-            $appalti               = $this->creaAppalti($imprese);
-            $segnalazioni          = $this->creaSegnalazioni($plessi, $utenti, $appalti);
-            $this->creaAdesioniDuplicati($segnalazioni, $utenti);
-        });
+        // I dati demo non devono mandare email "nuova segnalazione" ai gestori veri.
+        Segnalazione::$silenziaAvvisi = true;
+        try {
+            DB::transaction(function () {
+                [$istituti, $plessi] = $this->creaIstitutiEPlessi();
+                $imprese              = $this->creaImprese();
+                $utenti                = $this->creaUtenti($istituti, $imprese);
+                $this->creaSquadra($utenti);
+                $appalti               = $this->creaAppalti($imprese);
+                $segnalazioni          = $this->creaSegnalazioni($plessi, $utenti, $appalti);
+                $this->creaAdesioniDuplicati($segnalazioni, $utenti);
+            });
+        } finally {
+            Segnalazione::$silenziaAvvisi = false;
+        }
 
         $this->newLine();
         $this->info('Dati demo creati.');

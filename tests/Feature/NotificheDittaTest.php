@@ -119,7 +119,7 @@ class NotificheDittaTest extends TestCase
 
         $this->assegna($impresa);
 
-        Notification::assertNothingSent();
+        Notification::assertSentTimes(ImpresaAssegnataNotification::class, 0);
         Notification::assertNotSentTo($delegato, ImpresaAssegnataNotification::class);
     }
 

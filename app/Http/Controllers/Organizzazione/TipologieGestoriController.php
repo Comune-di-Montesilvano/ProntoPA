@@ -11,7 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-/** Di quali tipologie si occupa ogni gestore (non supervisore). */
+/** Di quali tipologie si occupa ogni gestore (non supervisore) o admin che fa anche il gestore. */
 class TipologieGestoriController extends Controller
 {
     public function index(CoperturaTipologie $copertura): View
@@ -36,6 +36,7 @@ class TipologieGestoriController extends Controller
 
         return view('organizzazione.tipologie-gestori.edit', [
             'utente' => $utente,
+            'puoTutte' => ! $utente->hasRole('admin'),
             'tipologie' => $this->tipologie(),
             'selezionate' => $utente->tipologieGestite()->pluck('tipologie_segnalazioni.id_tipologia_segnalazione')->map(fn ($id) => (int) $id)->all(),
         ]);
@@ -51,7 +52,9 @@ class TipologieGestoriController extends Controller
             'tipologie.*' => ['integer', 'exists:tipologie_segnalazioni,id_tipologia_segnalazione'],
         ]);
 
-        $utente->forceFill(['gestore_tutte_tipologie' => (bool) ($data['tutte'] ?? false)])->save();
+        // Gli admin vedono già tutto: per loro solo tipologie esplicite (avvisi mirati).
+        $tutte = ! $utente->hasRole('admin') && (bool) ($data['tutte'] ?? false);
+        $utente->forceFill(['gestore_tutte_tipologie' => $tutte])->save();
         $utente->tipologieGestite()->sync($data['tipologie'] ?? []);
 
         return redirect()->route('organizzazione.tipologie-gestori.index')
@@ -78,9 +81,11 @@ class TipologieGestoriController extends Controller
     /** @return \Illuminate\Database\Eloquent\Builder<User> */
     private function gestori(): \Illuminate\Database\Eloquent\Builder
     {
-        return User::role('gestore')
-            ->where('supervisore_segnalazioni', false)
+        return User::query()
             ->where(fn ($q) => $q->where('attivo', true)->orWhereNull('attivo'))
+            ->where(fn ($q) => $q
+                ->where(fn ($g) => $g->role('gestore')->where('supervisore_segnalazioni', false))
+                ->orWhere(fn ($a) => $a->role('admin')))
             ->orderBy('name');
     }
 
@@ -90,9 +95,9 @@ class TipologieGestoriController extends Controller
         return TipologiaSegnalazione::with('gruppo')->orderBy('id_gruppo')->orderBy('descrizione')->get();
     }
 
-    /** I supervisori vedono già tutto: non hanno tipologie. */
+    /** I supervisori vedono già tutto: non hanno tipologie. Gli admin sì, se fanno anche i gestori. */
     private function soloGestori(User $utente): void
     {
-        abort_unless($utente->hasRole('gestore') && ! $utente->isSupervisore(), 404);
+        abort_unless($utente->hasRole('admin') || ($utente->hasRole('gestore') && ! $utente->isSupervisore()), 404);
     }
 }
