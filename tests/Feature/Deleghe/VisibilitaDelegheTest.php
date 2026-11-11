@@ -97,12 +97,12 @@ class VisibilitaDelegheTest extends TestCase
         $this->delega($this->user, \App\Models\Istituto::first(), $this->plessi[0]);
 
         $this->actingAs($this->user)->post(route('segnalazioni.store'), [
-            'id_tipologia_segnalazione' => 1, 'testo_segnalazione' => 'Perdita acqua bagno',
+            'id_tipologia_segnalazione' => 1, 'titolo' => 'Titolo di prova', 'testo_segnalazione' => 'Perdita acqua bagno',
             'id_provenienza' => 2, 'id_plesso' => $this->plessi[1],
         ])->assertSessionHasErrors('id_plesso');
 
         $this->actingAs($this->user)->post(route('segnalazioni.store'), [
-            'id_tipologia_segnalazione' => 1, 'testo_segnalazione' => 'Perdita acqua bagno',
+            'id_tipologia_segnalazione' => 1, 'titolo' => 'Titolo di prova', 'testo_segnalazione' => 'Perdita acqua bagno',
             'id_provenienza' => 2,
         ])->assertSessionHasErrors('id_plesso');
     }

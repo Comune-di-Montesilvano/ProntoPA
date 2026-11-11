@@ -50,6 +50,7 @@ class DedupSemanticoTest extends TestCase
     public function test_job_salva_embedding(): void
     {
         $segnalazione = Segnalazione::factory()->create([
+            'titolo'             => 'Titolo di prova',
             'testo_segnalazione' => 'Perdita rubinetto bagno',
         ]);
 
@@ -69,6 +70,7 @@ class DedupSemanticoTest extends TestCase
 
         $this->actingAs($user)->post(route('segnalazioni.store'), [
             'id_tipologia_segnalazione' => 1,
+            'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Testo con embedding',
             'id_provenienza'            => 1,
         ]);

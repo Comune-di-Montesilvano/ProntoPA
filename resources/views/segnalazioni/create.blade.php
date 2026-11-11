@@ -157,6 +157,16 @@
                     <x-input-error :messages="$errors->get('livello_priorita')" class="mt-1" />
                 </div>
 
+                {{-- Titolo --}}
+                <div>
+                    <x-input-label for="titolo" value="Titolo *" />
+                    <x-text-input id="titolo" name="titolo" type="text" maxlength="100" required
+                                  class="mt-1 block w-full @error('titolo') border-red-500 @enderror"
+                                  :value="old('titolo')" placeholder="In breve, es. Fornitura 15 panchine plesso Colonnetta" />
+                    <p class="mt-1 text-xs text-gray-500">Massimo 100 caratteri.</p>
+                    <x-input-error :messages="$errors->get('titolo')" class="mt-1" />
+                </div>
+
                 {{-- Testo --}}
                 <div>
                     <x-input-label for="testo_segnalazione" value="Descrizione del problema *" />

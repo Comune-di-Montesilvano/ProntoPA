@@ -1,7 +1,7 @@
 {{-- Testata della lettura gestore: dove/cosa, stato, priorità (cliccabile), scadenza, etichette, menu. --}}
 @php
     $stato = $segnalazione->statoEnum();
-    $titolo = $segnalazione->titolo_generato ?: \Illuminate\Support\Str::limit((string) $segnalazione->testo_segnalazione, 90);
+    $titolo = $segnalazione->titoloLeggibile(90);
     $puoAggiornare = auth()->user()->can('update', $segnalazione);
 @endphp
 <header class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -11,7 +11,16 @@
             · {{ $segnalazione->tipologia?->descrizione ?? '—' }}
             @if($segnalazione->plesso) · {{ $segnalazione->plesso->nome }} @endif
         </p>
-        <h1 class="m-0 text-2xl font-bold text-[var(--ink)] break-words">{{ $titolo }}</h1>
+        <div class="flex items-start gap-2">
+            <h1 class="m-0 text-2xl font-bold text-[var(--ink)] break-words">{{ $titolo }}</h1>
+            @can('modificaPriorita', $segnalazione)
+                <button type="button" x-data x-on:click="$dispatch('apri-pannello', 'titolo')"
+                        class="mt-1 shrink-0 rounded-md px-1.5 py-0.5 text-[var(--slate-500)] hover:bg-[var(--slate-100)]"
+                        title="Modifica titolo" aria-label="Modifica titolo">
+                    <span class="text-sm"><i class="fas fa-pen" aria-hidden="true"></i></span>
+                </button>
+            @endcan
+        </div>
         <div class="flex flex-wrap items-center gap-2">
             <x-pa.pill :tono="$stato->tono()">{{ $stato->etichetta() }}</x-pa.pill>
             @can('modificaPriorita', $segnalazione)

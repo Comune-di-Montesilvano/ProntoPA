@@ -6,7 +6,7 @@
     $lettura = $lettura ?? 'gestore';
     $stato = $s->statoEnum();
     $url = route('segnalazioni.show', $s->id_segnalazione);
-    $titolo = $s->titolo_generato ?: \Illuminate\Support\Str::limit((string) $s->testo_segnalazione, 80);
+    $titolo = $s->titoloLeggibile(80);
     $sede = $s->plesso?->nome ?? ($lettura === 'gestore' ? $s->provenienza?->descrizione : null);
 @endphp
 <tr>

@@ -50,6 +50,7 @@ class UrgenteRimossoTest extends TestCase
     {
         $this->actingAs($this->segnalatore())->post(route('segnalazioni.store'), [
             'id_tipologia_segnalazione' => 1,
+            'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Perdita acqua',
             'id_provenienza'            => 1,
             'segnalazione_urgente'      => 1,

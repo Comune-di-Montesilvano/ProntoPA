@@ -27,7 +27,8 @@ class GeneraTitoloSegnalazione implements ShouldQueue
         }
 
         $testo = $segnalazione->testo_segnalazione;
-        if (blank($testo)) {
+        // Il titolo scritto da chi segnala vince sempre.
+        if (blank($testo) || filled($segnalazione->titolo)) {
             return;
         }
 
@@ -44,8 +45,8 @@ PROMPT;
             return;
         }
 
-        $titolo = Str::limit(trim($titolo, " \n\"'"), 200, '');
+        $titolo = Str::limit(trim($titolo, " \n\"'"), 100, '');
 
-        $segnalazione->update(['titolo_generato' => $titolo]);
+        $segnalazione->update(['titolo' => $titolo]);
     }
 }
