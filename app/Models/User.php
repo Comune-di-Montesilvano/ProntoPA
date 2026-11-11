@@ -30,6 +30,7 @@ class User extends Authenticatable
         'amministratore',
         'gestore_segnalazioni',
         'supervisore_segnalazioni',
+        'gestore_tutte_tipologie',
         'id_provenienza',
         'id_impresa',
         'telefono',
@@ -76,6 +77,7 @@ class User extends Authenticatable
             'amministratore'          => 'boolean',
             'gestore_segnalazioni'    => 'boolean',
             'supervisore_segnalazioni'=> 'boolean',
+            'gestore_tutte_tipologie' => 'boolean',
             'attivo'                  => 'boolean',
         ];
     }
@@ -187,6 +189,23 @@ class User extends Authenticatable
     public function deleghe(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Delega::class);
+    }
+
+    /** Tipologie di cui il gestore si occupa (oltre al flag "tutte"). */
+    public function tipologieGestite(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(TipologiaSegnalazione::class, 'gestori_tipologie', 'id_utente', 'id_tipologia_segnalazione');
+    }
+
+    /** Gestore (non supervisore) che vede, smista e riceve gli avvisi di questa tipologia. */
+    public function copreTipologia(?int $idTipologia): bool
+    {
+        if ($idTipologia === null || $this->isSupervisore() || ! $this->hasRole('gestore')) {
+            return false;
+        }
+
+        return $this->gestore_tutte_tipologie
+            || $this->tipologieGestite()->whereKey($idTipologia)->exists();
     }
 
     public function squadre(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
