@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Organizzazione;
 use App\Http\Controllers\Controller;
 use App\Models\TipologiaSegnalazione;
 use App\Models\User;
+use App\Services\Directory\Directory;
 use App\Services\Segnalazioni\CoperturaTipologie;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -14,12 +15,13 @@ use Illuminate\View\View;
 /** Di quali tipologie si occupa ogni gestore (non supervisore) o admin che fa anche il gestore. */
 class TipologieGestoriController extends Controller
 {
-    public function index(CoperturaTipologie $copertura): View
+    public function index(CoperturaTipologie $copertura, Directory $directory): View
     {
         $gestori = $this->gestori()->with('tipologieGestite')->get();
         $tipologie = $this->tipologie();
 
         return view('organizzazione.tipologie-gestori.index', [
+            'syncAd' => $directory->syncConfigurata(),
             'gestori' => $gestori,
             'tipologie' => $tipologie,
             // Per ogni tipologia chi la copre davvero (attivi con email)

@@ -45,6 +45,10 @@ class AppServiceProvider extends ServiceProvider
             || $user->hasRole('admin')
             || ($user->hasRole('gestore') && $user->isSupervisore()));
 
+        // Utenti di dominio: attivo/disattivo lo decide AD (sync e login), mai a mano.
+        Gate::define('cambia-attivo-utente', fn (User $attore, User $utente): bool => ! $attore->is($utente)
+            && $utente->auth_source !== 'ldap');
+
         Event::listen(Login::class, function (): void {
             session()->put('ripristino_id', Impostazione::ripristinoId());
         });

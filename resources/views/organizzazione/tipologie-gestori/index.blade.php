@@ -9,15 +9,16 @@
         <p class="m-0 text-sm text-[var(--slate-600)]">
             Ogni gestore vede, smista e riceve gli avvisi delle segnalazioni delle sue tipologie.
             I supervisori vedono tutto e non compaiono qui. I gestori arrivano dal gruppo di dominio
-            dei gestori e compaiono dopo il loro primo accesso; gli amministratori compaiono per poter
-            seguire anche alcune tipologie.
+            dei gestori e compaiono
+            {{ $syncAd ? 'dopo la sincronizzazione notturna con il dominio (o "Sincronizza ora" in Admin → Utenti)' : 'dopo il loro primo accesso' }};
+            gli amministratori compaiono per poter seguire anche alcune tipologie.
         </p>
 
         @include('organizzazione._orfane')
 
         <x-pa.card titolo="Per gestore">
             @if($gestori->isEmpty())
-                <p class="m-0 text-sm text-[var(--slate-500)]">Nessun gestore attivo: aggiungi le persone al gruppo di dominio dei gestori e fai loro fare il primo accesso.</p>
+                <p class="m-0 text-sm text-[var(--slate-500)]">Nessun gestore attivo: aggiungi le persone al gruppo di dominio dei gestori{{ $syncAd ? ' e attendi la sincronizzazione' : ' e fai loro fare il primo accesso' }}.</p>
             @else
                 <table class="min-w-full divide-y divide-gray-100 text-sm">
                     <tbody class="divide-y divide-gray-50">

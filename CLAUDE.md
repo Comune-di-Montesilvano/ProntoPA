@@ -129,7 +129,7 @@ app/Services/
   TelegramBotService
   Backup/     dump logico JSONL · archivio ZIP AES-256 · BackupService (crea/retention) · RipristinoService (con rollback)
   Directory/  Directory (interfaccia) · LdapRecordDirectory (AD reale) · MockDirectory · NullDirectory
-  Auth/       LdapLoginService · MappaGruppiLdap · NormalizzaUsernameAd · SpidLoginService
+  Auth/       LdapLoginService · AllineaUtenteAd (unica scrittura utente AD: login+sync) · SincronizzaUtentiAd (ldap:sincronizza) · MappaGruppiLdap · NormalizzaUsernameAd · SpidLoginService
   Deleghe/    DelegaService (scuole: richiesta, decisione segreteria, pre-delega, rinnovo, scadenze) · DelegaImpresaService (ditte: predelega CF→impresa, revoca, disattiva ditta, allinea ruolo)
 app/Support/Segnalazioni/  LetturaScheda (gestore|lavoro|segnalante) · ProssimoPasso · Attivita (feed per lettura, nomi interni nascosti al segnalante) · Scadenza (SLA in parole) · CaricaAllegati
 app/Support/Brand.php  # logo ente (file/URL), loghi email inline (cid; logo da URL scaricato in cache storage/framework/cache/brand)
@@ -137,7 +137,7 @@ app/Support/Brand.php  # logo ente (file/URL), loghi email inline (cid; logo da 
   Oidc/       OidcClient (discovery/PKCE/token/id_token/userinfo) · OidcConfig · ClaimsSpid · IdentitaSpid
 app/Jobs/           RicalcolaScadenzeSla  ScaricaAnagrafeMiur  CreaBackup  EseguiRipristino  CompletaCaricamento  CalcolaEmbeddingSegnalazione  GeneraTitoloSegnalazione  SuggerisciTriageSegnalazione
 app/Http/Middleware/EnsureUserIsActive.php  LimitaAccessoSpid.php
-app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni  ControllaInattivita (segnalazioni:inattivita)  ProvaLdap (ldap:prova)  DelegheScadenze (deleghe:scadenze)  DelegheRinnovi (deleghe:rinnovi)  backup:crea · backup:ripristina · backup:pulisci
+app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  CheckSlaViolazioni  ControllaInattivita (segnalazioni:inattivita)  ProvaLdap (ldap:prova)  SincronizzaLdap (ldap:sincronizza)  DelegheScadenze (deleghe:scadenze)  DelegheRinnovi (deleghe:rinnovi)  backup:crea · backup:ripristina · backup:pulisci
 ```
 
 ## Ruoli (Spatie)
@@ -169,6 +169,8 @@ Gruppi AD → ruolo (nomi in env `LDAP_GRUPPO_*` → `config('ldap.gruppi')`, NO
 | `PRONTOPA_OPERAI` | `operaio` | caposquadra NON da AD: si decide sulla squadra |
 | `PRONTOPA_URP` | `segnalatore` | + permesso `segnalazioni.per-conto`, provenienza 3 |
 | `PRONTOPA_SEGNALATORI` | `segnalatore` | provenienza 1 |
+
+**Sync AD (v0.9.14, spec `docs/superpowers/specs/2026-11-11-sync-ad-design.md`)**: account di servizio in sola lettura (`LDAP_SYNC_USERNAME`/`LDAP_SYNC_PASSWORD`, vuote = sync spenta; mock sincronizza sempre) → `ldap:sincronizza` 05:30 + "Sincronizza ora" in Admin → Utenti (job): crea/aggiorna/riattiva i membri dei gruppi, **disattiva** utenti `ldap` usciti dai gruppi o disabilitati in AD (ruoli/tipologie conservati). Mai scritture se AD giù, 0 membri o un gruppo `LDAP_GRUPPO_*` non vuoto non trovato (gruppi inutilizzati: svuotare la variabile); errori grezzi di ldap_search → esito fallita; >50% di disattivazioni (con ≥5 attivi) → giro bloccato, `--forza`/"Sincronizza comunque". Esito in `impostazioni.ldap_sync_esito`; notturna fallita → email admin. Utenti `ldap`: attivo deciso solo da AD (gate `cambia-attivo-utente`). Gestore che cambia ruolo perde le tipologie (admin tiene le esplicite). Diagnosi `ldap:prova --sync`, anteprima `ldap:sincronizza --prova`.
 
 Primo login AD: aggancio account legacy `locale` non-ditta con stessa email (se unico). Username AD già usato da altro account → login rifiutato ("contatta l'amministratore"). Diagnosi: `php artisan ldap:prova <username>` (nessuna scrittura DB): stampa la config letta e `Directory::motivoUltimoRifiuto()` (bind 49 con messaggio AD data 52e/533/775…, oppure bind ok ma utente non trovato → base DN/template). Il form di login mostra sempre il generico `auth.failed` (`lang/it/auth.php`).
 **Blocco tentativi** (`LoginRequest`, `config('auth.login')`): chiave account = identità normalizzata **senza IP** (`LOGIN_MAX_TENTATIVI`=5 in `LOGIN_BLOCCO_MINUTI`=15, da tenere sotto soglia/finestra di lockout AD), chiave IP 20/60 min. Il controllo precede il bind AD; ogni blocco → `Log::warning`. IP reale da `trustProxies('*')` = solo il peer diretto (reverse proxy) è fidato.
@@ -299,11 +301,11 @@ Test SPID: `tests/Support/FakeOidcProvider` simula pa-sso-proxy con `Http::fake`
 1. `git push tag` → Actions builda GHCR
 2. Portainer stack → `docker-compose.yml`, env vars (APP_KEY, DB_PASSWORD, `LDAP_HOST` `LDAP_BASE_DN` `LDAP_USER_DN_TEMPLATE`…). **Mai `LDAP_HOST=mock`**
 3. L'entrypoint a OGNI avvio esegue migrate + `AllineamentoSeeder` (dati di riferimento, ruoli/permessi, impostazioni nuove; mai valori configurati né ruoli utenti; nessun utente creato)
-4. Crea in AD i gruppi `PRONTOPA_*`, verifica con `php artisan ldap:prova <utente>`, entra con un utente di `PRONTOPA_ADMIN` → Admin → Impostazioni per configurare ente
+4. Crea in AD i gruppi `PRONTOPA_*` e un account di servizio in sola lettura (`LDAP_SYNC_USERNAME`/`LDAP_SYNC_PASSWORD` nello stack, consigliato), verifica con `php artisan ldap:prova <utente>` e `ldap:prova --sync`, entra con un utente di `PRONTOPA_ADMIN` → Admin → Impostazioni per configurare ente
 
 Rootless: no bind mount, named volumes `mariadb_data` `redis_data` `app_storage` → `/var/www/html/storage`
 
-Servizi `queue` (`queue:work`), `queue-lunghi` (connessione `redis-lunghi`, coda `lunghi`: backup e ripristini) e `scheduler` (loop `schedule:run` ogni 60s) obbligatori: senza, webhook/job AI/backup restano in coda per sempre e i comandi schedulati (`sla:check`, `segnalazioni:inattivita`, `digest:invia`, `deleghe:scadenze`, `deleghe:rinnovi`, verifica annuale, backup notturno) non partono mai. Stessa immagine di `php`, `entrypoint: []` (niente migrate/seed duplicato). `queue-lunghi` compare da solo con "Update the stack" (lo stack si legge da GitHub), nessun passo manuale.
+Servizi `queue` (`queue:work`), `queue-lunghi` (connessione `redis-lunghi`, coda `lunghi`: backup e ripristini) e `scheduler` (loop `schedule:run` ogni 60s) obbligatori: senza, webhook/job AI/backup restano in coda per sempre e i comandi schedulati (`sla:check`, `segnalazioni:inattivita`, `digest:invia`, `deleghe:scadenze`, `deleghe:rinnovi`, `ldap:sincronizza`, verifica annuale, backup notturno) non partono mai. Stessa immagine di `php`, `entrypoint: []` (niente migrate/seed duplicato). `queue-lunghi` compare da solo con "Update the stack" (lo stack si legge da GitHub), nessun passo manuale.
 
 **Password MariaDB** (v0.8.2): `DB_PASSWORD` obbligatoria (`:?`, stesso valore per `php` e `mariadb`), nessun default `segnalazioni_secret`/`root_secret`. Le password valgono SOLO alla creazione del volume `mariadb_data`: cambiarle nello stack dopo non ha effetto. `DB_ROOT_PASSWORD` è ignorata su volume esistente ma su un volume NUOVO mariadb non si inizializza senza → nuove installazioni: impostarla. Se il DB rifiuta l'accesso l'entrypoint, dopo ~30 s, stampa l'errore PDO reale con suggerimento "Access denied".
 **Reset password DB senza shell host** (emergenza, non operatività ordinaria): ferma `mariadb` dello stack → da Portainer crea un container temporaneo `mariadb:12.3` (stessa versione dello stack) con command `--skip-grant-tables` sullo stesso volume `mariadb_data` → dalla sua console Portainer: `FLUSH PRIVILEGES; ALTER USER 'segnalazioni'@'%' IDENTIFIED BY '<nuova>';` → rimuovi il container temporaneo → imposta la stessa `<nuova>` in `DB_PASSWORD` e riavvia lo stack.

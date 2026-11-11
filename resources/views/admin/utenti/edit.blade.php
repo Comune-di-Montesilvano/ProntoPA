@@ -79,13 +79,20 @@
             </div>
 
             <div>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="attivo" value="1"
-                           class="rounded border-gray-300 text-blue-600 shadow-sm"
-                           {{ old('attivo', $utente->attivo ?? true) ? 'checked' : '' }}>
-                    <span class="text-sm text-gray-700">Account attivo</span>
-                </label>
-                <x-input-error :messages="$errors->get('attivo')" class="mt-1" />
+                @if($utente->auth_source === 'ldap')
+                    <p class="text-sm text-gray-600">
+                        Stato: <strong>{{ $utente->attivo !== false ? 'attivo' : 'disattivato' }}</strong>.
+                        Gestito da Active Directory: per disattivare l'account togli la persona dai gruppi ProntoPA del dominio.
+                    </p>
+                @else
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="attivo" value="1"
+                               class="rounded border-gray-300 text-blue-600 shadow-sm"
+                               {{ old('attivo', $utente->attivo ?? true) ? 'checked' : '' }}>
+                        <span class="text-sm text-gray-700">Account attivo</span>
+                    </label>
+                    <x-input-error :messages="$errors->get('attivo')" class="mt-1" />
+                @endif
             </div>
 
             {{-- Profilo --}}

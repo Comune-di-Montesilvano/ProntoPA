@@ -17,4 +17,14 @@ final class NullDirectory implements Directory
     {
         return 'LDAP_HOST non configurato: nessun login dipendenti possibile.';
     }
+
+    public function syncConfigurata(): bool
+    {
+        return false;
+    }
+
+    public function membriGruppi(): array
+    {
+        throw new DirectoryNonDisponibile('LDAP_HOST non configurato: nessuna sincronizzazione possibile.');
+    }
 }

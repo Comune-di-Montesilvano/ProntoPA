@@ -39,6 +39,10 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="LDAP_HOST" value="" force="true"/>
         <server name="LDAP_HOST" value="" force="true"/>
+        <env name="LDAP_SYNC_USERNAME" value="" force="true"/>
+        <server name="LDAP_SYNC_USERNAME" value="" force="true"/>
+        <env name="LDAP_SYNC_PASSWORD" value="" force="true"/>
+        <server name="LDAP_SYNC_PASSWORD" value="" force="true"/>
         <env name="OIDC_MOCK" value="false" force="true"/>
         <server name="OIDC_MOCK" value="false" force="true"/>
         <env name="BACKUP_PASSPHRASE" value="" force="true"/>
