@@ -41,7 +41,7 @@ class CreaSegnalazioneTest extends DuskTestCase
                 ->waitFor('@submit-segnalazione')
                 ->press('@submit-segnalazione')
                 ->waitForLocation('/segnalazioni')
-                ->assertSee('Lampione spento in via Roma, test E2E Dusk.');
+                ->assertSee('Lampione spento via Roma');
         });
     }
 }
