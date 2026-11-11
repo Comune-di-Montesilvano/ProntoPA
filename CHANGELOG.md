@@ -4,6 +4,14 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.9] - 2026-11-11
+
+### Fixed
+- Creare un'organizzazione senza codice meccanografico (es. asili nido comunali, uffici)
+  dava errore 500: la colonna era obbligatoria nel database pur essendo facoltativa nel
+  form. Ora è facoltativa anche a DB, come già per le sedi; i codici vuoti esistenti
+  diventano "nessun codice".
+
 ## [0.9.8] - 2026-11-11
 
 ### Fixed
