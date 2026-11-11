@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Organizzazione;
 
 use App\Http\Controllers\Controller;
 use App\Models\Squadra;
@@ -15,12 +15,12 @@ class SquadreController extends Controller
     {
         $squadre = Squadra::with(['caposquadra', 'membri'])->orderBy('nome')->get();
 
-        return view('admin.squadre.index', compact('squadre'));
+        return view('organizzazione.squadre.index', compact('squadre'));
     }
 
     public function create(): View
     {
-        return view('admin.squadre.form', [
+        return view('organizzazione.squadre.form', [
             'squadra' => new Squadra(),
             'operai'  => User::role('operaio')->where('attivo', true)->orderBy('name')->get(),
         ]);
@@ -37,13 +37,13 @@ class SquadreController extends Controller
         ]);
         $squadra->membri()->sync($data['membri'] ?? []);
 
-        return redirect()->route('admin.squadre.index')
+        return redirect()->route('organizzazione.squadre.index')
             ->with('success', 'Squadra creata.');
     }
 
     public function edit(Squadra $squadra): View
     {
-        return view('admin.squadre.form', [
+        return view('organizzazione.squadre.form', [
             'squadra' => $squadra->load('membri'),
             'operai'  => User::role('operaio')->where('attivo', true)->orderBy('name')->get(),
         ]);
@@ -60,7 +60,7 @@ class SquadreController extends Controller
         ]);
         $squadra->membri()->sync($data['membri'] ?? []);
 
-        return redirect()->route('admin.squadre.index')
+        return redirect()->route('organizzazione.squadre.index')
             ->with('success', 'Squadra aggiornata.');
     }
 
@@ -68,7 +68,7 @@ class SquadreController extends Controller
     {
         $squadra->update(['attiva' => false]);
 
-        return redirect()->route('admin.squadre.index')
+        return redirect()->route('organizzazione.squadre.index')
             ->with('success', 'Squadra disattivata.');
     }
 

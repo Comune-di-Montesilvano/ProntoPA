@@ -108,8 +108,9 @@ app/Http/Controllers/
   AdesioniSegnalazioniController  AllegatiSegnalazioniController  BrandLogoController  DelegheImpresaController
   AiTriageController  PublicHomeController  ProfileController  TelegramAccountController
   Admin/{ImpostazioniController,UtentiController,ProfiliController,ProvenienzaController,
-         SediController,SlaController,SquadreController,OrganizzazioniController,AdminDashboardController,
+         SediController,SlaController,OrganizzazioniController,AdminDashboardController,
          AnagrafeMiurController,DelegheController,BackupController}
+  Organizzazione/{SquadreController,TipologieGestoriController}  # admin + supervisori
   Deleghe/{DecisioneDelegaController,RinnovoDelegheController}  DelegheScuolaController
   Api/{SegnalazioneApiController,TelegramWebhookController}
 app/Models/
@@ -123,7 +124,7 @@ app/Services/
   SegnalazioneWorkflowService  WebhookService  SlaService
   Sla/CalendarioUfficio  # orario d'ufficio + festivi nazionali (Pasqua calcolata) + patrono: ore/giorni lavorativi
   DedupService     # anti-duplicato: simili per tipologia/plesso/vicinanza + embeddings
-  Segnalazioni/  AccorpamentoService (accorpa: allegati/adesioni alla più vecchia, stato 8) · FineLavoriService · DestinatariComune (chi avvisare in comune) · DestinatariAssegnatario (sollecito/assegnazione: delegati ditta+email aziendale, operaio o caposquadra)
+  Segnalazioni/  CoperturaTipologie (chi copre quale tipologia, orfane) · AccorpamentoService (accorpa: allegati/adesioni alla più vecchia, stato 8) · FineLavoriService · DestinatariComune (chi avvisare in comune) · DestinatariAssegnatario (sollecito/assegnazione: delegati ditta+email aziendale, operaio o caposquadra)
   OllamaService    # LLM locale opzionale (titolo auto, triage suggerito, embeddings)
   TelegramBotService
   Backup/     dump logico JSONL · archivio ZIP AES-256 · BackupService (crea/retention) · RipristinoService (con rollback)
@@ -144,7 +145,7 @@ app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  Ch
 | Ruolo | Accesso |
 |---|---|
 | `admin` | Totale: utenti, impostazioni, sistema |
-| `gestore` | Segnalazioni. `supervisore_segnalazioni=true`→tutto; altrimenti solo assegnate |
+| `gestore` | Segnalazioni. `supervisore_segnalazioni=true`→tutto (+ area Organizzazione: squadre, tipologie dei gestori; gate `gestisci-organizzazione`); altrimenti le sue **tipologie** (`gestori_tipologie` o `gestore_tutte_tipologie`) + assegnate/aperte da sé, e agisce su quelle (riapertura ed eliminazione allegati restano al supervisore) |
 | `operaio` | Lavori assegnati a sé o alla propria squadra (`Squadra`, caposquadra riassegna ai membri) |
 | `segnalatore` | Proprie segnalazioni. Ha `id_provenienza` (scuola/URP/portale/interno) |
 | `impresa` | Solo lavori propria impresa (anche appalti scaduti, via `appalto.id_impresa`). Solo persone `spid` con `DelegaImpresa` attiva: ruolo e `id_impresa` decisi da `DelegaImpresaService::allinea()` (login SPID, predelega, revoca), mai a mano |
@@ -192,7 +193,8 @@ Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella 
 - **Notifiche tracciate (v0.9.4)**: listener `App\Listeners\TracciaNotificaInviata` (auto-discovery, evento `NotificationSent`, quindi all'invio vero nel worker) → tabella `notifiche_segnalazioni` (model `NotificaSegnalazione`, una riga per destinatario/canale). Segnalazione ricavata da proprietà `segnalazione`/`idSegnalazione` o dal metodo `segnalazioniTracciate()` (riepiloghi, accorpa). Nuova notifica → etichetta in `NotificaSegnalazione::ETICHETTE`. Widget `scheda/_notifiche` solo nella lettura gestore.
 - **Anti-duplicato**: adesioni multiple a una segnalazione esistente + merge a posteriori (`DedupService`, `AdesioneSegnalazione`)
 - **Notifiche ditta** (v0.8.19): assegnazione a impresa → email alle persone delegate attive + email aziendale, dedup case-insensitive; ditta disattivata → nessuna email; link solo a `route('accesso')`.
-- **Squadre**: assegnazione a operatore singolo o squadra, notifica al solo caposquadra
+- **Squadre**: assegnazione a operatore singolo o squadra, notifica al solo caposquadra. Gestite in `/organizzazione/squadre` (admin + supervisori), visibili nel pannello Assegna solo con impostazione `squadre_enabled`
+- **Tipologie dei gestori (v0.9.11, spec `docs/superpowers/specs/2026-11-11-ruoli-smistamento-design.md`)**: `Services/Segnalazioni/CoperturaTipologie` è l'unica fonte su chi copre cosa (copre solo gestore non supervisore, attivo, **con email**). Tipologia orfana → segnalazioni solo ai supervisori, alert in `/organizzazione/tipologie-gestori`, dashboard supervisore e scheda. Gestori esistenti al rilascio messi a "tutte" dalla migration
 - **Assistente AI locale opzionale** (profilo Docker `ai`, Ollama): titolo auto-generato, triage suggerito, dedup semantico via embeddings — sempre asincrono (queue), mai sul path sincrono; degrada in silenzio se Ollama non è raggiungibile (`Impostazione::get('ai_enabled')`)
 - **Digest mattutino gestori**: comando `digest:invia` / `InviaDigestGestori`
 - **Rendicontazione**: export XLSX (report mensile gestore, riepilogo impresa) e fascicolo PDF per segnalazione (richiede `composer install` per `phpoffice/phpspreadsheet` e `barryvdh/laravel-dompdf`)

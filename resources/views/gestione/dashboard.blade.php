@@ -48,6 +48,10 @@
     </x-slot>
 
     <div class="flex flex-col gap-4">
+        @can('gestisci-organizzazione')
+            @include('organizzazione._orfane', [...\App\Http\Controllers\Organizzazione\TipologieGestoriController::datiOrfane(app(\App\Services\Segnalazioni\CoperturaTipologie::class)), 'compatto' => true])
+        @endcan
+
         <p class="m-0 text-[var(--slate-600)]">
             {{ $conteggi['aperte'] }} {{ $conteggi['aperte'] === 1 ? 'aperta' : 'aperte' }},
             di cui {{ $conteggi['nuove'] }} da smistare

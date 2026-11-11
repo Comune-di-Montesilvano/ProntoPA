@@ -23,6 +23,18 @@
     @include('segnalazioni.scheda._testata')
     @include('segnalazioni.scheda._prossimo-passo')
     @include('segnalazioni.scheda._inattivita')
+    @can('gestisci-organizzazione')
+        @if(! $segnalazione->isChiusa() && $segnalazione->id_tipologia_segnalazione
+            && app(\App\Services\Segnalazioni\CoperturaTipologie::class)->isOrfana((int) $segnalazione->id_tipologia_segnalazione))
+            <section class="pa-card pa-passo pa-passo-amber p-4" role="status">
+                <p class="m-0 text-sm text-[var(--ink)]">
+                    Nessun gestore copre la tipologia <strong>{{ $segnalazione->tipologia?->descrizione }}</strong>:
+                    questa segnalazione arriva solo ai supervisori.
+                    <a href="{{ route('organizzazione.tipologie-gestori.index') }}" class="underline font-medium">Assegna la tipologia a un gestore</a>
+                </p>
+            </section>
+        @endif
+    @endcan
 
     <div class="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:grid-rows-[auto_1fr]">
         {{-- Chi ci lavora: sotto il prossimo passo anche su telefono --}}

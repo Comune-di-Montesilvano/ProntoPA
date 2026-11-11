@@ -112,6 +112,18 @@
                 </div>
             @endif
 
+            @can('gestisci-organizzazione')
+                <div class="pa-sb-section">
+                    <p class="pa-sb-heading">Organizzazione</p>
+                    <x-sidebar-link href="{{ route('organizzazione.tipologie-gestori.index') }}" :active="request()->routeIs('organizzazione.tipologie-gestori.*')" icon="adjustments">
+                        Tipologie dei gestori
+                    </x-sidebar-link>
+                    <x-sidebar-link href="{{ route('organizzazione.squadre.index') }}" :active="request()->routeIs('organizzazione.squadre.*')" icon="user-group">
+                        Squadre
+                    </x-sidebar-link>
+                </div>
+            @endcan
+
             @if($isAdmin)
                 <div class="pa-sb-section">
                     <p class="pa-sb-heading">Amministrazione</p>
@@ -138,9 +150,6 @@
                     </x-sidebar-link>
                     <x-sidebar-link href="{{ route('admin.sla.index') }}" :active="request()->routeIs('admin.sla.*')" icon="clock">
                         SLA
-                    </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.squadre.index') }}" :active="request()->routeIs('admin.squadre.*')" icon="user-group">
-                        Squadre
                     </x-sidebar-link>
                     <x-sidebar-link href="{{ route('admin.profili.index') }}" :active="request()->routeIs('admin.profili.*') || request()->routeIs('admin.provenienze.*')" icon="user-group">
                         Profili e provenienze

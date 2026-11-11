@@ -362,9 +362,18 @@ class Segnalazione extends Model
             if ($user->isSupervisore()) {
                 return $query;
             }
+            if ($user->gestore_tutte_tipologie && $user->hasRole('gestore')) {
+                return $query;
+            }
+
+            // Le sue + quelle delle tipologie di cui si occupa (anche nuove, da smistare).
             return $query->where(function ($q) use ($user) {
                 $q->where('id_operatore_assegnato', $user->id)
                   ->orWhere('id_utente_segnalazione', $user->id);
+
+                if ($user->hasRole('gestore')) {
+                    $q->orWhereIn('id_tipologia_segnalazione', $user->tipologieGestite()->select('tipologie_segnalazioni.id_tipologia_segnalazione'));
+                }
             });
         }
 
