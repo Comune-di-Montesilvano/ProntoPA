@@ -4,6 +4,27 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.11] - 2026-11-11
+
+### Added
+- **Tipologie dei gestori**: ogni gestore si occupa di alcune tipologie (es. impianti) o di
+  tutte. Vede e smista le segnalazioni delle sue tipologie, anche quelle nuove da smistare;
+  più gestori sulla stessa tipologia vedono tutti tutto. Riapertura ed eliminazione allegati
+  restano ai supervisori.
+- Nuova area **Organizzazione** (amministratori e supervisori): Tipologie dei gestori e
+  Squadre.
+- Avviso **tipologie senza gestore**: nella pagina delle tipologie, nella dashboard del
+  supervisore e nella scheda della segnalazione. Le loro segnalazioni arrivano solo ai
+  supervisori.
+
+### Changed
+- I gestori già in servizio partono con "tutte le tipologie": vedono e gestiscono tutte le
+  segnalazioni, non più solo quelle assegnate a loro. Restringetele da Organizzazione →
+  Tipologie dei gestori.
+- Le squadre si spostano da Amministrazione a Organizzazione (`/organizzazione/squadre`).
+- Digest mattutino: le segnalazioni da smistare arrivano anche ai gestori, filtrate per le
+  loro tipologie.
+
 ## [0.9.10] - 2026-11-11
 
 ### Changed
