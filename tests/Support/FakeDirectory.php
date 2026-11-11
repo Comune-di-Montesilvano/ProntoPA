@@ -48,6 +48,7 @@ final class FakeDirectory implements Directory
     public function aggiungi(string $password, DirectoryIdentity $id): self
     {
         $this->utenti[mb_strtolower($id->username)] = [$password, $id];
+        $this->membri = array_values(array_filter($this->membri, fn (DirectoryIdentity $m) => $m->guid !== $id->guid));
         $this->membri[] = $id;
 
         return $this;
