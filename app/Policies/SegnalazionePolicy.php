@@ -50,7 +50,8 @@ class SegnalazionePolicy
 
         if ($user->isGestore() || $user->hasRole('gestore')) {
             return $user->isSupervisore()
-                || $segnalazione->id_operatore_assegnato === $user->id;
+                || $segnalazione->id_operatore_assegnato === $user->id
+                || $user->copreTipologia((int) $segnalazione->id_tipologia_segnalazione ?: null);
         }
 
         if ($user->hasRole('impresa')) {

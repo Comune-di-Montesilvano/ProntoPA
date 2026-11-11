@@ -53,7 +53,9 @@ class InviaDigestGestori extends Command
                 ->orderBy('data_scadenza_sla')
                 ->get();
 
-            $nonAssegnate = $gestore->supervisore_segnalazioni ? $nonAssegnateGlobali : collect();
+            $nonAssegnate = $gestore->supervisore_segnalazioni
+                ? $nonAssegnateGlobali
+                : $nonAssegnateGlobali->filter(fn (Segnalazione $s) => $gestore->copreTipologia((int) $s->id_tipologia_segnalazione ?: null))->values();
 
             if ($inRitardo->isEmpty() && $inScadenza->isEmpty() && $nonAssegnate->isEmpty()) {
                 continue;
