@@ -31,7 +31,7 @@ class NuovaSegnalazioneNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $s = $this->segnalazione;
-        $tipologia = $s->tipologia?->descrizione ?? 'tipologia non indicata';
+        $tipologia = (string) ($s->tipologia()->value('descrizione') ?? 'tipologia non indicata');
         $oggetto = $this->riclassificata
             ? "Segnalazione #{$s->id_segnalazione} riclassificata in {$tipologia}"
             : "Nuova segnalazione #{$s->id_segnalazione} – {$tipologia}";

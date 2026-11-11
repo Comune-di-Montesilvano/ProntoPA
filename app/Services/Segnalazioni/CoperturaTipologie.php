@@ -97,7 +97,7 @@ class CoperturaTipologie
      * Filtro per ruolo che non esplode se il ruolo non esiste ancora
      * (lo scope role() di Spatie lancia RoleDoesNotExist).
      *
-     * @return \Closure(Builder<User>): void
+     * @return \Closure(Builder<User>): Builder<User>
      */
     private static function conRuolo(string $ruolo): \Closure
     {

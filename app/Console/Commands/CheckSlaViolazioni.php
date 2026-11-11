@@ -2,11 +2,10 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Impostazione;
 use App\Models\Segnalazione;
-use App\Models\User;
 use App\Notifications\SlaViolazioneNotification;
 use App\Notifications\SlaWarningNotification;
+use App\Services\Segnalazioni\DestinatariTipologia;
 use App\Services\SlaService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Notification;
@@ -14,17 +13,12 @@ use Illuminate\Support\Facades\Notification;
 class CheckSlaViolazioni extends Command
 {
     protected $signature   = 'sla:check';
-    protected $description = 'Controlla violazioni e warning SLA, notifica i supervisori';
+    protected $description = 'Controlla violazioni e warning SLA, avvisa i gestori della tipologia (scaduto: anche i supervisori)';
 
-    public function handle(SlaService $sla): void
+    public function handle(SlaService $sla, DestinatariTipologia $destinatari): void
     {
         $segnalazioni = Segnalazione::aperte()
             ->whereNotNull('data_scadenza_sla')
-            ->get();
-
-        $supervisori = User::where('supervisore_segnalazioni', true)
-            ->orWhere('amministratore', true)
-            ->where('attivo', true)
             ->get();
 
         $violate = 0;
@@ -34,13 +28,10 @@ class CheckSlaViolazioni extends Command
             if ($sla->isViolato($s) && ! $s->sla_violato) {
                 $s->update(['sla_violato' => true]);
 
-                // Con il digest attivo l'alert immediato resta solo per le critiche:
-                // il resto confluisce nel riepilogo mattutino.
-                $alertImmediato = ! Impostazione::get('digest_enabled', false)
-                    || (int) $s->livello_priorita === 4;
-
-                if ($alertImmediato && $supervisori->isNotEmpty()) {
-                    Notification::send($supervisori, new SlaViolazioneNotification($s));
+                // Sempre immediato, anche con il digest attivo (decisione committente 0.9.13).
+                $a = $destinatari->perSlaScaduto($s);
+                if ($a->isNotEmpty()) {
+                    Notification::send($a, new SlaViolazioneNotification($s));
                 }
                 $violate++;
                 continue;
@@ -48,8 +39,9 @@ class CheckSlaViolazioni extends Command
 
             if ($sla->isArischio($s) && ! $s->sla_warning_inviato) {
                 $s->update(['sla_warning_inviato' => true]);
-                if ($supervisori->isNotEmpty()) {
-                    Notification::send($supervisori, new SlaWarningNotification($s));
+                $a = $destinatari->perSlaArischio($s);
+                if ($a->isNotEmpty()) {
+                    Notification::send($a, new SlaWarningNotification($s));
                 }
                 $warning++;
             }
