@@ -33,6 +33,7 @@ class PasswordNonNeiLogTest extends TestCase
         return [
             'Directory::authenticate' => [Directory::class, 'authenticate'],
             'LdapRecordDirectory::authenticate' => [LdapRecordDirectory::class, 'authenticate'],
+            'LdapRecordDirectory::bindServizio' => [LdapRecordDirectory::class, 'bindServizio'],
             'MockDirectory::authenticate' => [MockDirectory::class, 'authenticate'],
             'NullDirectory::authenticate' => [NullDirectory::class, 'authenticate'],
             'LdapLoginService::login' => [LdapLoginService::class, 'login'],

@@ -13,6 +13,12 @@ final class FakeDirectory implements Directory
 
     public bool $nonDisponibile = false;
 
+    /** Elenco restituito da membriGruppi() (la sync). */
+    /** @var list<DirectoryIdentity> */
+    public array $membri = [];
+
+    public bool $sync = true;
+
     public ?string $motivo = null;
 
     /** Bind tentati: ognuno con password errata conterebbe verso il blocco account di AD. */
@@ -27,7 +33,7 @@ final class FakeDirectory implements Directory
      * @param  list<string>  $groups
      * @param  string|null|false  $email  false = default "<username>@ente.local"; null = account AD senza email
      */
-    public static function identita(string $username, array $groups, string|null|false $email = false, ?string $guid = null): DirectoryIdentity
+    public static function identita(string $username, array $groups, string|null|false $email = false, ?string $guid = null, bool $abilitato = true): DirectoryIdentity
     {
         return new DirectoryIdentity(
             guid: $guid ?? substr(md5($username), 0, 8).'-0000-0000-0000-'.substr(md5($username), 0, 12),
@@ -35,14 +41,30 @@ final class FakeDirectory implements Directory
             name: 'Utente '.$username,
             email: $email === false ? $username.'@ente.local' : $email,
             groups: $groups,
+            abilitato: $abilitato,
         );
     }
 
     public function aggiungi(string $password, DirectoryIdentity $id): self
     {
         $this->utenti[mb_strtolower($id->username)] = [$password, $id];
+        $this->membri[] = $id;
 
         return $this;
+    }
+
+    public function syncConfigurata(): bool
+    {
+        return $this->sync;
+    }
+
+    public function membriGruppi(): array
+    {
+        if ($this->nonDisponibile || ! $this->sync) {
+            throw new DirectoryNonDisponibile('Directory di test non disponibile');
+        }
+
+        return array_values(array_filter($this->membri, fn (DirectoryIdentity $m) => $m->groups !== []));
     }
 
     public function authenticate(string $username, string $password): ?DirectoryIdentity
