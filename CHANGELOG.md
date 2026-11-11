@@ -4,6 +4,17 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.15] - 2026-11-11
+
+### Fixed
+- La sincronizzazione AD si fermava con "Gruppi non trovati: PRONTOPA_URP, PRONTOPA_SEGNALATORI"
+  quando quei gruppi non esistono in AD. I nomi di default arrivano dal compose anche senza
+  variabili nello stack (e una variabile vuota non li toglie), quindi il consiglio di
+  "svuotare la variabile" non funzionava. Ora un gruppo assente è ignorato se nessun utente
+  attivo ha il ruolo di quel gruppo; la sync si ferma solo se manca un gruppo che ha ancora
+  persone (es. un gruppo rinominato), per non disattivarle. `ldap:prova --sync` elenca i
+  gruppi non trovati.
+
 ## [0.9.14] - 2026-11-11
 
 ### Added

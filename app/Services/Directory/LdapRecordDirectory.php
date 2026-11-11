@@ -216,8 +216,18 @@ final class LdapRecordDirectory implements Directory
         }
     }
 
+    /** @var list<string> */
+    private array $gruppiMancanti = [];
+
+    public function gruppiMancantiUltimaLettura(): array
+    {
+        return $this->gruppiMancanti;
+    }
+
     public function membriGruppi(): array
     {
+        $this->gruppiMancanti = [];
+
         if (! $this->syncConfigurata()) {
             throw new DirectoryNonDisponibile('Account di servizio non configurato (LDAP_SYNC_USERNAME / LDAP_SYNC_PASSWORD).');
         }
@@ -247,7 +257,7 @@ final class LdapRecordDirectory implements Directory
 
                 if (! $gruppo) {
                     // Gruppo rinominato/assente/fuori dal base DN: i suoi membri sparirebbero
-                    // dall'elenco e verrebbero disattivati. Errore dopo il giro (gruppiMancanti).
+                    // dall'elenco: la sync si ferma se qualcuno ha ancora quel ruolo (gruppiMancanti).
                     continue;
                 }
                 $trovati[] = $nomeGruppo;
@@ -282,12 +292,8 @@ final class LdapRecordDirectory implements Directory
             $connection->disconnect();
         }
 
-        $mancanti = self::gruppiMancanti($configurati, $trovati);
-        if ($mancanti !== []) {
-            throw new DirectoryNonDisponibile(sprintf(
-                'Gruppi non trovati in Active Directory: %s. Crea il gruppo sotto LDAP_BASE_DN, oppure svuota la variabile LDAP_GRUPPO_* corrispondente se non lo usi. Nessun utente modificato.',
-                implode(', ', $mancanti)));
-        }
+        // Gravità decisa da SincronizzaUtentiAd: grave solo se ci sono utenti di quel ruolo.
+        $this->gruppiMancanti = self::gruppiMancanti($configurati, $trovati);
 
         $membri = [];
         foreach ($perGuid as $guid => [$u, $gruppi]) {

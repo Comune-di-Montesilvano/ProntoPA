@@ -19,6 +19,14 @@ final class FakeDirectory implements Directory
 
     public bool $sync = true;
 
+    /** @var list<string> gruppi configurati non trovati nell'ultimo membriGruppi() */
+    public array $gruppiMancanti = [];
+
+    public function gruppiMancantiUltimaLettura(): array
+    {
+        return $this->gruppiMancanti;
+    }
+
     /** Lanciata da membriGruppi(): simula errori grezzi di ldap_search. */
     public ?\Throwable $errore = null;
 

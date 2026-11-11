@@ -23,6 +23,11 @@ final class NullDirectory implements Directory
         return false;
     }
 
+    public function gruppiMancantiUltimaLettura(): array
+    {
+        return [];
+    }
+
     public function membriGruppi(): array
     {
         throw new DirectoryNonDisponibile('LDAP_HOST non configurato: nessuna sincronizzazione possibile.');

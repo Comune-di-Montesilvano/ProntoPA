@@ -40,6 +40,11 @@ final class MockDirectory implements Directory
         return true;
     }
 
+    public function gruppiMancantiUltimaLettura(): array
+    {
+        return [];
+    }
+
     public function membriGruppi(): array
     {
         $membri = [];
