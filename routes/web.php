@@ -176,6 +176,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     Route::patch('utenti/{utente}/attivo', [UtentiController::class, 'toggleAttivo'])
         ->name('utenti.toggle-attivo');
+    Route::post('utenti/sincronizza', [UtentiController::class, 'sincronizza'])
+        ->name('utenti.sincronizza');
 
     Route::resource('utenti', UtentiController::class)
         ->except(['show', 'create', 'store'])
