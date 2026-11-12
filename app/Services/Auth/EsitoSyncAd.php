@@ -13,6 +13,9 @@ final class EsitoSyncAd
 
     public const BLOCCATA = 'bloccata';
 
+    /** Un altro giro sta già girando: non salvato, nessun avviso. */
+    public const IN_CORSO = 'in_corso';
+
     public function __construct(
         public readonly string $stato,
         public readonly Carbon $quando,
@@ -23,6 +26,7 @@ final class EsitoSyncAd
         public readonly int $daDisattivare = 0,
         public readonly int $senzaEmail = 0,
         public readonly int $usernameOccupati = 0,
+        public readonly int $errori = 0,
         public readonly ?string $motivo = null,
     ) {}
 
@@ -49,6 +53,7 @@ final class EsitoSyncAd
             'daDisattivare' => $this->daDisattivare,
             'senzaEmail' => $this->senzaEmail,
             'usernameOccupati' => $this->usernameOccupati,
+            'errori' => $this->errori,
             'motivo' => $this->motivo,
         ];
     }
@@ -66,6 +71,7 @@ final class EsitoSyncAd
             daDisattivare: (int) ($dati['daDisattivare'] ?? 0),
             senzaEmail: (int) ($dati['senzaEmail'] ?? 0),
             usernameOccupati: (int) ($dati['usernameOccupati'] ?? 0),
+            errori: (int) ($dati['errori'] ?? 0),
             motivo: isset($dati['motivo']) ? (string) $dati['motivo'] : null,
         );
     }

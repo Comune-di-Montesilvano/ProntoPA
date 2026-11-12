@@ -51,9 +51,9 @@ class SincronizzaUtentiAdTest extends TestCase
         return $u;
     }
 
-    private function sync(bool $forza = false, bool $prova = false): EsitoSyncAd
+    private function sync(bool $forza = false, bool $prova = false, ?int $confermati = null): EsitoSyncAd
     {
-        return app(SincronizzaUtentiAd::class)->esegui($forza, $prova);
+        return app(SincronizzaUtentiAd::class)->esegui($forza, $prova, $confermati);
     }
 
     public function test_crea_gestore_da_membro(): void
@@ -265,9 +265,117 @@ class SincronizzaUtentiAdTest extends TestCase
 
         $esito = $this->sync();
 
-        $this->assertSame('fallita', $esito->stato);
+        $this->assertSame('in_corso', $esito->stato);
         $this->assertStringContainsString('già in corso', (string) $esito->motivo);
+        $this->assertNull(app(SincronizzaUtentiAd::class)->ultimoEsito(), 'esito del giro in corso non sovrascritto');
+        $this->assertFalse(User::where('username', 'm.rossi')->exists());
         $lock->release();
+    }
+
+    public function test_comando_con_giro_in_corso_non_avvisa(): void
+    {
+        $this->utenteLdap('capo', [], 'admin');
+        $lock = Cache::lock('ldap-sync', 600);
+        $lock->get();
+
+        $this->artisan('ldap:sincronizza')->assertSuccessful();
+
+        Notification::assertNothingSent();
+        $lock->release();
+    }
+
+    public function test_in_corso_visibile_solo_durante_il_giro(): void
+    {
+        $sync = app(SincronizzaUtentiAd::class);
+        $visto = null;
+        User::creating(function () use ($sync, &$visto) {
+            $visto ??= $sync->inCorso();
+        });
+        $this->membro('m.rossi');
+
+        $sync->esegui();
+
+        $this->assertTrue($visto);
+        $this->assertFalse($sync->inCorso());
+    }
+
+    /** @return list<User> */
+    private function seiAttiviDueRestano(): array
+    {
+        $utenti = [];
+        foreach (['a', 'b', 'c', 'd', 'e', 'f'] as $n) {
+            $utenti[] = $this->utenteLdap("u.$n");
+        }
+        $this->membro('u.a');
+        $this->membro('u.b');
+
+        return $utenti;
+    }
+
+    public function test_forza_con_conferma_superata_si_blocca_di_nuovo(): void
+    {
+        $this->seiAttiviDueRestano();
+
+        $esito = $this->sync(forza: true, confermati: 3);
+
+        $this->assertSame('bloccata', $esito->stato);
+        $this->assertSame(4, $esito->daDisattivare);
+        $this->assertStringContainsString('Avevi confermato 3', (string) $esito->motivo);
+        $this->assertSame(6, User::where('attivo', true)->count());
+    }
+
+    public function test_forza_con_conferma_uguale_procede(): void
+    {
+        $this->seiAttiviDueRestano();
+
+        $esito = $this->sync(forza: true, confermati: 4);
+
+        $this->assertSame('ok', $esito->stato);
+        $this->assertSame(4, $esito->disattivati);
+    }
+
+    public function test_errore_su_un_utente_non_annulla_gli_altri(): void
+    {
+        User::saving(function (User $u) {
+            if ($u->username === 'rotto') {
+                throw new \RuntimeException('errore di scrittura simulato');
+            }
+        });
+        $uscito = $this->utenteLdap('ex.gestore');
+        $this->membro('m.rossi');
+        $this->membro('rotto');
+        $this->membro('l.bianchi');
+
+        $esito = $this->sync();
+
+        $this->assertSame('ok', $esito->stato);
+        $this->assertSame(1, $esito->errori);
+        $this->assertSame(2, $esito->creati);
+        $this->assertTrue(User::where('username', 'm.rossi')->exists());
+        $this->assertTrue(User::where('username', 'l.bianchi')->exists());
+        $this->assertFalse(User::where('username', 'rotto')->exists());
+        $this->assertFalse((bool) $uscito->fresh()->attivo);
+        $this->assertSame(1, app(SincronizzaUtentiAd::class)->ultimoEsito()?->errori);
+    }
+
+    public function test_errore_su_utente_esistente_non_lo_disattiva_ne_lo_tocca_a_meta(): void
+    {
+        $u = $this->utenteLdap('rotto', ['name' => 'Nome vecchio'], 'operaio');
+        User::saving(function (User $x) {
+            if ($x->username === 'rotto' && $x->isDirty('name')) {
+                throw new \RuntimeException('errore di scrittura simulato');
+            }
+        });
+        $this->membro('rotto');
+        $this->membro('altro');
+
+        $esito = $this->sync();
+
+        $this->assertSame(1, $esito->errori);
+        $fresco = $u->fresh();
+        $this->assertTrue((bool) $fresco->attivo);
+        $this->assertSame('Nome vecchio', $fresco->name);
+        $this->assertTrue($fresco->hasRole('operaio'));
     }
 
     public function test_comando_notturno_fallito_avvisa_admin(): void
@@ -293,6 +401,40 @@ class SincronizzaUtentiAdTest extends TestCase
         $this->assertStringContainsString('Operations error', (string) $esito->motivo);
         $this->assertTrue((bool) $admin->fresh()->attivo);
         Notification::assertSentTo($admin, SyncAdFallitaNotification::class);
+    }
+
+    public function test_gruppo_mancante_senza_utenti_di_quel_ruolo_ignorato(): void
+    {
+        $this->dir->gruppiMancanti = ['PRONTOPA_URP', 'PRONTOPA_SEGNALATORI'];
+        $this->membro('m.rossi');
+
+        $esito = $this->sync();
+
+        $this->assertSame('ok', $esito->stato);
+        $this->assertTrue(User::where('username', 'm.rossi')->exists());
+    }
+
+    public function test_gruppo_mancante_con_utenti_di_quel_ruolo_fallisce(): void
+    {
+        $operaio = $this->utenteLdap('op.uno', [], 'operaio');
+        $this->dir->gruppiMancanti = ['PRONTOPA_OPERAI'];
+        $this->membro('m.rossi');
+
+        $esito = $this->sync();
+
+        $this->assertSame('fallita', $esito->stato);
+        $this->assertStringContainsString('PRONTOPA_OPERAI', (string) $esito->motivo);
+        $this->assertTrue((bool) $operaio->fresh()->attivo);
+        $this->assertFalse(User::where('username', 'm.rossi')->exists());
+    }
+
+    public function test_urp_mancante_non_blocca_per_i_segnalatori_interni(): void
+    {
+        $this->utenteLdap('seg', ['id_provenienza' => 1], 'segnalatore');
+        $this->dir->gruppiMancanti = ['PRONTOPA_URP'];
+        $this->membro('seg', ['PRONTOPA_SEGNALATORI']);
+
+        $this->assertSame('ok', $this->sync()->stato);
     }
 
     public function test_comando_spento_senza_configurazione(): void

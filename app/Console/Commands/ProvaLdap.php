@@ -96,6 +96,11 @@ class ProvaLdap extends Command
         }
         $this->table(['Gruppo', 'Membri'], $righe);
 
+        $mancanti = $directory->gruppiMancantiUltimaLettura();
+        if ($mancanti !== []) {
+            $this->warn('Gruppi non trovati in AD (ignorati dalla sync finché nessun utente ha quel ruolo): '.implode(', ', $mancanti));
+        }
+
         $disabilitati = count(array_filter($membri, fn ($m) => ! $m->abilitato));
         $senzaEmail = count(array_filter($membri, fn ($m) => blank($m->email)));
         $this->info(sprintf('Totale: %d membri (%d disabilitati in AD, %d senza email). Nessuna scrittura.', count($membri), $disabilitati, $senzaEmail));

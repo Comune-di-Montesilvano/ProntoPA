@@ -12,6 +12,7 @@ use Database\Seeders\TabelleRiferimentoSeeder;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 use Tests\Support\FakeDirectory;
 use Tests\TestCase;
@@ -48,10 +49,109 @@ class SyncAdAdminTest extends TestCase
 
         $this->actingAs($this->admin)->post(route('admin.utenti.sincronizza'))
             ->assertRedirect()->assertSessionHas('success');
-        $this->actingAs($this->admin)->post(route('admin.utenti.sincronizza'), ['forza' => '1']);
+        Cache::forget(SincronizzaUtentiAdJob::CHIAVE_IN_CODA); // il job finto non gira
+        $this->actingAs($this->admin)->post(route('admin.utenti.sincronizza'), ['forza' => '1', 'confermati' => '9']);
 
-        Queue::assertPushed(SincronizzaUtentiAdJob::class, fn ($j) => $j->forza === false);
-        Queue::assertPushed(SincronizzaUtentiAdJob::class, fn ($j) => $j->forza === true);
+        Queue::assertPushed(SincronizzaUtentiAdJob::class, fn ($j) => $j->forza === false && $j->confermati === null);
+        Queue::assertPushed(SincronizzaUtentiAdJob::class, fn ($j) => $j->forza === true && $j->confermati === 9);
+    }
+
+    public function test_forza_senza_numero_confermato_rifiutata(): void
+    {
+        Queue::fake();
+
+        $this->actingAs($this->admin)->post(route('admin.utenti.sincronizza'), ['forza' => '1'])
+            ->assertSessionHasErrors('confermati');
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_doppio_clic_non_accoda_due_giri(): void
+    {
+        Queue::fake();
+
+        $this->actingAs($this->admin)->post(route('admin.utenti.sincronizza'))->assertSessionHas('success');
+        $this->actingAs($this->admin)->post(route('admin.utenti.sincronizza'))->assertSessionHas('warning');
+
+        Queue::assertPushed(SincronizzaUtentiAdJob::class, 1);
+        $this->actingAs($this->admin)->get(route('admin.utenti.index'))
+            ->assertSee('Sincronizzazione in corso')
+            ->assertDontSee('Sincronizza ora');
+    }
+
+    public function test_giro_notturno_in_corso_avvisa_chi_clicca(): void
+    {
+        Queue::fake();
+        Cache::put('ldap-sync-attivo', true, 600);
+
+        $this->actingAs($this->admin)->post(route('admin.utenti.sincronizza'))->assertSessionHas('warning');
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_job_finito_libera_il_pulsante(): void
+    {
+        $this->dir->aggiungi('pw', FakeDirectory::identita('m.rossi', ['PRONTOPA_GESTORI']));
+
+        $this->actingAs($this->admin)->post(route('admin.utenti.sincronizza'))->assertSessionHas('success');
+
+        $this->assertFalse(Cache::has(SincronizzaUtentiAdJob::CHIAVE_IN_CODA));
+        $this->assertTrue(User::where('username', 'm.rossi')->exists());
+    }
+
+    public function test_sincronizza_comunque_manda_il_numero_visto(): void
+    {
+        $this->esito(new EsitoSyncAd(EsitoSyncAd::BLOCCATA, now(), daDisattivare: 9, motivo: 'x'));
+
+        $this->actingAs($this->admin)->get(route('admin.utenti.index'))
+            ->assertSee('name="confermati" value="9"', false);
+    }
+
+    public function test_esito_mostra_errori(): void
+    {
+        $this->esito(new EsitoSyncAd(EsitoSyncAd::OK, now(), creati: 1, errori: 2));
+
+        $this->actingAs($this->admin)->get(route('admin.utenti.index'))
+            ->assertSee('2 non allineati per errore');
+    }
+
+    public function test_modifica_utente_ldap_cambia_solo_telefono_e_profilo(): void
+    {
+        $ldap = User::factory()->create(['attivo' => true, 'auth_source' => 'ldap', 'username' => 'm.rossi',
+            'name' => 'Mario Rossi', 'email' => 'm.rossi@ente.local', 'supervisore_segnalazioni' => false]);
+        $ldap->assignRole('gestore');
+
+        $this->actingAs($this->admin)->put(route('admin.utenti.update', $ldap), [
+            'name' => 'Altro', 'username' => 'altro', 'email' => 'altro@x.it', 'ruolo' => 'admin',
+            'supervisore' => '1', 'id_provenienza' => 3, 'telefono' => '085 123',
+        ])->assertRedirect(route('admin.utenti.index'));
+
+        $f = $ldap->fresh();
+        $this->assertSame('Mario Rossi', $f->name);
+        $this->assertSame('m.rossi', $f->username);
+        $this->assertSame('m.rossi@ente.local', $f->email);
+        $this->assertTrue($f->hasRole('gestore'));
+        $this->assertFalse($f->hasRole('admin'));
+        $this->assertFalse((bool) $f->supervisore_segnalazioni);
+        $this->assertSame('085 123', $f->telefono);
+
+        $this->actingAs($this->admin)->get(route('admin.utenti.edit', $ldap))
+            ->assertDontSee('name="ruolo"', false)
+            ->assertDontSee('name="email"', false)
+            ->assertSee('name="telefono"', false);
+    }
+
+    public function test_modifica_utente_spid_cambia_ancora_il_ruolo(): void
+    {
+        $spid = User::factory()->create(['attivo' => true, 'auth_source' => 'spid', 'username' => 'RSSMRA80A01G482X', 'email' => 's@x.it']);
+        $spid->assignRole('segnalatore');
+
+        $this->actingAs($this->admin)->put(route('admin.utenti.update', $spid), [
+            'name' => 'Nuovo', 'username' => 'RSSMRA80A01G482X', 'email' => 's@x.it', 'ruolo' => 'gestore', 'attivo' => '1',
+        ])->assertRedirect(route('admin.utenti.index'));
+
+        $this->assertTrue($spid->fresh()->hasRole('gestore'));
+        $this->assertSame('Nuovo', $spid->fresh()->name);
     }
 
     public function test_non_admin_non_puo_sincronizzare(): void

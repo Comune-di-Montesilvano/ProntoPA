@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use App\Notifications\SyncAdFallitaNotification;
+use App\Services\Auth\EsitoSyncAd;
 use App\Services\Auth\SincronizzaUtentiAd;
 use App\Services\Directory\Directory;
 use Illuminate\Console\Command;
@@ -28,9 +29,15 @@ class SincronizzaLdap extends Command
         $prova = (bool) $this->option('prova');
         $esito = $sync->esegui((bool) $this->option('forza'), $prova);
 
-        $this->table(['Esito', 'Creati', 'Aggiornati', 'Riattivati', 'Disattivati', 'Da disattivare', 'Senza email', 'Username occupati'], [[
+        if ($esito->stato === EsitoSyncAd::IN_CORSO) {
+            $this->info('Sincronizzazione già in corso: questo giro è saltato.');
+
+            return self::SUCCESS;
+        }
+
+        $this->table(['Esito', 'Creati', 'Aggiornati', 'Riattivati', 'Disattivati', 'Da disattivare', 'Senza email', 'Username occupati', 'Errori'], [[
             $esito->stato, $esito->creati, $esito->aggiornati, $esito->riattivati, $esito->disattivati,
-            $esito->daDisattivare, $esito->senzaEmail, $esito->usernameOccupati,
+            $esito->daDisattivare, $esito->senzaEmail, $esito->usernameOccupati, $esito->errori,
         ]]);
         if ($esito->motivo) {
             $this->line($esito->motivo);
