@@ -74,7 +74,7 @@ class SyncAdAdminTest extends TestCase
         $this->actingAs($this->admin)->post(route('admin.utenti.sincronizza'))->assertSessionHas('warning');
 
         Queue::assertPushed(SincronizzaUtentiAdJob::class, 1);
-        $this->actingAs($this->admin)->get(route('admin.utenti.index'))
+        $this->actingAs($this->admin)->get(route('admin.utenti.dominio'))
             ->assertSee('Sincronizzazione in corso')
             ->assertDontSee('Sincronizza ora');
     }
@@ -103,7 +103,7 @@ class SyncAdAdminTest extends TestCase
     {
         $this->esito(new EsitoSyncAd(EsitoSyncAd::BLOCCATA, now(), daDisattivare: 9, motivo: 'x'));
 
-        $this->actingAs($this->admin)->get(route('admin.utenti.index'))
+        $this->actingAs($this->admin)->get(route('admin.utenti.dominio'))
             ->assertSee('name="confermati" value="9"', false);
     }
 
@@ -111,11 +111,11 @@ class SyncAdAdminTest extends TestCase
     {
         $this->esito(new EsitoSyncAd(EsitoSyncAd::OK, now(), creati: 1, errori: 2));
 
-        $this->actingAs($this->admin)->get(route('admin.utenti.index'))
+        $this->actingAs($this->admin)->get(route('admin.utenti.dominio'))
             ->assertSee('2 non allineati per errore');
     }
 
-    public function test_modifica_utente_ldap_cambia_solo_telefono_e_profilo(): void
+    public function test_modifica_utente_ldap_cambia_solo_telefono(): void
     {
         $ldap = User::factory()->create(['attivo' => true, 'auth_source' => 'ldap', 'username' => 'm.rossi',
             'name' => 'Mario Rossi', 'email' => 'm.rossi@ente.local', 'supervisore_segnalazioni' => false]);
@@ -124,7 +124,7 @@ class SyncAdAdminTest extends TestCase
         $this->actingAs($this->admin)->put(route('admin.utenti.update', $ldap), [
             'name' => 'Altro', 'username' => 'altro', 'email' => 'altro@x.it', 'ruolo' => 'admin',
             'supervisore' => '1', 'id_provenienza' => 3, 'telefono' => '085 123',
-        ])->assertRedirect(route('admin.utenti.index'));
+        ])->assertRedirect(route('admin.utenti.dominio'));
 
         $f = $ldap->fresh();
         $this->assertSame('Mario Rossi', $f->name);
@@ -148,7 +148,7 @@ class SyncAdAdminTest extends TestCase
 
         $this->actingAs($this->admin)->put(route('admin.utenti.update', $spid), [
             'name' => 'Nuovo', 'username' => 'RSSMRA80A01G482X', 'email' => 's@x.it', 'ruolo' => 'gestore', 'attivo' => '1',
-        ])->assertRedirect(route('admin.utenti.index'));
+        ])->assertRedirect(route('admin.utenti.scuole'));
 
         $this->assertTrue($spid->fresh()->hasRole('gestore'));
         $this->assertSame('Nuovo', $spid->fresh()->name);
@@ -169,7 +169,7 @@ class SyncAdAdminTest extends TestCase
     {
         $this->esito(new EsitoSyncAd(EsitoSyncAd::OK, now(), creati: 3, disattivati: 2));
 
-        $this->actingAs($this->admin)->get(route('admin.utenti.index'))
+        $this->actingAs($this->admin)->get(route('admin.utenti.dominio'))
             ->assertOk()
             ->assertSee('Sincronizza ora')
             ->assertSee('3 creati')
@@ -181,7 +181,7 @@ class SyncAdAdminTest extends TestCase
     {
         $this->dir->sync = false;
 
-        $this->actingAs($this->admin)->get(route('admin.utenti.index'))
+        $this->actingAs($this->admin)->get(route('admin.utenti.dominio'))
             ->assertOk()
             ->assertDontSee('Sincronizza ora');
     }
@@ -190,7 +190,7 @@ class SyncAdAdminTest extends TestCase
     {
         $this->esito(new EsitoSyncAd(EsitoSyncAd::BLOCCATA, now(), daDisattivare: 9, motivo: 'Il giro disattiverebbe 9 utenti'));
 
-        $this->actingAs($this->admin)->get(route('admin.utenti.index'))
+        $this->actingAs($this->admin)->get(route('admin.utenti.dominio'))
             ->assertSee('Il giro disattiverebbe 9 utenti')
             ->assertSee('Sincronizza comunque');
     }
@@ -203,7 +203,7 @@ class SyncAdAdminTest extends TestCase
         $this->actingAs($this->admin)->patch(route('admin.utenti.toggle-attivo', $ldap))->assertForbidden();
         $this->assertTrue((bool) $ldap->fresh()->attivo);
 
-        $this->actingAs($this->admin)->get(route('admin.utenti.index'))
+        $this->actingAs($this->admin)->get(route('admin.utenti.dominio'))
             ->assertSee('Gestito da AD');
     }
 
@@ -223,7 +223,7 @@ class SyncAdAdminTest extends TestCase
 
         $this->actingAs($this->admin)->put(route('admin.utenti.update', $ldap), [
             'name' => 'Mario Rossi', 'username' => 'm.rossi', 'email' => 'm.rossi@ente.local', 'ruolo' => 'gestore',
-        ])->assertRedirect(route('admin.utenti.index'));
+        ])->assertRedirect(route('admin.utenti.dominio'));
 
         $this->assertTrue((bool) $ldap->fresh()->attivo);
         $this->actingAs($this->admin)->get(route('admin.utenti.edit', $ldap))
@@ -232,16 +232,22 @@ class SyncAdAdminTest extends TestCase
     }
 
     /** Bug 0.9.14: l'esito (JSON, motivo lungo) compariva nel form e ne bloccava il salvataggio (max 500). */
-    public function test_esito_sync_non_compare_ne_blocca_le_impostazioni(): void
+    public function test_esito_sync_non_compare_ne_blocca_aspetto_e_integrazioni(): void
     {
         $this->esito(new EsitoSyncAd(EsitoSyncAd::FALLITA, now(), motivo: str_repeat('Gruppi non trovati in Active Directory. ', 20)));
         $prima = Impostazione::get('ldap_sync_esito');
 
-        $this->actingAs($this->admin)->get(route('admin.impostazioni.index'))
-            ->assertOk()
-            ->assertDontSee('ldap_sync_esito');
+        foreach (['admin.aspetto', 'admin.integrazioni'] as $pagina) {
+            $this->actingAs($this->admin)->get(route($pagina))
+                ->assertOk()
+                ->assertDontSee('ldap_sync_esito');
+        }
 
-        $this->actingAs($this->admin)->patch(route('admin.impostazioni.update'), [
+        $this->actingAs($this->admin)->patch(route('admin.integrazioni.update', 'spid'), [
+            'impostazioni' => ['ldap_sync_esito' => 'manomesso'],
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($this->admin)->patch(route('admin.aspetto.update'), [
             'impostazioni' => ['ente_nome' => 'Comune di Prova', 'ldap_sync_esito' => 'manomesso'],
         ])->assertSessionHasNoErrors()->assertSessionHas('success');
 

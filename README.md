@@ -142,18 +142,18 @@ Il ruolo dei dipendenti deriva dai gruppi AD, riletti a ogni accesso (un solo ru
 
 I nomi dei gruppi si impostano con le variabili `LDAP_GRUPPO_ADMIN`, `LDAP_GRUPPO_SUPERVISORI`, `LDAP_GRUPPO_GESTORI`, `LDAP_GRUPPO_OPERAI`, `LDAP_GRUPPO_URP`, `LDAP_GRUPPO_SEGNALATORI` (default quelli in tabella): stanno in env perché servono già al primo accesso. Diagnosi di un utente: `php artisan ldap:prova <username>` mostra la configurazione letta e il motivo esatto di un rifiuto.
 
-**SPID/CIE**: registra su pa-sso-proxy un client OIDC con il redirect URI mostrato in **Admin → Impostazioni → SPID/CIE** (`<APP_URL>/auth/spid/callback`), poi inserisci lì issuer (radice del proxy, senza `/OIDC`), client id e secret. Il secret è salvato cifrato con `APP_KEY`: se cambi `APP_KEY` va reinserito.
+**SPID/CIE**: registra su pa-sso-proxy un client OIDC con il redirect URI mostrato in **Admin → Ente e sistema → Integrazioni → SPID/CIE** (`<APP_URL>/auth/spid/callback`), poi inserisci lì issuer (radice del proxy, senza `/OIDC`), client id e secret. Il secret è salvato cifrato con `APP_KEY`: se cambi `APP_KEY` va reinserito.
 
 `LDAP_USER_DN_TEMPLATE` va impostato in formato UPN (`%s@ente.local`, consigliato: i dipendenti possono scrivere anche il proprio UPN) o `DOMINIO\%s`: Active Directory rifiuta il bind col solo username, e con `%s` nessun dipendente riesce a entrare (l'app lo segnala nei log all'avvio).
 
 > **Le impostazioni applicative** (nome ente, logo, colori, coordinate mappa)
-> si configurano dall'interfaccia admin in **Admin → Impostazioni** — non dal file `.env`.
+> si configurano dall'interfaccia admin in **Admin → Ente e sistema → Aspetto** — non dal file `.env`.
 
 ### Brandizzazione
 
 Dopo il primo login con l'account admin:
 
-1. Vai su **Admin → Impostazioni**
+1. Vai su **Admin → Ente e sistema → Aspetto**
 2. Configura il gruppo **Brand**: nome ente, logo, colori primario e secondario
 3. Configura il gruppo **Mappa**: coordinate e zoom del territorio
 4. Configura il gruppo **Email**: mittente notifiche
@@ -164,7 +164,7 @@ La piattaforma include un bot Telegram opzionale per notifiche push e comandi ra
 
 Configurazione minima:
 
-1. Vai su **Admin → Impostazioni** e compila il gruppo **Bot Telegram**:
+1. Vai su **Admin → Ente e sistema → Integrazioni → Telegram** e compila:
 	- `telegram_bot_token`
 	- `telegram_bot_username`
 	- `telegram_webhook_secret` (opzionale, ma raccomandato)
@@ -192,7 +192,7 @@ La piattaforma supporta una policy di pubblicazione automatica delle segnalazion
 
 Configurazione:
 
-1. Vai su **Admin → Impostazioni**
+1. Vai su **Admin → Regole di lavoro → Segnalazioni**
 2. Nel gruppo **Pubblicazione automatica** imposta:
 	- `publication_enabled` (`Si/No`)
 	- `publication_auto_state_id` (stato trigger, es. `2 = In carico`)
@@ -234,7 +234,7 @@ Dopo il primo avvio il container esegue automaticamente le migrations e il seed 
 
 Nessun utente viene creato: configura `LDAP_HOST`, `LDAP_BASE_DN` e `LDAP_USER_DN_TEMPLATE` nello stack, crea in Active Directory i gruppi `PRONTOPA_*` (vedi [Accesso](#accesso)) e accedi con un utente del gruppo `PRONTOPA_ADMIN`. Prima, verifica la connessione con `docker compose exec php php artisan ldap:prova <username>`.
 
-Poi configura il tuo ente in **Admin → Impostazioni**.
+Poi configura il tuo ente in **Admin → Ente e sistema → Aspetto**.
 
 ### Backup
 

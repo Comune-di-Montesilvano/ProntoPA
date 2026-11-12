@@ -112,47 +112,73 @@
                 </div>
             @endif
 
-            @can('gestisci-organizzazione')
-                <div class="pa-sb-section">
-                    <p class="pa-sb-heading">Organizzazione</p>
-                    <x-sidebar-link href="{{ route('organizzazione.tipologie-gestori.index') }}" :active="request()->routeIs('organizzazione.tipologie-gestori.*')" icon="adjustments">
-                        Tipologie dei gestori
-                    </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('organizzazione.squadre.index') }}" :active="request()->routeIs('organizzazione.squadre.*')" icon="user-group">
-                        Squadre
-                    </x-sidebar-link>
-                </div>
-            @endcan
-
             @if($isAdmin)
                 <div class="pa-sb-section">
                     <p class="pa-sb-heading">Amministrazione</p>
-                    <x-sidebar-link href="{{ route('admin.dashboard') }}" :active="request()->is('admin') && !request()->routeIs('admin.impostazioni.*')" icon="cog">
-                        Pannello admin
+                    <x-sidebar-link href="{{ route('admin.dashboard') }}" :active="request()->routeIs('admin.dashboard')" icon="cog">
+                        Stato del sistema
                     </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.impostazioni.index') }}" :active="request()->routeIs('admin.impostazioni.*')" icon="adjustments">
-                        Impostazioni ente
+                </div>
+            @endif
+
+            @if($isAdmin || $u?->can('gestisci-organizzazione'))
+                <div class="pa-sb-section">
+                    <p class="pa-sb-heading">Persone</p>
+                    @if($isAdmin)
+                        <x-sidebar-link href="{{ route('admin.utenti.dominio') }}" :active="request()->routeIs('admin.utenti.*') && !request()->routeIs('admin.utenti.scuole', 'admin.utenti.ditte')" icon="user-group">
+                            Utenti di dominio
+                        </x-sidebar-link>
+                        <x-sidebar-link href="{{ route('admin.utenti.scuole') }}" :active="request()->routeIs('admin.utenti.scuole')" icon="user-group">
+                            Scuole (SPID)
+                        </x-sidebar-link>
+                        <x-sidebar-link href="{{ route('admin.utenti.ditte') }}" :active="request()->routeIs('admin.utenti.ditte')" icon="user-group">
+                            Ditte (SPID)
+                        </x-sidebar-link>
+                        <x-sidebar-link href="{{ route('admin.deleghe.index') }}" :active="request()->routeIs('admin.deleghe.*')" icon="user-group">
+                            Deleghe delle scuole
+                        </x-sidebar-link>
+                    @endif
+                    @can('gestisci-organizzazione')
+                        <x-sidebar-link href="{{ route('organizzazione.squadre.index') }}" :active="request()->routeIs('organizzazione.squadre.*')" icon="user-group">
+                            Squadre
+                        </x-sidebar-link>
+                        <x-sidebar-link href="{{ route('organizzazione.tipologie-gestori.index') }}" :active="request()->routeIs('organizzazione.tipologie-gestori.*')" icon="adjustments">
+                            Tipologie dei gestori
+                        </x-sidebar-link>
+                    @endcan
+                </div>
+            @endif
+
+            @if($isAdmin)
+                <div class="pa-sb-section">
+                    <x-sidebar-link href="{{ route('admin.enti.index') }}" :active="request()->routeIs('admin.enti.*', 'admin.sedi.*', 'admin.categorie-enti.*', 'admin.anagrafe-miur.*')" icon="office-building">
+                        Enti e sedi
                     </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.organizzazioni.index') }}" :active="request()->routeIs('admin.organizzazioni.*')" icon="office-building">
-                        Organizzazioni
+                </div>
+
+                <div class="pa-sb-section">
+                    <p class="pa-sb-heading">Regole di lavoro</p>
+                    <x-sidebar-link href="{{ route('admin.regole.scadenze') }}" :active="request()->routeIs('admin.regole.scadenze', 'admin.regole.orario', 'admin.sla.*')" icon="clock">
+                        Scadenze
                     </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.sedi.index') }}" :active="request()->routeIs('admin.sedi.*')" icon="map-pin">
-                        Sedi
+                    <x-sidebar-link href="{{ route('admin.regole.segnalazioni') }}" :active="request()->routeIs('admin.regole.segnalazioni*', 'admin.regole.pubblica-esistenti')" icon="clipboard">
+                        Segnalazioni
                     </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.anagrafe-miur.index') }}" :active="request()->routeIs('admin.anagrafe-miur.*')" icon="office-building">
-                        Anagrafe MIUR
+                    <x-sidebar-link href="{{ route('admin.regole.avvisi') }}" :active="request()->routeIs('admin.regole.avvisi*')" icon="inbox">
+                        Avvisi
+                    </x-sidebar-link>
+                </div>
+
+                <div class="pa-sb-section">
+                    <p class="pa-sb-heading">Ente e sistema</p>
+                    <x-sidebar-link href="{{ route('admin.aspetto') }}" :active="request()->routeIs('admin.aspetto*')" icon="adjustments">
+                        Aspetto
+                    </x-sidebar-link>
+                    <x-sidebar-link href="{{ route('admin.integrazioni') }}" :active="request()->routeIs('admin.integrazioni*')" icon="cog">
+                        Integrazioni
                     </x-sidebar-link>
                     <x-sidebar-link href="{{ route('admin.backup.index') }}" :active="request()->routeIs('admin.backup.*')" icon="archive">
                         Backup
-                    </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.deleghe.index') }}" :active="request()->routeIs('admin.deleghe.*')" icon="user-group">
-                        Deleghe
-                    </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.sla.index') }}" :active="request()->routeIs('admin.sla.*')" icon="clock">
-                        SLA
-                    </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.profili.index') }}" :active="request()->routeIs('admin.profili.*') || request()->routeIs('admin.provenienze.*')" icon="user-group">
-                        Profili e provenienze
                     </x-sidebar-link>
                 </div>
             @endif

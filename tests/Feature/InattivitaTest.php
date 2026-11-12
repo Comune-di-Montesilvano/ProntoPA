@@ -179,7 +179,7 @@ class InattivitaTest extends TestCase
         $this->actingAs($admin)->post(route('admin.sla.store'), [
             'livello_priorita' => 3, 'ore_target' => 3, 'unita' => 'giorni', 'ore_warning' => 7,
             'giorni_avviso_inattivita' => 5, 'giorni_archiviazione_inattivita' => 10,
-        ])->assertRedirect(route('admin.sla.index'));
+        ])->assertRedirect(route('admin.regole.scadenze'));
 
         $r = SlaConfigurazione::where('livello_priorita', 3)->firstOrFail();
         $this->assertSame(5, (int) $r->giorni_avviso_inattivita);

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Impostazione;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -18,6 +19,24 @@ class Brand
 
     /** Il template è renderizzato più volte per email (html, testo): un solo embed per messaggio. */
     private static ?\WeakMap $embedPerMessaggio = null;
+
+    /** Cancella il file del logo caricato (se c'è) e azzera l'impostazione. */
+    public static function rimuoviLogoFile(): void
+    {
+        $attuale = Impostazione::get('ente_logo_file');
+        if (filled($attuale)) {
+            Storage::disk('local')->delete($attuale);
+        }
+        Impostazione::set('ente_logo_file', null);
+    }
+
+    /** Sostituisce il logo caricato con un nuovo file (il vecchio viene cancellato). */
+    public static function salvaLogoFile(UploadedFile $file): void
+    {
+        self::rimuoviLogoFile();
+        $ext = $file->extension() === 'jpeg' ? 'jpg' : $file->extension();
+        Impostazione::set('ente_logo_file', $file->storeAs(self::DIR_LOGO, "logo-ente.{$ext}", 'local'));
+    }
 
     public static function logoEnteFile(): ?string
     {

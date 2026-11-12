@@ -1,12 +1,18 @@
 <x-app-layout>
-    <x-slot name="header">Anagrafe scuole MIUR</x-slot>
+    <x-slot name="header">Aggiungi da MIUR</x-slot>
+    <x-slot name="actions">
+        <a href="{{ route('admin.enti.index') }}"
+           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
+            Torna a Enti e sedi
+        </a>
+    </x-slot>
 
     <div class="space-y-6">
         <div class="bg-white shadow-sm rounded-xl p-6 space-y-3">
             <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Dataset</h2>
 
             @if(! $haIndice)
-                <p class="text-sm text-gray-600">Nessuna anagrafe scaricata. Premi "Scarica" per importare il file indicato in Impostazioni.</p>
+                <p class="text-sm text-gray-600">Nessuna anagrafe scaricata. Premi "Scarica" per importare il file indicato in Admin → Ente e sistema → Integrazioni.</p>
             @else
                 <dl class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                     <div><dt class="text-gray-500">File in uso</dt><dd class="break-all">{{ $stato['url'] }}</dd></div>
@@ -35,7 +41,7 @@
                         class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 disabled:opacity-50 transition">
                     Scarica
                 </button>
-                <a href="{{ route('admin.impostazioni.index') }}" class="ml-3 text-sm text-blue-700 hover:underline">Cambia link</a>
+                <a href="{{ route('admin.integrazioni') }}" class="ml-3 text-sm text-blue-700 hover:underline">Cambia link</a>
             </form>
         </div>
 
@@ -53,7 +59,7 @@
                                 <td>{{ $m['nome'] }}</td>
                                 <td class="text-right">{{ $m['segnalazioni'] }}</td>
                                 <td class="text-right">
-                                    <a class="text-blue-700 hover:underline" href="{{ $m['tipo'] === 'istituto' ? route('admin.organizzazioni.edit', $m['id']) : route('admin.sedi.edit', $m['id']) }}">Apri</a>
+                                    <a class="text-blue-700 hover:underline" href="{{ $m['tipo'] === 'istituto' ? route('admin.enti.show', $m['id']) : route('admin.sedi.edit', $m['id']) }}">Apri</a>
                                 </td>
                             </tr>
                         @endforeach

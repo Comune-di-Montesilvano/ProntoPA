@@ -19,50 +19,10 @@ class SediController extends Controller
     /** Campi che per una sede fonte_dati = miur vengono dall'anagrafe MIUR. */
     public const CAMPI_MIUR = ['id_istituto', 'nome', 'codice_meccanografico', 'indirizzo', 'email'];
 
-    public function index(Request $request): View
-    {
-        $query = Plesso::with('istituto')->orderBy('id_istituto')->orderBy('nome');
-
-        if ($request->filled('id_istituto')) {
-            $query->where('id_istituto', $request->id_istituto);
-        }
-
-        $sedi           = $query->paginate(30);
-        $organizzazioni = Istituto::orderBy('tipo')->orderBy('descrizione')->get();
-        $filtroIstituto = $request->id_istituto;
-
-        return view('admin.sedi.index', compact('sedi', 'organizzazioni', 'filtroIstituto'));
-    }
-
-    public function create(Request $request): View
-    {
-        $organizzazioni = Istituto::orderBy('tipo')->orderBy('descrizione')->get();
-        $preseleziona   = $request->id_istituto;
-
-        return view('admin.sedi.create', compact('organizzazioni', 'preseleziona'));
-    }
-
-    public function store(Request $request): RedirectResponse
-    {
-        $data = $request->validate([
-            'id_istituto'           => ['required', 'integer', 'exists:istituti,id_istituto'],
-            'nome'                  => ['required', 'string', 'max:255'],
-            'codice_meccanografico' => ['nullable', 'string', 'max:50'],
-            'indirizzo'             => ['nullable', 'string', 'max:255'],
-            'referente'             => ['nullable', 'string', 'max:50'],
-            'email'                 => ['nullable', 'email', 'max:50'],
-            'recapiti'              => ['nullable', 'string', 'max:50'],
-        ]);
-
-        Plesso::create($data);
-
-        return redirect()->route('admin.sedi.index', ['id_istituto' => $data['id_istituto']])
-            ->with('success', "Sede \"{$data['nome']}\" creata.");
-    }
-
     public function edit(Plesso $sede): View
     {
-        $organizzazioni = Istituto::orderBy('tipo')->orderBy('descrizione')->get();
+        $organizzazioni = Istituto::with('categoria')->orderBy('descrizione')->get()
+            ->sortBy([['categoria.ordine', 'asc'], ['categoria.nome', 'asc'], ['descrizione', 'asc']])->values();
         $altreSedi = Plesso::where('id_istituto', $sede->id_istituto)
             ->whereKeyNot($sede->id_plesso)->orderBy('nome')->get();
         $storico = $this->storico($sede);
@@ -91,7 +51,7 @@ class SediController extends Controller
             return $n;
         });
 
-        return redirect()->route('admin.sedi.edit', $destinazione)
+        return redirect()->route('admin.enti.show', $destinazione->id_istituto)
             ->with('success', "Sede \"{$sede->nome}\" unita a \"{$destinazione->nome}\": {$spostate} segnalazioni spostate.");
     }
 
@@ -125,7 +85,7 @@ class SediController extends Controller
 
         $sede->update($data);
 
-        return redirect()->route('admin.sedi.index', ['id_istituto' => $sede->id_istituto])
+        return redirect()->route('admin.enti.show', $sede->id_istituto)
             ->with('success', "Sede \"{$sede->nome}\" aggiornata.");
     }
 
@@ -142,7 +102,7 @@ class SediController extends Controller
         $idIstituto = $sede->id_istituto;
         $sede->delete();
 
-        return redirect()->route('admin.sedi.index', ['id_istituto' => $idIstituto])
+        return redirect()->route('admin.enti.show', $idIstituto)
             ->with('success', "Sede \"{$nome}\" eliminata.");
     }
 }

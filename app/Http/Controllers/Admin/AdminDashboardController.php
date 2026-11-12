@@ -3,32 +3,30 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Appalto;
-use App\Models\Istituto;
-use App\Models\Impresa;
-use App\Models\Plesso;
-use App\Models\SlaConfigurazione;
-use App\Models\User;
-use App\Services\Backup\CatalogoBackup;
-use Carbon\CarbonImmutable;
+use App\Services\Admin\Riquadro;
+use App\Services\Admin\StatoSistema;
 use Illuminate\View\View;
 
 class AdminDashboardController extends Controller
 {
-    public function index(CatalogoBackup $backup): View
+    /** Cosa va guardato per primo: problemi, poi attenzioni, poi il non verificabile, poi il resto. */
+    private const PRIORITA = [
+        Riquadro::PROBLEMA => 0,
+        Riquadro::ATTENZIONE => 1,
+        Riquadro::NON_VERIFICABILE => 2,
+        Riquadro::OK => 3,
+    ];
+
+    public function index(StatoSistema $stato): View
     {
-        $conteggi = [
-            'utenti_attivi' => User::where('attivo', true)->count(),
-            'utenti_disattivati' => User::where('attivo', false)->count(),
-            'enti' => Istituto::count(),
-            'sedi' => Plesso::count(),
-            'imprese' => Impresa::count(),
-            'appalti' => Appalto::count(),
-            'sla' => SlaConfigurazione::count(),
-        ];
+        $riquadri = collect($stato->riquadri())
+            ->sortBy(fn (Riquadro $r) => self::PRIORITA[$r->stato])
+            ->values()
+            ->all();
 
-        $backupInAllarme = $backup->inAllarme(CarbonImmutable::now());
-
-        return view('admin.dashboard', compact('conteggi', 'backupInAllarme'));
+        return view('admin.stato.index', [
+            'riquadri' => $riquadri,
+            'spente' => $stato->spente(),
+        ]);
     }
 }

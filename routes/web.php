@@ -1,17 +1,20 @@
 <?php
 
 use App\Http\Controllers\Admin\AnagrafeMiurController;
+use App\Http\Controllers\Admin\AspettoController;
 use App\Http\Controllers\Admin\BackupController;
+use App\Http\Controllers\Admin\IntegrazioniController;
 use App\Http\Controllers\Admin\DelegheController;
 use App\Http\Controllers\Deleghe\DecisioneDelegaController;
 use App\Http\Controllers\Deleghe\RinnovoDelegheController;
 use App\Http\Controllers\DelegheScuolaController;
-use App\Http\Controllers\Admin\ImpostazioniController;
 use App\Http\Controllers\Admin\AdminDashboardController;
-use App\Http\Controllers\Admin\OrganizzazioniController;
-use App\Http\Controllers\Admin\ProfiliController;
-use App\Http\Controllers\Admin\ProvenienzaController;
+use App\Http\Controllers\Admin\EntiController;
+use App\Http\Controllers\Admin\CategorieEntiController;
 use App\Http\Controllers\Admin\SediController;
+use App\Http\Controllers\Admin\Regole\AvvisiController;
+use App\Http\Controllers\Admin\Regole\ScadenzeController;
+use App\Http\Controllers\Admin\Regole\SegnalazioniController as RegoleSegnalazioniController;
 use App\Http\Controllers\Admin\SlaController;
 use App\Http\Controllers\Organizzazione\SquadreController;
 use App\Http\Controllers\Organizzazione\TipologieGestoriController;
@@ -170,10 +173,12 @@ Route::middleware(['auth', 'role:admin|gestore'])
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/impostazioni', [ImpostazioniController::class, 'index'])->name('impostazioni.index');
-    Route::patch('/impostazioni', [ImpostazioniController::class, 'update'])->name('impostazioni.update');
-    Route::post('/impostazioni/pubblica-esistenti', [ImpostazioniController::class, 'pubblicaEsistenti'])->name('impostazioni.pubblica-esistenti');
+    // Vecchia pagina unica delle impostazioni (segnalibri, email): ora Aspetto.
+    Route::get('impostazioni', fn () => redirect()->route('admin.aspetto', [], 301));
 
+    Route::get('utenti/dominio', [UtentiController::class, 'dominio'])->name('utenti.dominio');
+    Route::get('utenti/scuole', [UtentiController::class, 'scuole'])->name('utenti.scuole');
+    Route::get('utenti/ditte', [UtentiController::class, 'ditte'])->name('utenti.ditte');
     Route::patch('utenti/{utente}/attivo', [UtentiController::class, 'toggleAttivo'])
         ->name('utenti.toggle-attivo');
     Route::post('utenti/sincronizza', [UtentiController::class, 'sincronizza'])
@@ -183,12 +188,30 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         ->except(['show', 'create', 'store'])
         ->parameters(['utenti' => 'utente']);
 
-    Route::resource('organizzazioni', OrganizzazioniController::class)
-        ->except(['show'])
-        ->parameters(['organizzazioni' => 'organizzazione']);
+    // Enti (ex Organizzazioni) e sedi in una sezione sola.
+    Route::get('enti', [EntiController::class, 'index'])->name('enti.index');
+    Route::get('enti/nuovo', [EntiController::class, 'create'])->name('enti.create');
+    Route::post('enti', [EntiController::class, 'store'])->name('enti.store');
+    Route::get('enti/{ente}', [EntiController::class, 'show'])->name('enti.show');
+    Route::patch('enti/{ente}', [EntiController::class, 'update'])->name('enti.update');
+    Route::delete('enti/{ente}', [EntiController::class, 'destroy'])->name('enti.destroy');
+    Route::post('enti/{ente}/sedi', [EntiController::class, 'storeSede'])->name('enti.sedi.store');
+
+    Route::post('categorie-enti', [CategorieEntiController::class, 'store'])->name('categorie-enti.store');
+    Route::patch('categorie-enti/{categoria}', [CategorieEntiController::class, 'update'])->name('categorie-enti.update');
+    Route::delete('categorie-enti/{categoria}', [CategorieEntiController::class, 'destroy'])->name('categorie-enti.destroy');
+
+    // Vecchi URL (segnalibri): mai 404.
+    Route::redirect('organizzazioni', '/admin/enti', 301);
+    Route::redirect('organizzazioni/create', '/admin/enti', 301);
+    Route::get('organizzazioni/{id}/edit', fn (int $id) => redirect()->route('admin.enti.show', $id, 301))->whereNumber('id');
+    Route::get('sedi', fn (\Illuminate\Http\Request $request) => $request->filled('id_istituto')
+        ? redirect()->route('admin.enti.show', (int) $request->query('id_istituto'), 301)
+        : redirect()->route('admin.enti.index', [], 301));
+    Route::redirect('sedi/create', '/admin/enti', 301);
 
     Route::resource('sedi', SediController::class)
-        ->except(['show'])
+        ->only(['edit', 'update', 'destroy'])
         ->parameters(['sedi' => 'sede']);
     Route::post('sedi/{sede}/unisci', [SediController::class, 'unisci'])->name('sedi.unisci');
 
@@ -219,13 +242,29 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('deleghe/verifica/{utente}', [DelegheController::class, 'reinviaVerifica'])
         ->middleware('throttle:6,1')->name('deleghe.reinvia-verifica');
 
-    Route::resource('profili', ProfiliController::class)
-        ->except(['show'])
-        ->parameters(['profili' => 'profilo']);
+    // Pagine rimosse: i vecchi URL (e sotto-percorsi) portano alla dashboard admin.
+    Route::redirect('profili', '/admin', 301);
+    Route::redirect('provenienze', '/admin', 301);
+    Route::get('profili/{any}', fn () => redirect()->route('admin.dashboard', [], 301))->where('any', '.*');
+    Route::get('provenienze/{any}', fn () => redirect()->route('admin.dashboard', [], 301))->where('any', '.*');
 
-    Route::resource('provenienze', ProvenienzaController::class)
-        ->except(['show'])
-        ->parameters(['provenienze' => 'provenienza']);
+    Route::get('aspetto', [AspettoController::class, 'index'])->name('aspetto');
+    Route::patch('aspetto', [AspettoController::class, 'update'])->name('aspetto.update');
+    Route::get('integrazioni', [IntegrazioniController::class, 'index'])->name('integrazioni');
+    Route::patch('integrazioni/{sezione}', [IntegrazioniController::class, 'update'])
+        ->whereIn('sezione', array_keys(IntegrazioniController::SEZIONI))->name('integrazioni.update');
+    Route::post('integrazioni/{sezione}/prova', [IntegrazioniController::class, 'prova'])
+        ->whereIn('sezione', IntegrazioniController::CON_PROVA)->name('integrazioni.prova');
+
+    Route::prefix('regole')->name('regole.')->group(function () {
+        Route::get('scadenze', [ScadenzeController::class, 'index'])->name('scadenze');
+        Route::patch('scadenze/orario', [ScadenzeController::class, 'orario'])->name('orario');
+        Route::get('segnalazioni', [RegoleSegnalazioniController::class, 'index'])->name('segnalazioni');
+        Route::patch('segnalazioni', [RegoleSegnalazioniController::class, 'update'])->name('segnalazioni.update');
+        Route::post('segnalazioni/pubblica-esistenti', [RegoleSegnalazioniController::class, 'pubblicaEsistenti'])->name('pubblica-esistenti');
+        Route::get('avvisi', [AvvisiController::class, 'index'])->name('avvisi');
+        Route::patch('avvisi', [AvvisiController::class, 'update'])->name('avvisi.update');
+    });
 
     Route::resource('sla', SlaController::class)
         ->except(['show'])
@@ -234,6 +273,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
 // ── Organizzazione (admin + supervisori): squadre e tipologie dei gestori ─────
 Route::middleware(['auth', 'can:gestisci-organizzazione'])->prefix('organizzazione')->name('organizzazione.')->group(function () {
+    Route::patch('squadre/attiva', [SquadreController::class, 'attiva'])
+        ->middleware('role:admin')->name('squadre.attiva');
     Route::resource('squadre', SquadreController::class)
         ->except(['show'])
         ->parameters(['squadre' => 'squadra']);

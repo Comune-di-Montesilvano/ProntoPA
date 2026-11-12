@@ -128,4 +128,17 @@ class SquadreGestioneTest extends TestCase
             ->assertOk()
             ->assertSee('Le squadre sono disattivate');
     }
+
+    public function test_riquadro_interruttore_solo_per_admin(): void
+    {
+        $this->actingAs($this->admin())->get(route('organizzazione.squadre.index'))
+            ->assertOk()
+            ->assertSee('Usa le squadre di operai');
+
+        $supervisore = User::factory()->create(['supervisore_segnalazioni' => true]);
+        $supervisore->assignRole('gestore');
+        $this->actingAs($supervisore)->get(route('organizzazione.squadre.index'))
+            ->assertOk()
+            ->assertDontSee('Usa le squadre di operai');
+    }
 }

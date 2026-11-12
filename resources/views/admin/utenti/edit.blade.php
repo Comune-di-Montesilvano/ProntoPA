@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">Modifica utente — {{ $utente->username }}</x-slot>
     <x-slot name="actions">
-        <a href="{{ route('admin.utenti.index') }}"
+        <a href="{{ route($lista) }}"
            class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
             Indietro
         </a>
@@ -20,7 +20,7 @@
             <div class="px-4 py-3 border border-blue-200 bg-blue-50 rounded-lg text-sm text-blue-900">
                 <p class="m-0"><strong>Gestito da Active Directory.</strong>
                     Nome, username, email, ruolo e stato arrivano dal dominio e vengono riallineati a ogni sincronizzazione:
-                    per cambiarli modifica l'account o i gruppi ProntoPA in AD. Qui puoi cambiare solo telefono e profilo.</p>
+                    per cambiarli modifica l'account o i gruppi ProntoPA in AD. Qui puoi cambiare solo il telefono.</p>
                 <dl class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
                     <div><dt class="inline text-blue-700">Nome:</dt> <dd class="inline m-0">{{ $utente->name }}</dd></div>
                     <div><dt class="inline text-blue-700">Username:</dt> <dd class="inline m-0">{{ $utente->username }}</dd></div>
@@ -113,23 +113,6 @@
             </div>
             @endif
 
-            {{-- Profilo --}}
-            <div>
-                <x-input-label for="id_profilo" value="Profilo" />
-                <select id="id_profilo" name="id_profilo"
-                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    <option value="">— Nessuno —</option>
-                    @foreach($profili as $p)
-                        <option value="{{ $p->id_profilo }}"
-                            {{ old('id_profilo', $utente->id_profilo) == $p->id_profilo ? 'selected' : '' }}>
-                            {{ $p->descrizione }}
-                            @if($p->limita_istituto && $p->istituto) ({{ $p->istituto->descrizione }}) @endif
-                        </option>
-                    @endforeach
-                </select>
-                <x-input-error :messages="$errors->get('id_profilo')" class="mt-1" />
-            </div>
-
             {{-- Provenienza (per gli utenti di dominio la decide il gruppo AD) --}}
             @unless($daAd)
             <div>
@@ -149,7 +132,7 @@
             @endunless
 
             <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
-                <a href="{{ route('admin.utenti.index') }}" class="text-sm text-gray-500 hover:text-gray-700">Annulla</a>
+                <a href="{{ route($lista) }}" class="text-sm text-gray-500 hover:text-gray-700">Annulla</a>
                 <button type="submit"
                         class="inline-flex items-center px-5 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
                     Salva modifiche

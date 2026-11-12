@@ -29,7 +29,7 @@ class DelegaScuolaTest extends DuskTestCase
 
     public function test_richiesta_approvazione_e_segnalazione(): void
     {
-        $istituto = Istituto::create(['descrizione' => 'IC Delfico', 'codice_meccanografico' => 'PEIC82600C', 'email' => 'peic82600c@istruzione.it', 'tipo' => 'Scuola', 'tipo_ente' => 'scuola', 'attivo' => true]);
+        $istituto = Istituto::create(['descrizione' => 'IC Delfico', 'codice_meccanografico' => 'PEIC82600C', 'email' => 'peic82600c@istruzione.it', 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => true]);
         Plesso::create(['id_istituto' => $istituto->id_istituto, 'nome' => 'Media Delfico', 'codice_meccanografico' => 'PEMM82601D']);
         $user = User::factory()->create([
             'auth_source' => 'spid', 'codice_fiscale' => 'VRDLGU75B02H501K', 'username' => 'VRDLGU75B02H501K',

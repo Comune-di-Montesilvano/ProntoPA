@@ -5,9 +5,6 @@ namespace Tests\Feature;
 use App\Models\AdesioneSegnalazione;
 use App\Models\Appalto;
 use App\Models\Impresa;
-use App\Models\Istituto;
-use App\Models\Plesso;
-use App\Models\Profilo;
 use App\Models\Segnalazione;
 use App\Models\Squadra;
 use App\Models\User;
@@ -71,18 +68,6 @@ class VisibilitaSchedaTest extends TestCase
 
         $this->actingAs($partecipante)->get(route('segnalazioni.show', $aderita))->assertOk();
         $this->actingAs($partecipante)->get(route('segnalazioni.show', $altra))->assertForbidden();
-    }
-
-    public function test_segnalatore_scuola_apre_cio_che_vede_in_elenco(): void
-    {
-        $istituto = Istituto::create(['descrizione' => 'IC Test']);
-        $plesso = Plesso::create(['nome' => 'Plesso A', 'id_istituto' => $istituto->id_istituto]);
-        $profilo = Profilo::create(['descrizione' => 'Scuola', 'limita_istituto' => true, 'id_istituto' => $istituto->id_istituto]);
-        $segnalatore = $this->utente('segnalatore', ['id_profilo' => $profilo->id_profilo]);
-        $delCollega = Segnalazione::factory()->create(['id_plesso' => $plesso->id_plesso]);
-
-        $this->assertTrue(Segnalazione::visibileA($segnalatore)->whereKey($delCollega->getKey())->exists());
-        $this->actingAs($segnalatore)->get(route('segnalazioni.show', $delCollega))->assertOk();
     }
 
     public function test_comunica_fine_lavori_ditta_e_operaio_assegnati(): void

@@ -71,6 +71,16 @@ class OllamaService
         return null;
     }
 
+    /** Ollama risponde? (prova dall'admin: timeout 2 s, mai eccezioni). */
+    public function raggiungibile(): bool
+    {
+        try {
+            return Http::timeout(2)->get($this->baseUrl() . '/api/tags')->successful();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     private function baseUrl(): string
     {
         return rtrim((string) Impostazione::get('ai_ollama_url', 'http://ollama:11434'), '/');

@@ -81,9 +81,9 @@ class RichiesteDelegaSpidTest extends TestCase
 
     public function test_nuova_organizzazione_manuale_parte_senza_richieste_spid(): void
     {
-        $this->actingAs($this->admin)->post(route('admin.organizzazioni.store'), [
-            'descrizione' => 'Asili Nido Comunali', 'tipo' => 'Scuola', 'tipo_ente' => 'scuola', 'attivo' => '1',
-        ])->assertRedirect(route('admin.organizzazioni.index'));
+        $this->actingAs($this->admin)->post(route('admin.enti.store'), [
+            'descrizione' => 'Asili Nido Comunali', 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => '1',
+        ])->assertRedirect();
 
         $ist = Istituto::where('descrizione', 'Asili Nido Comunali')->sole();
         $this->assertTrue($ist->attivo);
@@ -94,10 +94,10 @@ class RichiesteDelegaSpidTest extends TestCase
     {
         $ist = $this->asiloSenzaRichieste();
 
-        $this->actingAs($this->admin)->put(route('admin.organizzazioni.update', $ist), [
-            'descrizione' => $ist->descrizione, 'tipo' => 'Scuola', 'tipo_ente' => 'scuola',
+        $this->actingAs($this->admin)->patch(route('admin.enti.update', $ist), [
+            'descrizione' => $ist->descrizione, 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria,
             'codice_meccanografico' => $ist->codice_meccanografico, 'attivo' => '1', 'richieste_delega_spid' => '1',
-        ])->assertRedirect(route('admin.organizzazioni.index'));
+        ])->assertRedirect();
 
         $this->assertTrue($ist->fresh()->richieste_delega_spid);
     }

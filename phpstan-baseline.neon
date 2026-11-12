@@ -7,12 +7,6 @@ parameters:
 			path: app/Console/Commands/AutoPublishSegnalazioni.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$annual_verification_due_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Console/Commands/CheckAnnualAccountVerification.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$livello_priorita\.$#'
 			identifier: property.notFound
 			count: 1
@@ -47,24 +41,6 @@ parameters:
 			identifier: larastan.relationExistence
 			count: 1
 			path: app/Http/Controllers/Admin/AdminDashboardController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Istituto\:\:\$descrizione\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Admin/OrganizzazioniController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Profilo\:\:\$descrizione\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Admin/ProfiliController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Provenienza\:\:\$descrizione\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Admin/ProvenienzaController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Plesso\:\:\$id_istituto\.$#'
@@ -116,12 +92,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$id_impresa\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/UtentiController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$id_profilo\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/Admin/UtentiController.php
@@ -325,28 +295,10 @@ parameters:
 			path: app/Http/Controllers/Api/TelegramWebhookController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$annual_verification_due_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Auth/AnnualAccountVerificationController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$annual_verification_token_hash\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Auth/AnnualAccountVerificationController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$email\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/Auth/ConfirmablePasswordController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Istituto\:\:\$domini_email_istituzionali\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Auth/RegisteredUserController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$data_chiusura\.$#'
@@ -407,24 +359,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/ImpreseDashboardController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Azione\:\:\$codice\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/MagicLinkController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Azione\:\:\$flag_preventivo\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/MagicLinkController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id_impresa\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/MagicLinkController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Segnalazione\:\:\$id_squadra_assegnata\.$#'

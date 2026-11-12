@@ -15,7 +15,7 @@ class SchemaMiurTest extends TestCase
 
     public function test_plesso_ha_fonte_dati_manuale_di_default(): void
     {
-        $istituto = Istituto::create(['descrizione' => 'X', 'codice_meccanografico' => 'PEIC000001']);
+        $istituto = Istituto::create(['id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'descrizione' => 'X', 'codice_meccanografico' => 'PEIC000001']);
         $plesso = Plesso::create(['id_istituto' => $istituto->id_istituto, 'nome' => 'Sede']);
 
         $this->assertSame('manuale', $plesso->fresh()->fonte_dati);
@@ -25,7 +25,7 @@ class SchemaMiurTest extends TestCase
     public function test_nomi_lunghi_accettati(): void
     {
         $lungo = str_repeat('A', 200);
-        $istituto = Istituto::create(['descrizione' => $lungo, 'codice_meccanografico' => 'PEIC000001']);
+        $istituto = Istituto::create(['id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'descrizione' => $lungo, 'codice_meccanografico' => 'PEIC000001']);
         $plesso = Plesso::create(['id_istituto' => $istituto->id_istituto, 'nome' => $lungo, 'indirizzo' => $lungo]);
 
         $this->assertSame($lungo, $istituto->fresh()->descrizione);
@@ -34,7 +34,7 @@ class SchemaMiurTest extends TestCase
 
     public function test_scope_con_codice_ignora_maiuscole_e_spazi(): void
     {
-        $istituto = Istituto::create(['descrizione' => 'X', 'codice_meccanografico' => ' peic828004 ']);
+        $istituto = Istituto::create(['id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'descrizione' => 'X', 'codice_meccanografico' => ' peic828004 ']);
         Plesso::create(['id_istituto' => $istituto->id_istituto, 'nome' => 'S', 'codice_meccanografico' => 'peaa828033']);
 
         $this->assertTrue(Istituto::conCodice('PEIC828004')->exists());

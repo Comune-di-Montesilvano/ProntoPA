@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">Modifica sede</x-slot>
     <x-slot name="actions">
-        <a href="{{ route('admin.sedi.index', ['id_istituto' => $sede->id_istituto]) }}"
+        <a href="{{ route('admin.enti.show', $sede->id_istituto) }}"
            class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
             Annulla
         </a>
@@ -15,16 +15,16 @@
             @if($miur)
                 <p class="text-sm bg-blue-50 text-blue-800 rounded-md p-3">
                     Dati da anagrafe MIUR: nome, codice, indirizzo ed email si aggiornano da
-                    <a href="{{ route('admin.anagrafe-miur.index') }}" class="underline">Admin → Anagrafe MIUR</a>.
+                    <a href="{{ route('admin.anagrafe-miur.index') }}" class="underline">Aggiungi da MIUR</a>.
                 </p>
             @endif
 
             <div>
-                <x-input-label for="id_istituto" value="Organizzazione *" />
+                <x-input-label for="id_istituto" value="Ente *" />
                 <select id="id_istituto" name="id_istituto" @disabled($miur) @if(! $miur) required @endif
                         class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_istituto') border-red-500 @enderror">
                     <option value="">— Seleziona —</option>
-                    @foreach($organizzazioni->groupBy('tipo') as $tipo => $items)
+                    @foreach($organizzazioni->groupBy(fn($o) => $o->categoria?->nome ?? '—') as $tipo => $items)
                         <optgroup label="{{ $tipo }}">
                             @foreach($items as $org)
                                 <option value="{{ $org->id_istituto }}"
@@ -88,7 +88,7 @@
             </div>
 
             <div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
-                <a href="{{ route('admin.sedi.index', ['id_istituto' => $sede->id_istituto]) }}"
+                <a href="{{ route('admin.enti.show', $sede->id_istituto) }}"
                    class="text-sm text-gray-500 hover:text-gray-700">Annulla</a>
                 <button type="submit"
                         class="inline-flex items-center px-5 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-sm text-white uppercase tracking-widest hover:bg-blue-700 transition">

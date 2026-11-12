@@ -13,13 +13,9 @@ use Illuminate\View\View;
 
 class SlaController extends Controller
 {
-    public function index(): View
+    public function index(): RedirectResponse
     {
-        $regole = SlaConfigurazione::with(['tipologia', 'specializzazione'])
-            ->orderBy('livello_priorita')
-            ->get();
-
-        return view('admin.sla.index', compact('regole'));
+        return redirect()->route('admin.regole.scadenze', [], 301);
     }
 
     public function create(): View
@@ -37,7 +33,7 @@ class SlaController extends Controller
         SlaConfigurazione::create($data);
         RicalcolaScadenzeSla::dispatch();
 
-        return redirect()->route('admin.sla.index')->with('success', 'Regola SLA creata: scadenze delle segnalazioni aperte in aggiornamento.');
+        return redirect()->route('admin.regole.scadenze')->with('success', 'Regola SLA creata: scadenze delle segnalazioni aperte in aggiornamento.');
     }
 
     public function edit(SlaConfigurazione $sla): View
@@ -54,7 +50,7 @@ class SlaController extends Controller
         $sla->update($this->validate($request));
         RicalcolaScadenzeSla::dispatch();
 
-        return redirect()->route('admin.sla.index')->with('success', 'Regola SLA aggiornata: scadenze delle segnalazioni aperte in aggiornamento.');
+        return redirect()->route('admin.regole.scadenze')->with('success', 'Regola SLA aggiornata: scadenze delle segnalazioni aperte in aggiornamento.');
     }
 
     public function destroy(SlaConfigurazione $sla): RedirectResponse
@@ -62,7 +58,7 @@ class SlaController extends Controller
         $sla->delete();
         RicalcolaScadenzeSla::dispatch();
 
-        return redirect()->route('admin.sla.index')->with('success', 'Regola SLA eliminata: scadenze delle segnalazioni aperte in aggiornamento.');
+        return redirect()->route('admin.regole.scadenze')->with('success', 'Regola SLA eliminata: scadenze delle segnalazioni aperte in aggiornamento.');
     }
 
     private function validate(Request $request): array

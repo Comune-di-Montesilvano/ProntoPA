@@ -258,6 +258,11 @@ class RipristinoServiceTest extends TestCase
         $this->assertNotNull($plesso);
         $this->assertSame('manuale', $plesso->fonte_dati);
         $this->assertSame('IC Vecchio', DB::table('istituti')->value('descrizione'));
+        // Migration categorie: l'istituto del backup vecchio finisce in "Scuole", nessuno resta senza categoria.
+        $categoria = DB::table('istituti')->join('categorie_enti', 'categorie_enti.id_categoria', '=', 'istituti.id_categoria')
+            ->where('istituti.descrizione', 'IC Vecchio')->value('categorie_enti.nome');
+        $this->assertSame('Scuole', $categoria);
+        $this->assertSame(0, DB::table('istituti')->whereNull('id_categoria')->count());
     }
 
     public function test_fallimento_a_meta_fa_rollback(): void

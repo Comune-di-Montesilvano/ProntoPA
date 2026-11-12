@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Scuole;
 
+use App\Models\CategoriaEnte;
 use App\Models\Istituto;
 use App\Models\Plesso;
 use App\Models\Segnalazione;
@@ -38,6 +39,29 @@ class SincronizzaScuoleTest extends TestCase
         return app(SincronizzaScuole::class);
     }
 
+    public function test_import_usa_categoria_import_miur(): void
+    {
+        $categoria = CategoriaEnte::perImportMiur();
+        $categoria->update(['nome' => 'Statali']);
+
+        $this->sync()->applicaSelezione('PEIC828004', []);
+
+        $istituto = Istituto::conCodice('PEIC828004')->sole();
+        $this->assertSame($categoria->id_categoria, $istituto->id_categoria);
+        $this->assertSame('Statali', $istituto->categoria->nome);
+    }
+
+    public function test_riallineamento_non_cambia_categoria_scelta(): void
+    {
+        $this->sync()->applicaSelezione('PEIC828004', []);
+        $altra = CategoriaEnte::factory()->create(['nome' => 'Altra']);
+        Istituto::conCodice('PEIC828004')->sole()->update(['id_categoria' => $altra->id_categoria]);
+
+        $this->sync()->riallinea();
+
+        $this->assertSame($altra->id_categoria, Istituto::conCodice('PEIC828004')->sole()->id_categoria);
+    }
+
     public function test_crea_istituto_e_sedi_selezionate(): void
     {
         $esito = $this->sync()->applicaSelezione('PEIC828004', ['PEMM828015', 'PEAA828033']);
@@ -46,7 +70,7 @@ class SincronizzaScuoleTest extends TestCase
         $this->assertSame('I. C. I.SILONE-MONTESILVANO', $istituto->descrizione);
         $this->assertSame('PEIC828004@istruzione.it', $istituto->email);
         $this->assertSame('miur', $istituto->fonte_dati);
-        $this->assertSame('scuola', $istituto->tipo_ente);
+        $this->assertSame(CategoriaEnte::perImportMiur()->id_categoria, $istituto->id_categoria);
         $this->assertTrue((bool) $istituto->attivo);
 
         $sm = Plesso::conCodice('PEMM828015')->sole();
@@ -61,7 +85,7 @@ class SincronizzaScuoleTest extends TestCase
 
     public function test_adotta_istituto_legacy_con_codice_minuscolo(): void
     {
-        $legacy = Istituto::create(['descrizione' => 'SILONE vecchio', 'codice_meccanografico' => ' peic828004 ', 'fonte_dati' => 'manuale']);
+        $legacy = Istituto::create(['id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'descrizione' => 'SILONE vecchio', 'codice_meccanografico' => ' peic828004 ', 'fonte_dati' => 'manuale']);
         $plesso = Plesso::create(['id_istituto' => $legacy->id_istituto, 'nome' => 'Media', 'codice_meccanografico' => 'pemm828015']);
 
         $esito = $this->sync()->applicaSelezione('PEIC828004', ['PEMM828015']);
@@ -107,7 +131,7 @@ class SincronizzaScuoleTest extends TestCase
     public function test_riallinea_aggiorna_miur_e_non_tocca_manuali(): void
     {
         $this->sync()->applicaSelezione('PEIC828004', ['PEMM828015']);
-        $manuale = Istituto::create(['descrizione' => 'Mio nome', 'codice_meccanografico' => 'PEEE037001', 'fonte_dati' => 'manuale']);
+        $manuale = Istituto::create(['id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'descrizione' => 'Mio nome', 'codice_meccanografico' => 'PEEE037001', 'fonte_dati' => 'manuale']);
 
         $nuovo = str_replace(['S.M. I.SILONE - MONTESILVANO', 'D.D. MONTESILVANO'], ['SCUOLA MEDIA SILONE', 'D.D. NUOVO NOME'], file_get_contents(base_path('tests/Fixtures/miur/anagrafe.json')));
         $this->usaFixture($nuovo);

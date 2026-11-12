@@ -90,7 +90,7 @@ class SchedaLettureTest extends TestCase
 
     public function test_ditta_vede_chiama_referente(): void
     {
-        $istituto = Istituto::create(['descrizione' => 'IC Rodari', 'tipo' => 'Scuola', 'tipo_ente' => 'scuola', 'attivo' => true]);
+        $istituto = Istituto::create(['descrizione' => 'IC Rodari', 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => true]);
         $plesso = Plesso::create(['id_istituto' => $istituto->id_istituto, 'nome' => 'Plesso Rodari', 'referente' => 'Maria Bianchi', 'recapiti' => '085 123456']);
         $this->s->update(['id_plesso' => $plesso->id_plesso]);
 

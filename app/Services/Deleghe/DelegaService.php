@@ -71,7 +71,7 @@ class DelegaService
         }
 
         if (blank($istituto->email)) {
-            $this->avvisaAdmin('scuola senza email', "La scuola {$istituto->descrizione} non ha un indirizzo email: le richieste di delega non possono partire. Configurala da Admin → Anagrafe MIUR o Organizzazioni.");
+            $this->avvisaAdmin('scuola senza email', "La scuola {$istituto->descrizione} non ha un indirizzo email: le richieste di delega non possono partire. Configurala da Admin → Enti e sedi.");
             throw new RichiestaDelegaRifiutata("La scuola non è ancora configurata: abbiamo avvisato l'ente.");
         }
 

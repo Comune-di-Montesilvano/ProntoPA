@@ -75,23 +75,25 @@ class SegnalazioneController extends Controller
 
     public function create(): View
     {
-        $user    = auth()->user();
-        $profilo = $user->profilo;
+        $user = auth()->user();
 
-        $tipologie   = TipologiaSegnalazione::with('gruppo')->orderBy('descrizione')->get();
+        $tipologie  = TipologiaSegnalazione::with('gruppo')->orderBy('descrizione')->get();
         $provenienze = Provenienza::orderBy('descrizione')->get();
 
         if ($user->isSpid()) {
-            $plessi = Plesso::with('istituto')
+            $plessi = Plesso::with('istituto.categoria')
                             ->whereIn('id_plesso', Delega::plessiCopertiDa($user))
-                            ->orderBy('nome')->get();
-        } elseif ($profilo && $profilo->limita_istituto && $profilo->id_istituto) {
-            $plessi = Plesso::with('istituto')
-                            ->where('id_istituto', $profilo->id_istituto)
-                            ->orderBy('nome')->get();
+                            ->get();
         } else {
-            $plessi = Plesso::with('istituto')->orderBy('nome')->get();
+            $plessi = Plesso::with('istituto.categoria')->get();
         }
+        // Per categoria (ordine configurato), poi ente, poi sede: la select le raggruppa in questo ordine.
+        $plessi = $plessi->sortBy([
+            ['istituto.categoria.ordine', 'asc'],
+            ['istituto.categoria.nome', 'asc'],
+            ['istituto.descrizione', 'asc'],
+            ['nome', 'asc'],
+        ])->values();
 
         $provenienza_default = $user->id_provenienza;
         $specializzazioni    = Specializzazione::orderBy('descrizione')->get();

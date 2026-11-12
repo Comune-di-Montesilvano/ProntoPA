@@ -38,6 +38,6 @@ class SyncAdFallitaNotification extends Notification implements ShouldQueue
         return $this->baseMailMessage($titolo)
             ->line($this->motivo)
             ->line('Gli utenti di ProntoPA non sono stati modificati. Controlla la configurazione AD e i gruppi, poi usa "Sincronizza ora" in Admin → Utenti.')
-            ->action('Apri Admin → Utenti', route('admin.utenti.index'));
+            ->action('Apri Admin → Utenti', route('admin.utenti.dominio'));
     }
 }

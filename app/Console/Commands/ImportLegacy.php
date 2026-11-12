@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Scuole\CategoriaIniziale;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -42,7 +43,6 @@ class ImportLegacy extends Command
 
         $this->importIstituti();
         $this->importPlessi();
-        $this->importProfili();
         $this->importImprese();
         $this->importAppalti();
 
@@ -82,7 +82,6 @@ class ImportLegacy extends Command
         DB::table('imprese')->truncate();
         DB::table('plessi')->truncate();
         DB::table('istituti')->truncate();
-        DB::table('profili')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
         $this->line('  Fatto.');
     }
@@ -109,6 +108,13 @@ class ImportLegacy extends Command
         $this->info('Importazione istituti...');
         $rows = $this->legacy()->table('istituti')->get();
         $riusati = 0;
+        // Gli istituti legacy sono scuole: stessa categoria che la migration dà ai tipi_ente "scuola".
+        $nomeCategoria = CategoriaIniziale::per(null, null, 'scuola');
+        $idCategoria = CategoriaIniziale::trovaOCrea(
+            $nomeCategoria,
+            (int) DB::table('categorie_enti')->max('ordine') + 1,
+            false,
+        );
         foreach ($rows as $r) {
             $codice = strtoupper(trim((string) $r->codice_meccanografico));
             $esistente = $codice === '' ? null
@@ -122,6 +128,7 @@ class ImportLegacy extends Command
 
             $this->istitutoMap[$r->id_istituto] = (int) DB::table('istituti')->insertGetId([
                 'descrizione'           => $r->descrizione,
+                'id_categoria'          => $idCategoria,
                 'codice_meccanografico' => $codice,
                 'dirigente'             => $r->dirigente,
                 'email'                 => $r->email,
@@ -174,23 +181,6 @@ class ImportLegacy extends Command
             ]);
         }
         $this->line("  {$rows->count()} plessi ({$riusati} già presenti, riusati).");
-    }
-
-    private function importProfili(): void
-    {
-        $this->info('Importazione profili...');
-        $rows = $this->legacy()->table('profili')->get();
-        foreach ($rows as $r) {
-            DB::table('profili')->updateOrInsert(
-                ['id_profilo' => $r->id_profilo],
-                [
-                    'descrizione'    => $r->descrizione,
-                    'limita_istituto' => (bool) $r->limita_istituto,
-                    'id_istituto'    => $this->istitutoMap[$r->id_istituto] ?? null,
-                ]
-            );
-        }
-        $this->line("  {$rows->count()} profili.");
     }
 
     private function importAppalti(): void
@@ -279,7 +269,6 @@ class ImportLegacy extends Command
                 'email'                     => $email,
                 'password'                  => Hash::make(str()->random(40)),
                 'password_legacy'           => null,
-                'id_profilo'                => $u->id_profilo ?: null,
                 'id_provenienza'            => $u->id_provenienza ?: null,
                 'amministratore'            => false,
                 'gestore_segnalazioni'      => false,

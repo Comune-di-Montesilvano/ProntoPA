@@ -75,9 +75,9 @@ class AutoPublishSegnalazioniTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole('admin');
 
-        $this->actingAs($admin)->get(route('admin.impostazioni.index'))
+        $this->actingAs($admin)->get(route('admin.regole.segnalazioni'))
             ->assertSee('Applica alle segnalazioni esistenti');
-        $this->actingAs($admin)->post(route('admin.impostazioni.pubblica-esistenti'))
+        $this->actingAs($admin)->post(route('admin.regole.pubblica-esistenti'))
             ->assertSessionHas('success', 'Regola applicata: 2 segnalazioni pubblicate.');
 
         $this->assertSame(2, Segnalazione::pubbliche()->count());
@@ -90,7 +90,7 @@ class AutoPublishSegnalazioniTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole('admin');
 
-        $this->actingAs($admin)->post(route('admin.impostazioni.pubblica-esistenti'))->assertSessionHas('error');
+        $this->actingAs($admin)->post(route('admin.regole.pubblica-esistenti'))->assertSessionHas('error');
         $this->assertSame(0, Segnalazione::where('flag_pubblicata', true)->count());
     }
 
@@ -99,7 +99,7 @@ class AutoPublishSegnalazioniTest extends TestCase
         $gestore = User::factory()->create();
         $gestore->assignRole('gestore');
 
-        $this->actingAs($gestore)->post(route('admin.impostazioni.pubblica-esistenti'))->assertForbidden();
+        $this->actingAs($gestore)->post(route('admin.regole.pubblica-esistenti'))->assertForbidden();
     }
 
     public function test_toggle_riservata_from_gestione_dashboard(): void

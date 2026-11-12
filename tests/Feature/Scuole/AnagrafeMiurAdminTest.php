@@ -104,7 +104,7 @@ class AnagrafeMiurAdminTest extends TestCase
     public function test_pagina_istituto_preseleziona_sedi_presenti(): void
     {
         $this->conIndice();
-        $ist = Istituto::create(['descrizione' => 'X', 'codice_meccanografico' => 'PEIC828004']);
+        $ist = Istituto::create(['id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'descrizione' => 'X', 'codice_meccanografico' => 'PEIC828004']);
         Plesso::create(['id_istituto' => $ist->id_istituto, 'nome' => 'Media', 'codice_meccanografico' => 'PEMM828015']);
 
         $this->actingAs($this->utente('admin'))
@@ -130,7 +130,7 @@ class AnagrafeMiurAdminTest extends TestCase
         $admin = $this->utente('admin');
 
         $this->actingAs($admin)->post(route('admin.anagrafe-miur.salva', 'PEIC828004'), ['sedi' => ['PEMM828015', 'PEAA828033']])
-            ->assertRedirect(route('admin.anagrafe-miur.show', 'PEIC828004'));
+            ->assertRedirect(route('admin.enti.show', Istituto::conCodice('PEIC828004')->value('id_istituto')));
         $this->assertSame(2, Plesso::where('fonte_dati', 'miur')->count());
 
         $this->actingAs($admin)->post(route('admin.anagrafe-miur.salva', 'PEIC828004'), ['sedi' => ['PEMM828015']])
@@ -152,7 +152,7 @@ class AnagrafeMiurAdminTest extends TestCase
     public function test_riquadro_non_piu_presenti(): void
     {
         $this->conIndice();
-        Istituto::create(['descrizione' => 'Scuola chiusa', 'codice_meccanografico' => 'PEIC000000', 'fonte_dati' => 'miur']);
+        Istituto::create(['id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'descrizione' => 'Scuola chiusa', 'codice_meccanografico' => 'PEIC000000', 'fonte_dati' => 'miur']);
 
         $this->actingAs($this->utente('admin'))
             ->get(route('admin.anagrafe-miur.index'))

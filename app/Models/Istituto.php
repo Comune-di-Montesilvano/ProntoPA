@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Istituto extends Model
@@ -14,8 +15,7 @@ class Istituto extends Model
 
     protected $fillable = [
         'descrizione',
-        'tipo',
-        'tipo_ente',
+        'id_categoria',
         'codice_meccanografico',
         'partita_iva',
         'codice_fiscale',
@@ -27,6 +27,11 @@ class Istituto extends Model
         'richieste_delega_spid',
         'recapiti',
     ];
+
+    public function categoria(): BelongsTo
+    {
+        return $this->belongsTo(CategoriaEnte::class, 'id_categoria', 'id_categoria');
+    }
 
     public function plessi(): HasMany
     {

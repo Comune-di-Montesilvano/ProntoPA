@@ -32,7 +32,7 @@ class UnisciSediTest extends TestCase
         $this->admin->syncRoles(['admin']);
         $this->istituto = Istituto::create([
             'descrizione' => 'D.D. MONTESILVANO', 'codice_meccanografico' => 'PEEE037001',
-            'tipo' => 'Scuola', 'tipo_ente' => 'scuola', 'attivo' => true,
+            'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => true,
         ]);
     }
 
@@ -56,7 +56,7 @@ class UnisciSediTest extends TestCase
             ->assertSee('D.D. MONTESILVANO-V. VERROCCHIO — primaria · PEEE037078');
 
         $this->actingAs($this->admin)->post(route('admin.sedi.unisci', $legacy), ['id_destinazione' => $miur->id_plesso])
-            ->assertRedirect(route('admin.sedi.edit', $miur))
+            ->assertRedirect(route('admin.enti.show', $miur->id_istituto))
             ->assertSessionHas('success');
 
         $this->assertModelMissing($legacy);
@@ -66,7 +66,7 @@ class UnisciSediTest extends TestCase
 
     public function test_unisci_rifiuta_sede_di_altro_istituto(): void
     {
-        $altro = Istituto::create(['descrizione' => 'IC SILONE', 'tipo' => 'Scuola', 'tipo_ente' => 'scuola', 'attivo' => true]);
+        $altro = Istituto::create(['descrizione' => 'IC SILONE', 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => true]);
         $legacy = $this->plesso('vecchia');
         $estranea = $this->plesso('estranea', null, $altro);
 

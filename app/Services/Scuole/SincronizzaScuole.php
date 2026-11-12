@@ -2,6 +2,7 @@
 
 namespace App\Services\Scuole;
 
+use App\Models\CategoriaEnte;
 use App\Models\Istituto;
 use App\Models\Plesso;
 use App\Models\Segnalazione;
@@ -38,7 +39,12 @@ class SincronizzaScuole
         return DB::transaction(function () use ($dati, $sediMiur, $codiciSedi) {
             $esito = ['creati' => [], 'aggiornati' => [], 'adottati' => [], 'non_selezionati' => []];
 
-            $istituto = Istituto::conCodice($dati['codice'])->first() ?? new Istituto(['attivo' => true, 'richieste_delega_spid' => true]);
+            $istituto = Istituto::conCodice($dati['codice'])->first() ?? new Istituto([
+                'attivo' => true,
+                'richieste_delega_spid' => true,
+                // La categoria si assegna solo alla creazione: un riallineamento non tocca la scelta dell'admin.
+                'id_categoria' => CategoriaEnte::perImportMiur()->id_categoria,
+            ]);
             $istituto->fill($this->campiIstituto($dati))->save();
 
             foreach ($codiciSedi as $codice) {
@@ -146,8 +152,6 @@ class SincronizzaScuole
             'descrizione' => $dati['nome'],
             'codice_meccanografico' => $dati['codice'],
             'email' => $dati['email'] ?: null,
-            'tipo' => 'Scuola',
-            'tipo_ente' => 'scuola',
             'fonte_dati' => 'miur',
         ];
     }

@@ -71,11 +71,32 @@ class TelegramBotService
         } catch (\Throwable $exception) {
             Log::warning('Telegram API call failed', [
                 'method' => $method,
-                'error' => $exception->getMessage(),
+                'error' => $this->senzaToken($exception->getMessage()),
             ]);
 
             return false;
         }
+    }
+
+    /** Username del bot se il token è valido (getMe), altrimenti null. Timeout 2 s, mai eccezioni. */
+    public function botVerificato(): ?string
+    {
+        if (! $this->isConfigured()) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(2)->get($this->apiBaseUrl() . '/getMe');
+            if ($response->successful() && (bool) $response->json('ok', false)) {
+                $username = $response->json('result.username');
+
+                return is_string($username) && $username !== '' ? $username : null;
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('Telegram getMe failed', ['error' => $this->senzaToken($exception->getMessage())]);
+        }
+
+        return null;
     }
 
     public function getFilePath(string $fileId): ?string
@@ -90,7 +111,7 @@ class TelegramBotService
                 return $response->json('result.file_path');
             }
         } catch (\Throwable $exception) {
-            Log::warning('Telegram getFile failed', ['error' => $exception->getMessage()]);
+            Log::warning('Telegram getFile failed', ['error' => $this->senzaToken($exception->getMessage())]);
         }
 
         return null;
@@ -108,10 +129,18 @@ class TelegramBotService
                 return $response->body();
             }
         } catch (\Throwable $exception) {
-            Log::warning('Telegram download file failed', ['error' => $exception->getMessage()]);
+            Log::warning('Telegram download file failed', ['error' => $this->senzaToken($exception->getMessage())]);
         }
 
         return null;
+    }
+
+    /** Il token sta nell'URL: i messaggi di errore HTTP lo riportano, quindi mai nei log. */
+    private function senzaToken(string $messaggio): string
+    {
+        $token = (string) $this->token();
+
+        return $token === '' ? $messaggio : str_replace($token, '***', $messaggio);
     }
 
     private function apiBaseUrl(): string

@@ -4,6 +4,45 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.18] - 2026-11-12
+
+### Changed
+- Area admin rifatta in quattro blocchi: **Stato del sistema** (home con riquadri verde/giallo/rosso:
+  sincronizzazione AD, backup, SPID, email, MIUR, tipologie senza gestore, richieste di delega,
+  Telegram/AI/antivirus; nessuna chiamata di rete, i servizi esterni mostrano l'esito dell'ultima
+  prova), **Persone** (utenti di dominio, scuole e ditte in tre elenchi separati; deleghe; squadre e
+  tipologie dei gestori), **Enti e sedi** (una sezione sola, categorie personalizzabili, aggiunta
+  da MIUR o a mano), **Regole di lavoro** (Scadenze, Segnalazioni, Avvisi), **Ente e sistema**
+  (Aspetto, Integrazioni con tasto "Prova", Backup).
+- Le impostazioni non stanno più in un form unico: ogni chiave ha la sua pagina e un solo
+  salvataggio guidato dal tipo (colori, url, email, orari e segreti validati). Un valore non
+  testuale inviato a mano ora dà un errore di validazione invece di un'eccezione.
+- I vecchi indirizzi (`/admin/impostazioni`, `/admin/utenti`, `/admin/organizzazioni`,
+  `/admin/sedi`, `/admin/sla`, `/admin/profili`, `/admin/provenienze`) reindirizzano alla pagina nuova.
+- "Etichetta ufficio segnalante" lasciata vuota ora ricade sul testo predefinito invece di
+  restare vuota.
+- Salvando una sezione di Integrazioni l'ultimo esito di "Prova" viene cancellato: un esito
+  negativo vecchio non sopravvive alla correzione.
+- Elenco Ditte: compaiono solo le persone SPID (gli account locali storici non sono in nessun elenco).
+
+### Removed
+- Profili (e la pagina Provenienze modificabile), l'impostazione morta
+  `telegram_notifica_stato_critico`, le colonne `tipo`/`tipo_ente` degli enti (sostituite dalle
+  categorie).
+- **Nota di deploy**: la migration dei profili scrive nel log (`laravel.log`) gli utenti di dominio
+  che perdono la limitazione legata al profilo: controllarlo dopo l'aggiornamento.
+- **Nota di deploy**: tornare all'immagine 0.9.17 dopo l'aggiornamento non è supportato (colonne e
+  tabella `profili` rimosse): per tornare indietro si ripristina il backup fatto prima dell'aggiornamento.
+- **Nota di deploy**: `ente_logo_url` ora deve essere un indirizzo completo (`https://…`): un
+  percorso relativo già salvato blocca il salvataggio di Aspetto finché non lo si corregge (oppure
+  si carica il logo come file).
+- Segreti (token Telegram, secret SPID e dei webhook): nuova casella "Rimuovi il valore salvato",
+  perché il campo lasciato vuoto li lascia invariati e prima non si potevano più togliere.
+
+### Fixed
+- Il token del bot Telegram non finisce più nei log: i messaggi di errore HTTP lo riportano
+  nell'URL e ora vengono ripuliti prima di essere scritti.
+
 ## [0.9.17] - 2026-11-12
 
 ### Fixed

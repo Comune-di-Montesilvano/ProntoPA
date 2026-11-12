@@ -103,10 +103,10 @@ class SlaOrarioUfficioTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.sla.store'), [
             'livello_priorita' => 3, 'ore_target' => 1, 'unita' => 'giorni', 'ore_warning' => 4,
-        ])->assertRedirect(route('admin.sla.index'));
+        ])->assertRedirect(route('admin.regole.scadenze'));
 
         $this->assertSame('giorni', SlaConfigurazione::firstOrFail()->unita);
-        $this->actingAs($admin)->get(route('admin.sla.index'))
+        $this->actingAs($admin)->get(route('admin.regole.scadenze'))
             ->assertOk()
             ->assertSee('1 giorno lavorativo');
     }

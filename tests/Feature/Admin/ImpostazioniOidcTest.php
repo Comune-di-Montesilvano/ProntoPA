@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Tests\TestCase;
 
+/** Integrazioni → SPID: secret cifrato, mai mostrato, problemi spiegati. */
 class ImpostazioniOidcTest extends TestCase
 {
     use RefreshDatabase;
@@ -31,7 +32,7 @@ class ImpostazioniOidcTest extends TestCase
 
     private function salva(array $valori): void
     {
-        $this->actingAs($this->admin)->patch(route('admin.impostazioni.update'), ['impostazioni' => $valori])
+        $this->actingAs($this->admin)->patch(route('admin.integrazioni.update', 'spid'), ['impostazioni' => $valori])
             ->assertSessionHasNoErrors();
     }
 
@@ -48,7 +49,7 @@ class ImpostazioniOidcTest extends TestCase
         $this->assertSame('segreto-123', $config->clientSecret());
         $this->assertTrue($config->configurato());
 
-        $this->actingAs($this->admin)->get(route('admin.impostazioni.index'))
+        $this->actingAs($this->admin)->get(route('admin.integrazioni'))
             ->assertOk()
             ->assertDontSee('segreto-123')
             ->assertSee('https://prontopa.ente.it/auth/spid/callback');
@@ -58,14 +59,14 @@ class ImpostazioniOidcTest extends TestCase
     {
         $this->salva(['oidc_client_id' => 'prontopa', 'oidc_client_secret' => 'segreto-123']);
 
-        $this->actingAs($this->admin)->get(route('admin.impostazioni.index'))
-            ->assertSee('Non attivo')
+        $this->actingAs($this->admin)->get(route('admin.integrazioni'))
+            ->assertSee('Non attiva')
             ->assertSee('Issuer mancante.');
 
         $this->salva(['oidc_issuer' => 'https://login.ente.it']);
 
-        $this->actingAs($this->admin)->get(route('admin.impostazioni.index'))
-            ->assertSee('Attivo: il tasto')
+        $this->actingAs($this->admin)->get(route('admin.integrazioni'))
+            ->assertSee('Attiva')
             ->assertDontSee('Issuer mancante.');
     }
 

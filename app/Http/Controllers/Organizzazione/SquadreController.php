@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Organizzazione;
 
 use App\Http\Controllers\Controller;
 use App\Models\Squadra;
+use App\Services\Impostazioni\SalvaImpostazioni;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,13 @@ class SquadreController extends Controller
         $squadre = Squadra::with(['caposquadra', 'membri'])->orderBy('nome')->get();
 
         return view('organizzazione.squadre.index', compact('squadre'));
+    }
+
+    public function attiva(Request $request, SalvaImpostazioni $salva): RedirectResponse
+    {
+        $salva->salva('SQUADRE', $request->input('impostazioni', []), (array) $request->input('impostazioni_rimuovi', []));
+
+        return redirect()->route('organizzazione.squadre.index')->with('success', 'Impostazione salvata.');
     }
 
     public function create(): View
