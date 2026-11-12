@@ -4,6 +4,26 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.16] - 2026-11-12
+
+### Changed
+- Admin → Utenti → Modifica: per gli utenti di dominio nome, username, email, ruolo,
+  supervisore e provenienza sono in sola lettura ("Gestito da Active Directory"); restano
+  modificabili telefono e profilo. Prima si potevano cambiare, ma la sincronizzazione li
+  riscriveva al giro successivo.
+- "Sincronizza comunque" applica solo il numero di disattivazioni che l'admin ha visto e
+  confermato: se nel frattempo in AD sono aumentate, il giro si blocca di nuovo e chiede
+  una nuova conferma.
+
+### Fixed
+- Un errore su un singolo utente non annulla più l'intero giro di sincronizzazione: quell'utente
+  resta com'era (e non viene disattivato), gli altri vengono allineati, e l'esito mostra
+  "N non allineati per errore".
+- "Sincronizza ora" con un giro già in corso o in coda (doppio clic, giro notturno) avvisa invece
+  di perdere la richiesta in silenzio; durante il giro la pagina mostra "Sincronizzazione in
+  corso". Un giro saltato perché un altro è in corso non sovrascrive più l'esito né manda
+  l'email di sync fallita agli admin.
+
 ## [0.9.15] - 2026-11-11
 
 ### Fixed
