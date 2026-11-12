@@ -49,6 +49,24 @@ class CategorieEntiMigrazioneTest extends TestCase
         $this->assertSame('Altro', CategoriaIniziale::per(null, null, null));
     }
 
+    public function test_scuole_statali_scritto_a_mano_non_duplica_la_categoria_miur(): void
+    {
+        $nomi = CategoriaIniziale::assegna([
+            1 => ['manuale', 'SCUOLE STATALI', 'scuola'],
+            2 => ['miur', 'Scuola', 'scuola'],
+        ]);
+
+        $this->assertSame(['Scuole statali'], array_values(array_unique($nomi)));
+    }
+
+    public function test_trova_o_crea_riusa_la_riga_esistente(): void
+    {
+        $primo = CategoriaIniziale::trovaOCrea('Nido', 1, false);
+        $this->assertSame($primo, CategoriaIniziale::trovaOCrea('Nido', 2, false));
+        $this->assertSame(1, CategoriaEnte::where('nome', 'Nido')->count());
+        $this->assertSame(2, CategoriaEnte::count()); // Scuole statali + Nido
+    }
+
     public function test_stato_schema_dopo_migrazione(): void
     {
         $this->assertTrue(Schema::hasColumn('istituti', 'id_categoria'));

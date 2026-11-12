@@ -29,19 +29,12 @@ return new class extends Migration
         $nomi = CategoriaIniziale::assegna($righe);
 
         // "Scuole statali" esiste sempre: l'import MIUR ha cosi una destinazione.
-        $elenco = array_values(array_unique([...array_values($nomi), CategoriaIniziale::MIUR]));
+        $elenco = array_values(array_unique([CategoriaIniziale::MIUR, ...array_values($nomi)]));
         usort($elenco, fn (string $a, string $b) => strcasecmp($a, $b));
 
         $ids = [];
-        $now = now();
         foreach ($elenco as $i => $nome) {
-            $ids[mb_strtolower($nome)] = DB::table('categorie_enti')->insertGetId([
-                'nome' => $nome,
-                'ordine' => $i + 1,
-                'import_miur' => $nome === CategoriaIniziale::MIUR,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ], 'id_categoria');
+            $ids[mb_strtolower($nome)] = CategoriaIniziale::trovaOCrea($nome, $i + 1, $nome === CategoriaIniziale::MIUR);
         }
 
         foreach ($nomi as $idIstituto => $nome) {

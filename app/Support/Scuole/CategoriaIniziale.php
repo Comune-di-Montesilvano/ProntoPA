@@ -36,7 +36,8 @@ class CategoriaIniziale
      */
     public static function assegna(iterable $righe): array
     {
-        $visti = [];
+        // La categoria MIUR esiste sempre: vale la sua grafia anche se un tipo scritto a mano differisce solo per maiuscole.
+        $visti = [mb_strtolower(self::MIUR) => self::MIUR];
         $esito = [];
         foreach ($righe as $id => [$fonte, $tipo, $tipoEnte]) {
             $nome = self::per($fonte, $tipo, $tipoEnte);
@@ -46,6 +47,27 @@ class CategoriaIniziale
         }
 
         return $esito;
+    }
+
+    /**
+     * Id della categoria con quel nome, creandola se manca. Il confronto lo fa il DB (con la sua collation:
+     * accenti e maiuscole inclusi), cosi due nomi uguali per il DB non violano l'unique su `nome`.
+     */
+    public static function trovaOCrea(string $nome, int $ordine, bool $importMiur): int
+    {
+        $db = \Illuminate\Support\Facades\DB::table('categorie_enti');
+        $id = (clone $db)->where('nome', $nome)->value('id_categoria');
+        if ($id !== null) {
+            return (int) $id;
+        }
+
+        return (int) $db->insertGetId([
+            'nome' => $nome,
+            'ordine' => $ordine,
+            'import_miur' => $importMiur,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ], 'id_categoria');
     }
 
     private static function pulisci(?string $s): string
