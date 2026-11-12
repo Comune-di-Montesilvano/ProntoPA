@@ -14,7 +14,7 @@
             <select name="id_istituto" id="filtro_id_istituto"
                     class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
                 <option value="">— Tutte —</option>
-                @foreach($organizzazioni->groupBy('tipo') as $tipo => $items)
+                @foreach($organizzazioni->groupBy(fn($o) => $o->categoria?->nome ?? '—') as $tipo => $items)
                     <optgroup label="{{ $tipo }}">
                         @foreach($items as $org)
                             <option value="{{ $org->id_istituto }}" {{ $filtroIstituto == $org->id_istituto ? 'selected' : '' }}>
@@ -56,8 +56,8 @@
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-4 py-3 text-gray-500 text-xs">
                                     {{ $sede->istituto?->descrizione ?? '—' }}
-                                    @if($sede->istituto?->tipo)
-                                        <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-500">{{ $sede->istituto->tipo }}</span>
+                                    @if($sede->istituto?->categoria?->nome)
+                                        <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-500">{{ $sede->istituto->categoria->nome }}</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 font-medium text-gray-800">{{ $sede->nome }}</td>

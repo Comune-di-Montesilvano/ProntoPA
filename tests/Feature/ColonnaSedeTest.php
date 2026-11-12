@@ -20,7 +20,7 @@ class ColonnaSedeTest extends TestCase
     {
         $this->seed(TabelleRiferimentoSeeder::class);
         $this->seed(RolesAndPermissionsSeeder::class);
-        $istituto = Istituto::create(['descrizione' => 'D.D. MONTESILVANO', 'tipo' => 'Scuola', 'tipo_ente' => 'scuola', 'attivo' => true]);
+        $istituto = Istituto::create(['descrizione' => 'D.D. MONTESILVANO', 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => true]);
         $plesso = Plesso::create(['id_istituto' => $istituto->id_istituto, 'nome' => 'MONTESILVANO-VIA DANTE', 'codice_meccanografico' => 'PEAA03701R']);
 
         $segnalatore = User::factory()->create();

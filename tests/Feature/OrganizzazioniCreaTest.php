@@ -35,8 +35,7 @@ class OrganizzazioniCreaTest extends TestCase
     {
         $this->actingAs($this->admin())->post(route('admin.organizzazioni.store'), [
             'descrizione'           => 'Asili Nido Comunali',
-            'tipo'                  => 'Scuola',
-            'tipo_ente'             => 'scuola',
+            'id_categoria'          => \App\Models\CategoriaEnte::perImportMiur()->id_categoria,
             'codice_meccanografico' => '',
             'partita_iva'           => '',
             'codice_fiscale'        => '',

@@ -30,14 +30,14 @@ class FormMiurTest extends TestCase
     {
         return Istituto::create([
             'descrizione' => 'IC SILONE', 'codice_meccanografico' => 'PEIC828004', 'email' => 'peic828004@istruzione.it',
-            'tipo' => 'Scuola', 'tipo_ente' => 'scuola', 'fonte_dati' => $fonte, 'attivo' => true,
+            'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'fonte_dati' => $fonte, 'attivo' => true,
         ]);
     }
 
     private function payloadIstituto(): array
     {
         return [
-            'descrizione' => 'NOME CAMBIATO', 'tipo' => 'Scuola', 'tipo_ente' => 'scuola',
+            'descrizione' => 'NOME CAMBIATO', 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria,
             'codice_meccanografico' => 'XXXX', 'email' => 'altro@example.it',
             'dirigente' => 'Dott.ssa Rossi', 'recapiti' => '085 123', 'attivo' => '1',
         ];
@@ -68,7 +68,7 @@ class FormMiurTest extends TestCase
     public function test_sede_miur_ignora_campi_miur(): void
     {
         $ist = $this->istituto('miur');
-        $altro = Istituto::create(['descrizione' => 'Altro', 'codice_meccanografico' => '']);
+        $altro = Istituto::create(['id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'descrizione' => 'Altro', 'codice_meccanografico' => '']);
         $sede = Plesso::create(['id_istituto' => $ist->id_istituto, 'nome' => 'MEDIA', 'codice_meccanografico' => 'PEMM828015', 'indirizzo' => 'VIA S.GOTTARDO', 'fonte_dati' => 'miur']);
 
         $this->actingAs($this->admin)->patch(route('admin.sedi.update', $sede), [

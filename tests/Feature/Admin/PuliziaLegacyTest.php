@@ -53,8 +53,8 @@ class PuliziaLegacyTest extends TestCase
 
     public function test_form_segnalazione_mostra_tutte_le_sedi_al_dominio(): void
     {
-        $a = Plesso::create(['nome' => 'Plesso Alfa', 'id_istituto' => Istituto::create(['descrizione' => 'IC Uno'])->id_istituto]);
-        $b = Plesso::create(['nome' => 'Plesso Beta', 'id_istituto' => Istituto::create(['descrizione' => 'IC Due'])->id_istituto]);
+        $a = Plesso::create(['nome' => 'Plesso Alfa', 'id_istituto' => Istituto::create(['id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'descrizione' => 'IC Uno'])->id_istituto]);
+        $b = Plesso::create(['nome' => 'Plesso Beta', 'id_istituto' => Istituto::create(['id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'descrizione' => 'IC Due'])->id_istituto]);
 
         $this->actingAs($this->segnalatoreLdap())->get(route('segnalazioni.create'))
             ->assertOk()

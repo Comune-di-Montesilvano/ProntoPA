@@ -32,7 +32,7 @@ class UnisciSediTest extends TestCase
         $this->admin->syncRoles(['admin']);
         $this->istituto = Istituto::create([
             'descrizione' => 'D.D. MONTESILVANO', 'codice_meccanografico' => 'PEEE037001',
-            'tipo' => 'Scuola', 'tipo_ente' => 'scuola', 'attivo' => true,
+            'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => true,
         ]);
     }
 
@@ -66,7 +66,7 @@ class UnisciSediTest extends TestCase
 
     public function test_unisci_rifiuta_sede_di_altro_istituto(): void
     {
-        $altro = Istituto::create(['descrizione' => 'IC SILONE', 'tipo' => 'Scuola', 'tipo_ente' => 'scuola', 'attivo' => true]);
+        $altro = Istituto::create(['descrizione' => 'IC SILONE', 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => true]);
         $legacy = $this->plesso('vecchia');
         $estranea = $this->plesso('estranea', null, $altro);
 

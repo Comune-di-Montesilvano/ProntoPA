@@ -20,36 +20,18 @@
                 </div>
 
                 <div>
-                    <x-input-label for="tipo" value="Tipo *" />
-                    <input id="tipo" name="tipo" type="text" list="tipi-list"
-                           value="{{ old('tipo', 'Scuola') }}"
-                           maxlength="50" required
-                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('tipo') border-red-500 @enderror"
-                           placeholder="Es. Scuola, Azienda speciale, Municipio…" />
-                    <datalist id="tipi-list">
-                        @foreach($tipiEsistenti as $t)
-                            <option value="{{ $t }}">
+                    <x-input-label for="id_categoria" value="Categoria *" />
+                    <select id="id_categoria" name="id_categoria" required
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_categoria') border-red-500 @enderror">
+                        @foreach($categorie as $c)
+                            <option value="{{ $c->id_categoria }}" {{ (int) old('id_categoria', \App\Models\CategoriaEnte::perImportMiur()->id_categoria) === $c->id_categoria ? 'selected' : '' }}>{{ $c->nome }}</option>
                         @endforeach
-                    </datalist>
-                    <x-input-error :messages="$errors->get('tipo')" class="mt-1" />
+                    </select>
+                    <x-input-error :messages="$errors->get('id_categoria')" class="mt-1" />
                 </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                <div>
-                    <x-input-label for="tipo_ente" value="Tipologia ente *" />
-                    <select id="tipo_ente" name="tipo_ente" required
-                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('tipo_ente') border-red-500 @enderror">
-                        @php $tipoEnte = old('tipo_ente', 'scuola'); @endphp
-                        <option value="comune" {{ $tipoEnte === 'comune' ? 'selected' : '' }}>Comune</option>
-                        <option value="scuola" {{ $tipoEnte === 'scuola' ? 'selected' : '' }}>Scuola</option>
-                        <option value="asl" {{ $tipoEnte === 'asl' ? 'selected' : '' }}>ASL</option>
-                        <option value="provincia" {{ $tipoEnte === 'provincia' ? 'selected' : '' }}>Provincia</option>
-                        <option value="regione" {{ $tipoEnte === 'regione' ? 'selected' : '' }}>Regione</option>
-                        <option value="altro" {{ $tipoEnte === 'altro' ? 'selected' : '' }}>Altro ente</option>
-                    </select>
-                    <x-input-error :messages="$errors->get('tipo_ente')" class="mt-1" />
-                </div>
                 <div>
                     <x-input-label for="partita_iva" value="Partita IVA" />
                     <x-text-input id="partita_iva" name="partita_iva" type="text"

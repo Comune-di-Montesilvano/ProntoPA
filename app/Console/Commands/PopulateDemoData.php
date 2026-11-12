@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Enums\SegnalazioneStato;
 use App\Models\AdesioneSegnalazione;
 use App\Models\Appalto;
+use App\Models\CategoriaEnte;
 use App\Models\Impresa;
 use App\Models\Istituto;
 use App\Models\Plesso;
@@ -112,9 +113,12 @@ class PopulateDemoData extends Command
             'Comune di Montesilvano — sede centrale',
         ];
 
+        $comune = CategoriaEnte::firstOrCreate(['nome' => 'Comune'], ['ordine' => 1]);
+        $scuole = CategoriaEnte::perImportMiur();
+
         $istituti = collect($nomi)->map(fn (string $nome) => Istituto::create([
             'descrizione' => $nome,
-            'tipo'        => str_starts_with($nome, 'Comune') ? 'ente' : 'scuola',
+            'id_categoria' => str_starts_with($nome, 'Comune') ? $comune->id_categoria : $scuole->id_categoria,
             'attivo'      => true,
             'fonte_dati'  => 'demo',
         ]));

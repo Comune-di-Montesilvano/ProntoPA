@@ -16,8 +16,7 @@
                     <thead class="bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wider">
                         <tr>
                             <th class="px-4 py-3 text-left">Descrizione</th>
-                            <th class="px-4 py-3 text-left">Tipo</th>
-                            <th class="px-4 py-3 text-left">Tipologia</th>
+                            <th class="px-4 py-3 text-left">Categoria</th>
                             <th class="px-4 py-3 text-left">P.IVA</th>
                             <th class="px-4 py-3 text-left">Dirigente / Ref.</th>
                             <th class="px-4 py-3 text-left">Email</th>
@@ -32,10 +31,9 @@
                                 <td class="px-4 py-3 font-medium text-gray-800">{{ $org->descrizione }}</td>
                                 <td class="px-4 py-3">
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                                        {{ $org->tipo ?? '—' }}
+                                        {{ $org->categoria?->nome ?? '—' }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-gray-500">{{ $org->tipo_ente ?? '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500 font-mono">{{ $org->partita_iva ?? '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $org->dirigente ?? '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $org->email ?? '—' }}</td>

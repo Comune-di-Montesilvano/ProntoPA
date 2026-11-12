@@ -28,7 +28,7 @@ class SediController extends Controller
         }
 
         $sedi           = $query->paginate(30);
-        $organizzazioni = Istituto::orderBy('tipo')->orderBy('descrizione')->get();
+        $organizzazioni = Istituto::with('categoria')->orderBy('descrizione')->get();
         $filtroIstituto = $request->id_istituto;
 
         return view('admin.sedi.index', compact('sedi', 'organizzazioni', 'filtroIstituto'));
@@ -36,7 +36,7 @@ class SediController extends Controller
 
     public function create(Request $request): View
     {
-        $organizzazioni = Istituto::orderBy('tipo')->orderBy('descrizione')->get();
+        $organizzazioni = Istituto::with('categoria')->orderBy('descrizione')->get();
         $preseleziona   = $request->id_istituto;
 
         return view('admin.sedi.create', compact('organizzazioni', 'preseleziona'));
@@ -62,7 +62,7 @@ class SediController extends Controller
 
     public function edit(Plesso $sede): View
     {
-        $organizzazioni = Istituto::orderBy('tipo')->orderBy('descrizione')->get();
+        $organizzazioni = Istituto::with('categoria')->orderBy('descrizione')->get();
         $altreSedi = Plesso::where('id_istituto', $sede->id_istituto)
             ->whereKeyNot($sede->id_plesso)->orderBy('nome')->get();
         $storico = $this->storico($sede);

@@ -24,7 +24,7 @@
                 <select id="id_istituto" name="id_istituto" @disabled($miur) @if(! $miur) required @endif
                         class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_istituto') border-red-500 @enderror">
                     <option value="">— Seleziona —</option>
-                    @foreach($organizzazioni->groupBy('tipo') as $tipo => $items)
+                    @foreach($organizzazioni->groupBy(fn($o) => $o->categoria?->nome ?? '—') as $tipo => $items)
                         <optgroup label="{{ $tipo }}">
                             @foreach($items as $org)
                                 <option value="{{ $org->id_istituto }}"

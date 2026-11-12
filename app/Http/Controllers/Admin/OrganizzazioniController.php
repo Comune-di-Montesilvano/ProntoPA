@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CategoriaEnte;
 use App\Models\Istituto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class OrganizzazioniController extends Controller
@@ -18,7 +18,7 @@ class OrganizzazioniController extends Controller
     public function index(): View
     {
         $organizzazioni = Istituto::withCount('plessi')
-            ->orderBy('tipo_ente')
+            ->orderBy('id_categoria')
             ->orderBy('descrizione')
             ->paginate(30);
 
@@ -27,21 +27,16 @@ class OrganizzazioniController extends Controller
 
     public function create(): View
     {
-        $tipiEsistenti = Istituto::select('tipo')
-            ->distinct()
-            ->whereNotNull('tipo')
-            ->orderBy('tipo')
-            ->pluck('tipo');
+        $categorie = CategoriaEnte::orderBy('ordine')->orderBy('nome')->get();
 
-        return view('admin.organizzazioni.create', compact('tipiEsistenti'));
+        return view('admin.organizzazioni.create', compact('categorie'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
             'descrizione'           => ['required', 'string', 'max:255'],
-            'tipo'                  => ['required', 'string', 'max:50'],
-            'tipo_ente'             => ['required', Rule::in(['comune', 'scuola', 'asl', 'provincia', 'regione', 'altro'])],
+            'id_categoria'          => ['required', 'integer', 'exists:categorie_enti,id_categoria'],
             'codice_meccanografico' => ['nullable', 'string', 'max:50'],
             'partita_iva'           => ['nullable', 'digits:11'],
             'codice_fiscale'        => ['nullable', 'string', 'max:16'],
@@ -65,21 +60,16 @@ class OrganizzazioniController extends Controller
 
     public function edit(Istituto $organizzazione): View
     {
-        $tipiEsistenti = Istituto::select('tipo')
-            ->distinct()
-            ->whereNotNull('tipo')
-            ->orderBy('tipo')
-            ->pluck('tipo');
+        $categorie = CategoriaEnte::orderBy('ordine')->orderBy('nome')->get();
 
-        return view('admin.organizzazioni.edit', compact('organizzazione', 'tipiEsistenti'));
+        return view('admin.organizzazioni.edit', compact('organizzazione', 'categorie'));
     }
 
     public function update(Request $request, Istituto $organizzazione): RedirectResponse
     {
         $regole = [
             'descrizione'           => ['required', 'string', 'max:255'],
-            'tipo'                  => ['required', 'string', 'max:50'],
-            'tipo_ente'             => ['required', Rule::in(['comune', 'scuola', 'asl', 'provincia', 'regione', 'altro'])],
+            'id_categoria'          => ['required', 'integer', 'exists:categorie_enti,id_categoria'],
             'codice_meccanografico' => ['nullable', 'string', 'max:50'],
             'partita_iva'           => ['nullable', 'digits:11'],
             'codice_fiscale'        => ['nullable', 'string', 'max:16'],

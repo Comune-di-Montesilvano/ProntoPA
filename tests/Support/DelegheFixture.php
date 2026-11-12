@@ -15,7 +15,7 @@ trait DelegheFixture
     {
         $istituto = Istituto::create([
             'descrizione' => "IC {$codice}", 'codice_meccanografico' => $codice, 'email' => $email,
-            'tipo' => 'Scuola', 'tipo_ente' => 'scuola', 'attivo' => true,
+            'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => true,
         ]);
 
         for ($i = 1; $i <= $plessi; $i++) {
