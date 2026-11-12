@@ -295,6 +295,40 @@ class SincronizzaUtentiAdTest extends TestCase
         Notification::assertSentTo($admin, SyncAdFallitaNotification::class);
     }
 
+    public function test_gruppo_mancante_senza_utenti_di_quel_ruolo_ignorato(): void
+    {
+        $this->dir->gruppiMancanti = ['PRONTOPA_URP', 'PRONTOPA_SEGNALATORI'];
+        $this->membro('m.rossi');
+
+        $esito = $this->sync();
+
+        $this->assertSame('ok', $esito->stato);
+        $this->assertTrue(User::where('username', 'm.rossi')->exists());
+    }
+
+    public function test_gruppo_mancante_con_utenti_di_quel_ruolo_fallisce(): void
+    {
+        $operaio = $this->utenteLdap('op.uno', [], 'operaio');
+        $this->dir->gruppiMancanti = ['PRONTOPA_OPERAI'];
+        $this->membro('m.rossi');
+
+        $esito = $this->sync();
+
+        $this->assertSame('fallita', $esito->stato);
+        $this->assertStringContainsString('PRONTOPA_OPERAI', (string) $esito->motivo);
+        $this->assertTrue((bool) $operaio->fresh()->attivo);
+        $this->assertFalse(User::where('username', 'm.rossi')->exists());
+    }
+
+    public function test_urp_mancante_non_blocca_per_i_segnalatori_interni(): void
+    {
+        $this->utenteLdap('seg', ['id_provenienza' => 1], 'segnalatore');
+        $this->dir->gruppiMancanti = ['PRONTOPA_URP'];
+        $this->membro('seg', ['PRONTOPA_SEGNALATORI']);
+
+        $this->assertSame('ok', $this->sync()->stato);
+    }
+
     public function test_comando_spento_senza_configurazione(): void
     {
         $this->dir->sync = false;

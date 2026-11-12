@@ -80,6 +80,18 @@ final class SincronizzaUtentiAd
             return EsitoSyncAd::fallita($e->getMessage());
         }
 
+        // Gruppo configurato ma assente in AD (es. default PRONTOPA_URP mai creato):
+        // innocuo se nessuno ha quel ruolo, altrimenti i suoi membri verrebbero disattivati.
+        $mancantiConUtenti = array_values(array_filter(
+            $this->directory->gruppiMancantiUltimaLettura(),
+            fn (string $g) => $this->utentiDelGruppo($g) > 0,
+        ));
+        if ($mancantiConUtenti !== []) {
+            return EsitoSyncAd::fallita(sprintf(
+                'Gruppi non trovati in Active Directory: %s, ma in ProntoPA ci sono utenti attivi con quel ruolo. Controlla nome e posizione del gruppo (sotto LDAP_BASE_DN). Nessun utente modificato.',
+                implode(', ', $mancantiConUtenti)));
+        }
+
         if ($membri === []) {
             return EsitoSyncAd::fallita('0 membri trovati nei gruppi: controlla LDAP_BASE_DN e i nomi dei gruppi. Nessun utente disattivato.');
         }
@@ -148,6 +160,27 @@ final class SincronizzaUtentiAd
             return new EsitoSyncAd(EsitoSyncAd::OK, now(), $creati, $aggiornati, $riattivati,
                 $daDisattivare->count(), $daDisattivare->count(), $senzaEmail, $occupati);
         });
+    }
+
+    /** Utenti di dominio attivi che oggi hanno il ruolo dato dal gruppo (nome in maiuscolo). */
+    private function utentiDelGruppo(string $gruppo): int
+    {
+        $chiave = collect((array) config('ldap.gruppi'))
+            ->search(fn ($nome) => mb_strtoupper(trim((string) $nome)) === $gruppo);
+
+        $q = User::where('auth_source', 'ldap')->where('attivo', true);
+        $conRuolo = fn (string $ruolo) => $q->whereHas('roles', fn ($r) => $r->where('name', $ruolo));
+
+        return match ($chiave) {
+            'admin' => $conRuolo('admin')->count(),
+            'supervisori' => $conRuolo('gestore')->where('supervisore_segnalazioni', true)->count(),
+            'gestori' => $conRuolo('gestore')->where(fn ($w) => $w->where('supervisore_segnalazioni', false)->orWhereNull('supervisore_segnalazioni'))->count(),
+            'operai' => $conRuolo('operaio')->count(),
+            'urp' => $conRuolo('segnalatore')->where('id_provenienza', MappaGruppiLdap::PROVENIENZA_URP)->count(),
+            'segnalatori' => $conRuolo('segnalatore')->where(fn ($w) => $w->where('id_provenienza', '!=', MappaGruppiLdap::PROVENIENZA_URP)->orWhereNull('id_provenienza'))->count(),
+            // Gruppo sconosciuto: prudenza, conta come grave.
+            default => 1,
+        };
     }
 
     /** @param list<array{0: DirectoryIdentity, 1: RuoloLdap}> $daAllineare */

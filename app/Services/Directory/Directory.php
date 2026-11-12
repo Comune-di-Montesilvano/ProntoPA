@@ -32,4 +32,12 @@ interface Directory
      * @throws DirectoryNonDisponibile sync non configurata, bind di servizio fallito, AD non raggiungibile
      */
     public function membriGruppi(): array;
+
+    /**
+     * Gruppi configurati (in maiuscolo) che l'ultimo membriGruppi() non ha
+     * trovato in AD. Chi chiama decide se è grave (ci sono utenti di quel ruolo).
+     *
+     * @return list<string>
+     */
+    public function gruppiMancantiUltimaLettura(): array;
 }
