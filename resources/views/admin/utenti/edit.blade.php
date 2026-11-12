@@ -11,8 +11,32 @@
         <form method="POST" action="{{ route('admin.utenti.update', $utente->id) }}" class="p-6 space-y-5 max-w-2xl">
             @csrf @method('PATCH')
 
-            @php $ruoloCorrente = old('ruolo', $utente->getRoleNames()->first() ?? 'segnalatore'); @endphp
+            @php
+                $ruoloCorrente = old('ruolo', $utente->getRoleNames()->first() ?? 'segnalatore');
+                $daAd = $utente->auth_source === 'ldap';
+            @endphp
 
+            @if($daAd)
+            <div class="px-4 py-3 border border-blue-200 bg-blue-50 rounded-lg text-sm text-blue-900">
+                <p class="m-0"><strong>Gestito da Active Directory.</strong>
+                    Nome, username, email, ruolo e stato arrivano dal dominio e vengono riallineati a ogni sincronizzazione:
+                    per cambiarli modifica l'account o i gruppi ProntoPA in AD. Qui puoi cambiare solo telefono e profilo.</p>
+                <dl class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                    <div><dt class="inline text-blue-700">Nome:</dt> <dd class="inline m-0">{{ $utente->name }}</dd></div>
+                    <div><dt class="inline text-blue-700">Username:</dt> <dd class="inline m-0">{{ $utente->username }}</dd></div>
+                    <div><dt class="inline text-blue-700">Email:</dt> <dd class="inline m-0">{{ $utente->email }}</dd></div>
+                    <div><dt class="inline text-blue-700">Ruolo:</dt> <dd class="inline m-0">{{ ucfirst($ruoloCorrente) }}@if($ruoloCorrente === 'gestore' && $utente->supervisore_segnalazioni) (supervisore)@endif</dd></div>
+                    <div><dt class="inline text-blue-700">Provenienza:</dt> <dd class="inline m-0">{{ $provenienze->firstWhere('id_provenienza', $utente->id_provenienza)?->descrizione ?? '—' }}</dd></div>
+                    <div><dt class="inline text-blue-700">Stato:</dt> <dd class="inline m-0">{{ $utente->attivo !== false ? 'attivo' : 'disattivato' }}</dd></div>
+                </dl>
+            </div>
+            <div>
+                <x-input-label for="telefono" value="Telefono" />
+                <x-text-input id="telefono" name="telefono" type="text" class="mt-1 block w-full"
+                    :value="old('telefono', $utente->telefono)" />
+                <x-input-error :messages="$errors->get('telefono')" class="mt-1" />
+            </div>
+            @else
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <x-input-label for="name" value="Nome completo *" />
@@ -79,21 +103,15 @@
             </div>
 
             <div>
-                @if($utente->auth_source === 'ldap')
-                    <p class="text-sm text-gray-600">
-                        Stato: <strong>{{ $utente->attivo !== false ? 'attivo' : 'disattivato' }}</strong>.
-                        Gestito da Active Directory: per disattivare l'account togli la persona dai gruppi ProntoPA del dominio.
-                    </p>
-                @else
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="attivo" value="1"
-                               class="rounded border-gray-300 text-blue-600 shadow-sm"
-                               {{ old('attivo', $utente->attivo ?? true) ? 'checked' : '' }}>
-                        <span class="text-sm text-gray-700">Account attivo</span>
-                    </label>
-                    <x-input-error :messages="$errors->get('attivo')" class="mt-1" />
-                @endif
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="attivo" value="1"
+                           class="rounded border-gray-300 text-blue-600 shadow-sm"
+                           {{ old('attivo', $utente->attivo ?? true) ? 'checked' : '' }}>
+                    <span class="text-sm text-gray-700">Account attivo</span>
+                </label>
+                <x-input-error :messages="$errors->get('attivo')" class="mt-1" />
             </div>
+            @endif
 
             {{-- Profilo --}}
             <div>
@@ -112,7 +130,8 @@
                 <x-input-error :messages="$errors->get('id_profilo')" class="mt-1" />
             </div>
 
-            {{-- Provenienza --}}
+            {{-- Provenienza (per gli utenti di dominio la decide il gruppo AD) --}}
+            @unless($daAd)
             <div>
                 <x-input-label for="id_provenienza" value="Provenienza" />
                 <select id="id_provenienza" name="id_provenienza"
@@ -127,6 +146,7 @@
                 </select>
                 <x-input-error :messages="$errors->get('id_provenienza')" class="mt-1" />
             </div>
+            @endunless
 
             <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
                 <a href="{{ route('admin.utenti.index') }}" class="text-sm text-gray-500 hover:text-gray-700">Annulla</a>

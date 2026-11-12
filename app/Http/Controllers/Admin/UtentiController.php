@@ -11,6 +11,7 @@ use App\Services\Auth\SincronizzaUtentiAd;
 use App\Services\Directory\Directory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -34,13 +35,25 @@ class UtentiController extends Controller
             'mostraDisattivati' => $mostraDisattivati,
             'syncConfigurata' => $directory->syncConfigurata(),
             'esitoSync' => $sync->ultimoEsito(),
+            'syncInCorso' => $sync->inCorso() || Cache::has(SincronizzaUtentiAdJob::CHIAVE_IN_CODA),
         ]);
     }
 
     /** "Sincronizza ora": in coda, l'esito compare qui al termine. */
-    public function sincronizza(Request $request): RedirectResponse
+    public function sincronizza(Request $request, SincronizzaUtentiAd $sync): RedirectResponse
     {
-        SincronizzaUtentiAdJob::dispatch($request->boolean('forza'));
+        $data = $request->validate([
+            'forza' => ['boolean'],
+            'confermati' => ['required_if_accepted:forza', 'integer', 'min:0'],
+        ]);
+        $forza = (bool) ($data['forza'] ?? false);
+
+        // Doppio clic o giro notturno in corso: la richiesta non va persa in silenzio.
+        if ($sync->inCorso() || ! Cache::add(SincronizzaUtentiAdJob::CHIAVE_IN_CODA, true, 900)) {
+            return back()->with('warning', 'Una sincronizzazione con Active Directory è già in corso: ricarica la pagina tra poco per vedere l\'esito, poi riprova se serve.');
+        }
+
+        SincronizzaUtentiAdJob::dispatch($forza, $forza ? (int) $data['confermati'] : null);
 
         return back()->with('success', 'Sincronizzazione con Active Directory avviata: ricarica la pagina tra poco per vedere l\'esito.');
     }
@@ -60,6 +73,21 @@ class UtentiController extends Controller
 
     public function update(Request $request, User $utente): RedirectResponse
     {
+        // Utenti di dominio: nome, username, email, ruolo, supervisore, provenienza e attivo
+        // li decide AD (sync e login), che li riscriverebbe al giro successivo.
+        if ($utente->auth_source === 'ldap') {
+            $data = $request->validate([
+                'id_profilo' => ['nullable', 'integer', 'exists:profili,id_profilo'],
+                'telefono' => ['nullable', 'string', 'max:50'],
+            ]);
+            $utente->id_profilo = $data['id_profilo'] ?? null;
+            $utente->telefono = $data['telefono'] ?? null;
+            $utente->save();
+
+            return redirect()->route('admin.utenti.index')
+                ->with('success', "Utente {$utente->username} aggiornato.");
+        }
+
         $data = $request->validate([
             'name'       => ['required', 'string', 'max:100'],
             'username'   => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($utente->id)],
@@ -77,10 +105,7 @@ class UtentiController extends Controller
         // Persona di una ditta: ruolo e impresa li governa DelegaImpresaService.
         $ditta = $utente->hasRole('impresa');
 
-        // Utenti di dominio: attivo lo decide AD (sync e login).
-        $attivoDaAd = $utente->auth_source === 'ldap';
-
-        if (! $attivoDaAd && $utente->is(auth()->user()) && ! ($data['attivo'] ?? false)) {
+        if ($utente->is(auth()->user()) && ! ($data['attivo'] ?? false)) {
             return back()
                 ->withErrors(['attivo' => 'Non puoi disattivare il tuo account.'])
                 ->withInput();
@@ -97,9 +122,7 @@ class UtentiController extends Controller
             $utente->gestore_segnalazioni     = $data['ruolo'] === 'gestore';
             $utente->supervisore_segnalazioni = ($data['ruolo'] === 'gestore') && ($data['supervisore'] ?? false);
         }
-        if (! $attivoDaAd) {
-            $utente->attivo = (bool) ($data['attivo'] ?? false);
-        }
+        $utente->attivo = (bool) ($data['attivo'] ?? false);
 
         $utente->save();
         if (! $ditta) {

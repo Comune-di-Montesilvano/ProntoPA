@@ -11,7 +11,7 @@
                     Mostra disattivati
                 </label>
             </form>
-            @if($syncConfigurata)
+            @if($syncConfigurata && ! $syncInCorso)
                 <form method="POST" action="{{ route('admin.utenti.sincronizza') }}" class="inline">
                     @csrf
                     <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-medium hover:bg-blue-700">
@@ -36,6 +36,9 @@
                 <strong>Sincronizzazione con Active Directory</strong>
                 (ogni notte alle 05:30; gli utenti di dominio sono attivati e disattivati solo da AD).
             </p>
+            @if($syncInCorso)
+                <p class="m-0 mt-1"><strong>Sincronizzazione in corso</strong>: ricarica la pagina tra poco per vedere l'esito.</p>
+            @endif
             @if($esitoSync === null)
                 <p class="m-0 mt-1">Nessuna sincronizzazione eseguita finora.</p>
             @else
@@ -47,16 +50,20 @@
                         @if($esitoSync->senzaEmail || $esitoSync->usernameOccupati)
                             · saltati: {{ $esitoSync->senzaEmail }} senza email, {{ $esitoSync->usernameOccupati }} con username già usato
                         @endif
+                        @if($esitoSync->errori)
+                            · <strong>{{ $esitoSync->errori }} non allineati per errore</strong> (dettagli nel log degli errori; riprova il giro)
+                        @endif
                     @else
                         {{ $esitoSync->stato === 'bloccata' ? 'bloccato' : 'non riuscito' }}.
                         {{ $esitoSync->motivo }}
                     @endif
                 </p>
-                @if($esitoSync->stato === 'bloccata')
+                @if($esitoSync->stato === 'bloccata' && ! $syncInCorso)
                     <form method="POST" action="{{ route('admin.utenti.sincronizza') }}" class="mt-2"
                           onsubmit="return confirm('Verranno disattivati {{ $esitoSync->daDisattivare }} utenti di dominio. Continuare?')">
                         @csrf
                         <input type="hidden" name="forza" value="1">
+                        <input type="hidden" name="confermati" value="{{ $esitoSync->daDisattivare }}">
                         <button type="submit" class="px-3 py-1.5 rounded-md bg-amber-600 text-white text-xs font-medium hover:bg-amber-700">Sincronizza comunque</button>
                     </form>
                 @endif
