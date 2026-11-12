@@ -61,7 +61,7 @@
                    placeholder="{{ $configurato ? 'Configurato — lascia vuoto per non modificarlo' : 'Non configurato' }}"
                    class="{{ $campo }}">
         @elseif($tipo === 'colore')
-            <input type="color" id="{{ $id }}" name="{{ $nome }}" value="{{ $corrente ?: '#000000' }}"
+            <input type="color" id="{{ $id }}" name="{{ $nome }}" value="{{ $corrente ?: ($chiave === 'ente_colore_secondario' ? '#1E40AF' : '#1D4ED8') }}"
                    class="h-10 w-20 rounded-md border-gray-300 shadow-sm">
         @else
             <input type="{{ $tipoInput }}" id="{{ $id }}" name="{{ $nome }}" value="{{ $corrente }}"

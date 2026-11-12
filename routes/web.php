@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Admin\AnagrafeMiurController;
+use App\Http\Controllers\Admin\AspettoController;
 use App\Http\Controllers\Admin\BackupController;
+use App\Http\Controllers\Admin\IntegrazioniController;
 use App\Http\Controllers\Admin\DelegheController;
 use App\Http\Controllers\Deleghe\DecisioneDelegaController;
 use App\Http\Controllers\Deleghe\RinnovoDelegheController;
@@ -244,6 +246,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::redirect('provenienze', '/admin', 301);
     Route::get('profili/{any}', fn () => redirect()->route('admin.dashboard', [], 301))->where('any', '.*');
     Route::get('provenienze/{any}', fn () => redirect()->route('admin.dashboard', [], 301))->where('any', '.*');
+
+    Route::get('aspetto', [AspettoController::class, 'index'])->name('aspetto');
+    Route::patch('aspetto', [AspettoController::class, 'update'])->name('aspetto.update');
+    Route::get('integrazioni', [IntegrazioniController::class, 'index'])->name('integrazioni');
+    Route::patch('integrazioni/{sezione}', [IntegrazioniController::class, 'update'])
+        ->whereIn('sezione', array_keys(IntegrazioniController::SEZIONI))->name('integrazioni.update');
+    Route::post('integrazioni/{sezione}/prova', [IntegrazioniController::class, 'prova'])
+        ->whereIn('sezione', IntegrazioniController::CON_PROVA)->name('integrazioni.prova');
 
     Route::prefix('regole')->name('regole.')->group(function () {
         Route::get('scadenze', [ScadenzeController::class, 'index'])->name('scadenze');

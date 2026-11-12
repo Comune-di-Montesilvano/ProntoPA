@@ -11,7 +11,6 @@ use App\Services\PubblicazioneAutomatica;
 use App\Services\Sla\CalendarioUfficio;
 use App\Support\Brand;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Collection;
@@ -49,15 +48,10 @@ class ImpostazioniController extends Controller
         $this->validaOrario($data['impostazioni']);
         $orarioPrima = $this->orarioAttuale();
 
-        if ($request->boolean('rimuovi_logo_file') || $request->hasFile('ente_logo_upload')) {
-            $this->cancellaLogoFile();
-        }
-
         if ($request->hasFile('ente_logo_upload')) {
-            $file = $request->file('ente_logo_upload');
-            $ext = $file->extension() === 'jpeg' ? 'jpg' : $file->extension();
-            $percorso = $file->storeAs(Brand::DIR_LOGO, "logo-ente.{$ext}", 'local');
-            Impostazione::set('ente_logo_file', $percorso);
+            Brand::salvaLogoFile($request->file('ente_logo_upload'));
+        } elseif ($request->boolean('rimuovi_logo_file')) {
+            Brand::rimuoviLogoFile();
         }
 
         foreach ($data['impostazioni'] as $chiave => $valore) {
@@ -154,15 +148,6 @@ class ImpostazioniController extends Controller
         $ordine = [...array_map(fn ($g) => "orario_$g", CalendarioUfficio::GIORNI), 'patrono'];
 
         return $voci->sortBy(fn ($imp) => array_search($imp->chiave, $ordine, true))->values();
-    }
-
-    private function cancellaLogoFile(): void
-    {
-        $attuale = Impostazione::get('ente_logo_file');
-        if (filled($attuale)) {
-            Storage::disk('local')->delete($attuale);
-        }
-        Impostazione::set('ente_logo_file', null);
     }
 
     public function pubblicaEsistenti(PubblicazioneAutomatica $pubblicazione): RedirectResponse

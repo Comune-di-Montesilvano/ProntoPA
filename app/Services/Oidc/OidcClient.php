@@ -88,6 +88,33 @@ final class OidcClient
         ];
     }
 
+    /**
+     * Null se la discovery risponde ed è usabile, altrimenti il motivo in italiano.
+     * Timeout 2 s, nessuna cache, mai eccezioni.
+     */
+    public function verificaDiscovery(): ?string
+    {
+        $problemi = $this->config->problemi();
+        if ($problemi !== []) {
+            return implode(' ', $problemi);
+        }
+
+        try {
+            $risposta = Http::timeout(2)->acceptJson()->get($this->config->issuer().'/.well-known/openid-configuration');
+        } catch (Throwable) {
+            return 'Il servizio di accesso SPID non risponde: controlla l\'indirizzo (issuer).';
+        }
+
+        if (! $risposta->successful()) {
+            return 'Il servizio di accesso SPID ha risposto con un errore (HTTP '.$risposta->status().'): controlla l\'indirizzo (issuer).';
+        }
+        if (! is_array($risposta->json()) || ! is_string($risposta->json('authorization_endpoint'))) {
+            return 'L\'indirizzo risponde ma non è un servizio di accesso valido (manca authorization_endpoint).';
+        }
+
+        return null;
+    }
+
     public function endSessionEndpoint(): ?string
     {
         $endpoint = $this->discovery()['end_session_endpoint'] ?? null;

@@ -78,6 +78,27 @@ class TelegramBotService
         }
     }
 
+    /** Username del bot se il token è valido (getMe), altrimenti null. Timeout 2 s, mai eccezioni. */
+    public function botVerificato(): ?string
+    {
+        if (! $this->isConfigured()) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(2)->get($this->apiBaseUrl() . '/getMe');
+            if ($response->successful() && (bool) $response->json('ok', false)) {
+                $username = $response->json('result.username');
+
+                return is_string($username) && $username !== '' ? $username : null;
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('Telegram getMe failed', ['error' => $exception->getMessage()]);
+        }
+
+        return null;
+    }
+
     public function getFilePath(string $fileId): ?string
     {
         if (! $this->isConfigured()) {

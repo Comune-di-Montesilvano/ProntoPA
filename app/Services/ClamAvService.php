@@ -19,6 +19,26 @@ class ClamAvService
         return (bool) Impostazione::get('antivirus_enabled', false);
     }
 
+    /** clamd risponde PONG? (prova dall'admin: timeout 2 s, mai eccezioni). */
+    public function raggiungibile(): bool
+    {
+        $socket = @fsockopen((string) config('services.clamav.host'), (int) config('services.clamav.port'), $errno, $errstr, 2);
+        if ($socket === false) {
+            return false;
+        }
+
+        try {
+            stream_set_timeout($socket, 2);
+            fwrite($socket, "zPING\0");
+
+            return str_contains((string) fread($socket, 64), 'PONG');
+        } catch (\Throwable) {
+            return false;
+        } finally {
+            fclose($socket);
+        }
+    }
+
     /**
      * Scansiona un file locale via protocollo INSTREAM di clamd.
      * Degrada in silenzio (torna null) se il servizio non è abilitato o
