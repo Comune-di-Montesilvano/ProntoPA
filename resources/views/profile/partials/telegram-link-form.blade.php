@@ -24,7 +24,7 @@
                         <p class="mt-1">Il bot Telegram non è ancora stato configurato dall'amministratore del sistema.</p>
                         @if($user->isAdmin())
                             <p class="mt-2 text-xs text-yellow-700">
-                                Come amministratore, puoi configurarlo andando in <strong>Admin ➔ Impostazioni ➔ Telegram</strong> e impostando le chiavi <code>telegram_bot_token</code> e <code>telegram_bot_username</code>.
+                                Come amministratore, puoi configurarlo andando in <strong>Admin ➔ Ente e sistema ➔ Integrazioni ➔ Telegram</strong> e inserendo il token e il nome del bot.
                             </p>
                         @else
                             <p class="mt-2 text-xs text-yellow-700">Contatta l'amministratore del sistema per abilitare il servizio.</p>

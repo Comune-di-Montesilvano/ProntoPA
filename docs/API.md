@@ -136,7 +136,7 @@ curl https://your-instance.example.it/api/segnalazioni/42/stato \
 ## Webhook outbound
 
 ProntoPA invia una notifica HTTP POST al cambio di stato di ogni segnalazione,
-se configurato in **Admin → Impostazioni → Webhook cittadini**.
+se configurato in **Admin → Ente e sistema → Integrazioni → Webhook cittadini**.
 
 ### Formato payload
 

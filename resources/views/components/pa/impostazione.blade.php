@@ -60,6 +60,13 @@
             <input type="password" id="{{ $id }}" name="{{ $nome }}" value="" autocomplete="new-password"
                    placeholder="{{ $configurato ? 'Configurato — lascia vuoto per non modificarlo' : 'Non configurato' }}"
                    class="{{ $campo }}">
+            @if($configurato)
+                <label class="inline-flex items-center gap-2 text-xs text-gray-600">
+                    <input type="checkbox" name="impostazioni_rimuovi[{{ $chiave }}]" value="1"
+                           class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500">
+                    Rimuovi il valore salvato
+                </label>
+            @endif
         @elseif($tipo === 'colore')
             <input type="color" id="{{ $id }}" name="{{ $nome }}" value="{{ $corrente ?: ($chiave === 'ente_colore_secondario' ? '#1E40AF' : '#1D4ED8') }}"
                    class="h-10 w-20 rounded-md border-gray-300 shadow-sm">

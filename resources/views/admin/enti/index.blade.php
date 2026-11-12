@@ -107,7 +107,7 @@
                     <div class="flex flex-wrap items-center gap-2">
                         <form method="POST" action="{{ route('admin.categorie-enti.update', $c) }}" class="flex flex-wrap items-center gap-2">
                             @csrf @method('PATCH')
-                            <input type="text" name="nome" value="{{ $c->nome }}" required maxlength="100" aria-label="Nome categoria"
+                            <input type="text" name="nome" value="{{ $c->nome }}" required maxlength="80" aria-label="Nome categoria"
                                    class="border-gray-300 rounded-md shadow-sm text-sm w-56">
                             <input type="number" name="ordine" value="{{ $c->ordine }}" min="0" aria-label="Ordine"
                                    class="border-gray-300 rounded-md shadow-sm text-sm w-20">
@@ -128,7 +128,7 @@
 
                 <form method="POST" action="{{ route('admin.categorie-enti.store') }}" class="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
                     @csrf
-                    <input type="text" name="nome" required maxlength="100" placeholder="Nuova categoria" aria-label="Nome nuova categoria"
+                    <input type="text" name="nome" required maxlength="80" placeholder="Nuova categoria" aria-label="Nome nuova categoria"
                            class="border-gray-300 rounded-md shadow-sm text-sm w-56">
                     <button class="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">Aggiungi categoria</button>
                 </form>

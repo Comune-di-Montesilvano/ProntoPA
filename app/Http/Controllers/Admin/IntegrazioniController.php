@@ -70,7 +70,7 @@ class IntegrazioniController extends Controller
 
     public function update(Request $request, string $sezione, SalvaImpostazioni $salva): RedirectResponse
     {
-        $salva->salva(self::SEZIONI[$sezione], $request->input('impostazioni', []));
+        $salva->salva(self::SEZIONI[$sezione], $request->input('impostazioni', []), (array) $request->input('impostazioni_rimuovi', []));
 
         // Un esito di prova fallito non deve sopravvivere alla correzione.
         Cache::forget("integrazioni:prova:$sezione");

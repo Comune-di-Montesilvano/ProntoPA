@@ -18,7 +18,7 @@ class AutoPublishSegnalazioni extends Command
         $count = $pubblicazione->applicaAEsistenti($giorni > 0 ? $giorni : null);
 
         if ($count === null) {
-            $this->warn('Pubblicazione automatica disattivata o senza stato trigger: configurala in Admin → Impostazioni.');
+            $this->warn('Pubblicazione automatica disattivata o senza stato trigger: configurala in Admin → Regole di lavoro → Segnalazioni.');
 
             return 0;
         }

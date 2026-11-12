@@ -31,6 +31,13 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
   categorie).
 - **Nota di deploy**: la migration dei profili scrive nel log (`laravel.log`) gli utenti di dominio
   che perdono la limitazione legata al profilo: controllarlo dopo l'aggiornamento.
+- **Nota di deploy**: tornare all'immagine 0.9.17 dopo l'aggiornamento non è supportato (colonne e
+  tabella `profili` rimosse): per tornare indietro si ripristina il backup fatto prima dell'aggiornamento.
+- **Nota di deploy**: `ente_logo_url` ora deve essere un indirizzo completo (`https://…`): un
+  percorso relativo già salvato blocca il salvataggio di Aspetto finché non lo si corregge (oppure
+  si carica il logo come file).
+- Segreti (token Telegram, secret SPID e dei webhook): nuova casella "Rimuovi il valore salvato",
+  perché il campo lasciato vuoto li lascia invariati e prima non si potevano più togliere.
 
 ### Fixed
 - Il token del bot Telegram non finisce più nei log: i messaggi di errore HTTP lo riportano

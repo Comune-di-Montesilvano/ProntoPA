@@ -107,7 +107,7 @@ webhooks:
       description: >
         Inviato da ProntoPA (non ricevuto) quando lo stato di una
         segnalazione cambia, se un URL è configurato in
-        Admin → Impostazioni → Webhook cittadini. Firmato HMAC-SHA256,
+        Admin → Ente e sistema → Integrazioni → Webhook cittadini. Firmato HMAC-SHA256,
         3 tentativi con backoff 30s/120s se il ricevente non risponde 2xx.
       requestBody:
         content:

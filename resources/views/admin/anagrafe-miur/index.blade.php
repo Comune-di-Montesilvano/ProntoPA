@@ -12,7 +12,7 @@
             <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Dataset</h2>
 
             @if(! $haIndice)
-                <p class="text-sm text-gray-600">Nessuna anagrafe scaricata. Premi "Scarica" per importare il file indicato in Impostazioni.</p>
+                <p class="text-sm text-gray-600">Nessuna anagrafe scaricata. Premi "Scarica" per importare il file indicato in Admin → Ente e sistema → Integrazioni.</p>
             @else
                 <dl class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                     <div><dt class="text-gray-500">File in uso</dt><dd class="break-all">{{ $stato['url'] }}</dd></div>

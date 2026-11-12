@@ -221,4 +221,18 @@ class StatoSistemaTest extends TestCase
             ->assertSee('Assistente AI')
             ->assertSee(route('admin.integrazioni'));
     }
+
+    public function test_email_con_mittente_di_esempio_gialla(): void
+    {
+        Impostazione::set('mail_from_address', 'noreply@comune.example.it');
+        $r = $this->riquadro('email');
+        $this->assertSame(Riquadro::ATTENZIONE, $r->stato);
+        $this->assertStringContainsString('Indirizzo mittente da impostare', $r->messaggio);
+
+        Impostazione::set('mail_from_address', 'info@example.com');
+        $this->assertSame(Riquadro::ATTENZIONE, $this->riquadro('email')->stato);
+
+        Impostazione::set('mail_from_address', 'noreply@esempio.it');
+        $this->assertSame(Riquadro::OK, $this->riquadro('email')->stato);
+    }
 }

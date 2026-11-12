@@ -14,7 +14,7 @@ class CategorieEntiController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'nome' => ['required', 'string', 'max:100', Rule::unique('categorie_enti', 'nome')],
+            'nome' => ['required', 'string', 'max:80', Rule::unique('categorie_enti', 'nome')],
             'ordine' => ['nullable', 'integer', 'min:0', 'max:65535'],
             'import_miur' => ['nullable', 'boolean'],
         ]);
@@ -36,7 +36,7 @@ class CategorieEntiController extends Controller
     public function update(Request $request, CategoriaEnte $categoria): RedirectResponse
     {
         $data = $request->validate([
-            'nome' => ['required', 'string', 'max:100', Rule::unique('categorie_enti', 'nome')->ignore($categoria->id_categoria, 'id_categoria')],
+            'nome' => ['required', 'string', 'max:80', Rule::unique('categorie_enti', 'nome')->ignore($categoria->id_categoria, 'id_categoria')],
             'ordine' => ['nullable', 'integer', 'min:0', 'max:65535'],
             'import_miur' => ['nullable', 'boolean'],
         ]);

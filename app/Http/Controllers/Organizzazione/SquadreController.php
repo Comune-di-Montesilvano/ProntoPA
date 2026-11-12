@@ -21,7 +21,7 @@ class SquadreController extends Controller
 
     public function attiva(Request $request, SalvaImpostazioni $salva): RedirectResponse
     {
-        $salva->salva('SQUADRE', $request->input('impostazioni', []));
+        $salva->salva('SQUADRE', $request->input('impostazioni', []), (array) $request->input('impostazioni_rimuovi', []));
 
         return redirect()->route('organizzazione.squadre.index')->with('success', 'Impostazione salvata.');
     }

@@ -244,7 +244,7 @@ final class OidcClient
     private function discovery(): array
     {
         if (! $this->config->configurato()) {
-            throw new OidcNonDisponibile('OIDC non configurato (Admin → Impostazioni → SPID)');
+            throw new OidcNonDisponibile('OIDC non configurato (Admin → Ente e sistema → Integrazioni → SPID)');
         }
 
         $issuer = $this->config->issuer();

@@ -29,7 +29,7 @@ class ScadenzeController extends Controller
 
     public function orario(Request $request, SalvaImpostazioni $salva): RedirectResponse
     {
-        $cambiate = $salva->salva('SCADENZE', $request->input('impostazioni', []));
+        $cambiate = $salva->salva('SCADENZE', $request->input('impostazioni', []), (array) $request->input('impostazioni_rimuovi', []));
 
         if ($cambiate !== []) {
             RicalcolaScadenzeSla::dispatch();

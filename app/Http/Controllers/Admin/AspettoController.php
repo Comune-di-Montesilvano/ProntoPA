@@ -24,7 +24,7 @@ class AspettoController extends Controller
             'rimuovi_logo_file' => ['nullable', 'boolean'],
         ]);
 
-        $salva->salva('ASPETTO', $request->input('impostazioni', []));
+        $salva->salva('ASPETTO', $request->input('impostazioni', []), (array) $request->input('impostazioni_rimuovi', []));
 
         if ($request->hasFile('ente_logo_upload')) {
             Brand::salvaLogoFile($request->file('ente_logo_upload'));

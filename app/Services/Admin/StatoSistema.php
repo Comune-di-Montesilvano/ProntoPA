@@ -147,9 +147,17 @@ class StatoSistema
     {
         $url = route('admin.aspetto');
 
-        return filled(Impostazione::get('mail_from_address'))
-            ? new Riquadro('email', 'Email in uscita', Riquadro::OK, 'Indirizzo del mittente impostato.', $url)
-            : new Riquadro('email', 'Email in uscita', Riquadro::PROBLEMA, "Manca l'indirizzo del mittente: le email non partono.", $url);
+        $mittente = trim((string) Impostazione::get('mail_from_address'));
+        if ($mittente === '') {
+            return new Riquadro('email', 'Email in uscita', Riquadro::PROBLEMA, "Manca l'indirizzo del mittente: le email non partono.", $url);
+        }
+        // Indirizzo d'esempio (quello di partenza o un dominio "example"): le email partono ma da un mittente finto.
+        $dominio = mb_strtolower((string) substr(strrchr($mittente, '@') ?: '', 1));
+        if (preg_match('/(^|\.)example(\.|$)/', $dominio) === 1) {
+            return new Riquadro('email', 'Email in uscita', Riquadro::ATTENZIONE, 'Indirizzo mittente da impostare: quello attuale è un indirizzo di esempio.', $url);
+        }
+
+        return new Riquadro('email', 'Email in uscita', Riquadro::OK, 'Indirizzo del mittente impostato.', $url);
     }
 
     private function webhook(): ?Riquadro

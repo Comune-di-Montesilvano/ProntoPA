@@ -186,4 +186,43 @@ class SalvaImpostazioniTest extends TestCase
             }
         }
     }
+
+    public function test_rimuovi_svuota_un_segreto(): void
+    {
+        Impostazione::set('telegram_bot_token', 'abc');
+        $cambiate = app(SalvaImpostazioni::class)->salva('INTEGRAZIONI_TELEGRAM', ['telegram_bot_token' => ''], ['telegram_bot_token' => '1']);
+
+        $this->assertContains('telegram_bot_token', $cambiate);
+        $this->assertTrue(blank(Impostazione::get('telegram_bot_token')));
+    }
+
+    public function test_rimuovi_segreto_cifrato(): void
+    {
+        $this->salva('INTEGRAZIONI_SPID', ['oidc_client_secret' => 's3']);
+        $cambiate = app(SalvaImpostazioni::class)->salva('INTEGRAZIONI_SPID', [], ['oidc_client_secret' => '1']);
+
+        $this->assertContains('oidc_client_secret', $cambiate);
+        $this->assertTrue(blank(Impostazione::get('oidc_client_secret')));
+    }
+
+    public function test_rimuovi_ignora_chiavi_non_segrete_o_fuori_sezione(): void
+    {
+        Impostazione::set('telegram_bot_token', 'abc');
+        Impostazione::set('ente_nome', 'Comune Prova');
+        $cambiate = app(SalvaImpostazioni::class)->salva('INTEGRAZIONI_TELEGRAM', [], [
+            'ente_nome' => '1',          // non segreto e fuori sezione
+            'oidc_client_secret' => '1', // segreto di un'altra sezione
+        ]);
+
+        $this->assertSame([], $cambiate);
+        $this->assertSame('Comune Prova', Impostazione::get('ente_nome'));
+        $this->assertSame('abc', Impostazione::get('telegram_bot_token'));
+    }
+
+    public function test_rimuovi_falso_non_svuota(): void
+    {
+        Impostazione::set('telegram_bot_token', 'abc');
+        $this->assertSame([], app(SalvaImpostazioni::class)->salva('INTEGRAZIONI_TELEGRAM', [], ['telegram_bot_token' => '0']));
+        $this->assertSame('abc', Impostazione::get('telegram_bot_token'));
+    }
 }

@@ -176,4 +176,17 @@ class UtentiPerTipoTest extends TestCase
                 ->assertOk()->assertDontSee('Ugo Legacy')->assertDontSee('Lia Legacy');
         }
     }
+
+    public function test_modifica_torna_alla_lista_del_tipo(): void
+    {
+        $spid = $this->persona('spid', 'segnalatore', ['codice_fiscale' => 'RSSMRA80A01H501U']);
+        $html = $this->actingAs($this->admin)->get(route('admin.utenti.edit', $spid))->assertOk()->getContent();
+        $scuole = preg_quote(route('admin.utenti.scuole'), '#');
+        $this->assertMatchesRegularExpression('#href="'.$scuole.'"[^>]*>\s*Indietro#', $html);
+        $this->assertMatchesRegularExpression('#href="'.$scuole.'"[^>]*>\s*Annulla#', $html);
+
+        $dom = $this->persona('ldap', 'gestore', ['ldap_guid' => 'g-dom']);
+        $html = $this->actingAs($this->admin)->get(route('admin.utenti.edit', $dom))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('#href="'.preg_quote(route('admin.utenti.dominio'), '#').'"[^>]*>\s*Indietro#', $html);
+    }
 }

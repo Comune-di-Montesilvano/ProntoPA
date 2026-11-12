@@ -127,7 +127,9 @@ class UtentiController extends Controller
     {
         $provenienze = Provenienza::orderBy('descrizione')->get();
 
-        return view('admin.utenti.edit', compact('utente', 'provenienze'));
+        $lista = $this->listaDi($utente);
+
+        return view('admin.utenti.edit', compact('utente', 'provenienze', 'lista'));
     }
 
     public function update(Request $request, User $utente): RedirectResponse

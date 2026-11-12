@@ -17,7 +17,7 @@ class AvvisiController extends Controller
 
     public function update(Request $request, SalvaImpostazioni $salva): RedirectResponse
     {
-        $salva->salva('AVVISI', $request->input('impostazioni', []));
+        $salva->salva('AVVISI', $request->input('impostazioni', []), (array) $request->input('impostazioni_rimuovi', []));
 
         return back()->with('success', 'Avvisi salvati.');
     }

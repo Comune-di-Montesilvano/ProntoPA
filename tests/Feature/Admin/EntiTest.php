@@ -171,4 +171,19 @@ class EntiTest extends TestCase
         }
         $this->get('/admin/organizzazioni/'.$ente->id_istituto.'/edit')->assertStatus(301)->assertRedirect(route('admin.enti.show', $ente));
     }
+
+    public function test_nome_categoria_oltre_80_caratteri_rifiutato(): void
+    {
+        $lungo = str_repeat('a', 81);
+        $this->actingAs($this->admin)->post(route('admin.categorie-enti.store'), ['nome' => $lungo])
+            ->assertSessionHasErrors('nome');
+        $this->assertDatabaseMissing('categorie_enti', ['nome' => $lungo]);
+
+        $cat = CategoriaEnte::factory()->create();
+        $this->actingAs($this->admin)->patch(route('admin.categorie-enti.update', $cat), ['nome' => $lungo])
+            ->assertSessionHasErrors('nome');
+
+        $this->actingAs($this->admin)->post(route('admin.categorie-enti.store'), ['nome' => str_repeat('b', 80)])
+            ->assertSessionHasNoErrors();
+    }
 }

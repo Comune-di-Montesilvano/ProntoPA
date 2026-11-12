@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Scuole\CategoriaIniziale;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -107,6 +108,13 @@ class ImportLegacy extends Command
         $this->info('Importazione istituti...');
         $rows = $this->legacy()->table('istituti')->get();
         $riusati = 0;
+        // Gli istituti legacy sono scuole: stessa categoria che la migration dà ai tipi_ente "scuola".
+        $nomeCategoria = CategoriaIniziale::per(null, null, 'scuola');
+        $idCategoria = CategoriaIniziale::trovaOCrea(
+            $nomeCategoria,
+            (int) DB::table('categorie_enti')->max('ordine') + 1,
+            false,
+        );
         foreach ($rows as $r) {
             $codice = strtoupper(trim((string) $r->codice_meccanografico));
             $esistente = $codice === '' ? null
@@ -120,6 +128,7 @@ class ImportLegacy extends Command
 
             $this->istitutoMap[$r->id_istituto] = (int) DB::table('istituti')->insertGetId([
                 'descrizione'           => $r->descrizione,
+                'id_categoria'          => $idCategoria,
                 'codice_meccanografico' => $codice,
                 'dirigente'             => $r->dirigente,
                 'email'                 => $r->email,

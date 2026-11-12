@@ -14,9 +14,10 @@ class SalvaImpostazioni
 {
     /**
      * @param  array<string, mixed>  $input  request()->input('impostazioni', [])
+     * @param  array<string, mixed>  $rimuovi  request()->input('impostazioni_rimuovi', []): chiave => '1' per svuotare un segreto
      * @return list<string> chiavi il cui valore salvato è cambiato
      */
-    public function salva(string $sezione, array $input): array
+    public function salva(string $sezione, array $input, array $rimuovi = []): array
     {
         $mappa = Sezioni::di($sezione);
         $mappa = array_diff_key($mappa, array_flip(Impostazione::CHIAVI_INTERNE));
@@ -27,6 +28,14 @@ class SalvaImpostazioni
         $cambiate = [];
         foreach ($mappa as $chiave => $tipo) {
             $nuovo = $this->nuovoValore($chiave, $tipo, $input);
+            $segreto = $tipo === 'segreto' || $tipo === 'segreto_cifrato';
+            if ($segreto && filter_var($rimuovi[$chiave] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                if (filled(Impostazione::get($chiave))) {
+                    $cambiate[] = $chiave;
+                    Impostazione::set($chiave, null);
+                }
+                continue;
+            }
             if ($nuovo === false) {
                 continue; // non toccare
             }

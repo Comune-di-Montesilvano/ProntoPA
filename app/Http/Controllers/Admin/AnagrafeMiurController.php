@@ -68,7 +68,7 @@ class AnagrafeMiurController extends Controller
 
             $url = (string) Impostazione::get('miur_anagrafe_url', '');
             if ($url === '') {
-                return back()->with('error', 'Configura il link in Impostazioni → scuole.');
+                return back()->with('error', 'Configura il link in Admin → Ente e sistema → Integrazioni → Anagrafe scuole MIUR.');
             }
 
             $this->anagrafe->salvaStato(['stato' => 'in_corso', 'messaggio' => null, 'avviato_at' => now()->toIso8601String()]);

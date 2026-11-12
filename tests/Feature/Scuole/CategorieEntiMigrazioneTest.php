@@ -91,4 +91,18 @@ class CategorieEntiMigrazioneTest extends TestCase
         $this->assertTrue($cat->import_miur);
         $this->assertSame(1, CategoriaEnte::where('import_miur', true)->count());
     }
+
+    public function test_migration_rilanciata_su_schema_gia_migrato_non_fallisce(): void
+    {
+        $cat = CategoriaEnte::factory()->create();
+        Istituto::create(['descrizione' => 'Ente', 'id_categoria' => $cat->id_categoria, 'attivo' => true]);
+
+        $migration = require database_path('migrations/2026_11_12_000003_create_categorie_enti.php');
+        $migration->up();
+
+        $this->assertTrue(Schema::hasTable('categorie_enti'));
+        $this->assertTrue(Schema::hasColumn('istituti', 'id_categoria'));
+        $this->assertFalse(Schema::hasColumn('istituti', 'tipo'));
+        $this->assertSame($cat->id_categoria, Istituto::first()->id_categoria);
+    }
 }
