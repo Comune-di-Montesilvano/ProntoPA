@@ -13,7 +13,7 @@ class Impostazione extends Model
     public    $incrementing = false;
 
     /** Stato interno: mai mostrato né modificabile dal form generico di Admin → Impostazioni (ente_logo_file passa dall'upload). */
-    public const CHIAVI_INTERNE = ['ripristino_id', 'ente_logo_file'];
+    public const CHIAVI_INTERNE = ['ripristino_id', 'ente_logo_file', 'ldap_sync_esito'];
 
     protected $fillable = [
         'chiave',

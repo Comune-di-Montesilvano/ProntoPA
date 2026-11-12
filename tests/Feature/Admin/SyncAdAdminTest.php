@@ -231,6 +231,24 @@ class SyncAdAdminTest extends TestCase
             ->assertSee('Gestito da Active Directory');
     }
 
+    /** Bug 0.9.14: l'esito (JSON, motivo lungo) compariva nel form e ne bloccava il salvataggio (max 500). */
+    public function test_esito_sync_non_compare_ne_blocca_le_impostazioni(): void
+    {
+        $this->esito(new EsitoSyncAd(EsitoSyncAd::FALLITA, now(), motivo: str_repeat('Gruppi non trovati in Active Directory. ', 20)));
+        $prima = Impostazione::get('ldap_sync_esito');
+
+        $this->actingAs($this->admin)->get(route('admin.impostazioni.index'))
+            ->assertOk()
+            ->assertDontSee('ldap_sync_esito');
+
+        $this->actingAs($this->admin)->patch(route('admin.impostazioni.update'), [
+            'impostazioni' => ['ente_nome' => 'Comune di Prova', 'ldap_sync_esito' => 'manomesso'],
+        ])->assertSessionHasNoErrors()->assertSessionHas('success');
+
+        $this->assertSame('Comune di Prova', Impostazione::get('ente_nome'));
+        $this->assertSame($prima, Impostazione::get('ldap_sync_esito'));
+    }
+
     public function test_tipologie_gestori_testo_con_sync(): void
     {
         $this->actingAs($this->admin)->get(route('organizzazione.tipologie-gestori.index'))
