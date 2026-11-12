@@ -4,6 +4,13 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.17] - 2026-11-12
+
+### Fixed
+- Admin → Impostazioni: l'esito della sincronizzazione AD (dato interno) compariva come campo
+  "Generale" con il JSON dell'ultimo giro e, con un motivo lungo, "Salva impostazioni" falliva
+  (oltre 500 caratteri) senza salvare nulla. Ora è nascosto e non modificabile dal form.
+
 ## [0.9.16] - 2026-11-12
 
 ### Changed
