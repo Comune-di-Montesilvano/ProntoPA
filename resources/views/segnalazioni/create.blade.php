@@ -82,7 +82,7 @@
                     $provenienza_sel = old('id_provenienza', $provenienza_default);
                     $scuola = auth()->user()->segnalaComeScuola();
                 @endphp
-                @if(! auth()->user()->puoScegliereProvenienza() || ($provenienza_default && auth()->user()->profilo?->limita_istituto))
+                @if(! auth()->user()->puoScegliereProvenienza())
                     <input type="hidden" name="id_provenienza" value="{{ $provenienza_default }}">
                     <div>
                         <x-input-label value="Provenienza" />

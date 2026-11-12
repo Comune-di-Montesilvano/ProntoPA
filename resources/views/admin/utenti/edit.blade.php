@@ -20,7 +20,7 @@
             <div class="px-4 py-3 border border-blue-200 bg-blue-50 rounded-lg text-sm text-blue-900">
                 <p class="m-0"><strong>Gestito da Active Directory.</strong>
                     Nome, username, email, ruolo e stato arrivano dal dominio e vengono riallineati a ogni sincronizzazione:
-                    per cambiarli modifica l'account o i gruppi ProntoPA in AD. Qui puoi cambiare solo telefono e profilo.</p>
+                    per cambiarli modifica l'account o i gruppi ProntoPA in AD. Qui puoi cambiare solo il telefono.</p>
                 <dl class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
                     <div><dt class="inline text-blue-700">Nome:</dt> <dd class="inline m-0">{{ $utente->name }}</dd></div>
                     <div><dt class="inline text-blue-700">Username:</dt> <dd class="inline m-0">{{ $utente->username }}</dd></div>
@@ -112,23 +112,6 @@
                 <x-input-error :messages="$errors->get('attivo')" class="mt-1" />
             </div>
             @endif
-
-            {{-- Profilo --}}
-            <div>
-                <x-input-label for="id_profilo" value="Profilo" />
-                <select id="id_profilo" name="id_profilo"
-                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    <option value="">— Nessuno —</option>
-                    @foreach($profili as $p)
-                        <option value="{{ $p->id_profilo }}"
-                            {{ old('id_profilo', $utente->id_profilo) == $p->id_profilo ? 'selected' : '' }}>
-                            {{ $p->descrizione }}
-                            @if($p->limita_istituto && $p->istituto) ({{ $p->istituto->descrizione }}) @endif
-                        </option>
-                    @endforeach
-                </select>
-                <x-input-error :messages="$errors->get('id_profilo')" class="mt-1" />
-            </div>
 
             {{-- Provenienza (per gli utenti di dominio la decide il gruppo AD) --}}
             @unless($daAd)

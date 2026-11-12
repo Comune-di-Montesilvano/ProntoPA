@@ -219,13 +219,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('deleghe/verifica/{utente}', [DelegheController::class, 'reinviaVerifica'])
         ->middleware('throttle:6,1')->name('deleghe.reinvia-verifica');
 
-    Route::resource('profili', ProfiliController::class)
-        ->except(['show'])
-        ->parameters(['profili' => 'profilo']);
-
-    Route::resource('provenienze', ProvenienzaController::class)
-        ->except(['show'])
-        ->parameters(['provenienze' => 'provenienza']);
+    // Pagine rimosse: i vecchi URL (e sotto-percorsi) portano alla dashboard admin.
+    Route::redirect('profili', '/admin', 301);
+    Route::redirect('provenienze', '/admin', 301);
+    Route::get('profili/{any}', fn () => redirect()->route('admin.dashboard', [], 301))->where('any', '.*');
+    Route::get('provenienze/{any}', fn () => redirect()->route('admin.dashboard', [], 301))->where('any', '.*');
 
     Route::resource('sla', SlaController::class)
         ->except(['show'])

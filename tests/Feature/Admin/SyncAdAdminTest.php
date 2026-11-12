@@ -115,7 +115,7 @@ class SyncAdAdminTest extends TestCase
             ->assertSee('2 non allineati per errore');
     }
 
-    public function test_modifica_utente_ldap_cambia_solo_telefono_e_profilo(): void
+    public function test_modifica_utente_ldap_cambia_solo_telefono(): void
     {
         $ldap = User::factory()->create(['attivo' => true, 'auth_source' => 'ldap', 'username' => 'm.rossi',
             'name' => 'Mario Rossi', 'email' => 'm.rossi@ente.local', 'supervisore_segnalazioni' => false]);

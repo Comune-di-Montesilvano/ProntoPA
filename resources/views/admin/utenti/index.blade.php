@@ -80,7 +80,6 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ruolo</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profilo</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ente</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ultimo accesso</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stato</th>
@@ -107,7 +106,6 @@
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Segnalatore</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3 text-gray-500">{{ $u->profilo?->descrizione ?? '—' }}</td>
                             <td class="px-4 py-3 text-gray-500">{{ $u->istituto?->descrizione ?? '—' }}</td>
                             <td class="px-4 py-3 text-gray-400 whitespace-nowrap">
                                 {{ $u->last_login?->format('d/m/Y H:i') ?? 'Mai' }}
@@ -137,7 +135,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="px-4 py-8 text-center text-gray-400 text-sm">Nessun utente trovato.</td>
+                            <td colspan="8" class="px-4 py-8 text-center text-gray-400 text-sm">Nessun utente trovato.</td>
                         </tr>
                     @endforelse
                 </tbody>

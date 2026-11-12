@@ -151,9 +151,6 @@
                     <x-sidebar-link href="{{ route('admin.sla.index') }}" :active="request()->routeIs('admin.sla.*')" icon="clock">
                         SLA
                     </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.profili.index') }}" :active="request()->routeIs('admin.profili.*') || request()->routeIs('admin.provenienze.*')" icon="user-group">
-                        Profili e provenienze
-                    </x-sidebar-link>
                 </div>
             @endif
         </nav>

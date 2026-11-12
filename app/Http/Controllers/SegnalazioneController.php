@@ -75,19 +75,14 @@ class SegnalazioneController extends Controller
 
     public function create(): View
     {
-        $user    = auth()->user();
-        $profilo = $user->profilo;
+        $user = auth()->user();
 
-        $tipologie   = TipologiaSegnalazione::with('gruppo')->orderBy('descrizione')->get();
+        $tipologie  = TipologiaSegnalazione::with('gruppo')->orderBy('descrizione')->get();
         $provenienze = Provenienza::orderBy('descrizione')->get();
 
         if ($user->isSpid()) {
             $plessi = Plesso::with('istituto')
                             ->whereIn('id_plesso', Delega::plessiCopertiDa($user))
-                            ->orderBy('nome')->get();
-        } elseif ($profilo && $profilo->limita_istituto && $profilo->id_istituto) {
-            $plessi = Plesso::with('istituto')
-                            ->where('id_istituto', $profilo->id_istituto)
                             ->orderBy('nome')->get();
         } else {
             $plessi = Plesso::with('istituto')->orderBy('nome')->get();

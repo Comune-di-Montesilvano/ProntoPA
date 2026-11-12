@@ -107,7 +107,7 @@ app/Http/Controllers/
   StatisticheController  ReportController  FascicoloPdfController
   AdesioniSegnalazioniController  AllegatiSegnalazioniController  BrandLogoController  DelegheImpresaController
   AiTriageController  PublicHomeController  ProfileController  TelegramAccountController
-  Admin/{ImpostazioniController,UtentiController,ProfiliController,ProvenienzaController,
+  Admin/{ImpostazioniController,UtentiController,
          SediController,SlaController,OrganizzazioniController,AdminDashboardController,
          AnagrafeMiurController,DelegheController,BackupController}
   Organizzazione/{SquadreController,TipologieGestoriController}  # admin + supervisori
@@ -116,7 +116,7 @@ app/Http/Controllers/
 app/Models/
   Segnalazione  User  Impresa  Appalto  NotaSegnalazione  AllegatoSegnalazione
   StatoSegnalazione  StoricoStatoSegnalazione  Squadra  AdesioneSegnalazione
-  SlaConfigurazione  Specializzazione  TipologiaSegnalazione  Profilo  Azione  ApiLog
+  SlaConfigurazione  Specializzazione  TipologiaSegnalazione  Azione  ApiLog
   Delega  DelegaStorico  DelegaImpresa  Istituto  Plesso  Provenienza  GruppoSegnalazione  Impostazione (helper statico+cache)
 app/Enums/SegnalazioneStato.php    # fonte di verità sugli stati, vedi sotto
 app/Policies/SegnalazionePolicy.php

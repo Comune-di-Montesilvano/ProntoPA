@@ -406,15 +406,6 @@ class Segnalazione extends Model
                 ->orWhereHas('adesioni', fn ($a) => $a->where('id_utente', $user->id)));
         }
 
-        // Segnalatore scuola: vede tutte le segnalazioni dei plessi del suo istituto
-        $profilo = $user->profilo;
-        if ($profilo && $profilo->limita_istituto && $profilo->id_istituto) {
-            $plessoIds = Plesso::where('id_istituto', $profilo->id_istituto)
-                               ->pluck('id_plesso');
-            return $query->where(fn ($q) => $q->whereIn('id_plesso', $plessoIds)
-                ->orWhereHas('adesioni', fn ($a) => $a->where('id_utente', $user->id)));
-        }
-
         // Segnalatore generico (URP, interni): proprie e quelle a cui partecipa (adesione/accorpamento)
         return $query->where(fn ($q) => $q->where('id_utente_segnalazione', $user->id)
             ->orWhereHas('adesioni', fn ($a) => $a->where('id_utente', $user->id)));

@@ -163,13 +163,6 @@ class ImpostazioniSeeder extends Seeder
                 'descrizione' => 'Notifica Telegram quando viene assegnato un operatore',
             ],
             [
-                'chiave'      => 'telegram_notifica_stato_critico',
-                'valore'      => '1',
-                'tipo'        => 'boolean',
-                'gruppo'      => 'notifiche_telegram',
-                'descrizione' => 'Notifica Telegram per segnalazioni a priorità critica',
-            ],
-            [
                 'chiave'      => 'telegram_notifica_sla_warning',
                 'valore'      => '1',
                 'tipo'        => 'boolean',

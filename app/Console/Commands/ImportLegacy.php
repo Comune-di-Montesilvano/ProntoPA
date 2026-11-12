@@ -42,7 +42,6 @@ class ImportLegacy extends Command
 
         $this->importIstituti();
         $this->importPlessi();
-        $this->importProfili();
         $this->importImprese();
         $this->importAppalti();
 
@@ -82,7 +81,6 @@ class ImportLegacy extends Command
         DB::table('imprese')->truncate();
         DB::table('plessi')->truncate();
         DB::table('istituti')->truncate();
-        DB::table('profili')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
         $this->line('  Fatto.');
     }
@@ -176,23 +174,6 @@ class ImportLegacy extends Command
         $this->line("  {$rows->count()} plessi ({$riusati} già presenti, riusati).");
     }
 
-    private function importProfili(): void
-    {
-        $this->info('Importazione profili...');
-        $rows = $this->legacy()->table('profili')->get();
-        foreach ($rows as $r) {
-            DB::table('profili')->updateOrInsert(
-                ['id_profilo' => $r->id_profilo],
-                [
-                    'descrizione'    => $r->descrizione,
-                    'limita_istituto' => (bool) $r->limita_istituto,
-                    'id_istituto'    => $this->istitutoMap[$r->id_istituto] ?? null,
-                ]
-            );
-        }
-        $this->line("  {$rows->count()} profili.");
-    }
-
     private function importAppalti(): void
     {
         $this->info('Importazione appalti...');
@@ -279,7 +260,6 @@ class ImportLegacy extends Command
                 'email'                     => $email,
                 'password'                  => Hash::make(str()->random(40)),
                 'password_legacy'           => null,
-                'id_profilo'                => $u->id_profilo ?: null,
                 'id_provenienza'            => $u->id_provenienza ?: null,
                 'amministratore'            => false,
                 'gestore_segnalazioni'      => false,

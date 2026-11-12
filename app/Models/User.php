@@ -25,7 +25,6 @@ class User extends Authenticatable
         'oidc_subject',
         'bloccato_at',
         'motivo_blocco',
-        'id_profilo',
         'id_istituto',
         'amministratore',
         'gestore_segnalazioni',
@@ -164,11 +163,6 @@ class User extends Authenticatable
     }
 
     // --- Relazioni ---
-
-    public function profilo()
-    {
-        return $this->belongsTo(Profilo::class, 'id_profilo', 'id_profilo');
-    }
 
     public function impresa()
     {

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SincronizzaUtentiAdJob;
-use App\Models\Profilo;
 use App\Models\Provenienza;
 use App\Models\User;
 use App\Services\Auth\SincronizzaUtentiAd;
@@ -22,7 +21,7 @@ class UtentiController extends Controller
     {
         $mostraDisattivati = request()->boolean('mostra_disattivati');
 
-        $utenti = User::with(['profilo', 'istituto'])
+        $utenti = User::with(['istituto'])
             ->when(! $mostraDisattivati, fn ($query) => $query->where(function ($subQuery) {
                 $subQuery->where('attivo', true)->orWhereNull('attivo');
             }))
@@ -65,10 +64,9 @@ class UtentiController extends Controller
 
     public function edit(User $utente): View
     {
-        $profili     = Profilo::with('istituto')->orderBy('descrizione')->get();
         $provenienze = Provenienza::orderBy('descrizione')->get();
 
-        return view('admin.utenti.edit', compact('utente', 'profili', 'provenienze'));
+        return view('admin.utenti.edit', compact('utente', 'provenienze'));
     }
 
     public function update(Request $request, User $utente): RedirectResponse
@@ -77,10 +75,8 @@ class UtentiController extends Controller
         // li decide AD (sync e login), che li riscriverebbe al giro successivo.
         if ($utente->auth_source === 'ldap') {
             $data = $request->validate([
-                'id_profilo' => ['nullable', 'integer', 'exists:profili,id_profilo'],
                 'telefono' => ['nullable', 'string', 'max:50'],
             ]);
-            $utente->id_profilo = $data['id_profilo'] ?? null;
             $utente->telefono = $data['telefono'] ?? null;
             $utente->save();
 
@@ -95,7 +91,6 @@ class UtentiController extends Controller
                 ->where(fn ($q) => $q->where('auth_source', 'locale')->where('attivo', true))
                 ->ignore($utente->id)],
             'ruolo'      => ['required', Rule::in(['admin', 'gestore', 'segnalatore'])],
-            'id_profilo'    => ['nullable', 'integer', 'exists:profili,id_profilo'],
             'id_provenienza'=> ['nullable', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
             'telefono'      => ['nullable', 'string', 'max:50'],
             'supervisore'   => ['boolean'],
@@ -114,7 +109,6 @@ class UtentiController extends Controller
         $utente->name              = $data['name'];
         $utente->username          = $data['username'];
         $utente->email             = $data['email'];
-        $utente->id_profilo        = $data['id_profilo'] ?? null;
         $utente->id_provenienza    = $data['id_provenienza'] ?? null;
         $utente->telefono          = $data['telefono'] ?? null;
         if (! $ditta) {
