@@ -164,7 +164,8 @@ class User extends Authenticatable
 
     // --- Relazioni ---
 
-    public function impresa()
+    /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Impresa, $this> */
+    public function impresa(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Impresa::class, 'id_impresa', 'id_impresa');
     }

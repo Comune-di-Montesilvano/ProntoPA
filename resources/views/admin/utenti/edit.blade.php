@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">Modifica utente — {{ $utente->username }}</x-slot>
     <x-slot name="actions">
-        <a href="{{ route('admin.utenti.index') }}"
+        <a href="{{ route('admin.utenti.dominio') }}"
            class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
             Indietro
         </a>
@@ -132,7 +132,7 @@
             @endunless
 
             <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
-                <a href="{{ route('admin.utenti.index') }}" class="text-sm text-gray-500 hover:text-gray-700">Annulla</a>
+                <a href="{{ route('admin.utenti.dominio') }}" class="text-sm text-gray-500 hover:text-gray-700">Annulla</a>
                 <button type="submit"
                         class="inline-flex items-center px-5 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
                     Salva modifiche

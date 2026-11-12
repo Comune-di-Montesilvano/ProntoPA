@@ -178,6 +178,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::patch('/impostazioni', [ImpostazioniController::class, 'update'])->name('impostazioni.update');
     Route::post('/impostazioni/pubblica-esistenti', [ImpostazioniController::class, 'pubblicaEsistenti'])->name('impostazioni.pubblica-esistenti');
 
+    Route::get('utenti/dominio', [UtentiController::class, 'dominio'])->name('utenti.dominio');
+    Route::get('utenti/scuole', [UtentiController::class, 'scuole'])->name('utenti.scuole');
+    Route::get('utenti/ditte', [UtentiController::class, 'ditte'])->name('utenti.ditte');
     Route::patch('utenti/{utente}/attivo', [UtentiController::class, 'toggleAttivo'])
         ->name('utenti.toggle-attivo');
     Route::post('utenti/sincronizza', [UtentiController::class, 'sincronizza'])

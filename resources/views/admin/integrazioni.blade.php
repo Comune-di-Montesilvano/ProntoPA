@@ -131,7 +131,7 @@
                     <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">Non configurata</span>
                 @endif
             </div>
-            <a href="{{ \Illuminate\Support\Facades\Route::has('admin.utenti.dominio') ? route('admin.utenti.dominio') : route('admin.utenti.index') }}"
+            <a href="{{ route('admin.utenti.dominio') }}"
                class="text-sm text-blue-700 hover:underline">Vai agli utenti del dominio</a>
         </section>
     </div>

@@ -8,6 +8,7 @@ use App\Models\Provenienza;
 use App\Models\User;
 use App\Services\Auth\SincronizzaUtentiAd;
 use App\Services\Directory\Directory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -17,25 +18,85 @@ use Illuminate\View\View;
 
 class UtentiController extends Controller
 {
-    public function index(Directory $directory, SincronizzaUtentiAd $sync): View
+    /** Vecchio elenco unico: ora tre liste per tipo (301, query conservata). */
+    public function index(Request $request): RedirectResponse
     {
-        $mostraDisattivati = request()->boolean('mostra_disattivati');
+        return redirect()->route('admin.utenti.dominio', $request->only('mostra_disattivati'), 301);
+    }
 
-        $utenti = User::with(['istituto'])
-            ->when(! $mostraDisattivati, fn ($query) => $query->where(function ($subQuery) {
-                $subQuery->where('attivo', true)->orWhereNull('attivo');
-            }))
-            ->orderBy('name')
+    public function dominio(Request $request, Directory $directory, SincronizzaUtentiAd $sync): View
+    {
+        $utenti = $this->elenco($request, User::where('auth_source', 'ldap'))
+            ->with('roles')
+            ->withCount('tipologieGestite')
             ->paginate(25)
             ->withQueryString();
 
-        return view('admin.utenti.index', [
+        return view('admin.utenti.dominio', [
             'utenti' => $utenti,
-            'mostraDisattivati' => $mostraDisattivati,
             'syncConfigurata' => $directory->syncConfigurata(),
             'esitoSync' => $sync->ultimoEsito(),
             'syncInCorso' => $sync->inCorso() || Cache::has(SincronizzaUtentiAdJob::CHIAVE_IN_CODA),
         ]);
+    }
+
+    public function scuole(Request $request): View
+    {
+        $utenti = $this->elenco($request, User::where('auth_source', 'spid')->withoutRole('impresa'))
+            ->with(['deleghe' => fn ($q) => $q->attive()->with('istituto')])
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('admin.utenti.scuole', ['utenti' => $utenti]);
+    }
+
+    public function ditte(Request $request): View
+    {
+        $utenti = $this->elenco($request, User::role('impresa'))
+            ->with('impresa')
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('admin.utenti.ditte', ['utenti' => $utenti]);
+    }
+
+    /**
+     * Filtri comuni alle tre liste: ricerca `q` (nome, username, CF, email,
+     * LIKE case-insensitive col `%`/`_` dell'utente resi letterali) e
+     * disattivati nascosti salvo `mostra_disattivati`.
+     *
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    private function elenco(Request $request, Builder $query): Builder
+    {
+        $q = trim((string) $request->query('q', ''));
+
+        return $query
+            ->when(! $request->boolean('mostra_disattivati'), fn ($b) => $b->where(
+                fn ($w) => $w->where('attivo', true)->orWhereNull('attivo')
+            ))
+            ->when($q !== '', function ($b) use ($q) {
+                // Carattere di escape "!" (portabile tra MariaDB e SQLite).
+                $like = '%'.preg_replace('/[!%_]/', '!$0', mb_strtolower($q)).'%';
+
+                return $b->where(function ($w) use ($like) {
+                    foreach (['name', 'username', 'codice_fiscale', 'email'] as $i => $colonna) {
+                        $w->{$i === 0 ? 'whereRaw' : 'orWhereRaw'}("LOWER({$colonna}) LIKE ? ESCAPE '!'", [$like]);
+                    }
+                });
+            })
+            ->orderBy('name');
+    }
+
+    /** Lista di appartenenza di un utente, dove tornare dopo una modifica. */
+    private function listaDi(User $utente): string
+    {
+        return match (true) {
+            $utente->auth_source === 'ldap' => 'admin.utenti.dominio',
+            $utente->hasRole('impresa') => 'admin.utenti.ditte',
+            default => 'admin.utenti.scuole',
+        };
     }
 
     /** "Sincronizza ora": in coda, l'esito compare qui al termine. */
@@ -80,7 +141,7 @@ class UtentiController extends Controller
             $utente->telefono = $data['telefono'] ?? null;
             $utente->save();
 
-            return redirect()->route('admin.utenti.index')
+            return redirect()->route('admin.utenti.dominio')
                 ->with('success', "Utente {$utente->username} aggiornato.");
         }
 
@@ -123,7 +184,7 @@ class UtentiController extends Controller
             $utente->syncRoles([$data['ruolo']]);
         }
 
-        return redirect()->route('admin.utenti.index')
+        return redirect()->route($this->listaDi($utente))
             ->with('success', "Utente {$utente->username} aggiornato.");
     }
 

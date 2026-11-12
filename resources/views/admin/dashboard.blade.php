@@ -56,7 +56,7 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <a href="{{ route('admin.utenti.index') }}" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-white hover:shadow-sm transition">
+                    <a href="{{ route('admin.utenti.dominio') }}" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-white hover:shadow-sm transition">
                         <div class="font-semibold text-gray-800">Utenti</div>
                         <div class="text-sm text-gray-500 mt-1">Approva e monitora gli account</div>
                     </a>
