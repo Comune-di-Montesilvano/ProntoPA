@@ -107,13 +107,13 @@ class RicalcoloSlaTest extends TestCase
 
     public function test_orario_invertito_rifiutato(): void
     {
-        $this->actingAs($this->admin)->patch(route('admin.impostazioni.update'), $this->formImpostazioni(['orario_lun' => '14:00-08:00']))
+        $this->actingAs($this->admin)->patch(route('admin.regole.orario'), $this->formImpostazioni(['orario_lun' => '14:00-08:00']))
             ->assertSessionHasErrors('impostazioni.orario_lun');
     }
 
     public function test_patrono_inesistente_rifiutato(): void
     {
-        $this->actingAs($this->admin)->patch(route('admin.impostazioni.update'), $this->formImpostazioni(['patrono' => '31/02']))
+        $this->actingAs($this->admin)->patch(route('admin.regole.orario'), $this->formImpostazioni(['patrono' => '31/02']))
             ->assertSessionHasErrors('impostazioni.patrono');
     }
 
@@ -124,7 +124,7 @@ class RicalcoloSlaTest extends TestCase
             $vuoti["orario_$g"] = '';
         }
 
-        $this->actingAs($this->admin)->patch(route('admin.impostazioni.update'), $this->formImpostazioni($vuoti))
+        $this->actingAs($this->admin)->patch(route('admin.regole.orario'), $this->formImpostazioni($vuoti))
             ->assertSessionHasErrors('impostazioni.orario_lun');
         $this->assertSame('08:00-14:00', Impostazione::get('orario_lun'));
     }
@@ -133,11 +133,11 @@ class RicalcoloSlaTest extends TestCase
     {
         Bus::fake();
 
-        $this->actingAs($this->admin)->patch(route('admin.impostazioni.update'), $this->formImpostazioni())
+        $this->actingAs($this->admin)->patch(route('admin.regole.orario'), $this->formImpostazioni())
             ->assertSessionHasNoErrors();
         Bus::assertNotDispatched(RicalcolaScadenzeSla::class);
 
-        $this->actingAs($this->admin)->patch(route('admin.impostazioni.update'), $this->formImpostazioni(['patrono' => '13/06']))
+        $this->actingAs($this->admin)->patch(route('admin.regole.orario'), $this->formImpostazioni(['patrono' => '13/06']))
             ->assertSessionHasNoErrors();
         Bus::assertDispatched(RicalcolaScadenzeSla::class);
         $this->assertSame('13/06', Impostazione::get('patrono'));
@@ -145,9 +145,9 @@ class RicalcoloSlaTest extends TestCase
 
     public function test_pagina_impostazioni_mostra_festivi_dell_anno(): void
     {
-        $this->actingAs($this->admin)->get(route('admin.impostazioni.index'))
+        $this->actingAs($this->admin)->get(route('admin.regole.scadenze'))
             ->assertOk()
-            ->assertSee("Orario d'ufficio")
+            ->assertSee("Orario d'ufficio", false)
             ->assertSee('06/04/2026')
             ->assertSeeInOrder(['orario_lun', 'orario_mar', 'orario_dom', 'patrono']);
     }

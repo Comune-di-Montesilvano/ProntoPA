@@ -64,7 +64,7 @@
                         <div class="font-semibold text-gray-800">Enti e sedi</div>
                         <div class="text-sm text-gray-500 mt-1">Scuole, uffici e strutture collegate</div>
                     </a>
-                    <a href="{{ route('admin.sla.index') }}" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-white hover:shadow-sm transition">
+                    <a href="{{ route('admin.regole.scadenze') }}" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-white hover:shadow-sm transition">
                         <div class="font-semibold text-gray-800">SLA</div>
                         <div class="text-sm text-gray-500 mt-1">Tempi e priorità di lavorazione</div>
                     </a>

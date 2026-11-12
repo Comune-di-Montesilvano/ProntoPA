@@ -142,7 +142,7 @@
                     <x-sidebar-link href="{{ route('admin.deleghe.index') }}" :active="request()->routeIs('admin.deleghe.*')" icon="user-group">
                         Deleghe
                     </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.sla.index') }}" :active="request()->routeIs('admin.sla.*')" icon="clock">
+                    <x-sidebar-link href="{{ route('admin.regole.scadenze') }}" :active="request()->routeIs('admin.sla.*', 'admin.regole.*')" icon="clock">
                         SLA
                     </x-sidebar-link>
                 </div>

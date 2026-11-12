@@ -11,6 +11,9 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\EntiController;
 use App\Http\Controllers\Admin\CategorieEntiController;
 use App\Http\Controllers\Admin\SediController;
+use App\Http\Controllers\Admin\Regole\AvvisiController;
+use App\Http\Controllers\Admin\Regole\ScadenzeController;
+use App\Http\Controllers\Admin\Regole\SegnalazioniController as RegoleSegnalazioniController;
 use App\Http\Controllers\Admin\SlaController;
 use App\Http\Controllers\Organizzazione\SquadreController;
 use App\Http\Controllers\Organizzazione\TipologieGestoriController;
@@ -242,6 +245,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('profili/{any}', fn () => redirect()->route('admin.dashboard', [], 301))->where('any', '.*');
     Route::get('provenienze/{any}', fn () => redirect()->route('admin.dashboard', [], 301))->where('any', '.*');
 
+    Route::prefix('regole')->name('regole.')->group(function () {
+        Route::get('scadenze', [ScadenzeController::class, 'index'])->name('scadenze');
+        Route::patch('scadenze/orario', [ScadenzeController::class, 'orario'])->name('orario');
+        Route::get('segnalazioni', [RegoleSegnalazioniController::class, 'index'])->name('segnalazioni');
+        Route::patch('segnalazioni', [RegoleSegnalazioniController::class, 'update'])->name('segnalazioni.update');
+        Route::post('segnalazioni/pubblica-esistenti', [RegoleSegnalazioniController::class, 'pubblicaEsistenti'])->name('pubblica-esistenti');
+        Route::get('avvisi', [AvvisiController::class, 'index'])->name('avvisi');
+        Route::patch('avvisi', [AvvisiController::class, 'update'])->name('avvisi.update');
+    });
+
     Route::resource('sla', SlaController::class)
         ->except(['show'])
         ->parameters(['sla' => 'sla']);
@@ -249,6 +262,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
 // ── Organizzazione (admin + supervisori): squadre e tipologie dei gestori ─────
 Route::middleware(['auth', 'can:gestisci-organizzazione'])->prefix('organizzazione')->name('organizzazione.')->group(function () {
+    Route::patch('squadre/attiva', [SquadreController::class, 'attiva'])
+        ->middleware('role:admin')->name('squadre.attiva');
     Route::resource('squadre', SquadreController::class)
         ->except(['show'])
         ->parameters(['squadre' => 'squadra']);

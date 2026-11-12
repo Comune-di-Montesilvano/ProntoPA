@@ -30,6 +30,6 @@ class AdminDashboardTest extends TestCase
         $response->assertSee('Sedi');
         $response->assertSee('SLA');
         $response->assertSee(route('admin.enti.index'));
-        $response->assertSee(route('admin.sla.index'));
+        $response->assertSee(route('admin.regole.scadenze'));
     }
 }

@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header">Configurazione SLA</x-slot>
+    <x-slot name="header">Scadenze</x-slot>
     <x-slot name="actions">
         <a href="{{ route('admin.sla.create') }}"
            class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
@@ -7,16 +7,11 @@
         </a>
     </x-slot>
 
-    @if(session('success'))
-        <div class="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
-            {{ session('success') }}
-        </div>
-    @endif
-
+    <h2 class="text-sm font-semibold text-gray-800 mb-2">Tempi massimi per tipo di segnalazione</h2>
     <div class="bg-white shadow-sm rounded-xl overflow-hidden">
         @if($regole->isEmpty())
             <div class="p-10 text-center text-gray-400 text-sm">
-                Nessuna regola SLA configurata. Le segnalazioni non avranno scadenza automatica.
+                Nessuna regola configurata. Le segnalazioni non avranno scadenza automatica.
             </div>
         @else
             <table class="min-w-full divide-y divide-gray-100 text-sm">
@@ -58,7 +53,7 @@
                                 <a href="{{ route('admin.sla.edit', $r->id_sla) }}"
                                    class="text-blue-600 hover:text-blue-800 text-xs font-medium">Modifica</a>
                                 <form method="POST" action="{{ route('admin.sla.destroy', $r->id_sla) }}"
-                                      onsubmit="return confirm('Eliminare questa regola SLA?')">
+                                      onsubmit="return confirm('Eliminare questa regola?')">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-medium">Elimina</button>
                                 </form>
@@ -70,9 +65,34 @@
         @endif
     </div>
 
-    <div class="mt-4 p-4 bg-blue-50 rounded-lg text-sm text-blue-700">
-        <strong>Come funziona:</strong> quando una segnalazione viene aperta, il sistema cerca la regola SLA più specifica
-        (tipologia + specializzazione + priorità). Se non trovata, usa la regola default (senza tipologia).
-        Il job <code>sla:check</code> controlla quotidianamente e notifica i supervisori.
+    <div class="mt-4 mb-8 p-4 bg-blue-50 rounded-lg text-sm text-blue-700">
+        <strong>Come funziona:</strong> quando arriva una segnalazione, il sistema cerca la regola più specifica
+        (tipologia, specializzazione e priorità). Se non ne trova, usa quella senza tipologia.
+        Ogni giorno controlla le scadenze e avvisa i supervisori.
     </div>
+
+    <form method="POST" action="{{ route('admin.regole.orario') }}" class="bg-white shadow-sm rounded-xl p-5 space-y-4">
+        @csrf @method('PATCH')
+        <h2 class="text-sm font-semibold text-gray-800">Orario d'ufficio</h2>
+        <p class="text-sm text-gray-600">Le scadenze contano solo queste ore. Weekend, festivi nazionali (Pasqua e Pasquetta comprese) e giorno del patrono sono esclusi; la pausa pranzo non si conta. Se cambi orario o patrono, le scadenze delle segnalazioni aperte si ricalcolano.</p>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+            <x-pa.impostazione chiave="orario_lun" tipo="orario" etichetta="Lunedì" />
+            <x-pa.impostazione chiave="orario_mar" tipo="orario" etichetta="Martedì" />
+            <x-pa.impostazione chiave="orario_mer" tipo="orario" etichetta="Mercoledì" />
+            <x-pa.impostazione chiave="orario_gio" tipo="orario" etichetta="Giovedì" />
+            <x-pa.impostazione chiave="orario_ven" tipo="orario" etichetta="Venerdì" />
+            <x-pa.impostazione chiave="orario_sab" tipo="orario" etichetta="Sabato" />
+            <x-pa.impostazione chiave="orario_dom" tipo="orario" etichetta="Domenica" />
+            <x-pa.impostazione chiave="patrono" tipo="patrono" etichetta="Giorno del patrono"
+                aiuto="Giorno e mese (es. 13/06): è considerato festivo." />
+        </div>
+
+        <div class="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+            <p class="font-medium">Festivi {{ $anno }}</p>
+            <p class="mt-0.5 text-xs text-gray-600">{{ $festivi }}</p>
+        </div>
+
+        <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">Salva orario</button>
+    </form>
 </x-app-layout>
