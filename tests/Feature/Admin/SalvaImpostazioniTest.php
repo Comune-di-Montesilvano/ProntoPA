@@ -174,4 +174,16 @@ class SalvaImpostazioniTest extends TestCase
         $chiavi = collect(Sezioni::tutte())->flatMap(fn ($m) => array_keys($m));
         $this->assertFalse($chiavi->contains('telegram_notifica_stato_critico'));
     }
+
+    public function test_valore_array_e_errore_di_validazione_non_eccezione(): void
+    {
+        foreach ([['ASPETTO', 'ente_nome', ['a', 'b']], ['ASPETTO', 'ente_colore_primario', [['x']]], ['INTEGRAZIONI_SPID', 'oidc_issuer', ['x']], ['INTEGRAZIONI_TELEGRAM', 'telegram_bot_token', ['x']]] as [$sezione, $chiave, $valore]) {
+            try {
+                $this->salva($sezione, [$chiave => $valore]);
+                $this->fail("Atteso ValidationException per $chiave");
+            } catch (ValidationException $e) {
+                $this->assertArrayHasKey("impostazioni.$chiave", $e->errors());
+            }
+        }
+    }
 }

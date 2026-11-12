@@ -72,6 +72,9 @@ class IntegrazioniController extends Controller
     {
         $salva->salva(self::SEZIONI[$sezione], $request->input('impostazioni', []));
 
+        // Un esito di prova fallito non deve sopravvivere alla correzione.
+        Cache::forget("integrazioni:prova:$sezione");
+
         return back()->with('success', 'Impostazioni salvate.');
     }
 

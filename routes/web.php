@@ -8,7 +8,6 @@ use App\Http\Controllers\Admin\DelegheController;
 use App\Http\Controllers\Deleghe\DecisioneDelegaController;
 use App\Http\Controllers\Deleghe\RinnovoDelegheController;
 use App\Http\Controllers\DelegheScuolaController;
-use App\Http\Controllers\Admin\ImpostazioniController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\EntiController;
 use App\Http\Controllers\Admin\CategorieEntiController;
@@ -174,9 +173,8 @@ Route::middleware(['auth', 'role:admin|gestore'])
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/impostazioni', [ImpostazioniController::class, 'index'])->name('impostazioni.index');
-    Route::patch('/impostazioni', [ImpostazioniController::class, 'update'])->name('impostazioni.update');
-    Route::post('/impostazioni/pubblica-esistenti', [ImpostazioniController::class, 'pubblicaEsistenti'])->name('impostazioni.pubblica-esistenti');
+    // Vecchia pagina unica delle impostazioni (segnalibri, email): ora Aspetto.
+    Route::get('impostazioni', fn () => redirect()->route('admin.aspetto', [], 301));
 
     Route::get('utenti/dominio', [UtentiController::class, 'dominio'])->name('utenti.dominio');
     Route::get('utenti/scuole', [UtentiController::class, 'scuole'])->name('utenti.scuole');

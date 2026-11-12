@@ -40,7 +40,7 @@
         </div>
 
         <h2 class="text-sm font-semibold text-gray-800 pt-2">Colori</h2>
-        <div class="flex flex-wrap items-start gap-6" x-data="{ p: '{{ $primario }}', s: '{{ $secondario }}' }">
+        <div class="flex flex-wrap items-start gap-6" x-data="{ p: @js($primario), s: @js($secondario) }">
             <div @input="p = $event.target.value"><x-pa.impostazione chiave="ente_colore_primario" tipo="colore" etichetta="Colore principale" /></div>
             <div @input="s = $event.target.value"><x-pa.impostazione chiave="ente_colore_secondario" tipo="colore" etichetta="Colore di accento" /></div>
             <div class="flex flex-col gap-1">

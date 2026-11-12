@@ -79,7 +79,7 @@ class InvalidaSessioniTest extends TestCase
         $this->get(route('admin.dashboard'))->assertRedirect(route('login'));
     }
 
-    public function test_ripristino_id_non_compare_ne_si_modifica_dalle_impostazioni(): void
+    public function test_ripristino_id_non_compare_ne_si_modifica_dalle_pagine_impostazioni(): void
     {
         Impostazione::set('ripristino_id', $id = (string) Str::uuid());
         $this->actingAs($this->admin())->withSession(['ripristino_id' => $id]);
@@ -88,8 +88,11 @@ class InvalidaSessioniTest extends TestCase
             \Illuminate\Routing\Middleware\ThrottleRequests::class,
         ]);
 
-        $this->get(route('admin.impostazioni.index'))->assertOk()->assertDontSee($id)->assertDontSee('ripristino_id');
-        $this->patch(route('admin.impostazioni.update'), ['impostazioni' => ['ripristino_id' => 'manomesso', 'ente_nome' => 'X']]);
+        foreach (['admin.aspetto', 'admin.integrazioni', 'admin.regole.scadenze', 'admin.regole.segnalazioni', 'admin.regole.avvisi'] as $pagina) {
+            $this->get(route($pagina))->assertOk()->assertDontSee($id)->assertDontSee('ripristino_id');
+        }
+        $this->patch(route('admin.aspetto.update'), ['impostazioni' => ['ripristino_id' => 'manomesso', 'ente_nome' => 'X']]);
+        $this->patch(route('admin.integrazioni.update', 'spid'), ['impostazioni' => ['ripristino_id' => 'manomesso']]);
 
         $this->assertSame($id, Impostazione::query()->find('ripristino_id')?->valore);
         $this->assertSame('X', Impostazione::get('ente_nome'));

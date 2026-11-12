@@ -52,7 +52,7 @@ class UtentiController extends Controller
 
     public function ditte(Request $request): View
     {
-        $utenti = $this->elenco($request, User::role('impresa'))
+        $utenti = $this->elenco($request, User::role('impresa')->where('auth_source', 'spid'))
             ->with('impresa')
             ->paginate(25)
             ->withQueryString();

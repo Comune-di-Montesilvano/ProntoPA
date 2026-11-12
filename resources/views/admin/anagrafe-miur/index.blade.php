@@ -41,7 +41,7 @@
                         class="inline-flex items-center px-3 py-1.5 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 disabled:opacity-50 transition">
                     Scarica
                 </button>
-                <a href="{{ route('admin.impostazioni.index') }}" class="ml-3 text-sm text-blue-700 hover:underline">Cambia link</a>
+                <a href="{{ route('admin.integrazioni') }}" class="ml-3 text-sm text-blue-700 hover:underline">Cambia link</a>
             </form>
         </div>
 

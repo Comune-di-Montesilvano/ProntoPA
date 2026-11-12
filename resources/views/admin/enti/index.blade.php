@@ -3,11 +3,11 @@
     <x-slot name="actions">
         <a href="{{ route('admin.anagrafe-miur.index') }}"
            class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
-            Aggiungi da MIUR
+            <span class="sm:hidden">Da MIUR</span><span class="hidden sm:inline">Aggiungi da MIUR</span>
         </a>
         <a href="{{ route('admin.enti.create') }}"
            class="inline-flex items-center px-3 py-1.5 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
-            Nuovo ente a mano
+            <span class="sm:hidden">A mano</span><span class="hidden sm:inline">Nuovo ente a mano</span>
         </a>
     </x-slot>
 

@@ -93,6 +93,17 @@ class SalvaImpostazioni
      */
     private function valida(array $mappa, array $input): void
     {
+        // Un array al posto di un valore (impostazioni[chiave][]=x) non è mai valido.
+        $errori = [];
+        foreach ($input as $chiave => $valore) {
+            if (! is_scalar($valore) && $valore !== null) {
+                $errori["impostazioni.$chiave"] = 'Valore non valido.';
+            }
+        }
+        if ($errori) {
+            throw ValidationException::withMessages($errori);
+        }
+
         $regole = [];
         foreach ($mappa as $chiave => $tipo) {
             if (! array_key_exists($chiave, $input)) {
@@ -116,7 +127,6 @@ class SalvaImpostazioni
             }
         }
 
-        $errori = [];
         $validator = Validator::make(['impostazioni' => $input], $regole, [
             'impostazioni.*.regex' => 'Scegli un colore valido (formato #RRGGBB).',
             'impostazioni.*.url'   => "Scrivi un indirizzo completo, che inizi con http:// o https://.",
@@ -140,7 +150,7 @@ class SalvaImpostazioni
     }
 
     /**
-     * Logica presa da ImpostazioniController::validaOrario.
+     * Orario d'ufficio: almeno un giorno aperto, fasce e patrono validi.
      *
      * @param  array<string, string>  $mappa
      * @param  array<string, mixed>  $inviate

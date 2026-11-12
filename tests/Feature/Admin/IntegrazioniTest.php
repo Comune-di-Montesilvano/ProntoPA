@@ -123,4 +123,16 @@ class IntegrazioniTest extends TestCase
             ->assertSee('profilo Docker')
             ->assertSee('Sincronizzazione');
     }
+
+    public function test_salvataggio_cancella_l_esito_della_prova(): void
+    {
+        Cache::put('integrazioni:prova:telegram', ['ok' => false, 'messaggio' => 'x', 'quando' => now()->toIso8601String()], 600);
+        Cache::put('integrazioni:prova:ai', ['ok' => true, 'messaggio' => 'y', 'quando' => now()->toIso8601String()], 600);
+
+        $this->actingAs($this->admin)->patch(route('admin.integrazioni.update', 'telegram'), ['impostazioni' => ['telegram_bot_token' => 'nuovo']])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull(Cache::get('integrazioni:prova:telegram'));
+        $this->assertNotNull(Cache::get('integrazioni:prova:ai'));
+    }
 }

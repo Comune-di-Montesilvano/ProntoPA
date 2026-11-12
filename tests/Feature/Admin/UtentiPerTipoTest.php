@@ -164,4 +164,16 @@ class UtentiPerTipoTest extends TestCase
 
         $this->assertSame($uno, $cinque);
     }
+
+    public function test_ditta_locale_legacy_non_compare_in_nessun_elenco(): void
+    {
+        $impresa = Impresa::factory()->create();
+        $this->persona('locale', 'impresa', ['name' => 'Ugo Legacy', 'id_impresa' => $impresa->id_impresa]);
+        $this->persona('locale', 'segnalatore', ['name' => 'Lia Legacy']);
+
+        foreach (['dominio', 'scuole', 'ditte'] as $lista) {
+            $this->actingAs($this->admin)->get(route("admin.utenti.$lista", ['mostra_disattivati' => 1]))
+                ->assertOk()->assertDontSee('Ugo Legacy')->assertDontSee('Lia Legacy');
+        }
+    }
 }

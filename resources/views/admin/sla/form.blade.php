@@ -82,7 +82,7 @@
                     </div>
                     <p class="-mt-3 text-xs text-gray-400">
                         Si conta solo l'orario d'ufficio (weekend, festivi e patrono esclusi), impostato in
-                        <a href="{{ route('admin.impostazioni.index') }}" class="underline">Impostazioni → Orario d'ufficio</a>.
+                        <a href="{{ route('admin.regole.scadenze') }}" class="underline">Regole di lavoro → Scadenze</a>.
                         N giorni lavorativi = entro la chiusura dell'N-esimo giorno lavorativo dopo quello della segnalazione.
                     </p>
 

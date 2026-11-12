@@ -148,7 +148,7 @@ class RicalcoloSlaTest extends TestCase
         $this->actingAs($this->admin)->get(route('admin.regole.scadenze'))
             ->assertOk()
             ->assertSee("Orario d'ufficio", false)
-            ->assertSee('06/04/2026')
+            ->assertSee('25/04/'.Carbon::now()->year)
             ->assertSeeInOrder(['orario_lun', 'orario_mar', 'orario_dom', 'patrono']);
     }
 }

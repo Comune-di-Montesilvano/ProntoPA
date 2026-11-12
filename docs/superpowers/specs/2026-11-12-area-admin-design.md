@@ -1,6 +1,6 @@
 # Area amministrazione rifatta: Stato del sistema, Persone, Enti e sedi, Regole, Ente e integrazioni
 
-Data: 2026-11-12 · Stato: design, da approvare · Release: **un'unica patch 0.9.x** (decisione committente)
+Data: 2026-11-12 · Stato: rilasciata 0.9.18 · Release: **un'unica patch 0.9.x** (decisione committente)
 
 Progetto 2 di `2026-11-11-ruoli-smistamento-design.md` ("riorganizzazione area Impostazioni/admin").
 

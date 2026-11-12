@@ -32,7 +32,7 @@ class BrandLogoTest extends TestCase
 
     private function carica(array $extra = []): \Illuminate\Testing\TestResponse
     {
-        return $this->actingAs($this->admin)->patch(route('admin.impostazioni.update'), [
+        return $this->actingAs($this->admin)->patch(route('admin.aspetto.update'), [
             'impostazioni' => ['ente_nome' => 'Comune di Prova'],
         ] + $extra);
     }
@@ -83,7 +83,7 @@ class BrandLogoTest extends TestCase
 
     public function test_ente_logo_file_non_scrivibile_dal_form_generico(): void
     {
-        $this->carica(['impostazioni' => ['ente_logo_file' => '../../.env']]);
+        $this->carica(['impostazioni' => ['ente_nome' => 'Comune di Prova', 'ente_logo_file' => '../../.env']]);
 
         $this->assertEmpty(Impostazione::get('ente_logo_file'));
     }

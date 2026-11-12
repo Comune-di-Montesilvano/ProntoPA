@@ -78,18 +78,20 @@ BACKUP_PASSPHRASE=  # passphrase AES-256 dei backup, uguale tra dev e prod per m
 
 Nuova env var → anche nel blocco `x-php-env` di `docker-compose.yml` (niente passthrough automatico).
 
-Brand/mappa/email → **Admin → Impostazioni**.
+Brand/mappa/email → **Admin → Ente e sistema → Aspetto** (le altre impostazioni stanno nelle pagine di Regole di lavoro e Integrazioni, vedi sotto).
 
-## Brandizzazione (`impostazioni`)
+## Impostazioni (`impostazioni`) e menu Amministrazione (v0.9.18)
 
-| Chiave | Gruppo |
-|---|---|
-| `ente_nome` `ente_logo_url` `ente_logo_file` (interna, upload su disco `local` `brand/`, servito da `brand.logo-ente`, ha precedenza sull'URL) `ente_colore_primario` `ente_colore_secondario` `ente_sito_url` | brand |
-| `osm_lat` `osm_lng` `osm_zoom` | mappa |
-| `mail_from_address` `mail_from_name` | email |
-| `miur_anagrafe_url` `miur_comune_default` | scuole |
-| `deleghe_max_pendenti` `deleghe_giorni_stop_rifiuto` `deleghe_giorni_scadenza_richiesta` `deleghe_email_giorno_istituto` `deleghe_mesi_validita` `deleghe_giorni_avviso_delegato` | deleghe |
-| `orario_lun`…`orario_dom` (`HH:MM-HH:MM`, vuoto = chiuso) `patrono` (`GG/MM`) | orario |
+Spec: `docs/superpowers/specs/2026-11-12-area-admin-design.md`. Non c'è più un form unico: ogni chiave appartiene a **una pagina** e `App\Support\Impostazioni\Sezioni` è la mappa (sezione → chiave → tipo: `testo` `url` `email` `intero` `colore` `ora` `bool` `segreto` `segreto_cifrato` `stato` `disco` `orario` `patrono`…). `App\Services\Impostazioni\SalvaImpostazioni::salva($sezione, $input)` valida e salva solo le chiavi della sezione (mai `Impostazione::CHIAVI_INTERNE`, valori array rifiutati, segreto vuoto = invariato, `segreto_cifrato` con `Crypt`). Nuova chiave → riga in `Sezioni` + `ImpostazioniSeeder`, e `<x-pa.impostazione chiave="…" tipo="…">` nella pagina.
+
+| Pagina (menu) | Sezioni | Chiavi principali |
+|---|---|---|
+| Ente e sistema → Aspetto (`admin.aspetto`) | `ASPETTO` | `ente_nome` `ente_logo_url` `ente_logo_file` (interna: upload su disco `local` `brand/`, `Brand::salvaLogoFile()`, servito da `brand.logo-ente`, ha precedenza sull'URL) `ente_colore_primario/secondario` `ente_sito_url` · `osm_lat/lng/zoom` · `mail_from_address/name` |
+| Ente e sistema → Integrazioni (`admin.integrazioni`, `PATCH integrazioni/{slug}`, `POST integrazioni/{slug}/prova`) | `INTEGRAZIONI_*` (spid telegram webhook ai antivirus allegati miur deleghe) | `oidc_*` · `telegram_*` · `webhook_cittadini_*` · `ai_*` · `antivirus_enabled` · `allegati_*` · `miur_*` · `deleghe_*`. "Prova" (spid/telegram/ai/antivirus) salva l'esito in cache `integrazioni:prova:<slug>` (30 min), cancellato a ogni salvataggio della sezione |
+| Regole di lavoro → Scadenze / Segnalazioni / Avvisi (`admin.regole.*`) | `SCADENZE` `SEGNALAZIONI` `AVVISI` | Scadenze: regole SLA (tabella) + `orario_lun`…`orario_dom` (`HH:MM-HH:MM`, vuoto = chiuso) `patrono` (`GG/MM`) · Segnalazioni: riapertura, adesioni/dedup, pubblicazione automatica, `etichetta_ufficio_segnalante` (vuota = default) · Avvisi: digest e notifiche Telegram |
+| Squadre (`organizzazione.squadre.index`) | `SQUADRE` | `squadre_enabled` (solo admin) |
+
+**Menu Amministrazione** (`layouts/app.blade.php`, solo admin salvo Squadre/Tipologie): Stato del sistema (`admin.dashboard`) · Persone (Utenti di dominio / Scuole (SPID) / Ditte (SPID) / Deleghe delle scuole / Squadre / Tipologie dei gestori: queste due anche al supervisore, `@can('gestisci-organizzazione')`) · Enti e sedi (`admin.enti.*`, categorie, "Aggiungi da MIUR" non è voce di menu) · Regole di lavoro · Ente e sistema. Vecchi URL (`/admin/impostazioni`, `utenti`, `organizzazioni*`, `sedi*`, `sla`, `profili*`, `provenienze*`) → 301 alla pagina nuova (`MenuERedirectTest`). **Stato del sistema** (`Services/Admin/StatoSistema` → `Riquadro` ok|attenzione|problema|non_verificabile): sync AD, backup, SPID, email, webhook, MIUR, tipologie orfane, deleghe in attesa, Telegram/AI/antivirus; **mai chiamate di rete** (per i servizi esterni conta solo l'esito in cache dell'ultima prova), "meglio grigio che verde falso"; in fondo "Non attive: …".
 
 ```php
 $val = Impostazione::get('ente_nome', 'ProntoPA');
@@ -107,8 +109,8 @@ app/Http/Controllers/
   StatisticheController  ReportController  FascicoloPdfController
   AdesioniSegnalazioniController  AllegatiSegnalazioniController  BrandLogoController  DelegheImpresaController
   AiTriageController  PublicHomeController  ProfileController  TelegramAccountController
-  Admin/{ImpostazioniController,UtentiController,
-         SediController,SlaController,OrganizzazioniController,AdminDashboardController,
+  Admin/{AdminDashboardController (Stato del sistema),UtentiController (dominio|scuole|ditte),EntiController,CategorieEntiController,SediController,
+         AspettoController,IntegrazioniController,SlaController,Regole/{ScadenzeController,SegnalazioniController,AvvisiController},
          AnagrafeMiurController,DelegheController,BackupController}
   Organizzazione/{SquadreController,TipologieGestoriController}  # admin + supervisori
   Deleghe/{DecisioneDelegaController,RinnovoDelegheController}  DelegheScuolaController
@@ -122,6 +124,7 @@ app/Enums/SegnalazioneStato.php    # fonte di verità sugli stati, vedi sotto
 app/Policies/SegnalazionePolicy.php
 app/Services/
   SegnalazioneWorkflowService  WebhookService  SlaService
+  Admin/{StatoSistema,Riquadro}  Impostazioni/SalvaImpostazioni  # home admin e salvataggio guidato da `Sezioni`
   Sla/CalendarioUfficio  # orario d'ufficio + festivi nazionali (Pasqua calcolata) + patrono: ore/giorni lavorativi
   DedupService     # anti-duplicato: simili per tipologia/plesso/vicinanza + embeddings
   Segnalazioni/  CoperturaTipologie (chi copre quale tipologia, orfane) · AccorpamentoService (accorpa: allegati/adesioni alla più vecchia, stato 8) · FineLavoriService · DestinatariComune (chi avvisare in comune) · DestinatariAssegnatario (sollecito/assegnazione: delegati ditta+email aziendale, operaio o caposquadra)
@@ -144,7 +147,7 @@ app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  Ch
 
 | Ruolo | Accesso |
 |---|---|
-| `admin` | Totale: utenti, impostazioni, sistema |
+| `admin` | Totale: persone, enti, regole, integrazioni, sistema |
 | `gestore` | Segnalazioni. `supervisore_segnalazioni=true`→tutto (+ area Organizzazione: squadre, tipologie dei gestori; gate `gestisci-organizzazione`); altrimenti le sue **tipologie** (`gestori_tipologie` o `gestore_tutte_tipologie`) + assegnate/aperte da sé, e agisce su quelle (riapertura ed eliminazione allegati restano al supervisore) |
 | `operaio` | Lavori assegnati a sé o alla propria squadra (`Squadra`, caposquadra riassegna ai membri) |
 | `segnalatore` | Proprie segnalazioni. Ha `id_provenienza` (scuola/URP/portale/interno) |
@@ -157,7 +160,7 @@ app/Console/Commands/PopulateDemoData.php (artisan demo)  InviaDigestGestori  Ch
 - **Username per tipo di account** (regola del committente, non derogabile): dominio = sAMAccountName (`mario.rossi`), SPID = codice fiscale (anche persone delle ditte). Niente generatori `nome.cognome`.
 - `users.auth_source` = `locale`·`ldap`·`spid`; `ldap_guid` chiave identità AD; `email` NON unique a DB (unicità applicativa solo tra `locale` attivi); reset password solo `locale` attivi
 
-**Scuole via SPID/CIE** (`/auth/spid` → pa-sso-proxy): OIDC Authorization Code + PKCE, solo `client_secret_basic`, id_token verificato via JWKS (senza `kid` ok se JWKS ha una chiave) + claim persona da userinfo (`sub` deve coincidere). Identità = `users.codice_fiscale` (`TINIT-` rimosso), **mai** il `sub`. Primo accesso → "Completa profilo" (utente creato SOLO con l'email) → verifica email (`verification.*`) → `LimitaAccessoSpid`: senza delega attiva gli utenti `spid` vedono solo verifica email e "Le mie deleghe" (`scuola.deleghe.*`); visibilità segnalazioni = `Delega::plessiCopertiDa()` (scope, policy, form). Deleghe decise dalla segreteria via link firmato senza login (`deleghe/decidi|rinnovo/{token}`, solo hash SHA-256 a DB, firma legata ad `APP_URL`). `state`/`nonce`/`verifier` in sessione Laravel (monouso). Config in Admin → Impostazioni → SPID: issuer (radice, senza `/OIDC`), client id, secret **cifrato con `APP_KEY`** (cambiare `APP_KEY` = reinserire il secret); redirect URI `{APP_URL}/auth/spid/callback` mostrato in sola lettura. Logout SPID → `end_session_endpoint` del proxy.
+**Scuole via SPID/CIE** (`/auth/spid` → pa-sso-proxy): OIDC Authorization Code + PKCE, solo `client_secret_basic`, id_token verificato via JWKS (senza `kid` ok se JWKS ha una chiave) + claim persona da userinfo (`sub` deve coincidere). Identità = `users.codice_fiscale` (`TINIT-` rimosso), **mai** il `sub`. Primo accesso → "Completa profilo" (utente creato SOLO con l'email) → verifica email (`verification.*`) → `LimitaAccessoSpid`: senza delega attiva gli utenti `spid` vedono solo verifica email e "Le mie deleghe" (`scuola.deleghe.*`); visibilità segnalazioni = `Delega::plessiCopertiDa()` (scope, policy, form). Deleghe decise dalla segreteria via link firmato senza login (`deleghe/decidi|rinnovo/{token}`, solo hash SHA-256 a DB, firma legata ad `APP_URL`). `state`/`nonce`/`verifier` in sessione Laravel (monouso). Config in Admin → Integrazioni → SPID: issuer (radice, senza `/OIDC`), client id, secret **cifrato con `APP_KEY`** (cambiare `APP_KEY` = reinserire il secret); redirect URI `{APP_URL}/auth/spid/callback` mostrato in sola lettura. Logout SPID → `end_session_endpoint` del proxy.
 
 Gruppi AD → ruolo (nomi in env `LDAP_GRUPPO_*` → `config('ldap.gruppi')`, NON in Impostazioni: servono al primo login, prima che esista un admin), precedenza in quest'ordine, un solo ruolo, ricalcolato a ogni login:
 
@@ -170,7 +173,7 @@ Gruppi AD → ruolo (nomi in env `LDAP_GRUPPO_*` → `config('ldap.gruppi')`, NO
 | `PRONTOPA_URP` | `segnalatore` | + permesso `segnalazioni.per-conto`, provenienza 3 |
 | `PRONTOPA_SEGNALATORI` | `segnalatore` | provenienza 1 |
 
-**Sync AD (v0.9.14, spec `docs/superpowers/specs/2026-11-11-sync-ad-design.md`)**: account di servizio in sola lettura (`LDAP_SYNC_USERNAME`/`LDAP_SYNC_PASSWORD`, vuote = sync spenta; mock sincronizza sempre) → `ldap:sincronizza` 05:30 + "Sincronizza ora" in Admin → Utenti (job): crea/aggiorna/riattiva i membri dei gruppi, **disattiva** utenti `ldap` usciti dai gruppi o disabilitati in AD (ruoli/tipologie conservati). Mai scritture se AD giù, 0 membri o manca in AD un gruppo i cui utenti hanno ancora quel ruolo (gruppo assente senza utenti, es. URP mai creato, ignorato: i default `LDAP_GRUPPO_*` del compose usano `:-` e non si possono svuotare); errori grezzi di ldap_search → esito fallita; >50% di disattivazioni (con ≥5 attivi) → giro bloccato, `--forza`/"Sincronizza comunque". Esito in `impostazioni.ldap_sync_esito`; notturna fallita → email admin. Utenti `ldap`: attivo, nome, username, email, ruolo, supervisore e provenienza decisi solo da AD (gate `cambia-attivo-utente`; form admin modifica solo telefono/profilo). "Sincronizza comunque" passa `confermati` (le disattivazioni viste): se sono aumentate, di nuovo bloccata. Errore su un utente → savepoint, contato in `errori`, gli altri proseguono. Giro con lock già preso → stato `in_corso` (non salvato, nessuna email); pulsante deduplicato da `ldap-sync-in-coda` + `inCorso()`. Gestore che cambia ruolo perde le tipologie (admin tiene le esplicite). Diagnosi `ldap:prova --sync`, anteprima `ldap:sincronizza --prova`.
+**Sync AD (v0.9.14, spec `docs/superpowers/specs/2026-11-11-sync-ad-design.md`)**: account di servizio in sola lettura (`LDAP_SYNC_USERNAME`/`LDAP_SYNC_PASSWORD`, vuote = sync spenta; mock sincronizza sempre) → `ldap:sincronizza` 05:30 + "Sincronizza ora" in Admin → Persone → Utenti di dominio (job): crea/aggiorna/riattiva i membri dei gruppi, **disattiva** utenti `ldap` usciti dai gruppi o disabilitati in AD (ruoli/tipologie conservati). Mai scritture se AD giù, 0 membri o manca in AD un gruppo i cui utenti hanno ancora quel ruolo (gruppo assente senza utenti, es. URP mai creato, ignorato: i default `LDAP_GRUPPO_*` del compose usano `:-` e non si possono svuotare); errori grezzi di ldap_search → esito fallita; >50% di disattivazioni (con ≥5 attivi) → giro bloccato, `--forza`/"Sincronizza comunque". Esito in `impostazioni.ldap_sync_esito`; notturna fallita → email admin. Utenti `ldap`: attivo, nome, username, email, ruolo, supervisore e provenienza decisi solo da AD (gate `cambia-attivo-utente`; form admin modifica solo telefono/profilo). "Sincronizza comunque" passa `confermati` (le disattivazioni viste): se sono aumentate, di nuovo bloccata. Errore su un utente → savepoint, contato in `errori`, gli altri proseguono. Giro con lock già preso → stato `in_corso` (non salvato, nessuna email); pulsante deduplicato da `ldap-sync-in-coda` + `inCorso()`. Gestore che cambia ruolo perde le tipologie (admin tiene le esplicite). Diagnosi `ldap:prova --sync`, anteprima `ldap:sincronizza --prova`.
 
 Primo login AD: aggancio account legacy `locale` non-ditta con stessa email (se unico). Username AD già usato da altro account → login rifiutato ("contatta l'amministratore"). Diagnosi: `php artisan ldap:prova <username>` (nessuna scrittura DB): stampa la config letta e `Directory::motivoUltimoRifiuto()` (bind 49 con messaggio AD data 52e/533/775…, oppure bind ok ma utente non trovato → base DN/template). Il form di login mostra sempre il generico `auth.failed` (`lang/it/auth.php`).
 **Blocco tentativi** (`LoginRequest`, `config('auth.login')`): chiave account = identità normalizzata **senza IP** (`LOGIN_MAX_TENTATIVI`=5 in `LOGIN_BLOCCO_MINUTI`=15, da tenere sotto soglia/finestra di lockout AD), chiave IP 20/60 min. Il controllo precede il bind AD; ogni blocco → `Log::warning`. IP reale da `trustProxies('*')` = solo il peer diretto (reverse proxy) è fidato.
@@ -237,7 +240,7 @@ POST /api/segnalazioni              # crea da sito Comune (Sanctum), 409 se simi
 GET  /api/segnalazioni/{id}/stato   # legge stato
 ```
 
-Webhook outbound: HTTP POST HMAC-firmato al cambio stato → Admin → Impostazioni → Webhook.
+Webhook outbound: HTTP POST HMAC-firmato al cambio stato → Admin → Integrazioni → Webhook.
 
 ## Test E2E (Dusk)
 
@@ -301,7 +304,7 @@ Test SPID: `tests/Support/FakeOidcProvider` simula pa-sso-proxy con `Http::fake`
 1. `git push tag` → Actions builda GHCR
 2. Portainer stack → `docker-compose.yml`, env vars (APP_KEY, DB_PASSWORD, `LDAP_HOST` `LDAP_BASE_DN` `LDAP_USER_DN_TEMPLATE`…). **Mai `LDAP_HOST=mock`**
 3. L'entrypoint a OGNI avvio esegue migrate + `AllineamentoSeeder` (dati di riferimento, ruoli/permessi, impostazioni nuove; mai valori configurati né ruoli utenti; nessun utente creato)
-4. Crea in AD i gruppi `PRONTOPA_*` e un account di servizio in sola lettura (`LDAP_SYNC_USERNAME`/`LDAP_SYNC_PASSWORD` nello stack, consigliato), verifica con `php artisan ldap:prova <utente>` e `ldap:prova --sync`, entra con un utente di `PRONTOPA_ADMIN` → Admin → Impostazioni per configurare ente
+4. Crea in AD i gruppi `PRONTOPA_*` e un account di servizio in sola lettura (`LDAP_SYNC_USERNAME`/`LDAP_SYNC_PASSWORD` nello stack, consigliato), verifica con `php artisan ldap:prova <utente>` e `ldap:prova --sync`, entra con un utente di `PRONTOPA_ADMIN` → Admin → Aspetto e Integrazioni per configurare l'ente
 
 Rootless: no bind mount, named volumes `mariadb_data` `redis_data` `app_storage` → `/var/www/html/storage`
 
