@@ -1,5 +1,11 @@
 <x-app-layout>
-    <x-slot name="header">Anagrafe scuole MIUR</x-slot>
+    <x-slot name="header">Aggiungi da MIUR</x-slot>
+    <x-slot name="actions">
+        <a href="{{ route('admin.enti.index') }}"
+           class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
+            Torna a Enti e sedi
+        </a>
+    </x-slot>
 
     <div class="space-y-6">
         <div class="bg-white shadow-sm rounded-xl p-6 space-y-3">
@@ -53,7 +59,7 @@
                                 <td>{{ $m['nome'] }}</td>
                                 <td class="text-right">{{ $m['segnalazioni'] }}</td>
                                 <td class="text-right">
-                                    <a class="text-blue-700 hover:underline" href="{{ $m['tipo'] === 'istituto' ? route('admin.organizzazioni.edit', $m['id']) : route('admin.sedi.edit', $m['id']) }}">Apri</a>
+                                    <a class="text-blue-700 hover:underline" href="{{ $m['tipo'] === 'istituto' ? route('admin.enti.show', $m['id']) : route('admin.sedi.edit', $m['id']) }}">Apri</a>
                                 </td>
                             </tr>
                         @endforeach

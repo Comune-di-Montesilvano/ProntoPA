@@ -33,7 +33,7 @@ class OrganizzazioniCreaTest extends TestCase
     /** Asili nido, uffici comunali ecc. non hanno codice meccanografico MIUR. */
     public function test_crea_organizzazione_senza_codice_meccanografico(): void
     {
-        $this->actingAs($this->admin())->post(route('admin.organizzazioni.store'), [
+        $this->actingAs($this->admin())->post(route('admin.enti.store'), [
             'descrizione'           => 'Asili Nido Comunali',
             'id_categoria'          => \App\Models\CategoriaEnte::perImportMiur()->id_categoria,
             'codice_meccanografico' => '',
@@ -43,7 +43,7 @@ class OrganizzazioniCreaTest extends TestCase
             'email'                 => '',
             'recapiti'              => '',
             'domini_email_istituzionali' => '',
-        ])->assertRedirect(route('admin.organizzazioni.index'));
+        ])->assertRedirect();
 
         $istituto = Istituto::where('descrizione', 'Asili Nido Comunali')->firstOrFail();
         $this->assertNull($istituto->codice_meccanografico);

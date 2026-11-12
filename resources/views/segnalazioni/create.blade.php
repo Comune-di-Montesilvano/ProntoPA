@@ -114,12 +114,12 @@
                     <select id="id_plesso" name="id_plesso" @required($scuola)
                             class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_plesso') border-red-500 @enderror">
                         <option value="">{{ $scuola ? '— Seleziona —' : '— Nessuno —' }}</option>
-                        @foreach($plessi->groupBy(fn($p) => $p->istituto ? trim($p->istituto->descrizione.' · '.$p->istituto->codice_meccanografico, ' ·') : 'Altro') as $istituto => $items)
-                            <optgroup label="{{ $istituto }}">
+                        @foreach($plessi->groupBy(fn($p) => $p->istituto?->categoria?->nome ?? 'Altro') as $categoria => $items)
+                            <optgroup label="{{ $categoria }}">
                                 @foreach($items as $p)
                                     <option value="{{ $p->id_plesso }}"
                                         {{ old('id_plesso') == $p->id_plesso ? 'selected' : '' }}>
-                                        {{ $p->etichetta() }}
+                                        {{ $p->istituto ? $p->istituto->descrizione.' — ' : '' }}{{ $p->etichetta() }}
                                     </option>
                                 @endforeach
                             </optgroup>

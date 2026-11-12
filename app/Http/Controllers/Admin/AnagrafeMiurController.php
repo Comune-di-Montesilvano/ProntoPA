@@ -113,14 +113,17 @@ class AnagrafeMiurController extends Controller
             return back()->with('error', $e->getMessage().'. Ricarica la pagina.');
         }
 
-        $redirect = redirect()->route('admin.anagrafe-miur.show', strtoupper($codice))
+        $ente = Istituto::conCodice($codice)->first();
+        $redirect = ($ente
+            ? redirect()->route('admin.enti.show', $ente)
+            : redirect()->route('admin.anagrafe-miur.show', strtoupper($codice)))
             ->with('success', sprintf(
                 'Salvato. Sedi create: %d, aggiornate: %d, adottate da anagrafica esistente: %d.',
                 count($esito['creati']), count($esito['aggiornati']), count($esito['adottati'])
             ));
 
         if ($esito['non_selezionati'] !== []) {
-            $redirect->with('warning', 'Sedi presenti in ProntoPA ma non selezionate (non rimosse, eliminale da Sedi se serve): '
+            $redirect->with('warning', 'Sedi presenti in ProntoPA ma non selezionate (non rimosse, eliminale dalla scheda ente se serve): '
                 .implode(', ', array_map(fn (Plesso $p) => $p->nome, $esito['non_selezionati'])));
         }
 

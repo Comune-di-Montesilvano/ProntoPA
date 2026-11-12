@@ -60,13 +60,9 @@
                         <div class="font-semibold text-gray-800">Utenti</div>
                         <div class="text-sm text-gray-500 mt-1">Approva e monitora gli account</div>
                     </a>
-                    <a href="{{ route('admin.organizzazioni.index') }}" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-white hover:shadow-sm transition">
-                        <div class="font-semibold text-gray-800">Organizzazioni</div>
-                        <div class="text-sm text-gray-500 mt-1">Anagrafica enti manuale</div>
-                    </a>
-                    <a href="{{ route('admin.sedi.index') }}" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-white hover:shadow-sm transition">
-                        <div class="font-semibold text-gray-800">Sedi</div>
-                        <div class="text-sm text-gray-500 mt-1">Plessi e strutture collegate</div>
+                    <a href="{{ route('admin.enti.index') }}" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-white hover:shadow-sm transition">
+                        <div class="font-semibold text-gray-800">Enti e sedi</div>
+                        <div class="text-sm text-gray-500 mt-1">Scuole, uffici e strutture collegate</div>
                     </a>
                     <a href="{{ route('admin.sla.index') }}" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-white hover:shadow-sm transition">
                         <div class="font-semibold text-gray-800">SLA</div>

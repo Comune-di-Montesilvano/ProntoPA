@@ -8,9 +8,8 @@ use App\Http\Controllers\Deleghe\RinnovoDelegheController;
 use App\Http\Controllers\DelegheScuolaController;
 use App\Http\Controllers\Admin\ImpostazioniController;
 use App\Http\Controllers\Admin\AdminDashboardController;
-use App\Http\Controllers\Admin\OrganizzazioniController;
-use App\Http\Controllers\Admin\ProfiliController;
-use App\Http\Controllers\Admin\ProvenienzaController;
+use App\Http\Controllers\Admin\EntiController;
+use App\Http\Controllers\Admin\CategorieEntiController;
 use App\Http\Controllers\Admin\SediController;
 use App\Http\Controllers\Admin\SlaController;
 use App\Http\Controllers\Organizzazione\SquadreController;
@@ -183,12 +182,30 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         ->except(['show', 'create', 'store'])
         ->parameters(['utenti' => 'utente']);
 
-    Route::resource('organizzazioni', OrganizzazioniController::class)
-        ->except(['show'])
-        ->parameters(['organizzazioni' => 'organizzazione']);
+    // Enti (ex Organizzazioni) e sedi in una sezione sola.
+    Route::get('enti', [EntiController::class, 'index'])->name('enti.index');
+    Route::get('enti/nuovo', [EntiController::class, 'create'])->name('enti.create');
+    Route::post('enti', [EntiController::class, 'store'])->name('enti.store');
+    Route::get('enti/{ente}', [EntiController::class, 'show'])->name('enti.show');
+    Route::patch('enti/{ente}', [EntiController::class, 'update'])->name('enti.update');
+    Route::delete('enti/{ente}', [EntiController::class, 'destroy'])->name('enti.destroy');
+    Route::post('enti/{ente}/sedi', [EntiController::class, 'storeSede'])->name('enti.sedi.store');
+
+    Route::post('categorie-enti', [CategorieEntiController::class, 'store'])->name('categorie-enti.store');
+    Route::patch('categorie-enti/{categoria}', [CategorieEntiController::class, 'update'])->name('categorie-enti.update');
+    Route::delete('categorie-enti/{categoria}', [CategorieEntiController::class, 'destroy'])->name('categorie-enti.destroy');
+
+    // Vecchi URL (segnalibri): mai 404.
+    Route::redirect('organizzazioni', '/admin/enti', 301);
+    Route::redirect('organizzazioni/create', '/admin/enti', 301);
+    Route::get('organizzazioni/{id}/edit', fn (int $id) => redirect()->route('admin.enti.show', $id, 301))->whereNumber('id');
+    Route::get('sedi', fn (\Illuminate\Http\Request $request) => $request->filled('id_istituto')
+        ? redirect()->route('admin.enti.show', (int) $request->query('id_istituto'), 301)
+        : redirect()->route('admin.enti.index', [], 301));
+    Route::redirect('sedi/create', '/admin/enti', 301);
 
     Route::resource('sedi', SediController::class)
-        ->except(['show'])
+        ->only(['edit', 'update', 'destroy'])
         ->parameters(['sedi' => 'sede']);
     Route::post('sedi/{sede}/unisci', [SediController::class, 'unisci'])->name('sedi.unisci');
 

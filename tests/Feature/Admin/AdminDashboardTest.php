@@ -29,7 +29,7 @@ class AdminDashboardTest extends TestCase
         $response->assertDontSee('Utenti pending');
         $response->assertSee('Sedi');
         $response->assertSee('SLA');
-        $response->assertSee(route('admin.sedi.index'));
+        $response->assertSee(route('admin.enti.index'));
         $response->assertSee(route('admin.sla.index'));
     }
 }

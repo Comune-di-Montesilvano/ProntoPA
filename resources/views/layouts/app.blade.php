@@ -133,14 +133,8 @@
                     <x-sidebar-link href="{{ route('admin.impostazioni.index') }}" :active="request()->routeIs('admin.impostazioni.*')" icon="adjustments">
                         Impostazioni ente
                     </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.organizzazioni.index') }}" :active="request()->routeIs('admin.organizzazioni.*')" icon="office-building">
-                        Organizzazioni
-                    </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.sedi.index') }}" :active="request()->routeIs('admin.sedi.*')" icon="map-pin">
-                        Sedi
-                    </x-sidebar-link>
-                    <x-sidebar-link href="{{ route('admin.anagrafe-miur.index') }}" :active="request()->routeIs('admin.anagrafe-miur.*')" icon="office-building">
-                        Anagrafe MIUR
+                    <x-sidebar-link href="{{ route('admin.enti.index') }}" :active="request()->routeIs('admin.enti.*', 'admin.sedi.*', 'admin.categorie-enti.*', 'admin.anagrafe-miur.*')" icon="office-building">
+                        Enti e sedi
                     </x-sidebar-link>
                     <x-sidebar-link href="{{ route('admin.backup.index') }}" :active="request()->routeIs('admin.backup.*')" icon="archive">
                         Backup

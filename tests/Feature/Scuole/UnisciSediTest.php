@@ -56,7 +56,7 @@ class UnisciSediTest extends TestCase
             ->assertSee('D.D. MONTESILVANO-V. VERROCCHIO — primaria · PEEE037078');
 
         $this->actingAs($this->admin)->post(route('admin.sedi.unisci', $legacy), ['id_destinazione' => $miur->id_plesso])
-            ->assertRedirect(route('admin.sedi.edit', $miur))
+            ->assertRedirect(route('admin.enti.show', $miur->id_istituto))
             ->assertSessionHas('success');
 
         $this->assertModelMissing($legacy);

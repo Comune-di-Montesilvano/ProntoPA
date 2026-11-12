@@ -130,7 +130,7 @@ class AnagrafeMiurAdminTest extends TestCase
         $admin = $this->utente('admin');
 
         $this->actingAs($admin)->post(route('admin.anagrafe-miur.salva', 'PEIC828004'), ['sedi' => ['PEMM828015', 'PEAA828033']])
-            ->assertRedirect(route('admin.anagrafe-miur.show', 'PEIC828004'));
+            ->assertRedirect(route('admin.enti.show', Istituto::conCodice('PEIC828004')->value('id_istituto')));
         $this->assertSame(2, Plesso::where('fonte_dati', 'miur')->count());
 
         $this->actingAs($admin)->post(route('admin.anagrafe-miur.salva', 'PEIC828004'), ['sedi' => ['PEMM828015']])

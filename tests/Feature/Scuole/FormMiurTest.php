@@ -47,7 +47,7 @@ class FormMiurTest extends TestCase
     {
         $ist = $this->istituto('miur');
 
-        $this->actingAs($this->admin)->patch(route('admin.organizzazioni.update', $ist), $this->payloadIstituto())->assertRedirect();
+        $this->actingAs($this->admin)->patch(route('admin.enti.update', $ist), $this->payloadIstituto())->assertRedirect();
 
         $ist->refresh();
         $this->assertSame('IC SILONE', $ist->descrizione);
@@ -60,7 +60,7 @@ class FormMiurTest extends TestCase
     {
         $ist = $this->istituto('manuale');
 
-        $this->actingAs($this->admin)->patch(route('admin.organizzazioni.update', $ist), $this->payloadIstituto())->assertRedirect();
+        $this->actingAs($this->admin)->patch(route('admin.enti.update', $ist), $this->payloadIstituto())->assertRedirect();
 
         $this->assertSame('NOME CAMBIATO', $ist->fresh()->descrizione);
     }
@@ -98,7 +98,7 @@ class FormMiurTest extends TestCase
     {
         $ist = $this->istituto('miur');
 
-        $this->actingAs($this->admin)->get(route('admin.organizzazioni.edit', $ist))
+        $this->actingAs($this->admin)->get(route('admin.enti.show', $ist))
             ->assertOk()
             ->assertSee('Dati da anagrafe MIUR')
             ->assertSee('readonly', false);
