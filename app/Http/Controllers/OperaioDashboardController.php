@@ -83,14 +83,14 @@ class OperaioDashboardController extends Controller
 
         $punti = Segnalazione::where('id_operatore_assegnato', $user->id)
             ->aperte()
-            ->where('latitudine', '!=', 0)
-            ->where('longitudine', '!=', 0)
-            ->with(['tipologia', 'stato'])
+            ->with(['tipologia', 'stato', 'plesso'])
             ->get()
+            ->filter(fn ($s) => $s->posizione() !== null)
+            ->values()
             ->map(fn ($s) => [
                 'id'        => $s->id_segnalazione,
-                'lat'       => $s->latitudine,
-                'lng'       => $s->longitudine,
+                'lat'       => $s->posizione()['lat'],
+                'lng'       => $s->posizione()['lng'],
                 'titolo'    => $s->tipologia?->descrizione ?? 'Segnalazione',
                 'priorita'  => $s->label_priorita,
                 'stato'     => $s->stato?->descrizione,

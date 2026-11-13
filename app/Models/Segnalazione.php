@@ -127,6 +127,24 @@ class Segnalazione extends Model
     }
 
     /** @return BelongsTo<Plesso, $this> */
+    /**
+     * Dove mostrare la segnalazione su una mappa: la posizione della sede (1.0.0);
+     * le vecchie coordinate proprie solo come ripiego finché esistono.
+     *
+     * @return array{lat: float, lng: float}|null
+     */
+    public function posizione(): ?array
+    {
+        $plesso = $this->id_plesso ? $this->plesso : null;
+        if ($plesso?->haCoordinate()) {
+            return ['lat' => (float) $plesso->latitudine, 'lng' => (float) $plesso->longitudine];
+        }
+        $lat = (float) ($this->attributes['latitudine'] ?? 0);
+        $lng = (float) ($this->attributes['longitudine'] ?? 0);
+
+        return $lat != 0 && $lng != 0 ? ['lat' => $lat, 'lng' => $lng] : null;
+    }
+
     public function plesso(): BelongsTo
     {
         return $this->belongsTo(Plesso::class, 'id_plesso', 'id_plesso');

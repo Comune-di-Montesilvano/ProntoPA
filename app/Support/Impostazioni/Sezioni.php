@@ -23,6 +23,7 @@ final class Sezioni
         'osm_lat'                => 'decimale',
         'osm_lng'                => 'decimale',
         'osm_zoom'               => 'intero',
+        'geocoding_comune'       => 'testo',
     ];
 
     public const SCADENZE = [

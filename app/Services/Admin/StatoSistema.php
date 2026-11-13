@@ -46,6 +46,7 @@ class StatoSistema
             $this->miur(),
             $this->orfane(),
             $this->deleghe(),
+            $this->sedi(),
             $this->conProva('telegram', 'Telegram', filled(Impostazione::get('telegram_bot_token'))),
             $this->conProva('ai', 'Assistente AI', (bool) Impostazione::get('ai_enabled', false)),
             $this->conProva('antivirus', 'Antivirus allegati', (bool) Impostazione::get('antivirus_enabled', false)),
@@ -193,6 +194,27 @@ class StatoSistema
         return $nomi === []
             ? new Riquadro('orfane', 'Tipologie senza gestore', Riquadro::OK, 'Ogni tipologia ha almeno un gestore.', $url)
             : new Riquadro('orfane', 'Tipologie senza gestore', Riquadro::ATTENZIONE, 'Le segnalazioni di queste tipologie vanno solo ai supervisori: '.implode(', ', $nomi).'.', $url);
+    }
+
+    /** Sedi senza posizione: niente mappa né "Naviga" per chi va sul posto. Nessuna chiamata di rete. */
+    private function sedi(): Riquadro
+    {
+        $url = route('admin.enti.index');
+        $titolo = 'Posizione delle sedi';
+        $n = \App\Models\Plesso::whereHas('istituto', fn ($q) => $q->where('attivo', true))
+            ->where(fn ($q) => $q->whereNull('latitudine')->orWhereNull('longitudine'))->count();
+        $esito = json_decode((string) Impostazione::get(\App\Jobs\GeocodificaSedi::CHIAVE_ESITO, ''), true);
+        $ultimo = is_array($esito) && isset($esito['quando'])
+            ? ' Ultima ricerca: '.\Illuminate\Support\Carbon::parse($esito['quando'])->timezone('Europe/Rome')->format('d/m/Y H:i')
+                .' ('.(int) $esito['trovate'].' trovate, '.(int) $esito['non_trovate'].' non trovate, '.(int) $esito['errori'].' errori).'
+            : '';
+
+        if ($n === 0) {
+            return new Riquadro('sedi', $titolo, Riquadro::OK, 'Tutte le sedi hanno la posizione.'.$ultimo, $url);
+        }
+
+        return new Riquadro('sedi', $titolo, Riquadro::ATTENZIONE,
+            ($n === 1 ? '1 sede senza posizione' : "$n sedi senza posizione").': usa "Trova le posizioni mancanti" in Enti e sedi.'.$ultimo, $url);
     }
 
     private function deleghe(): Riquadro

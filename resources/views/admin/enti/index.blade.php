@@ -35,6 +35,20 @@
             </form>
         </div>
 
+        {{-- Posizione delle sedi --}}
+        <div class="bg-white shadow-sm rounded-xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div class="text-sm">
+                <h2 class="font-semibold text-gray-700">Posizione delle sedi</h2>
+                <p class="text-gray-600 m-0">Cerca sulla mappa le sedi che non hanno ancora una posizione, dal loro indirizzo (una al secondo, in sottofondo).</p>
+            </div>
+            <form method="POST" action="{{ route('admin.sedi.geocodifica-mancanti') }}">
+                @csrf
+                <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
+                    Trova le posizioni mancanti
+                </button>
+            </form>
+        </div>
+
         {{-- Filtri --}}
         <form method="GET" action="{{ route('admin.enti.index') }}" class="bg-white shadow-sm rounded-xl px-4 py-3 flex flex-wrap gap-2 items-end">
             <div>

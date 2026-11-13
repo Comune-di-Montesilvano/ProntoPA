@@ -100,6 +100,13 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'mappa',
                 'descrizione' => 'Livello di zoom default (1-19)',
             ],
+            [
+                'chiave'      => 'geocoding_comune',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'mappa',
+                'descrizione' => 'Comune aggiunto agli indirizzi delle sedi per trovarne la posizione',
+            ],
 
             // Pubblicazione automatica
             [

@@ -87,6 +87,36 @@
                 </div>
             </div>
 
+            @php
+                $haPos = $sede->haCoordinate();
+                $cLat = $haPos ? $sede->latitudine : (float) (\App\Models\Impostazione::get('osm_lat') ?: 42.5);
+                $cLng = $haPos ? $sede->longitudine : (float) (\App\Models\Impostazione::get('osm_lng') ?: 14.1);
+            @endphp
+            <div class="space-y-2">
+                <x-input-label value="Posizione sulla mappa" />
+                <p class="text-xs text-gray-500 m-0">Serve per la mappa della scheda e per "Naviga" di chi va sul posto. Trascina il segnaposto o clicca sulla mappa.</p>
+                <div id="mappa-sede" class="h-64 rounded-md border border-gray-200 z-0"></div>
+                <div class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <x-input-label for="latitudine" value="Latitudine" />
+                        <x-text-input id="latitudine" name="latitudine" type="text" inputmode="decimal" class="mt-1 block w-40"
+                                      :value="old('latitudine', $sede->latitudine)" />
+                    </div>
+                    <div>
+                        <x-input-label for="longitudine" value="Longitudine" />
+                        <x-text-input id="longitudine" name="longitudine" type="text" inputmode="decimal" class="mt-1 block w-40"
+                                      :value="old('longitudine', $sede->longitudine)" />
+                    </div>
+                    <button type="button" id="trova-indirizzo"
+                            class="inline-flex items-center px-3 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 transition">
+                        Trova dall'indirizzo
+                    </button>
+                    <span id="trova-esito" class="text-xs text-gray-600" role="status"></span>
+                </div>
+                <x-input-error :messages="$errors->get('latitudine')" class="mt-1" />
+                <x-input-error :messages="$errors->get('longitudine')" class="mt-1" />
+            </div>
+
             <div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
                 <a href="{{ route('admin.enti.show', $sede->id_istituto) }}"
                    class="text-sm text-gray-500 hover:text-gray-700">Annulla</a>
@@ -121,4 +151,54 @@
             <x-input-error :messages="$errors->get('id_destinazione')" class="mt-1" />
         </div>
     @endif
+    @push('head')
+        <link rel="stylesheet" href="{{ asset('build/vendor/leaflet/leaflet.css') }}?v={{ config('app.version') }}" />
+    @endpush
+    @push('scripts')
+        <script src="{{ asset('build/vendor/leaflet/leaflet.js') }}?v={{ config('app.version') }}"></script>
+        <script>
+            (function () {
+                const fLat = document.getElementById('latitudine');
+                const fLng = document.getElementById('longitudine');
+                const esito = document.getElementById('trova-esito');
+                const mappa = L.map('mappa-sede', { scrollWheelZoom: false }).setView([{{ $cLat }}, {{ $cLng }}], {{ $haPos ? 17 : 13 }});
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                    maxZoom: 19,
+                }).addTo(mappa);
+                let marker = null;
+                const metti = (lat, lng) => {
+                    if (!marker) {
+                        marker = L.marker([lat, lng], { draggable: true }).addTo(mappa);
+                        marker.on('dragend', () => scrivi(marker.getLatLng()));
+                    } else {
+                        marker.setLatLng([lat, lng]);
+                    }
+                };
+                const scrivi = (p) => { fLat.value = p.lat.toFixed(7); fLng.value = p.lng.toFixed(7); };
+                @if($haPos) metti({{ $cLat }}, {{ $cLng }}); @endif
+                mappa.on('click', (e) => { metti(e.latlng.lat, e.latlng.lng); scrivi(e.latlng); });
+
+                document.getElementById('trova-indirizzo').addEventListener('click', async () => {
+                    esito.textContent = 'Cerco…';
+                    try {
+                        const r = await fetch(@js(route('admin.sedi.geocodifica', $sede->id_plesso)), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                                       'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                            body: JSON.stringify({ indirizzo: document.getElementById('indirizzo').value }),
+                        });
+                        const dati = await r.json();
+                        if (!r.ok) { esito.textContent = dati.message || 'Non trovato.'; return; }
+                        metti(dati.lat, dati.lng);
+                        scrivi({ lat: dati.lat, lng: dati.lng });
+                        mappa.setView([dati.lat, dati.lng], 17);
+                        esito.textContent = 'Trovato: controlla il segnaposto e salva.';
+                    } catch (e) {
+                        esito.textContent = 'Ricerca non riuscita, riprova.';
+                    }
+                });
+            })();
+        </script>
+    @endpush
 </x-app-layout>

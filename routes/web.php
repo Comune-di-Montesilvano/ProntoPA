@@ -222,6 +222,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         : redirect()->route('admin.enti.index', [], 301));
     Route::redirect('sedi/create', '/admin/enti', 301);
 
+    Route::post('sedi/geocodifica-mancanti', [SediController::class, 'geocodificaMancanti'])->name('sedi.geocodifica-mancanti');
+    Route::post('sedi/{sede}/geocodifica', [SediController::class, 'geocodifica'])
+        ->middleware('throttle:30,1')->name('sedi.geocodifica');
     Route::resource('sedi', SediController::class)
         ->only(['edit', 'update', 'destroy'])
         ->parameters(['sedi' => 'sede']);
