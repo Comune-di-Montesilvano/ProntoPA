@@ -37,6 +37,7 @@ class TabelleRiferimentoSeeder extends Seeder
             ['id_azione' => 12, 'codice' => 'annulla',            'descrizione' => 'Chiudi senza intervento', 'id_stato_segnalazione' => 9,    'competenza_azione' => 0, 'colore' => 'danger',    'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 0, 'ordine' => 100, 'parametri_filtro' => '{"stati":[1,2,3,4,5,6]}'],
             ['id_azione' => 13, 'codice' => 'archivia',           'descrizione' => 'Archivia',             'id_stato_segnalazione' => 10,   'competenza_azione' => 0, 'colore' => 'secondary', 'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 0, 'ordine' => 110, 'parametri_filtro' => '{"stati":[]}'],
             ['id_azione' => 14, 'codice' => 'riapri',             'descrizione' => 'Riapri',               'id_stato_segnalazione' => 2,    'competenza_azione' => 0, 'colore' => 'warning',   'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 1, 'ordine' => 120, 'parametri_filtro' => '{"stati":[7,8,9,10]}'],
+            ['id_azione' => 15, 'codice' => 'rimanda',            'descrizione' => 'Rimanda al gestore',   'id_stato_segnalazione' => 2,    'competenza_azione' => 2, 'colore' => 'warning',   'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 1, 'ordine' => 85,  'parametri_filtro' => '{"stati":[3,4,5]}'],
         ]);
 
         // Le tipologie le gestisce l'admin (1.0.0): solo su un'installazione nuova.

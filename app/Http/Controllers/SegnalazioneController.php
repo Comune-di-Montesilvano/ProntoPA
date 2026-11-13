@@ -320,6 +320,22 @@ class SegnalazioneController extends Controller
             ->with('success', $chiusa ? 'Lavoro chiuso. Grazie!' : 'Fine lavori comunicata al comune.');
     }
 
+    // ── Rimanda al gestore (operaio, caposquadra, ditta) ──────────────────────
+
+    public function rimanda(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('rimanda', $segnalazione);
+
+        $data = $request->validate(['nota' => ['required', 'string', 'max:2000']], [
+            'nota.required' => 'Scrivi perché lo rimandi al comune.',
+        ]);
+
+        $this->workflow->rimandaAlGestore($segnalazione, $request->user(), trim($data['nota']));
+
+        return redirect()->route('dashboard')
+            ->with('success', "Segnalazione #{$segnalazione->id_segnalazione} rimandata al comune.");
+    }
+
     // ── Aggiungi nota ─────────────────────────────────────────────────────────
 
     public function aggiungiNota(Request $request, Segnalazione $segnalazione): RedirectResponse

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\SegnalazioneStato;
 use App\Models\Segnalazione;
+use App\Models\Squadra;
 use App\Models\User;
 use App\Services\Sla\CalendarioUfficio;
 use Illuminate\Support\Carbon;
@@ -88,6 +89,32 @@ class SegnalazionePolicy
         }
 
         return $user->hasRole('operaio') && $this->view($user, $segnalazione);
+    }
+
+    /** Chi ha il lavoro (operaio assegnato, caposquadra, ditta) lo rimanda al comune. */
+    public function rimanda(User $user, Segnalazione $segnalazione): bool
+    {
+        if ($segnalazione->isChiusa() || ! in_array($segnalazione->statoEnum(), [
+            SegnalazioneStato::ASSEGNATA_OPERATORE, SegnalazioneStato::ASSEGNATA_IMPRESA, SegnalazioneStato::PREVENTIVO_IN_ATTESA,
+        ], true)) {
+            return false;
+        }
+
+        if ($user->hasRole('impresa')) {
+            return $user->id_impresa !== null && $segnalazione->id_appalto && $segnalazione->appalto?->id_impresa === $user->id_impresa;
+        }
+
+        if (! $user->hasRole('operaio')) {
+            return false;
+        }
+
+        if ((int) $segnalazione->id_operatore_assegnato === $user->id) {
+            return true;
+        }
+
+        // Della squadra decide solo il caposquadra, non ogni membro.
+        return $segnalazione->id_squadra_assegnata
+            && Squadra::whereKey($segnalazione->id_squadra_assegnata)->where('id_caposquadra', $user->id)->exists();
     }
 
     /** Il comune sollecita chi ha il lavoro. */

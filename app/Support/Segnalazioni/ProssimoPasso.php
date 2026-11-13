@@ -137,8 +137,12 @@ class ProssimoPasso
             return ['tono' => 'amber', 'titolo' => 'In pausa: ti avviseremo quando riprendere', 'sottotitolo' => null, 'azioni' => [$scrivi]];
         }
 
+        $rimanda = Gate::forUser($this->u)->allows('rimanda', $this->s)
+            ? ['tipo' => 'pannello', 'etichetta' => 'Rimanda al comune', 'pannello' => 'rimanda', 'primaria' => false]
+            : null;
+
         if ($stato === SegnalazioneStato::PREVENTIVO_IN_ATTESA) {
-            return ['tono' => 'amber', 'titolo' => 'Preventivo inviato, in attesa del comune', 'sottotitolo' => null, 'azioni' => [$scrivi]];
+            return ['tono' => 'amber', 'titolo' => 'Preventivo inviato, in attesa del comune', 'sottotitolo' => null, 'azioni' => array_values(array_filter([$scrivi, $rimanda]))];
         }
 
         if ($this->s->haFineLavori()) {
@@ -153,6 +157,9 @@ class ProssimoPasso
         if (Gate::forUser($this->u)->allows('comunicaFineLavori', $this->s)) {
             $azioni[] = ['tipo' => 'pannello', 'etichetta' => 'Comunica fine lavori', 'pannello' => 'fine-lavori', 'primaria' => true];
             $this->pannello($azioni, 'preventivo', 'Invia preventivo', 6);
+            if ($rimanda) {
+                $azioni[] = $rimanda;
+            }
             $azioni[] = $scrivi;
 
             return [

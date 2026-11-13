@@ -119,6 +119,14 @@ class Attivita
 
     private function fraseInterna(?SegnalazioneStato $stato, StoricoStatoSegnalazione $evento): string
     {
+        // Ritorno a "nuova"/"in carico" fatto da chi aveva il lavoro = "Rimanda al gestore".
+        if (in_array($stato, [SegnalazioneStato::NUOVA, SegnalazioneStato::IN_CARICO], true)) {
+            $autore = $this->utente((int) $evento->id_utente);
+            if ($autore !== null && $this->letturaDi($autore) === 'lavoro') {
+                return 'ha rimandato al comune';
+            }
+        }
+
         return match ($stato) {
             SegnalazioneStato::NUOVA => 'ha inviato la segnalazione',
             SegnalazioneStato::IN_CARICO => 'ha preso in carico',

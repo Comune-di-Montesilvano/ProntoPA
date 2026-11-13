@@ -14,11 +14,13 @@ use App\Models\Squadra;
 use App\Models\StoricoStatoSegnalazione;
 use App\Models\User;
 use App\Notifications\ImpresaAssegnataNotification;
+use App\Notifications\RimandataAlGestoreNotification;
 use App\Notifications\OperatoreAssegnatoNotification;
 use App\Notifications\SegnalazioneChiusaNotification;
 use App\Notifications\SegnalazioneStatoCambiato;
 use App\Notifications\SquadraAssegnataNotification;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -116,6 +118,64 @@ class SegnalazioneWorkflowService
             'collega'  => $this->eseguiCollega($segnalazione, $azione, $user, $params),
             default    => $this->eseguiTransizione($segnalazione, $azione, $user, $params),
         };
+    }
+
+    /**
+     * Operaio, caposquadra o ditta rimandano il lavoro: torna "in carico" al gestore
+     * dell'ultima assegnazione, oppure "nuova" se quel gestore non c'è più (avvisati i
+     * supervisori). Chi rimanda perde il lavoro; la scadenza non cambia.
+     */
+    public function rimandaAlGestore(Segnalazione $segnalazione, User $autore, string $nota): void
+    {
+        $gestore = DB::transaction(function () use ($segnalazione, $autore, $nota) {
+            $ultima = StoricoStatoSegnalazione::where('id_segnalazione', $segnalazione->id_segnalazione)
+                ->whereIn('id_stato_segnalazione', [SegnalazioneStato::ASSEGNATA_OPERATORE->value, SegnalazioneStato::ASSEGNATA_IMPRESA->value])
+                ->orderByDesc('data_registrazione')->orderByDesc('id')
+                ->first();
+            $gestore = $ultima ? User::find($ultima->id_utente) : null;
+            if (! $gestore || $gestore->attivo === false || ! $gestore->hasAnyRole(['gestore', 'admin'])) {
+                $gestore = null;
+            }
+            $stato = $gestore ? SegnalazioneStato::IN_CARICO : SegnalazioneStato::NUOVA;
+
+            $segnalazione->update([
+                'id_stato_segnalazione' => $stato->value,
+                'id_operatore_assegnato' => $gestore?->id ?? 0,
+                'id_squadra_assegnata' => null,
+                'id_appalto' => null,
+                'fine_lavori_at' => null,
+            ]);
+
+            StoricoStatoSegnalazione::create([
+                'id_segnalazione' => $segnalazione->id_segnalazione,
+                'id_stato_segnalazione' => $stato->value,
+                'id_utente' => $autore->id,
+                'id_utente_collegato' => $gestore?->id ?? 0,
+                'id_appalto' => 0,
+            ]);
+
+            $segnalazione->note()->create([
+                'testo' => "Rimandata al comune: {$nota}",
+                'id_utente' => $autore->id,
+                'visibile_web' => false,
+                'visibile_impresa' => false,
+            ]);
+
+            return $gestore;
+        });
+
+        $destinatari = $gestore
+            ? collect([$gestore])
+            : User::role('gestore')->where('supervisore_segnalazioni', true)->get()->filter(fn (User $u) => $u->attivo !== false);
+        $mittente = $autore->hasRole('impresa')
+            ? (string) ($autore->impresa->ragione_sociale ?? $autore->name)
+            : (string) $autore->name;
+        $fresca = $segnalazione->fresh();
+        if ($destinatari->isNotEmpty()) {
+            Notification::send($destinatari, new RimandataAlGestoreNotification($fresca, $mittente, $nota));
+        }
+
+        InviaWebhookOutbound::dispatch($fresca);
     }
 
     public function setEvidenza(Segnalazione $segnalazione, bool $evidenza): void
@@ -340,7 +400,8 @@ class SegnalazioneWorkflowService
         }
 
         // Sostituita da "Accorpa" (AccorpamentoService): la riga resta in db_azioni per lo storico.
-        if ($azione->codice === 'segna_duplicata') {
+        // "Rimanda al gestore" ha pannello e rotta suoi (rimandaAlGestore), mai nel menu.
+        if (in_array($azione->codice, ['segna_duplicata', 'rimanda'], true)) {
             return false;
         }
 

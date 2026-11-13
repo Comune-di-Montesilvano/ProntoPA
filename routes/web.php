@@ -111,6 +111,8 @@ Route::middleware('auth')->group(function () {
         ->name('segnalazioni.sollecito-segnalante');
     Route::post('segnalazioni/{segnalazione}/fine-lavori', [SegnalazioneController::class, 'fineLavori'])
         ->name('segnalazioni.fine-lavori');
+    Route::post('segnalazioni/{segnalazione}/rimanda', [SegnalazioneController::class, 'rimanda'])
+        ->name('segnalazioni.rimanda');
 
     Route::post('segnalazioni/{segnalazione}/evidenza', [SegnalazioneController::class, 'toggleEvidenza'])
         ->name('segnalazioni.evidenza');
