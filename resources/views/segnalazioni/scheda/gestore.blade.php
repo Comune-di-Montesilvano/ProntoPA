@@ -3,7 +3,6 @@
     // Pannello di ogni azione del workflow; quelle senza un pannello dedicato usano il generico.
     $pannelloDi = fn ($a) => match ($a->codice) {
         'assegna_operatore', 'assegna_impresa', 'prendi_in_carico' => 'assegna',
-        'sospendi' => 'sospendi',
         'chiudi' => 'chiudi',
         'annulla' => 'annulla',
         'collega' => 'collega',
@@ -131,11 +130,12 @@
     @include('segnalazioni.scheda.pannelli.assegna')
 @endif
 @if($disponibile('chiudi')) @include('segnalazioni.scheda.pannelli.chiudi') @endif
-@if($disponibile('sospendi')) @include('segnalazioni.scheda.pannelli.sospendi') @endif
 @if($disponibile('annulla')) @include('segnalazioni.scheda.pannelli.annulla') @endif
 @if($disponibile('collega')) @include('segnalazioni.scheda.pannelli.collega') @endif
 @if($disponibile('presenta_preventivo')) @include('segnalazioni.scheda.pannelli.preventivo') @endif
-@can('modificaPriorita', $segnalazione) @include('segnalazioni.scheda.pannelli.priorita') @include('segnalazioni.scheda.pannelli.titolo') @endcan
+@can('modificaPriorita', $segnalazione) @include('segnalazioni.scheda.pannelli.priorita') @include('segnalazioni.scheda.pannelli.titolo')
+    @unless($segnalazione->isChiusa()) @include('segnalazioni.scheda.pannelli.scadenza') @endunless
+@endcan
 @can('sollecita', $segnalazione) @include('segnalazioni.scheda.pannelli.sollecita') @endcan
 @can('accorpa', $segnalazione) @include('segnalazioni.scheda.pannelli.accorpa') @endcan
 @foreach($generiche as $azione)

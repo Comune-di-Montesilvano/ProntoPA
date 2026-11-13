@@ -23,7 +23,7 @@ class SchemaStatiAzioniTest extends TestCase
             'assegna a me' => ['prendi_in_carico', 'Assegna a me', [1, 2, 3, 4, 5]],
             'assegna operatore' => ['assegna_operatore', 'Assegna operatore', [1, 2, 3, 4, 5]],
             'assegna impresa' => ['assegna_impresa', 'Assegna impresa', [1, 2, 3, 4, 5]],
-            'sospendi' => ['sospendi', 'Sospendi', [2, 3, 4, 5]],
+            'sospendi' => ['sospendi', 'Sospendi', []],
             'chiudi' => ['chiudi', 'Chiudi', [2, 3, 4]],
             'chiudi senza intervento' => ['annulla', 'Chiudi senza intervento', [1, 2, 3, 4, 5, 6]],
             'archivia' => ['archivia', 'Archivia', []],

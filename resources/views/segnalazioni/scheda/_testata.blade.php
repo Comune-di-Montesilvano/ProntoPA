@@ -33,7 +33,16 @@
             @else
                 <x-pa.prio :livello="$segnalazione->livello_priorita" />
             @endcan
-            <x-pa.scadenza :segnalazione="$segnalazione" estesa />
+            @if(! $segnalazione->isChiusa() && auth()->user()->can('modificaPriorita', $segnalazione))
+                <button type="button" x-data x-on:click="$dispatch('apri-pannello', 'scadenza')"
+                        class="inline-flex items-center gap-1 rounded-md border border-dashed border-[var(--slate-300)] px-1.5 py-0.5 hover:bg-[var(--slate-100)]"
+                        title="Sposta la scadenza" aria-label="Sposta la scadenza">
+                    <x-pa.scadenza :segnalazione="$segnalazione" estesa />
+                    <span class="text-xs text-[var(--slate-500)]"><i class="fas fa-pen" aria-hidden="true"></i></span>
+                </button>
+            @else
+                <x-pa.scadenza :segnalazione="$segnalazione" estesa />
+            @endif
             @if($segnalazione->flag_riservata)
                 <x-pa.pill tono="slate"><i class="fas fa-lock" aria-hidden="true"></i> Riservata</x-pa.pill>
             @endif

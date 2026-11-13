@@ -2,6 +2,7 @@
 
 namespace App\Services\Segnalazioni;
 
+use App\Models\NotaSegnalazione;
 use App\Models\Segnalazione;
 use App\Models\User;
 use App\Services\Sla\CalendarioUfficio;
@@ -18,7 +19,11 @@ class ScadenzaManuale
 {
     public function __construct(private readonly SlaService $sla) {}
 
-    public function imposta(Segnalazione $s, CarbonInterface $giorno, User $autore): void
+    /**
+     * Con un motivo (pulsante "Scadenza…") la nota la vede anche chi ha segnalato; senza (assegnazione
+     * multipla) resta al comune e a chi lavora. Restituisce la nota creata.
+     */
+    public function imposta(Segnalazione $s, CarbonInterface $giorno, User $autore, ?string $motivo = null): NotaSegnalazione
     {
         $tz = config('app.timezone');
         $giorno = Carbon::parse($giorno->format('Y-m-d'), $tz);
@@ -41,11 +46,13 @@ class ScadenzaManuale
             'sla_warning_inviato' => false,
         ])->save();
 
-        $s->note()->create([
-            'testo' => 'Scadenza spostata al '.$scadenza->format('d/m/Y').'.',
+        $motivo = trim((string) $motivo);
+
+        return $s->note()->create([
+            'testo' => 'Scadenza spostata al '.$scadenza->format('d/m/Y').($motivo !== '' ? ': '.$motivo : '.'),
             'id_utente' => $autore->id,
-            'visibile_web' => false,
-            'visibile_impresa' => true,
+            'visibile_web' => $motivo !== '',
+            'visibile_impresa' => (bool) $s->id_appalto,
         ]);
     }
 

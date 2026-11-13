@@ -526,6 +526,28 @@ class SegnalazioneController extends Controller
     }
 
     /** Toglie la scadenza fissata a mano: torna quella calcolata dalla regola (spec §3). */
+    /** "Scadenza…": si rimanda con un motivo, che la scuola vede sempre (e riceve per email). */
+    public function aggiornaScadenza(Request $request, Segnalazione $segnalazione, \App\Services\Segnalazioni\ScadenzaManuale $scadenze): RedirectResponse
+    {
+        $this->authorize('modificaPriorita', $segnalazione);
+        abort_if($segnalazione->isChiusa(), 422, 'Segnalazione chiusa.');
+
+        $dati = $request->validate([
+            'data_scadenza' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'motivo' => ['required', 'string', 'max:1000'],
+        ], [
+            'data_scadenza.required' => 'Scegli la nuova scadenza.',
+            'data_scadenza.after_or_equal' => 'La nuova scadenza non può essere nel passato.',
+            'motivo.required' => 'Scrivi il motivo: lo vede anche chi ha segnalato.',
+        ]);
+
+        $nota = $scadenze->imposta($segnalazione, \Illuminate\Support\Carbon::parse($dati['data_scadenza']), $request->user(), $dati['motivo']);
+        $this->notificaNota($segnalazione, $nota);
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Scadenza spostata al '.\Illuminate\Support\Carbon::parse($dati['data_scadenza'])->format('d/m/Y').'.');
+    }
+
     public function scadenzaAutomatica(Segnalazione $segnalazione, \App\Services\Segnalazioni\ScadenzaManuale $scadenze): RedirectResponse
     {
         $this->authorize('modificaPriorita', $segnalazione);

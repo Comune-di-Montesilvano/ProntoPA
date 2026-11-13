@@ -53,10 +53,12 @@ class Attivita
         foreach ($this->segnalazione->note()->visibiliA($this->lettore)->get() as $nota) {
             $voci->push($this->daNota($nota));
         }
+        $precedente = null;
         foreach ($storico as $evento) {
             if ($dal === null || Carbon::parse($evento->data_registrazione)->gte($dal)) {
-                $voci->push($this->daStato($evento));
+                $voci->push($this->daStato($evento, $precedente === SegnalazioneStato::SOSPESA->value));
             }
+            $precedente = (int) $evento->id_stato_segnalazione;
         }
         foreach ($this->segnalazione->allegati()->get() as $allegato) {
             $voci->push($this->daAllegato($allegato));
@@ -93,13 +95,13 @@ class Attivita
     }
 
     /** @return Voce */
-    private function daStato(StoricoStatoSegnalazione $evento): array
+    private function daStato(StoricoStatoSegnalazione $evento, bool $dopoSospensione = false): array
     {
         $stato = SegnalazioneStato::tryFrom((int) $evento->id_stato_segnalazione);
 
         $frase = $this->lettura === 'segnalante'
             ? ($stato?->fraseSegnalante()['titolo'] ?? 'Stato aggiornato')
-            : $this->fraseInterna($stato, $evento);
+            : ($dopoSospensione && $stato !== SegnalazioneStato::SOSPESA ? 'ha ripreso' : $this->fraseInterna($stato, $evento));
 
         return $this->voce($evento->data_registrazione, (int) $evento->id_utente, 'stato', null, $frase);
     }
@@ -139,9 +141,10 @@ class Attivita
         }
 
         return match (true) {
-            $nota->visibile_web && $nota->visibile_impresa => 'Ditta e segnalante',
-            $nota->visibile_web => 'Segnalante',
-            $nota->visibile_impresa => 'Ditta',
+            // "Ditta" solo se una ditta c'è davvero: altrimenti la nota la vede solo il comune.
+            $nota->visibile_web && $nota->visibile_impresa && $this->segnalazione->id_appalto => 'Ditta e segnalante',
+            (bool) $nota->visibile_web => 'Segnalante',
+            $nota->visibile_impresa && $this->segnalazione->id_appalto => 'Ditta',
             default => 'Interna',
         };
     }

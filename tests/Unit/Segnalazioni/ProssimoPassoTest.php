@@ -104,7 +104,8 @@ class ProssimoPassoTest extends TestCase
         $this->assertStringContainsString('Paolo Neri deve chiudere il lavoro', $passo['titolo']);
         $this->assertStringContainsString('è in ritardo di 2 giorni', $passo['titolo'].' '.$passo['sottotitolo']);
         $this->assertContains('Sollecita', $this->etichette($passo));
-        $this->assertContains('Sospendi', $this->etichette($passo));
+        $this->assertContains('Scadenza…', $this->etichette($passo));
+        $this->assertNotContains('Sospendi', $this->etichette($passo));
         $this->assertContains('Chiudi', $this->etichette($passo));
         $this->assertContains('Riassegna', $this->etichette($passo));
     }
