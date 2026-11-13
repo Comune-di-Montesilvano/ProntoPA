@@ -17,8 +17,6 @@ use Illuminate\Support\Facades\Notification;
  */
 class FineLavoriService
 {
-    private const CHIUDI = 9;
-
     public function __construct(private readonly SegnalazioneWorkflowService $workflow) {}
 
     /**
@@ -49,18 +47,17 @@ class FineLavoriService
             ]);
         });
 
+        $chiusa = ! ($autore->hasRole('impresa') && $segnalazione->haPreventivo());
+        if ($chiusa) {
+            $this->workflow->chiudiPerFineLavori($segnalazione->refresh(), $autore);
+        }
+
         $comune = DestinatariComune::per($segnalazione, $autore);
         if ($comune->isNotEmpty()) {
-            Notification::send($comune, new FineLavoriNotification($segnalazione, $nota, $this->mittente($autore)));
+            Notification::send($comune, new FineLavoriNotification($segnalazione, $nota, $this->mittente($autore), $chiusa));
         }
 
-        if ($autore->hasRole('impresa') && $segnalazione->haPreventivo()) {
-            return false;
-        }
-
-        $this->workflow->eseguiAzione($segnalazione->refresh(), self::CHIUDI, $autore);
-
-        return true;
+        return $chiusa;
     }
 
     private function mittente(User $autore): string

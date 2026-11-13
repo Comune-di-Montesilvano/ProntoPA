@@ -530,6 +530,17 @@ class SegnalazioneController extends Controller
             ->with('success', 'Titolo aggiornato.');
     }
 
+    /** Toglie la scadenza fissata a mano: torna quella calcolata dalla regola (spec §3). */
+    public function scadenzaAutomatica(Segnalazione $segnalazione, \App\Services\Segnalazioni\ScadenzaManuale $scadenze): RedirectResponse
+    {
+        $this->authorize('modificaPriorita', $segnalazione);
+
+        $scadenze->rimuovi($segnalazione);
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Scadenza di nuovo calcolata in automatico.');
+    }
+
     public function aggiornaPriorita(Request $request, Segnalazione $segnalazione): RedirectResponse
     {
         $this->authorize('modificaPriorita', $segnalazione);

@@ -6,13 +6,12 @@ use App\Models\Segnalazione;
 use App\Models\User;
 use App\Services\SegnalazioneWorkflowService;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
  * La stessa azione su più segnalazioni dall'elenco (spec 2026-11-13 §4).
- * Ognuna passa dal workflow in una propria transazione: quelle che non si possono fare
+ * Ognuna passa dal workflow come dalla scheda: quelle che non si possono fare
  * vengono saltate col motivo, le altre vanno avanti.
  */
 class AzioniMultiple
@@ -46,7 +45,8 @@ class AzioniMultiple
             }
 
             try {
-                DB::transaction(fn () => $this->workflow->eseguiAzione($s, $idAzione, $u, $params));
+                // Niente transazione esterna: le email e il webhook partirebbero prima del commit.
+                $this->workflow->eseguiAzione($s, $idAzione, $u, $params);
                 $fatte++;
             } catch (ValidationException $e) {
                 $saltate[$s->id_segnalazione] = (string) collect($e->errors())->flatten()->first();

@@ -48,13 +48,7 @@ class SegnalazioneWorkflowService
     {
         $statoCorrente = $segnalazione->statoEnum();
 
-        $query = Azione::orderBy('ordine');
-
-        if ($user->hasRole('impresa')) {
-            $query->whereIn('competenza_azione', [1, 2]);
-        } else {
-            $query->whereIn('competenza_azione', [0, 2]);
-        }
+        $query = Azione::orderBy('ordine')->whereIn('competenza_azione', $this->competenzeDi($user));
 
         return $query->get()->filter(function (Azione $azione) use ($segnalazione, $user, $statoCorrente) {
             return $this->azioneApplicabile($azione, $segnalazione, $user, $statoCorrente);
@@ -66,8 +60,11 @@ class SegnalazioneWorkflowService
      */
     public function getAzioniRapide(Segnalazione $segnalazione, User $user): Collection
     {
+        // Solo azioni senza campi da compilare: le altre hanno il loro pannello nella scheda.
+        $conCampi = ['prendi_in_carico', 'sospendi', 'annulla', 'rifiuta_preventivo', 'presenta_preventivo', 'collega'];
+
         return $this->getAzioniDisponibili($segnalazione, $user)
-            ->reject(fn (Azione $a) => $a->flag_operatore || $a->flag_appalto)
+            ->reject(fn (Azione $a) => $a->flag_operatore || $a->flag_appalto || in_array($a->codice, $conCampi, true))
             ->values();
     }
 
@@ -89,10 +86,25 @@ class SegnalazioneWorkflowService
         User         $user,
         array        $params = []
     ): void {
-        $azione        = Azione::findOrFail($idAzione);
+        $this->esegui($segnalazione, Azione::findOrFail($idAzione), $user, $params, controllaCompetenza: true);
+    }
+
+    /**
+     * Fine lavori di ditta od operaio: chiude a nome di chi ha finito, anche se "Chiudi"
+     * è un'azione del comune. Lo stato deve comunque ammetterla.
+     */
+    public function chiudiPerFineLavori(Segnalazione $segnalazione, User $autore): void
+    {
+        $this->esegui($segnalazione, Azione::where('codice', 'chiudi')->firstOrFail(), $autore, [], controllaCompetenza: false);
+    }
+
+    /** @param  array<string, mixed>  $params */
+    private function esegui(Segnalazione $segnalazione, Azione $azione, User $user, array $params, bool $controllaCompetenza): void
+    {
         $statoCorrente = $segnalazione->statoEnum();
 
-        if (! $this->azioneApplicabile($azione, $segnalazione, $user, $statoCorrente)) {
+        if (($controllaCompetenza && ! in_array((int) $azione->competenza_azione, $this->competenzeDi($user), true))
+            || ! $this->azioneApplicabile($azione, $segnalazione, $user, $statoCorrente)) {
             throw ValidationException::withMessages([
                 'azione' => 'Azione non applicabile allo stato attuale della segnalazione.',
             ]);
@@ -246,6 +258,8 @@ class SegnalazioneWorkflowService
             $update['sla_violato']   = false;
             $update['fine_lavori_at'] = null;
             $update['id_operatore_assegnato'] = $user->id; // torna "in carico" a chi riapre
+            $update['id_appalto'] = null; // la ditta di prima non la vede più
+            $update['id_squadra_assegnata'] = null;
         }
 
         if ($nuovoStato->isTerminale() && $azione->codice !== 'riapri') {
@@ -305,6 +319,16 @@ class SegnalazioneWorkflowService
     }
 
     // ── Filtro applicabilità ─────────────────────────────────────────────────
+
+    /**
+     * Competenza: 0=Ente (admin/gestore), 1=Impresa, 2=Entrambi.
+     *
+     * @return list<int>
+     */
+    private function competenzeDi(User $user): array
+    {
+        return $user->hasRole('impresa') ? [1, 2] : [0, 2];
+    }
 
     private function azioneApplicabile(Azione $azione, Segnalazione $segnalazione, User $user, SegnalazioneStato $statoCorrente): bool
     {

@@ -11,7 +11,9 @@ use App\Services\SegnalazioneWorkflowService;
 use App\Services\TelegramBotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
@@ -185,10 +187,7 @@ class TelegramWebhookController extends Controller
             return;
         }
 
-        $azioni = $this->workflow->getAzioniDisponibili($segnalazione, $user)
-            ->filter(fn ($azione) => ! $azione->flag_operatore && ! $azione->flag_appalto)
-            ->take(6)
-            ->values();
+        $azioni = $this->azioniTelegram($segnalazione, $user)->take(6)->values();
 
         $keyboard = $azioni->isNotEmpty()
             ? $azioni->chunk(2)->map(fn ($chunk) => $chunk->map(fn ($azione) => [
@@ -236,15 +235,20 @@ class TelegramWebhookController extends Controller
             return;
         }
 
-        $azione = $this->workflow->getAzioniDisponibili($segnalazione, $user)
+        $azione = $this->azioniTelegram($segnalazione, $user)
             ->first(fn ($item) => (int) $item->id_azione === (int) $matches[2]);
 
-        if (! $azione || $azione->flag_operatore || $azione->flag_appalto) {
-            $this->telegram->answerCallbackQuery($callbackId, 'Questa azione richiede parametri aggiuntivi.');
+        if (! $azione) {
+            $this->telegram->answerCallbackQuery($callbackId, 'Azione non disponibile da Telegram: apri la scheda.');
             return;
         }
 
-        $this->workflow->eseguiAzione($segnalazione, $azione->id_azione, $user);
+        try {
+            $this->workflow->eseguiAzione($segnalazione, $azione->id_azione, $user);
+        } catch (ValidationException $e) {
+            $this->telegram->answerCallbackQuery($callbackId, (string) collect($e->errors())->flatten()->first());
+            return;
+        }
 
         $this->telegram->answerCallbackQuery($callbackId, 'Azione eseguita.');
         $this->handleOpenCommand($user, $segnalazione->id_segnalazione);
@@ -264,18 +268,20 @@ class TelegramWebhookController extends Controller
             return;
         }
 
-        $disponibili = $this->workflow->getAzioniDisponibili($segnalazione, $user)
-            ->filter(fn ($a) => ! $a->flag_operatore && ! $a->flag_appalto);
-
-        $azione = $disponibili->first(fn ($a) => $a->statoTarget?->chiusura)
-            ?? $disponibili->first(fn ($a) => preg_match('/chiudi|proponi/i', (string) $a->descrizione));
+        // Solo "Chiudi" (lavoro fatto): "senza intervento" chiede un motivo, si fa dalla scheda.
+        $azione = $this->azioniTelegram($segnalazione, $user)->firstWhere('codice', 'chiudi');
 
         if (! $azione) {
             $this->telegram->sendMessage($user->telegram_chat_id, 'Nessuna azione di chiusura disponibile per #' . $idSegnalazione . '.');
             return;
         }
 
-        $this->workflow->eseguiAzione($segnalazione, $azione->id_azione, $user);
+        try {
+            $this->workflow->eseguiAzione($segnalazione, $azione->id_azione, $user);
+        } catch (ValidationException $e) {
+            $this->telegram->sendMessage($user->telegram_chat_id, (string) collect($e->errors())->flatten()->first());
+            return;
+        }
         $this->telegram->sendMessage($user->telegram_chat_id, '✅ Azione "' . $azione->descrizione . '" eseguita su #' . $idSegnalazione . '.');
     }
 
@@ -463,9 +469,24 @@ class TelegramWebhookController extends Controller
         $reply = "Foto caricata con successo per la segnalazione #{$segnalazione->id_segnalazione} (Fase: " . ($fase === 'dopo' ? 'Dopo' : 'Prima') . ").";
 
         if ($user->hasRole('impresa')) {
-            $reply .= "\n\nPer il rapportino di fine lavoro (ore e materiali) apri la scheda:\n" . route('segnalazioni.show', $segnalazione->id_segnalazione);
+            $reply .= "\n\nPer comunicare la fine dei lavori apri la scheda:\n" . route('segnalazioni.show', $segnalazione->id_segnalazione);
         }
 
         $this->telegram->sendMessage($chatId, $reply);
+    }
+
+    /**
+     * Azioni eseguibili da Telegram: solo chi può aggiornare la segnalazione dalla scheda,
+     * solo azioni senza campi da compilare.
+     *
+     * @return \Illuminate\Support\Collection<int, \App\Models\Azione>
+     */
+    private function azioniTelegram(Segnalazione $segnalazione, User $user): \Illuminate\Support\Collection
+    {
+        if (Gate::forUser($user)->denies('update', $segnalazione)) {
+            return collect();
+        }
+
+        return $this->workflow->getAzioniRapide($segnalazione, $user);
     }
 }

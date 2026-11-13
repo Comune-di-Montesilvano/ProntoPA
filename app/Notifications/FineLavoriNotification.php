@@ -23,6 +23,7 @@ class FineLavoriNotification extends Notification implements ShouldQueue
         public readonly Segnalazione $segnalazione,
         public readonly NotaSegnalazione $nota,
         public readonly string $mittente,
+        public readonly bool $chiusa = false,
     ) {}
 
     /** @return list<string> */
@@ -38,7 +39,7 @@ class FineLavoriNotification extends Notification implements ShouldQueue
         $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Fine lavori'))
             ->line("{$this->mittente} ha comunicato la fine dei lavori sulla segnalazione #{$id}.")
             ->line(Str::limit($this->nota->testo, 500))
-            ->line($this->segnalazione->isChiusa()
+            ->line($this->chiusa
                 ? 'La segnalazione è stata chiusa.'
                 : 'Verifica il lavoro e chiudi la segnalazione.');
 

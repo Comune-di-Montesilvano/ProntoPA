@@ -116,7 +116,16 @@
                 <label for="assegna-scadenza" class="pa-field-label">Scadenza (facoltativa)</label>
                 <input id="assegna-scadenza" type="date" name="data_scadenza" min="{{ now()->format('Y-m-d') }}" class="pa-input"
                        value="{{ old('_pannello') === 'assegna' ? old('data_scadenza') : '' }}">
-                <p class="pa-field-help">Vuota: resta quella calcolata{{ $segnalazione->scadenza_manuale ? ' (oggi fissata a mano al '.$segnalazione->data_scadenza_sla?->format('d/m').')' : '' }}.</p>
+                @if($segnalazione->scadenza_manuale)
+                    <p class="pa-field-help">
+                        Vuota: resta quella fissata a mano al {{ $segnalazione->data_scadenza_sla?->format('d/m') }}.
+                        @can('modificaPriorita', $segnalazione)
+                            <button type="submit" form="scadenza-automatica" class="font-semibold text-[var(--ente-primary)] underline">Torna al calcolo automatico</button>
+                        @endcan
+                    </p>
+                @else
+                    <p class="pa-field-help">Vuota: resta quella calcolata.</p>
+                @endif
                 <x-input-error :messages="$errors->get('data_scadenza')" />
             </div>
 
@@ -132,4 +141,10 @@
             <x-pa.btn type="submit" variant="primary" dusk="assegna-invia" ::disabled="tipo === 'ditta' && !appalto">Assegna</x-pa.btn>
         </footer>
     </form>
+    @if($segnalazione->scadenza_manuale)
+        <form id="scadenza-automatica" method="POST" action="{{ route('segnalazioni.scadenza-automatica', $segnalazione) }}" class="hidden">
+            @csrf
+            @method('PATCH')
+        </form>
+    @endif
 </x-pa.drawer>

@@ -21,12 +21,23 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
   di chi assegna.
 
 ### Added
-- Scadenza fissata a mano dal pannello Assegna: non viene più ricalcolata in automatico.
+- Scadenza fissata a mano dal pannello Assegna: non viene più ricalcolata in automatico
+  (si torna al calcolo automatico dallo stesso pannello).
 - Azioni multiple nell'elenco gestione: seleziona le righe e assegna, chiudi, chiudi senza
   intervento o stampa le schede (fino a 100 per volta).
 
+### Security
+- Una ditta non può più eseguire azioni riservate al comune (chiudere, accettare il proprio
+  preventivo, assegnare) inviando a mano la richiesta: la competenza dell'azione ora è verificata
+  anche all'esecuzione, non solo nel menu.
+- Telegram: pulsanti e `/chiudi` solo per chi può aggiornare la segnalazione dalla scheda e solo
+  per azioni senza campi da compilare; un'azione rifiutata risponde con il motivo invece di un errore.
+
 ### Fixed
 - "Riassegna" compariva ma non si poteva usare.
+- Riaprire una segnalazione la stacca dalla ditta e dalla squadra di prima.
+- L'email di chiusura a scuole e cittadini dice "dal comune" invece del nome di chi ha chiuso.
+- Il menu ⋮ dell'elenco non propone più azioni che chiedono un motivo o un pannello.
 - Il digest mattutino usava una funzione SQL solo MariaDB per l'ordinamento.
 
 ## [0.9.18] - 2026-11-12

@@ -38,7 +38,7 @@ class AzioniRapideTest extends TestCase
     public function test_azioni_rapide_escludono_quelle_con_parametri(): void
     {
         $admin = $this->admin();
-        $segnalazione = Segnalazione::factory()->create();
+        $segnalazione = Segnalazione::factory()->create(['id_stato_segnalazione' => 3]);
 
         $workflow = app(SegnalazioneWorkflowService::class);
         $rapide   = $workflow->getAzioniRapide($segnalazione, $admin);
@@ -63,7 +63,7 @@ class AzioniRapideTest extends TestCase
     public function test_dashboard_mostra_menu_azioni_rapide(): void
     {
         $admin = $this->admin();
-        Segnalazione::factory()->create();
+        Segnalazione::factory()->create(['id_stato_segnalazione' => 3]);
 
         $response = $this->actingAs($admin)->get(route('gestione.dashboard'));
 
