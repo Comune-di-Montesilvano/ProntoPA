@@ -156,7 +156,7 @@ class ProssimoPasso
 
             return [
                 'tono' => $this->tonoScadenza(),
-                'titolo' => 'Quando hai finito, comunica la fine dei lavori con le foto',
+                'titolo' => 'Quando hai finito, comunica la fine dei lavori',
                 'sottotitolo' => Scadenza::estesa($this->s)['testo'] ?? null,
                 'azioni' => $azioni,
             ];
@@ -268,7 +268,7 @@ class ProssimoPasso
 
     private function dataFineLavori(): string
     {
-        return $this->data($this->s->fine_lavori_at ?? $this->s->allegati()->where('fase', 'dopo')->max('created_at'));
+        return $this->data($this->s->fine_lavori_at);
     }
 
     private function ultimoPassaggioA(SegnalazioneStato $stato): mixed

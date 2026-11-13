@@ -300,10 +300,13 @@ class Segnalazione extends Model
         ];
     }
 
-    /** Ditta o operaio hanno comunicato la fine dei lavori (prima della 0.9.19 lo diceva solo la foto "dopo"). */
+    /**
+     * Ditta o operaio hanno comunicato la fine dei lavori per l'assegnazione in corso:
+     * ogni assegnazione azzera fine_lavori_at, le foto "dopo" di prima restano solo storia.
+     */
     public function haFineLavori(): bool
     {
-        return $this->fine_lavori_at !== null || $this->allegati()->where('fase', 'dopo')->exists();
+        return $this->fine_lavori_at !== null;
     }
 
     /** La ditta ha presentato un preventivo: la fine lavori la verifica il comune. */

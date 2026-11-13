@@ -122,7 +122,7 @@ class ProssimoPassoTest extends TestCase
     public function test_gestore_dopo_fine_lavori_chiude(): void
     {
         $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 4, 'id_appalto' => $this->ditta()->id_appalto]);
-        AllegatoSegnalazione::create(['id_segnalazione' => $s->id_segnalazione, 'percorso' => 'x.jpg', 'tipo' => 'image/jpeg', 'nome_originale' => 'x.jpg', 'dimensione' => 1, 'id_utente_creazione' => $this->gestore->id, 'fase' => 'dopo']);
+        $s->forceFill(['fine_lavori_at' => now()])->save();
 
         $passo = ProssimoPasso::per($s, $this->gestore);
 
@@ -171,7 +171,7 @@ class ProssimoPassoTest extends TestCase
 
         $passo = ProssimoPasso::per($s, $ditta);
 
-        $this->assertSame('Quando hai finito, comunica la fine dei lavori con le foto', $passo['titolo']);
+        $this->assertSame('Quando hai finito, comunica la fine dei lavori', $passo['titolo']);
         $this->assertSame('Comunica fine lavori', $this->primaria($passo));
         $this->assertContains('Scrivi al comune', $this->etichette($passo));
     }
@@ -182,7 +182,7 @@ class ProssimoPassoTest extends TestCase
         $ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $appalto->id_impresa]);
         $ditta->assignRole('impresa');
         $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 4, 'id_appalto' => $appalto->id_appalto]);
-        AllegatoSegnalazione::create(['id_segnalazione' => $s->id_segnalazione, 'percorso' => 'x.jpg', 'tipo' => 'image/jpeg', 'nome_originale' => 'x.jpg', 'dimensione' => 1, 'id_utente_creazione' => $ditta->id, 'fase' => 'dopo']);
+        $s->forceFill(['fine_lavori_at' => now()])->save();
 
         $passo = ProssimoPasso::per($s, $ditta);
 
