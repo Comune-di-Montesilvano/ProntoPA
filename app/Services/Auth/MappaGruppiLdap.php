@@ -10,18 +10,17 @@ namespace App\Services\Auth;
  */
 final class MappaGruppiLdap
 {
-    public const PROVENIENZA_INTERNA = 1;
-
-    public const PROVENIENZA_URP = 3;
-
-    /** Ordine = precedenza: [chiave config('ldap.gruppi'), ruolo, supervisore, per-conto, provenienza] */
+    /**
+     * Ordine = precedenza: [chiave config('ldap.gruppi'), ruolo, supervisore].
+     * URP e segnalatori sono la stessa cosa (1.0.0: niente più "per conto").
+     */
     private const LIVELLI = [
-        ['admin', 'admin', false, false, self::PROVENIENZA_INTERNA],
-        ['supervisori', 'gestore', true, false, self::PROVENIENZA_INTERNA],
-        ['gestori', 'gestore', false, false, self::PROVENIENZA_INTERNA],
-        ['operai', 'operaio', false, false, self::PROVENIENZA_INTERNA],
-        ['urp', 'segnalatore', false, true, self::PROVENIENZA_URP],
-        ['segnalatori', 'segnalatore', false, false, self::PROVENIENZA_INTERNA],
+        ['admin', 'admin', false],
+        ['supervisori', 'gestore', true],
+        ['gestori', 'gestore', false],
+        ['operai', 'operaio', false],
+        ['urp', 'segnalatore', false],
+        ['segnalatori', 'segnalatore', false],
     ];
 
     /**
@@ -31,12 +30,12 @@ final class MappaGruppiLdap
     {
         $utente = array_map(fn (string $g) => mb_strtoupper(trim($g)), $gruppi);
 
-        foreach (self::LIVELLI as [$chiave, $ruolo, $supervisore, $perConto, $provenienza]) {
+        foreach (self::LIVELLI as [$chiave, $ruolo, $supervisore]) {
             // Nomi in env (LDAP_GRUPPO_*): servono già al primo login, prima che esista un admin.
             $nome = mb_strtoupper(trim((string) config("ldap.gruppi.{$chiave}")));
 
             if ($nome !== '' && in_array($nome, $utente, true)) {
-                return new RuoloLdap($ruolo, $supervisore, $perConto, $provenienza);
+                return new RuoloLdap($ruolo, $supervisore);
             }
         }
 

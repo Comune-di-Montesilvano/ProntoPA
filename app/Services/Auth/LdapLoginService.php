@@ -6,8 +6,8 @@ use App\Models\User;
 use App\Services\Directory\Directory;
 
 /**
- * Login dipendenti: AD è la fonte di verità. A ogni login ruolo, flag,
- * provenienza e permesso per-conto vengono ricalcolati dai gruppi
+ * Login dipendenti: AD è la fonte di verità. A ogni login ruolo, flag
+ * e supervisore vengono ricalcolati dai gruppi
  * (scrittura in AllineaUtenteAd, la stessa della sincronizzazione).
  */
 final class LdapLoginService

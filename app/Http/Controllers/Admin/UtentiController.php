@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SincronizzaUtentiAdJob;
-use App\Models\Provenienza;
 use App\Models\User;
 use App\Services\Auth\SincronizzaUtentiAd;
 use App\Services\Directory\Directory;
@@ -125,16 +124,14 @@ class UtentiController extends Controller
 
     public function edit(User $utente): View
     {
-        $provenienze = Provenienza::orderBy('descrizione')->get();
-
         $lista = $this->listaDi($utente);
 
-        return view('admin.utenti.edit', compact('utente', 'provenienze', 'lista'));
+        return view('admin.utenti.edit', compact('utente', 'lista'));
     }
 
     public function update(Request $request, User $utente): RedirectResponse
     {
-        // Utenti di dominio: nome, username, email, ruolo, supervisore, provenienza e attivo
+        // Utenti di dominio: nome, username, email, ruolo, supervisore e attivo
         // li decide AD (sync e login), che li riscriverebbe al giro successivo.
         if ($utente->auth_source === 'ldap') {
             $data = $request->validate([
@@ -154,7 +151,6 @@ class UtentiController extends Controller
                 ->where(fn ($q) => $q->where('auth_source', 'locale')->where('attivo', true))
                 ->ignore($utente->id)],
             'ruolo'      => ['required', Rule::in(['admin', 'gestore', 'segnalatore'])],
-            'id_provenienza'=> ['nullable', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
             'telefono'      => ['nullable', 'string', 'max:50'],
             'supervisore'   => ['boolean'],
             'attivo'        => ['nullable', 'boolean'],
@@ -172,7 +168,6 @@ class UtentiController extends Controller
         $utente->name              = $data['name'];
         $utente->username          = $data['username'];
         $utente->email             = $data['email'];
-        $utente->id_provenienza    = $data['id_provenienza'] ?? null;
         $utente->telefono          = $data['telefono'] ?? null;
         if (! $ditta) {
             $utente->amministratore           = $data['ruolo'] === 'admin';

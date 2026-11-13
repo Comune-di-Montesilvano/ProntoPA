@@ -18,7 +18,6 @@
                 <thead class="bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <tr>
                         <th class="px-4 py-3 text-left">Tipologia</th>
-                        <th class="px-4 py-3 text-left">Specializzazione</th>
                         <th class="px-4 py-3 text-left">Priorità</th>
                         <th class="px-4 py-3 text-left">Tempo massimo</th>
                         <th class="px-4 py-3 text-left">A rischio da</th>
@@ -31,7 +30,6 @@
                     @foreach($regole as $r)
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-3 text-gray-700">{{ $r->tipologia?->descrizione ?? '— Tutte —' }}</td>
-                            <td class="px-4 py-3 text-gray-700">{{ $r->specializzazione?->descrizione ?? '— Tutte —' }}</td>
                             <td class="px-4 py-3">
                                 @php $labels = [1=>'Bassa',2=>'Media',3=>'Alta',4=>'Critica']; @endphp
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
@@ -67,7 +65,7 @@
 
     <div class="mt-4 mb-8 p-4 bg-blue-50 rounded-lg text-sm text-blue-700">
         <strong>Come funziona:</strong> quando arriva una segnalazione, il sistema cerca la regola più specifica
-        (tipologia, specializzazione e priorità). Se non ne trova, usa quella senza tipologia.
+        (tipologia e priorità). Se non ne trova, usa quella senza tipologia.
         Ogni giorno controlla le scadenze e avvisa i supervisori.
     </div>
 

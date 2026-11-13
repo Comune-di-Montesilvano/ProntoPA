@@ -430,7 +430,7 @@ class SincronizzaUtentiAdTest extends TestCase
 
     public function test_urp_mancante_non_blocca_per_i_segnalatori_interni(): void
     {
-        $this->utenteLdap('seg', ['id_provenienza' => 1], 'segnalatore');
+        $this->utenteLdap('seg', [], 'segnalatore');
         $this->dir->gruppiMancanti = ['PRONTOPA_URP'];
         $this->membro('seg', ['PRONTOPA_SEGNALATORI']);
 

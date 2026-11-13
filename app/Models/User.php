@@ -30,7 +30,6 @@ class User extends Authenticatable
         'gestore_segnalazioni',
         'supervisore_segnalazioni',
         'gestore_tutte_tipologie',
-        'id_provenienza',
         'id_impresa',
         'telefono',
         'attivo',
@@ -146,17 +145,16 @@ class User extends Authenticatable
         return max(0, $inviata + self::ATTESA_REINVIO_VERIFICA - now()->timestamp);
     }
 
-    /** Scuola (SPID o segnalatore "Direzioni didattiche"): plesso e dettagli obbligatori, niente mappa. */
+    /** Scuola = persona SPID (le deleghe dicono quali sedi). 1.0.0: niente più provenienza. */
     public function segnalaComeScuola(): bool
     {
-        return $this->isSpid()
-            || ($this->hasRole('segnalatore') && (int) $this->id_provenienza === \App\Services\Auth\SpidLoginService::PROVENIENZA_SCUOLE);
+        return $this->isSpid();
     }
 
-    /** I segnalatori segnalano sempre con la propria provenienza; gestori e admin la scelgono. */
-    public function puoScegliereProvenienza(): bool
+    /** Personale del comune che smista (non scuola SPID, non segnalatore). */
+    public function isPersonaleComune(): bool
     {
-        return blank($this->id_provenienza) || (! $this->isSpid() && ! $this->hasRole('segnalatore'));
+        return ! $this->isSpid() && ! $this->hasRole('segnalatore');
     }
 
     public function isBloccato(): bool
@@ -184,11 +182,6 @@ class User extends Authenticatable
     public function impresa(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Impresa::class, 'id_impresa', 'id_impresa');
-    }
-
-    public function provenienza()
-    {
-        return $this->belongsTo(Provenienza::class, 'id_provenienza', 'id_provenienza');
     }
 
     public function istituto()

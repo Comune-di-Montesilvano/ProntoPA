@@ -29,48 +29,16 @@ class AdesioniSegnalazioniController extends Controller
 
         $user = $request->user();
 
-        $data = $request->validate([
-            'segnalante' => ['nullable', 'string', 'max:255'],
-            'telefono'   => ['nullable', 'string', 'max:50'],
-            'email'      => ['nullable', 'email', 'max:255'],
-        ]);
-
-        $perConto = $user->can('segnalazioni.per-conto') && filled($data['segnalante'] ?? null);
-
-        // Un utente "in proprio" aderisce una sola volta; l'URP può
-        // registrare più chiamanti distinti sulla stessa segnalazione,
-        // ma non lo stesso chiamante due volte.
-        if (! $perConto) {
-            $giaAderente = $segnalazione->adesioni()
-                ->where('id_utente', $user->id)
-                ->whereNull('segnalante')
-                ->exists();
-
-            if ($giaAderente) {
-                throw ValidationException::withMessages([
-                    'adesione' => 'Hai già aderito a questa segnalazione.',
-                ]);
-            }
-        }
-
-        if ($perConto) {
-            $stessoChiamante = $segnalazione->adesioni()
-                ->where('segnalante', $data['segnalante'])
-                ->exists();
-
-            if ($stessoChiamante) {
-                throw ValidationException::withMessages([
-                    'adesione' => 'Questo chiamante ha già un\'adesione su questa segnalazione.',
-                ]);
-            }
+        // Una adesione per persona (indice unico a DB).
+        if ($segnalazione->adesioni()->where('id_utente', $user->id)->exists()) {
+            throw ValidationException::withMessages([
+                'adesione' => 'Hai già aderito a questa segnalazione.',
+            ]);
         }
 
         AdesioneSegnalazione::create([
             'id_segnalazione' => $segnalazione->id_segnalazione,
             'id_utente'       => $user->id,
-            'segnalante'      => $perConto ? $data['segnalante'] : null,
-            'telefono'        => $perConto ? ($data['telefono'] ?? null) : null,
-            'email'           => $perConto ? ($data['email'] ?? null) : null,
         ]);
 
         $this->escalaPriorita($segnalazione);

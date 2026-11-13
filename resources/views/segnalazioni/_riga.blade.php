@@ -7,7 +7,7 @@
     $stato = $s->statoEnum();
     $url = route('segnalazioni.show', $s->id_segnalazione);
     $titolo = $s->titoloLeggibile(80);
-    $sede = $s->plesso?->nome ?? ($lettura === 'gestore' ? $s->provenienza?->descrizione : null);
+    $sede = $s->plesso?->nome;
 @endphp
 <tr>
     @foreach($colonne as $colonna)

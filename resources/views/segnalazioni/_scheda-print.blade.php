@@ -24,8 +24,8 @@
     <div class="meta-row">
         <div><span class="label">Data segnalazione :</span>
             {{ $segnalazione->data_segnalazione?->format('d-m-y H:i') }}</div>
-        <div><span class="label">Provenienza :</span>
-            <strong>{{ strtoupper($segnalazione->provenienza?->descrizione ?? '—') }}</strong></div>
+        <div><span class="label">Segnalata da :</span>
+            <strong>{{ $segnalazione->utente?->name ?? '—' }}</strong></div>
     </div>
 
     {{-- Plesso --}}

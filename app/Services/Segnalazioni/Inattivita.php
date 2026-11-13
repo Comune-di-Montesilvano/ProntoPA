@@ -181,7 +181,6 @@ class Inattivita
     {
         return SlaConfigurazione::applicabileA(
             $s->id_tipologia_segnalazione,
-            $s->id_specializzazione,
             $s->livello_priorita ?? 2,
         );
     }

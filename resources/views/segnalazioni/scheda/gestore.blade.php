@@ -59,7 +59,7 @@
                 @endif
                 <p class="m-0 text-sm text-[var(--slate-500)]">
                     Inviata il {{ $segnalazione->data_segnalazione?->format('d/m/Y H:i') }}
-                    @if($segnalazione->segnalante) da {{ $segnalazione->segnalante }} @elseif($segnalazione->utente) da {{ $segnalazione->utente->name }} @endif
+                    @if($segnalazione->utente) da {{ $segnalazione->utente->name }} @endif
                     @if($segnalazione->adesioni->isNotEmpty()) · e da altre {{ $segnalazione->adesioni->count() }} persone @endif
                 </p>
             </x-pa.card>
@@ -96,10 +96,6 @@
                 <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
                     <dt class="text-[var(--slate-500)]">Tipologia</dt>
                     <dd class="m-0">{{ $segnalazione->tipologia?->descrizione ?? '—' }}@if($segnalazione->tipologia?->gruppo) <span class="text-[var(--slate-500)]">· {{ $segnalazione->tipologia->gruppo->descrizione }}</span>@endif</dd>
-                    @if($segnalazione->specializzazione)
-                        <dt class="text-[var(--slate-500)]">Specializzazione</dt><dd class="m-0">{{ $segnalazione->specializzazione->descrizione }}</dd>
-                    @endif
-                    <dt class="text-[var(--slate-500)]">Provenienza</dt><dd class="m-0">{{ $segnalazione->provenienza?->descrizione ?? '—' }}</dd>
                     @if($segnalazione->utente)
                         <dt class="text-[var(--slate-500)]">Registrata da</dt><dd class="m-0">{{ $segnalazione->utente->name }}</dd>
                     @endif

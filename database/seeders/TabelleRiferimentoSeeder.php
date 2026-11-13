@@ -9,13 +9,6 @@ class TabelleRiferimentoSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('provenienze_segnalazioni')->insertOrIgnore([
-            ['id_provenienza' => 1, 'descrizione' => 'SEGNALAZIONI INTERNE'],
-            ['id_provenienza' => 2, 'descrizione' => 'DIREZIONI DIDATTICHE'],
-            ['id_provenienza' => 3, 'descrizione' => 'URP'],
-            ['id_provenienza' => 4, 'descrizione' => 'PORTALE'],
-        ]);
-
         DB::table('db_stato_segnalazioni')->insertOrIgnore([
             ['id_stato' => 1,  'descrizione' => 'Nuova',                'iniziale' => 1, 'in_carico' => 0, 'id_gestione' => 0, 'sospesa' => 0, 'chiusura' => 0, 'colore_sfondo' => 'primary'],
             ['id_stato' => 2,  'descrizione' => 'In carico',             'iniziale' => 0, 'in_carico' => 1, 'id_gestione' => 1, 'sospesa' => 0, 'chiusura' => 0, 'colore_sfondo' => 'info'],
@@ -72,16 +65,6 @@ class TabelleRiferimentoSeeder extends Seeder
         ]);
         }
 
-        DB::table('db_specializzazioni')->insertOrIgnore([
-            ['id_specializzazione' => 1, 'descrizione' => 'Edifici Civili ed Industriali (OG1)'],
-            ['id_specializzazione' => 2, 'descrizione' => 'Lavori stradali (OG3)'],
-            ['id_specializzazione' => 3, 'descrizione' => 'Impianti Elettrici e Trasmissione Dati'],
-            ['id_specializzazione' => 4, 'descrizione' => 'Falegnameria'],
-            ['id_specializzazione' => 5, 'descrizione' => 'Infissi e Porte'],
-            ['id_specializzazione' => 6, 'descrizione' => 'Gestione Verde Pubblico'],
-            ['id_specializzazione' => 7, 'descrizione' => 'Impresa di Pulizie'],
-            ['id_specializzazione' => 8, 'descrizione' => 'Disinfestazione e Derattizzazione'],
-        ]);
 
         DB::table('parametri')->insertOrIgnore([
             ['id_parametro' => 1, 'descrizione' => 'AZIONI_PER_RIGA',              'valore' => '4'],

@@ -30,22 +30,6 @@
                         <x-input-error :messages="$errors->get('id_tipologia_segnalazione')" class="mt-1" />
                     </div>
 
-                    @if($specializzazioni->isNotEmpty())
-                    <div>
-                        <x-input-label for="id_specializzazione" value="Specializzazione (vuoto = tutte)" />
-                        <select id="id_specializzazione" name="id_specializzazione"
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">— Tutte —</option>
-                            @foreach($specializzazioni as $sp)
-                                <option value="{{ $sp->id_specializzazione }}"
-                                    {{ old('id_specializzazione', $regola->id_specializzazione) == $sp->id_specializzazione ? 'selected' : '' }}>
-                                    {{ $sp->descrizione }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <x-input-error :messages="$errors->get('id_specializzazione')" class="mt-1" />
-                    </div>
-                    @endif
 
                     <div>
                         <x-input-label for="livello_priorita" value="Priorità *" />

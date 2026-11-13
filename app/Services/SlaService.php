@@ -20,7 +20,6 @@ class SlaService
 
         $regola = SlaConfigurazione::applicabileA(
             $segnalazione->id_tipologia_segnalazione,
-            $segnalazione->id_specializzazione,
             $priorita
         );
 
@@ -70,7 +69,6 @@ class SlaService
         $priorita = $segnalazione->livello_priorita ?? 2;
         $regola = SlaConfigurazione::applicabileA(
             $segnalazione->id_tipologia_segnalazione,
-            $segnalazione->id_specializzazione,
             $priorita
         );
 

@@ -420,14 +420,9 @@ class SegnalazioneWorkflowService
                 ? User::find($segnalazione->id_utente_segnalazione)
                 : null;
 
+            // 1.0.0: solo l'account (attivo) di chi ha segnalato; niente più email del chiamante.
             if ($segnalatore && $segnalatore->id !== $attore->id && $segnalatore->attivo !== false) {
                 $segnalatore->notify(new SegnalazioneChiusaNotification($segnalazione, $azione, $attore));
-                return;
-            }
-
-            if ($segnalazione->email) {
-                Notification::route('mail', $segnalazione->email)
-                    ->notify(new SegnalazioneChiusaNotification($segnalazione, $azione, $attore));
             }
 
             return;
@@ -473,14 +468,6 @@ class SegnalazioneWorkflowService
     private function notificaAderenti(Segnalazione $segnalazione, Azione $azione, User $attore): void
     {
         foreach ($segnalazione->adesioni()->with('utente')->get() as $adesione) {
-            if ($adesione->segnalante !== null) {
-                if ($adesione->email) {
-                    Notification::route('mail', $adesione->email)
-                        ->notify(new SegnalazioneChiusaNotification($segnalazione, $azione, $attore));
-                }
-                continue;
-            }
-
             $utente = $adesione->utente;
             if ($utente
                 && $utente->id !== $attore->id

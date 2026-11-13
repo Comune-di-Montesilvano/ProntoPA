@@ -19,16 +19,15 @@ class AllineamentoSeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_aggiunge_permesso_mancante_su_installazione_esistente(): void
+    public function test_aggiunge_ruoli_mancanti_su_installazione_esistente(): void
     {
         Role::findOrCreate('gestore', 'web');
         User::factory()->create()->assignRole('gestore');
 
         $this->seed(AllineamentoSeeder::class);
 
-        $this->assertTrue(Permission::where('name', 'segnalazioni.per-conto')->exists());
-        $this->assertTrue(Role::findByName('admin')->hasPermissionTo('segnalazioni.per-conto'));
-        $this->assertTrue(Role::findByName('gestore')->hasPermissionTo('segnalazioni.per-conto'));
+        // 1.0.0: il permesso "per conto" non esiste più.
+        $this->assertFalse(Permission::where('name', 'segnalazioni.per-conto')->exists());
         foreach (['admin', 'gestore', 'operaio', 'segnalatore', 'impresa'] as $ruolo) {
             $this->assertTrue(Role::where('name', $ruolo)->exists(), $ruolo);
         }

@@ -96,9 +96,10 @@ final class SincronizzaUtentiAd
 
         // Gruppo configurato ma assente in AD (es. default PRONTOPA_URP mai creato):
         // innocuo se nessuno ha quel ruolo, altrimenti i suoi membri verrebbero disattivati.
+        $mancanti = $this->directory->gruppiMancantiUltimaLettura();
         $mancantiConUtenti = array_values(array_filter(
-            $this->directory->gruppiMancantiUltimaLettura(),
-            fn (string $g) => $this->utentiDelGruppo($g) > 0,
+            $mancanti,
+            fn (string $g) => $this->utentiDelGruppo($g, $mancanti) > 0,
         ));
         if ($mancantiConUtenti !== []) {
             return EsitoSyncAd::fallita(sprintf(
@@ -192,11 +193,22 @@ final class SincronizzaUtentiAd
         });
     }
 
-    /** Utenti di dominio attivi che oggi hanno il ruolo dato dal gruppo (nome in maiuscolo). */
-    private function utentiDelGruppo(string $gruppo): int
+    /**
+     * Utenti di dominio attivi che oggi hanno il ruolo dato dal gruppo (nome in maiuscolo).
+     * URP e segnalatori danno lo stesso ruolo: conta solo se mancano entrambi.
+     *
+     * @param  list<string>  $mancanti
+     */
+    private function utentiDelGruppo(string $gruppo, array $mancanti = []): int
     {
-        $chiave = collect((array) config('ldap.gruppi'))
-            ->search(fn ($nome) => mb_strtoupper(trim((string) $nome)) === $gruppo);
+        $gruppi = collect((array) config('ldap.gruppi'))->map(fn ($nome) => mb_strtoupper(trim((string) $nome)));
+        $chiave = $gruppi->search(fn ($nome) => $nome === $gruppo);
+        if (in_array($chiave, ['urp', 'segnalatori'], true)) {
+            $altro = (string) $gruppi->get($chiave === 'urp' ? 'segnalatori' : 'urp');
+            if ($altro !== '' && ! in_array($altro, $mancanti, true)) {
+                return 0;
+            }
+        }
 
         $q = User::where('auth_source', 'ldap')->where('attivo', true);
         $conRuolo = fn (string $ruolo) => $q->whereHas('roles', fn ($r) => $r->where('name', $ruolo));
@@ -206,8 +218,7 @@ final class SincronizzaUtentiAd
             'supervisori' => $conRuolo('gestore')->where('supervisore_segnalazioni', true)->count(),
             'gestori' => $conRuolo('gestore')->where(fn ($w) => $w->where('supervisore_segnalazioni', false)->orWhereNull('supervisore_segnalazioni'))->count(),
             'operai' => $conRuolo('operaio')->count(),
-            'urp' => $conRuolo('segnalatore')->where('id_provenienza', MappaGruppiLdap::PROVENIENZA_URP)->count(),
-            'segnalatori' => $conRuolo('segnalatore')->where(fn ($w) => $w->where('id_provenienza', '!=', MappaGruppiLdap::PROVENIENZA_URP)->orWhereNull('id_provenienza'))->count(),
+            'urp', 'segnalatori' => $conRuolo('segnalatore')->count(),
             // Gruppo sconosciuto: prudenza, conta come grave.
             default => 1,
         };

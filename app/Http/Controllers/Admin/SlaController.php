@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Jobs\RicalcolaScadenzeSla;
 use App\Models\SlaConfigurazione;
-use App\Models\Specializzazione;
 use App\Models\TipologiaSegnalazione;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +22,6 @@ class SlaController extends Controller
         return view('admin.sla.form', [
             'regola'          => new SlaConfigurazione(),
             'tipologie'       => TipologiaSegnalazione::orderBy('descrizione')->get(),
-            'specializzazioni'=> Specializzazione::orderBy('descrizione')->get(),
         ]);
     }
 
@@ -41,7 +39,6 @@ class SlaController extends Controller
         return view('admin.sla.form', [
             'regola'          => $sla,
             'tipologie'       => TipologiaSegnalazione::orderBy('descrizione')->get(),
-            'specializzazioni'=> Specializzazione::orderBy('descrizione')->get(),
         ]);
     }
 
@@ -65,7 +62,6 @@ class SlaController extends Controller
     {
         return $request->validate([
             'id_tipologia_segnalazione' => ['nullable', 'integer', 'exists:tipologie_segnalazioni,id_tipologia_segnalazione'],
-            'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
             'livello_priorita'          => ['required', 'integer', 'between:1,4'],
             'ore_target'                => ['required', 'integer', 'min:1'],
             'unita'                     => ['required', 'in:ore,giorni'],

@@ -9,9 +9,7 @@ use App\Models\Impostazione;
 use App\Models\NotaSegnalazione;
 use App\Models\Delega;
 use App\Models\Plesso;
-use App\Models\Provenienza;
 use App\Models\Segnalazione;
-use App\Models\Specializzazione;
 use App\Models\SlaConfigurazione;
 use App\Models\StoricoStatoSegnalazione;
 use App\Notifications\NotaDaEsternoNotification;
@@ -62,7 +60,7 @@ class SegnalazioneController extends Controller
     {
         $user = auth()->user();
         $segnalazioni = Segnalazione::visibileA($user)
-            ->with(['tipologia', 'provenienza', 'plesso'])
+            ->with(['tipologia', 'plesso'])
             ->withMax('storicoStati', 'data_registrazione')
             ->aperte()
             ->orderByDesc('data_segnalazione')
@@ -79,7 +77,6 @@ class SegnalazioneController extends Controller
         $user = auth()->user();
 
         $tipologie  = TipologiaSegnalazione::with('gruppo')->orderBy('descrizione')->get();
-        $provenienze = Provenienza::orderBy('descrizione')->get();
 
         if ($user->isSpid()) {
             $plessi = Plesso::with('istituto.categoria')
@@ -96,16 +93,13 @@ class SegnalazioneController extends Controller
             ['nome', 'asc'],
         ])->values();
 
-        $provenienza_default = $user->id_provenienza;
-        $specializzazioni    = Specializzazione::orderBy('descrizione')->get();
 
-        // Tempo previsto per tipologia (0 = regola valida per tutte) e priorità: il segnalante
-        // non sceglie la specializzazione, contano solo le regole senza.
-        $tempiPrevisti = SlaConfigurazione::whereNull('id_specializzazione')->get()
+        // Tempo previsto per tipologia (0 = regola valida per tutte) e priorità.
+        $tempiPrevisti = SlaConfigurazione::all()
             ->groupBy(fn (SlaConfigurazione $r) => (int) $r->id_tipologia_segnalazione)
             ->map(fn ($regole) => $regole->mapWithKeys(fn (SlaConfigurazione $r) => [$r->livello_priorita => $r->descrizioneTempo()]));
 
-        return view('segnalazioni.create', compact('tipologie', 'provenienze', 'plessi', 'provenienza_default', 'specializzazioni', 'tempiPrevisti'));
+        return view('segnalazioni.create', compact('tipologie', 'plessi', 'tempiPrevisti'));
     }
 
     // ── Salva nuova segnalazione ───────────────────────────────────────────────
@@ -117,10 +111,6 @@ class SegnalazioneController extends Controller
         $mimeConsentiti = array_filter(
             array_map('trim', explode(',', Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png')))
         );
-
-        if (! $request->user()->puoScegliereProvenienza()) {
-            $request->merge(['id_provenienza' => $request->user()->id_provenienza]);
-        }
 
         $scuola = $request->user()->segnalaComeScuola();
         if ($scuola) {
@@ -139,11 +129,9 @@ class SegnalazioneController extends Controller
             'titolo'                    => ['required', 'string', 'max:100'],
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
             'id_plesso'                 => $regolePlesso,
-            'id_provenienza'            => ['required', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
             'latitudine'                => ['nullable', 'numeric'],
             'longitudine'               => ['nullable', 'numeric'],
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
-            'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
             'ubicazione_tipo'           => $scuola ? ['required', 'integer', 'between:1,4'] : ['nullable', 'integer', 'between:0,4'],
             'allegati'                  => ['nullable', 'array', 'max:' . $maxPerRequest],
             'allegati.*'                => [
@@ -151,10 +139,6 @@ class SegnalazioneController extends Controller
                 'max:' . ($maxSizeMb * 1024),
                 'mimetypes:' . implode(',', $mimeConsentiti),
             ],
-            'segnalante_per_conto'      => ['nullable', 'string', 'max:255'],
-            'telefono_per_conto'        => ['nullable', 'string', 'max:50'],
-            'email_per_conto'           => ['nullable', 'email', 'max:255'],
-            'salva_e_nuova'             => ['nullable', 'boolean'],
         ], [
             'id_plesso.required'           => 'Scegli il plesso.',
             'id_plesso.in'                 => 'Puoi segnalare solo per i plessi coperti dalle tue deleghe.',
@@ -166,25 +150,15 @@ class SegnalazioneController extends Controller
 
         $user = auth()->user();
 
-        $perConto = $user->can('segnalazioni.per-conto');
-
-
         $segnalazione = Segnalazione::create(array_merge(
-            Arr::except($data, ['allegati', 'segnalante_per_conto', 'telefono_per_conto', 'email_per_conto', 'salva_e_nuova']),
+            Arr::except($data, ['allegati']),
             [
                 'id_utente_segnalazione' => $user->id,
                 'id_stato_segnalazione'  => SegnalazioneStato::NUOVA->value,
                 'id_plesso'              => $data['id_plesso'] ?? 0,
                 'latitudine'             => $data['latitudine'] ?? 0,
                 'longitudine'            => $data['longitudine'] ?? 0,
-                'segnalante'             => $perConto && filled($data['segnalante_per_conto'] ?? null)
-                                                ? $data['segnalante_per_conto'] : $user->name,
-                'email'                  => $perConto && filled($data['email_per_conto'] ?? null)
-                                                ? $data['email_per_conto'] : $user->email,
-                'telefono'               => $perConto && filled($data['telefono_per_conto'] ?? null)
-                                                ? $data['telefono_per_conto'] : $user->telefono,
                 'livello_priorita'       => $data['livello_priorita'] ?? 2,
-                'id_specializzazione'    => $data['id_specializzazione'] ?? null,
                 'ubicazione_tipo'        => $data['ubicazione_tipo'] ?? null,
             ]
         ));
@@ -226,11 +200,6 @@ class SegnalazioneController extends Controller
             CalcolaEmbeddingSegnalazione::dispatch($segnalazione->id_segnalazione);
         }
 
-        if ($perConto && $request->boolean('salva_e_nuova')) {
-            return redirect()->route('segnalazioni.create')
-                ->with('success', 'Segnalazione #' . $segnalazione->id_segnalazione . ' inviata. Inseriscine un\'altra.');
-        }
-
         return redirect()->route('segnalazioni.index')
             ->with('success', 'Segnalazione inviata con successo.');
     }
@@ -242,8 +211,8 @@ class SegnalazioneController extends Controller
         $this->authorize('view', $segnalazione);
 
         $segnalazione->load([
-            'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
-            'operatore', 'utente', 'appalto', 'specializzazione',
+            'stato', 'tipologia.gruppo', 'plesso.istituto',
+            'operatore', 'utente', 'appalto',
             'squadraAssegnata',
             'segnalazioneMadre', 'duplicati', 'segnalazioneCorrelata', 'correlate',
             'note' => fn ($q) => $q->visibiliA(auth()->user()),
@@ -488,7 +457,7 @@ class SegnalazioneController extends Controller
         $this->authorize('view', $segnalazione);
 
         $segnalazione->load([
-            'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
+            'stato', 'tipologia.gruppo', 'plesso.istituto',
             'operatore', 'utente', 'appalto.impresa',
             'note' => fn ($q) => $q->visibiliA(auth()->user()),
             'storicoStati.stato', 'storicoStati.utente',

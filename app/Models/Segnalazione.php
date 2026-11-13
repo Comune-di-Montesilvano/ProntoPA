@@ -43,12 +43,8 @@ class Segnalazione extends Model
         'flag_pubblicata',
         'flag_evidenza',
         'id_stato_segnalazione',
-        'id_provenienza',
         'id_appalto',
         'id_operatore_assegnato',
-        'segnalante',
-        'email',
-        'telefono',
         'importo_preventivo',
         'importo_liquidato',
         'id_segnalazione_madre',
@@ -62,7 +58,6 @@ class Segnalazione extends Model
         'avviso_inattivita_at',
         'external_id',
         'livello_priorita',
-        'id_specializzazione',
         'ubicazione_tipo',
         'id_squadra_assegnata',
         'titolo',
@@ -121,11 +116,6 @@ class Segnalazione extends Model
         return $this->belongsTo(TipologiaSegnalazione::class, 'id_tipologia_segnalazione', 'id_tipologia_segnalazione');
     }
 
-    public function provenienza(): BelongsTo
-    {
-        return $this->belongsTo(Provenienza::class, 'id_provenienza', 'id_provenienza');
-    }
-
     /** @return BelongsTo<Plesso, $this> */
     /**
      * Dove mostrare la segnalazione su una mappa: la posizione della sede (1.0.0);
@@ -156,10 +146,6 @@ class Segnalazione extends Model
         return $this->belongsTo(Appalto::class, 'id_appalto', 'id_appalto');
     }
 
-    public function specializzazione(): BelongsTo
-    {
-        return $this->belongsTo(Specializzazione::class, 'id_specializzazione', 'id_specializzazione');
-    }
 
     /** @return HasMany<NotaSegnalazione, $this> */
     public function note(): HasMany

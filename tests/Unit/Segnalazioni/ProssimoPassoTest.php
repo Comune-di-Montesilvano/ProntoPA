@@ -207,8 +207,8 @@ class ProssimoPassoTest extends TestCase
     public function test_sollecitata_prefisso_e_alza_priorita(): void
     {
         $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 2]);
-        $s->adesioni()->create(['id_utente' => $this->gestore->id]);
-        $s->adesioni()->create(['id_utente' => $this->gestore->id]);
+        $s->adesioni()->create(['id_utente' => User::factory()->create()->id]);
+        $s->adesioni()->create(['id_utente' => User::factory()->create()->id]);
 
         $passo = ProssimoPasso::per($s, $this->gestore);
 

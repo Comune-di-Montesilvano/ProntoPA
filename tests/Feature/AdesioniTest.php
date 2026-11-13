@@ -65,25 +65,6 @@ class AdesioniTest extends TestCase
         $this->assertSame(1, $seg->adesioni()->count());
     }
 
-    public function test_adesione_per_conto_consente_piu_chiamanti(): void
-    {
-        $seg = Segnalazione::factory()->create(['flag_riservata' => false]);
-        $urp = $this->utente();
-        $urp->givePermissionTo('segnalazioni.per-conto');
-
-        $this->actingAs($urp)->post(route('segnalazioni.adesioni.store', $seg), [
-            'segnalante' => 'Primo Chiamante',
-            'telefono'   => '111',
-        ]);
-        $response = $this->actingAs($urp)->post(route('segnalazioni.adesioni.store', $seg), [
-            'segnalante' => 'Secondo Chiamante',
-            'telefono'   => '222',
-        ]);
-
-        $response->assertSessionHasNoErrors();
-        $this->assertSame(2, $seg->adesioni()->count());
-    }
-
     public function test_escalation_priorita_ogni_n_adesioni(): void
     {
         $seg = Segnalazione::factory()->create(['livello_priorita' => 2, 'flag_riservata' => false]);
@@ -118,23 +99,6 @@ class AdesioniTest extends TestCase
         );
 
         $response->assertSessionHasErrors('adesione');
-    }
-
-    public function test_adesione_per_conto_stesso_chiamante_rifiutata(): void
-    {
-        $seg = Segnalazione::factory()->create(['flag_riservata' => false]);
-        $urp = $this->utente();
-        $urp->givePermissionTo('segnalazioni.per-conto');
-
-        $this->actingAs($urp)->post(route('segnalazioni.adesioni.store', $seg), [
-            'segnalante' => 'Mario Rossi',
-        ]);
-        $response = $this->actingAs($urp)->post(route('segnalazioni.adesioni.store', $seg), [
-            'segnalante' => 'Mario Rossi',
-        ]);
-
-        $response->assertSessionHasErrors('adesione');
-        $this->assertSame(1, $seg->adesioni()->count());
     }
 
     public function test_aderenti_notificati_alla_chiusura(): void

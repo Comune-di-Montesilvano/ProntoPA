@@ -51,7 +51,8 @@ class AccorpaTest extends TestCase
     public function test_accorpa_chiude_nuova_imposta_madre_e_crea_adesione(): void
     {
         $vecchia = Segnalazione::factory()->create();
-        $nuova = Segnalazione::factory()->create(['segnalante' => 'Pina Verdi', 'email' => 'pina@example.com']);
+        $pina = User::factory()->create(['name' => 'Pina Verdi']);
+        $nuova = Segnalazione::factory()->create(['id_utente_segnalazione' => $pina->id]);
 
         $this->accorpa($nuova, $vecchia)->assertRedirect(route('segnalazioni.show', $vecchia->id_segnalazione));
 
@@ -59,13 +60,13 @@ class AccorpaTest extends TestCase
         $this->assertTrue($nuova->isChiusa());
         $this->assertSame(SegnalazioneStato::DUPLICATA, $nuova->statoEnum());
         $this->assertSame($vecchia->id_segnalazione, (int) $nuova->id_segnalazione_madre);
-        $this->assertSame('Pina Verdi', $vecchia->adesioni()->first()?->segnalante);
+        $this->assertSame($pina->id, (int) $vecchia->adesioni()->first()?->id_utente);
     }
 
     public function test_allegati_e_adesioni_spostati(): void
     {
         $vecchia = Segnalazione::factory()->create();
-        $nuova = Segnalazione::factory()->create();
+        $nuova = Segnalazione::factory()->create(['id_utente_segnalazione' => User::factory()->create()->id]);
         AllegatoSegnalazione::create(['id_segnalazione' => $nuova->id_segnalazione, 'percorso' => 'x.jpg', 'tipo' => 'image/jpeg', 'nome_originale' => 'x.jpg', 'dimensione' => 1, 'id_utente_creazione' => $this->admin->id]);
         $aderente = User::factory()->create();
         $nuova->adesioni()->create(['id_utente' => $aderente->id]);
@@ -113,7 +114,7 @@ class AccorpaTest extends TestCase
     public function test_nota_con_testo_sulla_vecchia(): void
     {
         $vecchia = Segnalazione::factory()->create();
-        $nuova = Segnalazione::factory()->create(['segnalante' => 'Pina Verdi', 'testo_segnalazione' => 'Perde ancora acqua']);
+        $nuova = Segnalazione::factory()->create(['id_utente_segnalazione' => User::factory()->create(['name' => 'Pina Verdi'])->id, 'testo_segnalazione' => 'Perde ancora acqua']);
 
         $this->accorpa($nuova, $vecchia);
 
@@ -187,13 +188,15 @@ class AccorpaTest extends TestCase
         $this->actingAs($segnalatore)->get(route('segnalazioni.show', $vecchia))->assertOk();
     }
 
-    public function test_segnalante_anonimo_avvisato_per_email(): void
+    public function test_segnalazione_vecchia_senza_account_nessun_avviso_ne_adesione(): void
     {
-        $nuova = Segnalazione::factory()->create(['email' => 'pina@example.com']);
+        $nuova = Segnalazione::factory()->create(['id_utente_segnalazione' => 0]);
+        $vecchia = Segnalazione::factory()->create();
 
-        $this->accorpa($nuova, Segnalazione::factory()->create());
+        $this->accorpa($nuova, $vecchia);
 
-        Notification::assertSentOnDemand(AccorpataNotification::class, fn ($n, $c, $d) => $d->routes['mail'] === 'pina@example.com');
+        Notification::assertSentOnDemandTimes(AccorpataNotification::class, 0);
+        $this->assertSame(0, $vecchia->adesioni()->count());
     }
 
     public function test_segna_duplicata_non_piu_tra_azioni(): void
@@ -254,7 +257,7 @@ class AccorpaTest extends TestCase
         $this->assertSame(1, $vecchia->volteSegnalata());
         $this->assertFalse($vecchia->isSollecitata());
 
-        $this->accorpa(Segnalazione::factory()->create(), $vecchia);
+        $this->accorpa(Segnalazione::factory()->create(['id_utente_segnalazione' => User::factory()->create()->id]), $vecchia);
 
         $vecchia->refresh();
         $this->assertSame(2, $vecchia->volteSegnalata());

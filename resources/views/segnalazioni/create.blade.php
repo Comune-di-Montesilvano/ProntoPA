@@ -16,39 +16,6 @@
                   x-on:change.capture="if ($event.target.name === 'id_plesso') { ignora = false; controllaSimili($data) }">
                 @csrf
 
-                {{-- Per conto di (telefonata / sportello) --}}
-                @can('segnalazioni.per-conto')
-                    <fieldset class="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4">
-                        <legend class="px-2 text-sm font-semibold text-amber-800">
-                            Per conto di (telefonata / sportello)
-                        </legend>
-                        <div class="grid gap-4 sm:grid-cols-3">
-                            <div>
-                                <x-input-label for="segnalante_per_conto" value="Nome chiamante" />
-                                <input type="text" name="segnalante_per_conto" id="segnalante_per_conto"
-                                       value="{{ old('segnalante_per_conto') }}"
-                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                <x-input-error :messages="$errors->get('segnalante_per_conto')" class="mt-1" />
-                            </div>
-                            <div>
-                                <x-input-label for="telefono_per_conto" value="Telefono" />
-                                <input type="text" name="telefono_per_conto" id="telefono_per_conto"
-                                       value="{{ old('telefono_per_conto') }}"
-                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                <x-input-error :messages="$errors->get('telefono_per_conto')" class="mt-1" />
-                            </div>
-                            <div>
-                                <x-input-label for="email_per_conto" value="Email (per la notifica di chiusura)" />
-                                <input type="email" name="email_per_conto" id="email_per_conto"
-                                       value="{{ old('email_per_conto') }}"
-                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                <x-input-error :messages="$errors->get('email_per_conto')" class="mt-1" />
-                            </div>
-                        </div>
-                        <p class="mt-2 text-xs text-amber-700">Campi facoltativi: compilali se segnali per conto di qualcun altro.</p>
-                    </fieldset>
-                @endcan
-
                 {{-- Tipologia — griglia icone --}}
                 <div>
                     <x-input-label value="Tipologia *" />
@@ -77,36 +44,7 @@
                     @endforeach
                 </div>
 
-                {{-- Provenienza --}}
-                @php
-                    $provenienza_sel = old('id_provenienza', $provenienza_default);
-                    $scuola = auth()->user()->segnalaComeScuola();
-                @endphp
-                @if(! auth()->user()->puoScegliereProvenienza())
-                    <input type="hidden" name="id_provenienza" value="{{ $provenienza_default }}">
-                    <div>
-                        <x-input-label value="Provenienza" />
-                        <p class="mt-1 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
-                            {{ $provenienze->firstWhere('id_provenienza', $provenienza_default)?->descrizione ?? '—' }}
-                        </p>
-                    </div>
-                @else
-                    <div>
-                        <x-input-label for="id_provenienza" value="Provenienza *" />
-                        <select id="id_provenienza" name="id_provenienza"
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_provenienza') border-red-500 @enderror"
-                                required>
-                            <option value="">— Seleziona —</option>
-                            @foreach($provenienze as $p)
-                                <option value="{{ $p->id_provenienza }}"
-                                    {{ $provenienza_sel == $p->id_provenienza ? 'selected' : '' }}>
-                                    {{ $p->descrizione }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <x-input-error :messages="$errors->get('id_provenienza')" class="mt-1" />
-                    </div>
-                @endif
+                @php $scuola = auth()->user()->segnalaComeScuola(); @endphp
 
                 {{-- Plesso --}}
                 <div>
@@ -189,23 +127,6 @@
                     @endunless
                     <div x-show="dettagli" class="{{ $scuola ? '' : 'mt-4 ' }}space-y-6">
 
-                        {{-- Specializzazione: solo per chi smista (gestori/admin); per i segnalatori basta la tipologia --}}
-                        @if($specializzazioni->isNotEmpty() && auth()->user()->puoScegliereProvenienza())
-                        <div>
-                            <x-input-label for="id_specializzazione" value="Tipo di intervento richiesto" />
-                            <select id="id_specializzazione" name="id_specializzazione"
-                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_specializzazione') border-red-500 @enderror">
-                                <option value="">— Generico / Non specificato —</option>
-                                @foreach($specializzazioni as $sp)
-                                    <option value="{{ $sp->id_specializzazione }}"
-                                        {{ old('id_specializzazione') == $sp->id_specializzazione ? 'selected' : '' }}>
-                                        {{ $sp->descrizione }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <x-input-error :messages="$errors->get('id_specializzazione')" class="mt-1" />
-                        </div>
-                        @endif
 
                         {{-- Ubicazione --}}
                         <div>
@@ -307,12 +228,6 @@
                             class="inline-flex items-center px-5 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-sm text-white uppercase tracking-widest hover:bg-blue-700 transition">
                         Invia segnalazione
                     </button>
-                    @can('segnalazioni.per-conto')
-                        <button type="submit" name="salva_e_nuova" value="1"
-                                class="ml-3 inline-flex items-center rounded-md border border-blue-600 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">
-                            Salva e inserisci nuova
-                        </button>
-                    @endcan
                 </div>
             </form>
         </div>
@@ -354,16 +269,6 @@
             const csrf = document.createElement('input');
             csrf.type = 'hidden'; csrf.name = '_token'; csrf.value = '{{ csrf_token() }}';
             form.appendChild(csrf);
-            ['segnalante_per_conto', 'telefono_per_conto', 'email_per_conto'].forEach((name, i) => {
-                const src = document.querySelector('[name=' + name + ']');
-                if (src?.value) {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = ['segnalante', 'telefono', 'email'][i];
-                    input.value = src.value;
-                    form.appendChild(input);
-                }
-            });
             document.body.appendChild(form);
             form.submit();
         }
