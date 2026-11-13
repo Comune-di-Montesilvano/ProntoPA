@@ -4,6 +4,20 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.20] - 2026-11-13
+
+### Changed
+- **Sospendi tolta**: non fermava la scadenza e Riprendi la ricalcolava dall'apertura, quindi non
+  serviva. Le segnalazioni sospese tornano allo stato di prima, con la scadenza che avevano.
+- **Scadenza…**: pulsante nel prossimo passo (e cliccando la scadenza in testata) per rimandarla
+  con un motivo obbligatorio, che la scuola vede sempre e riceve per email. Il campo scadenza esce
+  dal pannello Assegna; "Torna al calcolo automatico" è nello stesso pannello.
+
+### Fixed
+- Attività: dopo una sospensione compare "ha ripreso", non una seconda "ha preso in carico".
+- L'etichetta "Ditta" sulle note compare solo se una ditta è assegnata.
+- "Chi ci lavora" dice "In carico a" quando un gestore se n'è fatto carico, non "Operatore".
+
 ## [0.9.19] - 2026-11-13
 
 ### Changed

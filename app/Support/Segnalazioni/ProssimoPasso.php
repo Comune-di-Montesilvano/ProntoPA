@@ -87,6 +87,7 @@ class ProssimoPasso
                     $this->pannelloAssegna($azioni, 'Assegna…', primaria: true);
                     $this->pannello($azioni, 'chiudi', 'Chiudi', 9);
                     $this->pannelloPriorita($azioni);
+                    $this->pannelloScadenza($azioni);
                     break;
                 case SegnalazioneStato::ASSEGNATA_OPERATORE:
                 case SegnalazioneStato::ASSEGNATA_IMPRESA:
@@ -96,7 +97,7 @@ class ProssimoPasso
                     }
                     $this->pannello($azioni, 'chiudi', 'Chiudi', 9);
                     $this->pannelloAssegna($azioni, 'Riassegna');
-                    $this->pannello($azioni, 'sospendi', 'Sospendi', 4);
+                    $this->pannelloScadenza($azioni);
                     break;
                 case SegnalazioneStato::PREVENTIVO_IN_ATTESA:
                     $titolo = 'Preventivo di € '.number_format((float) $this->s->importo_preventivo, 2, ',', '.').' da valutare';
@@ -200,6 +201,18 @@ class ProssimoPasso
     {
         if ($this->disponibile(2) || $this->disponibile(3)) {
             $azioni[] = ['tipo' => 'pannello', 'etichetta' => $etichetta, 'pannello' => 'assegna', 'primaria' => $primaria];
+        }
+    }
+
+    /**
+     * Rimandare la scadenza con un motivo (al posto di Sospendi, 0.9.20).
+     *
+     * @param  list<AzionePasso>  $azioni
+     */
+    private function pannelloScadenza(array &$azioni): void
+    {
+        if (! $this->s->isChiusa() && Gate::forUser($this->u)->allows('modificaPriorita', $this->s)) {
+            $azioni[] = ['tipo' => 'pannello', 'etichetta' => 'Scadenza…', 'pannello' => 'scadenza', 'primaria' => false];
         }
     }
 

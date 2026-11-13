@@ -10,7 +10,8 @@
         <p class="m-0"><span class="text-[var(--slate-500)]">Squadra</span> <strong class="text-[var(--ink)]">{{ $squadra->nome }}</strong></p>
     @endif
     @if($operatore)
-        <p class="m-0"><span class="text-[var(--slate-500)]">Operatore</span> <strong class="text-[var(--ink)]">{{ $operatore->name }}</strong></p>
+        {{-- In carico = un gestore se n'è fatto carico ("Assegna a me"): non è un operaio. --}}
+        <p class="m-0"><span class="text-[var(--slate-500)]">{{ $segnalazione->statoEnum() === \App\Enums\SegnalazioneStato::IN_CARICO ? 'In carico a' : 'Operatore' }}</span> <strong class="text-[var(--ink)]">{{ $operatore->name }}</strong></p>
     @endif
     @if($appalto)
         <p class="m-0"><span class="text-[var(--slate-500)]">Ditta</span> <strong class="text-[var(--ink)]">{{ $appalto->impresa?->ragione_sociale ?? '—' }}</strong></p>

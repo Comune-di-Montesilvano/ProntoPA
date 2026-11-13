@@ -122,6 +122,8 @@ Route::middleware('auth')->group(function () {
 
     Route::patch('segnalazioni/{segnalazione}/priorita', [SegnalazioneController::class, 'aggiornaPriorita'])
         ->name('segnalazioni.priorita');
+    Route::patch('segnalazioni/{segnalazione}/scadenza', [SegnalazioneController::class, 'aggiornaScadenza'])
+        ->name('segnalazioni.scadenza');
     Route::patch('segnalazioni/{segnalazione}/scadenza-automatica', [SegnalazioneController::class, 'scadenzaAutomatica'])
         ->name('segnalazioni.scadenza-automatica');
     Route::patch('segnalazioni/{segnalazione}/titolo', [SegnalazioneController::class, 'aggiornaTitolo'])
