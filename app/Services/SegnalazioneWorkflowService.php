@@ -6,6 +6,7 @@ use App\Enums\SegnalazioneStato;
 use App\Events\SegnalazionePublishedAutomatically;
 use App\Jobs\InviaWebhookOutbound;
 use App\Services\Segnalazioni\DestinatariAssegnatario;
+use App\Services\Segnalazioni\ScadenzaManuale;
 use App\Models\Azione;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
@@ -19,6 +20,7 @@ use App\Notifications\SegnalazioneStatoCambiato;
 use App\Notifications\SquadraAssegnataNotification;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -26,6 +28,7 @@ class SegnalazioneWorkflowService
 {
     public function __construct(
         private readonly SlaService $sla,
+        private readonly ScadenzaManuale $scadenzaManuale,
     ) {}
 
     /**
@@ -131,6 +134,9 @@ class SegnalazioneWorkflowService
             ]);
         }
 
+        // La data della sospensione non ha più senso: si torna al calcolo dalla regola.
+        $this->scadenzaManuale->rimuovi($segnalazione->refresh());
+
         InviaWebhookOutbound::dispatch($segnalazione->fresh());
     }
 
@@ -180,6 +186,23 @@ class SegnalazioneWorkflowService
 
         $update = ['id_stato_segnalazione' => $nuovoStato->value];
 
+        // Assegnare sostituisce chi c'era prima: operatore, squadra e ditta sono alternativi.
+        $assegnazione = $azione->flag_operatore || $azione->flag_appalto || $azione->codice === 'prendi_in_carico';
+        if ($assegnazione) {
+            $update['fine_lavori_at'] = null;
+        }
+
+        if ($azione->codice === 'prendi_in_carico') {
+            $update['id_operatore_assegnato'] = $user->id;
+            $update['id_squadra_assegnata'] = null;
+            $update['id_appalto'] = null;
+        }
+
+        if ($azione->flag_operatore) {
+            $update['id_appalto'] = null;
+            $update['id_squadra_assegnata'] = null;
+        }
+
         if ($azione->flag_operatore && ! empty($params['id_operatore'])) {
             $update['id_operatore_assegnato'] = $params['id_operatore'];
         }
@@ -195,6 +218,8 @@ class SegnalazioneWorkflowService
 
         if ($azione->flag_appalto && ! empty($params['id_appalto'])) {
             $update['id_appalto'] = $params['id_appalto'];
+            $update['id_operatore_assegnato'] = 0;
+            $update['id_squadra_assegnata'] = null;
         }
 
         if ($azione->flag_preventivo && isset($params['importo_preventivo'])) {
@@ -212,12 +237,14 @@ class SegnalazioneWorkflowService
         if ($azione->codice === 'riapri') {
             $update['data_chiusura'] = null;
             $update['sla_violato']   = false;
+            $update['fine_lavori_at'] = null;
+            $update['id_operatore_assegnato'] = $user->id; // torna "in carico" a chi riapre
         }
 
         if ($nuovoStato->isTerminale() && $azione->codice !== 'riapri') {
             $update['data_chiusura'] = now();
             $update['sla_violato']   = false;
-        } elseif ($azione->codice !== 'riapri') {
+        } elseif ($azione->codice !== 'riapri' && ! $segnalazione->scadenza_manuale) {
             $scadenza = $this->sla->calcolaScadenza($segnalazione);
             if ($scadenza) {
                 $update['data_scadenza_sla'] = $scadenza;
@@ -226,11 +253,17 @@ class SegnalazioneWorkflowService
 
         $segnalazione->update($update);
 
+        if ($azione->codice === 'riapri') {
+            $this->scadenzaManuale->rimuovi($segnalazione);
+        } elseif (! $nuovoStato->isTerminale() && ! empty($params['data_scadenza'])) {
+            $this->scadenzaManuale->imposta($segnalazione, Carbon::parse($params['data_scadenza']), $user);
+        }
+
         StoricoStatoSegnalazione::create([
             'id_segnalazione'       => $segnalazione->id_segnalazione,
             'id_stato_segnalazione' => $nuovoStato->value,
             'id_utente'             => $user->id,
-            'id_utente_collegato'   => $params['id_operatore'] ?? 0,
+            'id_utente_collegato'   => $azione->codice === 'prendi_in_carico' ? $user->id : ($params['id_operatore'] ?? 0),
             'id_appalto'            => $params['id_appalto'] ?? 0,
         ]);
 
