@@ -225,6 +225,7 @@ Spec: `docs/superpowers/specs/2026-10-21-backup-ripristino-design.md`. Admin →
 - **Temporanei**: `backups/tmp/` (cartelle 0700: dump/estrazioni/ricifrature in chiaro) e `backups/stato/` (stati dei job, marcatore `backup-in-corso.json` per la pagina) → `CatalogoBackup::pulisciTemporanei()` solo per età (>3 h, oltre ogni timeout/TTL lock; stati >30 gg), a ogni retention e upload. Niente controllo del lock: prenderlo farebbe rinunciare un notturno concorrente.
 - **Comandi**: `backup:crea --tipo=` · `backup:ripristina {file} --passphrase=` · `backup:pulisci` (dev/CI, in prod non serve).
 - **Gotcha**: il worker `queue-lunghi` (`--force`, `retry_after` 7300) è obbligatorio: senza, backup/ripristini da UI restano in coda per sempre. `--force` serve a recuperare un ripristino interrotto da un worker ucciso (l'app torna su).
+- Job che può superare 90 s (`retry_after` della connessione `redis`) → `$this->onConnection(config('backup.connessione_coda'))->onQueue('lunghi')` nel costruttore, altrimenti riconsegnato a metà → `MaxAttemptsExceeded`.
 
 ## Database
 
@@ -260,6 +261,8 @@ Tag `v*.*.*` → `.github/workflows/release.yml` → build **amd64 only** (arm64
 **Rebuild giornaliero** (04:30 UTC, dopo il giro Dependabot delle 01:00; o dispatch `rebuild_latest`): rebuild di `main` con base/patch Alpine fresche (`APK_REFRESH` = data del giorno invalida il layer `apk upgrade`) → stessa pipeline digest/Trivy/firma → tag `:latest-YYYYMMDD` + `:latest`. `:X.Y.Z`/`:X.Y` mai toccati; saltato se nelle 24 h è uscito un tag. `APP_VERSION` = ultimo tag, `APP_BUILD_TYPE=auto` (tag Sentry `build_type`/`commit`/`build_date`). Le patch arrivano in prod solo con `IMAGE_TAG=latest` (default). `ghcr-cleanup.yml` (domenica, dispatch = dry-run): tiene tag di rilascio/`latest`/`dev`, ultimi 30 `latest-*`, firme cosign (tag `sha256-<digest>`) delle sole immagini tenute, figli degli indici tenuti, versioni < 6 h.
 
 **Rilascio**: bump `publiccode.yml` `softwareVersion` + CHANGELOG `## [X.Y.Z] - data` **nella stessa PR della modifica** (preferenza committente, niente PR di rilascio separata) → `main` protetto: PR squash con CI verde (`test`+`dusk`+`publiccode.yml validation`) → `git switch main && git pull` → `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z` → `gh run watch <id> --exit-status` sul workflow release.
+
+Migrations distruttive: già il **merge** su `main` va in prod (rebuild `:latest` 04:30 UTC), non solo il tag → backup manuale in prod prima del merge.
 
 ```bash
 git tag v1.2.0 && git push origin v1.2.0
@@ -299,6 +302,12 @@ PR dependabot con conflitto `composer.lock`/`package-lock.json` (tipico se ne me
 ## Test
 
 CSRF/throttle non auto-bypassati nei Feature test nonostante `APP_ENV=testing` (`app()->runningUnitTests()` risulta `false` qui). Sui POST a rotte `web`: `$this->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class, \Illuminate\Routing\Middleware\ThrottleRequests::class])`.
+
+**SQLite ≠ MariaDB strict**: i test non vedono lunghezze varchar né NOT NULL → `max:` della validazione = lunghezza colonna, campi `nullable` su colonne NOT NULL → `?? ''` prima del save.
+
+Prima del push: **suite intera**, non solo `--filter` (vecchi test che verificano il comportamento appena tolto restano rossi in CI).
+
+**Prova di aggiornamento su dati veri** (DB dev = copia prod): `mariadb-dump --single-transaction` nello scratchpad → `migrate` + `AllineamentoSeeder` ×2 → smoke curl delle pagine; per rifarla `DROP/CREATE DATABASE` + reimport del dump.
 
 Causa trovata (v1.2): nel container dev `CACHE_STORE`/`SESSION_DRIVER`/`QUEUE_CONNECTION`/`MAIL_MAILER` arrivano dall'env del compose (redis/smtp) e Laravel legge `$_SERVER` prima di `$_ENV` — un `<env>` senza `force` non li sovrascrive, e i test scrivevano nella cache Redis del dev (test flaky + impostazioni dev inquinate). `phpunit.xml` ora li forza con `<env … force="true"/>` **e** `<server … force="true"/>` (idem `LDAP_HOST` vuoto). Nuova variabile che il compose passa al container e che i test devono controllare → stessa coppia env+server forzata.
 
