@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SegnalazioneStato;
+use App\Models\Appalto;
+use App\Models\Impostazione;
 use App\Models\Provenienza;
 use App\Models\Segnalazione;
 use App\Models\Specializzazione;
+use App\Models\Squadra;
 use App\Models\TipologiaSegnalazione;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -83,12 +86,24 @@ class GestioneController extends Controller
 
         $filtri = $this->parametriFiltro($request);
 
+        // Pannelli delle azioni multiple: stessi elenchi del pannello Assegna della scheda.
+        $operatoriAssegnabili = User::where(fn ($q) => $q->where('gestore_segnalazioni', true)
+                ->orWhere('amministratore', true)
+                ->orWhereHas('roles', fn ($r) => $r->whereIn('name', ['operaio', 'gestore', 'admin'])))
+            ->where(fn ($q) => $q->whereNull('attivo')->orWhere('attivo', true))
+            ->orderBy('name')
+            ->get();
+        $squadre = Impostazione::get('squadre_enabled', false)
+            ? Squadra::where('attiva', true)->orderBy('nome')->get()
+            : collect();
+        $appaltiValidi = Appalto::where('valido', true)->with('impresa')->orderBy('descrizione')->get();
+
         return view('gestione.dashboard', compact(
             'segnalazioni', 'tab', 'conteggi',
             'q', 'idTipologia', 'idProvenienza',
             'idOperatore', 'dataDa', 'dataA', 'livelloPriorita', 'idSpecializzazione',
             'ordine', 'filtro', 'tipologie', 'provenienze', 'specializzazioni', 'operatori',
-            'azioniRapidePerSegnalazione', 'filtri'
+            'azioniRapidePerSegnalazione', 'filtri', 'operatoriAssegnabili', 'squadre', 'appaltiValidi'
         ));
     }
 
@@ -145,8 +160,15 @@ class GestioneController extends Controller
     /** Tutte le schede dell'elenco filtrato, una per pagina, in un unico documento. */
     public function stampaSchede(Request $request): View
     {
+        // Selezione dall'elenco (azioni multiple): solo quelle, raggruppate per chi lavora e sede.
+        $ids = array_slice(array_filter(array_map('intval', (array) $request->query('ids', []))), 0, 100);
+        $query = $ids
+            ? Segnalazione::visibileA($request->user())->whereIn('id_segnalazione', $ids)
+                ->orderBy('id_operatore_assegnato')->orderBy('id_appalto')->orderBy('id_plesso')->orderBy('id_segnalazione')
+            : $this->elencoFiltrato($request);
+
         // Stesse relazioni di SegnalazioneController::stampa (scheda singola).
-        $segnalazioni = $this->elencoFiltrato($request)
+        $segnalazioni = $query
             ->with([
                 'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
                 'operatore', 'utente', 'appalto.impresa',

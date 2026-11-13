@@ -1,5 +1,5 @@
 {{-- Riga di un elenco di segnalazioni (tabella .pa-elenco, a scheda sotto 768px).
-     Parametri: s, colonne (priorita|segnalazione|stato|assegnata|scadenza|aggiornata|affida|azioni),
+     Parametri: s, colonne (seleziona|priorita|segnalazione|stato|assegnata|scadenza|aggiornata|affida|azioni),
      lettura ('gestore'|'lavoro'|'segnalante', default gestore), rapide (azioni rapide, opzionale),
      segui (true = visibile solo per adesione, lettura segnalante), membri (caposquadra, colonna affida). --}}
 @php
@@ -12,6 +12,13 @@
 <tr>
     @foreach($colonne as $colonna)
         @switch($colonna)
+            @case('seleziona')
+                <td class="pa-col-seleziona">
+                    <input type="checkbox" value="{{ $s->id_segnalazione }}" x-model="scelte"
+                           aria-label="Seleziona #{{ $s->id_segnalazione }}">
+                </td>
+                @break
+
             @case('priorita')
                 <td class="pa-col-priorita whitespace-nowrap">
                     <x-pa.prio :livello="$s->livello_priorita" />

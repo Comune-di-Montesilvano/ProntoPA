@@ -137,6 +137,7 @@ Route::middleware(['auth', 'role:admin|gestore'])->prefix('gestione')->name('ges
     Route::get('/', [GestioneController::class, 'index'])->name('dashboard');
     Route::get('/stampa', [GestioneController::class, 'stampaLista'])->name('stampa');
     Route::get('/stampa-schede', [GestioneController::class, 'stampaSchede'])->name('stampa-schede');
+    Route::post('/azioni-multiple', \App\Http\Controllers\AzioniMultipleController::class)->name('azioni-multiple');
     Route::get('/export-csv', [GestioneController::class, 'exportCsv'])->name('export-csv');
     Route::get('/reports/mensile', [ReportController::class, 'mensileGestore'])->name('reports.mensile');
     Route::get('/reports/mensile/xlsx', [ReportController::class, 'mensileGestoreXlsx'])->name('reports.mensile.xlsx');

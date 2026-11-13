@@ -249,4 +249,14 @@
   .pa-elenco td.pa-col-scadenza, .pa-elenco td.pa-col-aggiornata { grid-column: 2 / -1; grid-row: 2; }
   .pa-elenco td.pa-col-priorita { grid-column: 1; grid-row: 3; }
   .pa-elenco td.pa-col-assegnata { grid-column: 2 / -1; grid-row: 3; font-size: 13px; }
+  .pa-elenco td.pa-col-seleziona { grid-column: 3; grid-row: 2; justify-self: end; }
+  .pa-elenco tr:has(.pa-col-seleziona) td.pa-col-scadenza { grid-column: 2; }
+}
+/* Azioni multiple: barra fissa in basso, a tutta larghezza su telefono */
+.pa-barra-multipla { position: fixed; z-index: 40; left: 50%; bottom: 16px; transform: translateX(-50%);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; max-width: calc(100% - 32px);
+  padding: 10px 16px; border: 1px solid var(--slate-200); border-radius: var(--radius-md);
+  background: var(--white, #fff); box-shadow: 0 8px 24px rgb(15 23 42 / .18); }
+@media (max-width: 767px) {
+  .pa-barra-multipla { left: 0; right: 0; bottom: 0; transform: none; max-width: none; border-radius: 0; border-width: 1px 0 0; }
 }
