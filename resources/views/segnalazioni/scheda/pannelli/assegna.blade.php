@@ -2,6 +2,7 @@
 @php
     $azOperatore = $azioniDisponibili->firstWhere('codice', 'assegna_operatore');
     $azImpresa = $azioniDisponibili->firstWhere('codice', 'assegna_impresa');
+    $azMe = $azioniDisponibili->firstWhere('codice', 'prendi_in_carico');
     $iniziale = old('_tipo', $azImpresa && ! $azOperatore ? 'ditta' : 'operaio');
     $appalti = $appaltiValidi->map(fn ($a) => [
         'id' => $a->id_appalto,
@@ -10,7 +11,7 @@
         'email' => (bool) $a->impresa?->email,
     ])->values();
 @endphp
-<x-pa.drawer name="assegna" title="Assegna" :sottotitolo="'#'.$segnalazione->id_segnalazione" :aperto="old('_pannello') === 'assegna'">
+<x-pa.drawer name="assegna" :title="$segnalazione->statoEnum()->value >= 3 ? 'Riassegna' : 'Assegna'" :sottotitolo="'#'.$segnalazione->id_segnalazione" :aperto="old('_pannello') === 'assegna'">
     <form method="POST" action="{{ route('segnalazioni.azione', $segnalazione->id_segnalazione) }}" class="flex flex-1 flex-col"
           x-data="{ tipo: @js($iniziale), cerca: '', appalto: @js((int) old('id_appalto')), appalti: @js($appalti),
                     get filtrati() { const q = this.cerca.toLowerCase(); return this.appalti.filter(a => !q || (a.ditta + ' ' + a.descrizione).toLowerCase().includes(q)); },
@@ -18,7 +19,7 @@
         @csrf
         <input type="hidden" name="_pannello" value="assegna">
         <input type="hidden" name="_tipo" :value="tipo">
-        <input type="hidden" name="id_azione" :value="tipo === 'ditta' ? {{ (int) $azImpresa?->id_azione }} : {{ (int) $azOperatore?->id_azione }}">
+        <input type="hidden" name="id_azione" :value="tipo === 'me' ? {{ (int) $azMe?->id_azione }} : (tipo === 'ditta' ? {{ (int) $azImpresa?->id_azione }} : {{ (int) $azOperatore?->id_azione }})">
 
         <div class="flex flex-1 flex-col gap-5 px-6 py-5">
             <fieldset class="m-0 flex flex-wrap gap-2 border-0 p-0">
@@ -36,6 +37,11 @@
                 @if($azImpresa)
                     <label class="pa-btn pa-btn-outline pa-btn-sm cursor-pointer" :class="tipo === 'ditta' && 'pa-btn-secondary'">
                         <input type="radio" class="sr-only" value="ditta" x-model="tipo"> Ditta
+                    </label>
+                @endif
+                @if($azMe)
+                    <label class="pa-btn pa-btn-outline pa-btn-sm cursor-pointer" :class="tipo === 'me' && 'pa-btn-secondary'" dusk="assegna-me">
+                        <input type="radio" class="sr-only" value="me" x-model="tipo"> A me
                     </label>
                 @endif
             </fieldset>
@@ -107,6 +113,14 @@
             @endcan
 
             <div class="pa-field">
+                <label for="assegna-scadenza" class="pa-field-label">Scadenza (facoltativa)</label>
+                <input id="assegna-scadenza" type="date" name="data_scadenza" min="{{ now()->format('Y-m-d') }}" class="pa-input"
+                       value="{{ old('_pannello') === 'assegna' ? old('data_scadenza') : '' }}">
+                <p class="pa-field-help">Vuota: resta quella calcolata{{ $segnalazione->scadenza_manuale ? ' (oggi fissata a mano al '.$segnalazione->data_scadenza_sla?->format('d/m').')' : '' }}.</p>
+                <x-input-error :messages="$errors->get('data_scadenza')" />
+            </div>
+
+            <div class="pa-field" x-show="tipo !== 'me'">
                 <label for="assegna-nota" class="pa-field-label">Nota per chi riceve il lavoro (facoltativa)</label>
                 <textarea id="assegna-nota" name="nota" rows="3" maxlength="2000" class="pa-textarea">{{ old('_pannello') === 'assegna' ? old('nota') : '' }}</textarea>
             </div>
@@ -115,7 +129,7 @@
 
         <footer class="flex justify-end gap-2 border-t border-[var(--slate-200)] px-6 py-4">
             <x-pa.btn x-on:click="$dispatch('apri-pannello', '')">Annulla</x-pa.btn>
-            <x-pa.btn type="submit" variant="primary" ::disabled="tipo === 'ditta' && !appalto">Assegna</x-pa.btn>
+            <x-pa.btn type="submit" variant="primary" dusk="assegna-invia" ::disabled="tipo === 'ditta' && !appalto">Assegna</x-pa.btn>
         </footer>
     </form>
 </x-pa.drawer>

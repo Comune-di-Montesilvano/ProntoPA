@@ -307,6 +307,7 @@ class SegnalazioneController extends Controller
             'nota'                      => ['nullable', 'string', 'max:2000'],
             'id_segnalazione_correlata' => ['nullable', 'integer', 'exists:segnalazioni,id_segnalazione'],
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
+            'data_scadenza'             => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
         ];
 
         // Il pannello Assegna fissa anche la priorità: permesso controllato prima,
@@ -320,20 +321,26 @@ class SegnalazioneController extends Controller
             $rules['importo_preventivo'] = ['required', 'numeric', 'min:0'];
         }
 
+        // Chiudere non chiede nulla: nota e foto facoltative (spec 2026-11-13 §1).
         if ($azione->codice === 'chiudi') {
-            // Se ditta/operaio hanno già mandato il rapportino con le foto, il comune chiude e basta.
-            $giaRendicontata = $segnalazione->haFineLavori();
-            $obbligo = $giaRendicontata ? 'nullable' : 'required';
-            $rules['ore_lavoro'] = [$obbligo, 'numeric', 'min:0'];
-            $rules['materiali']  = [$obbligo, 'string', 'max:1000'];
-            $rules['nota']       = [$obbligo, 'string', 'max:2000'];
-            $rules += CaricaAllegati::regole(obbligatori: ! $giaRendicontata);
+            $rules += CaricaAllegati::regole(obbligatori: false);
+        }
+
+        if (in_array($azione->codice, ['sospendi', 'rifiuta_preventivo'], true)) {
+            $rules['nota'] = ['required', 'string', 'max:2000'];
+        }
+
+        if ($azione->codice === 'annulla') {
+            $rules['motivo'] = ['required', Rule::in(array_keys(SegnalazioneWorkflowService::MOTIVI_SENZA_INTERVENTO))];
+            $rules['nota'] = ['required_if:motivo,altro', 'nullable', 'string', 'max:2000'];
         }
 
         $data = $request->validate($rules, [
             ...CaricaAllegati::messaggi(),
-            'allegati.required' => 'Devi caricare almeno una foto dell\'intervento per proporre la chiusura.',
-            'allegati.min' => 'Devi caricare almeno una foto dell\'intervento per proporre la chiusura.',
+            'motivo.required' => 'Indica perché si chiude senza intervento.',
+            'nota.required_if' => 'Scrivi il motivo.',
+            'nota.required' => 'Scrivi il motivo.',
+            'data_scadenza.after_or_equal' => 'La nuova scadenza non può essere nel passato.',
         ]);
 
         $this->workflow->eseguiAzione(

@@ -1,4 +1,4 @@
-{{-- Chiudi: con il rapportino, salvo che ditta/operaio l'abbiano già mandato (fine lavori). --}}
+{{-- Chiudi (lavoro fatto): nota e foto facoltative. --}}
 @php
     $azione = $azioniDisponibili->firstWhere('codice', 'chiudi');
     $giaRendicontata = $segnalazione->haFineLavori();
@@ -12,30 +12,17 @@
         <input type="hidden" name="id_azione" value="{{ $azione->id_azione }}">
         <div class="flex flex-1 flex-col gap-4 px-6 py-5">
             @if($giaRendicontata)
-                <p class="m-0 text-sm text-[var(--slate-700)]">La fine dei lavori è già stata comunicata con le foto: verificale in Attività e chiudi.</p>
-            @else
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div class="pa-field">
-                        <label for="chiudi-ore" class="pa-field-label">Ore impiegate</label>
-                        <input id="chiudi-ore" type="number" step="0.1" min="0" name="ore_lavoro" class="pa-input" required value="{{ $mio ? old('ore_lavoro') : '' }}">
-                        <x-input-error :messages="$errors->get('ore_lavoro')" />
-                    </div>
-                    <div class="pa-field">
-                        <label for="chiudi-materiali" class="pa-field-label">Materiali usati</label>
-                        <input id="chiudi-materiali" type="text" name="materiali" maxlength="1000" class="pa-input" required value="{{ $mio ? old('materiali') : '' }}">
-                        <x-input-error :messages="$errors->get('materiali')" />
-                    </div>
-                </div>
-                <div class="pa-field">
-                    <label for="chiudi-foto" class="pa-field-label">Foto del lavoro finito</label>
-                    <input id="chiudi-foto" type="file" name="allegati[]" multiple accept="{{ $mime }}" required class="text-sm">
-                    <x-input-error :messages="array_merge($errors->get('allegati'), $errors->get('allegati.*'))" />
-                </div>
+                <p class="m-0 text-sm text-[var(--slate-700)]">La fine dei lavori è già stata comunicata: verificala in Attività e chiudi.</p>
             @endif
             <div class="pa-field">
-                <label for="chiudi-nota" class="pa-field-label">{{ $giaRendicontata ? 'Nota (facoltativa)' : 'Descrizione dell\'intervento' }}</label>
-                <textarea id="chiudi-nota" name="nota" rows="3" maxlength="2000" class="pa-textarea" @required(! $giaRendicontata)>{{ $mio ? old('nota') : '' }}</textarea>
+                <label for="chiudi-nota" class="pa-field-label">Cosa è stato fatto (facoltativo)</label>
+                <textarea id="chiudi-nota" name="nota" rows="3" maxlength="2000" class="pa-textarea">{{ $mio ? old('nota') : '' }}</textarea>
                 <x-input-error :messages="$errors->get('nota')" />
+            </div>
+            <div class="pa-field">
+                <label for="chiudi-foto" class="pa-field-label">Foto (facoltative)</label>
+                <input id="chiudi-foto" type="file" name="allegati[]" multiple accept="{{ $mime }}" class="text-sm">
+                <x-input-error :messages="array_merge($errors->get('allegati'), $errors->get('allegati.*'))" />
             </div>
             <x-input-error :messages="$errors->get('azione')" />
         </div>

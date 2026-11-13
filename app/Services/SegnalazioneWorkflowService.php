@@ -26,6 +26,14 @@ use Illuminate\Validation\ValidationException;
 
 class SegnalazioneWorkflowService
 {
+    /** Motivi di "Chiudi senza intervento" (azione annulla, stato 9). */
+    public const MOTIVI_SENZA_INTERVENTO = [
+        'non_pertinente' => 'Non pertinente',
+        'errata' => 'Segnalazione errata',
+        'gia_risolta' => 'Già risolta',
+        'altro' => 'Altro',
+    ];
+
     public function __construct(
         private readonly SlaService $sla,
         private readonly ScadenzaManuale $scadenzaManuale,
@@ -226,10 +234,9 @@ class SegnalazioneWorkflowService
             $update['importo_preventivo'] = $params['importo_preventivo'];
         }
 
-        // Motivazione obbligatoria per ANNULLATA
-        if ($azione->codice === 'annulla' && empty($params['nota'])) {
+        if ($azione->codice === 'annulla' && empty($params['motivo']) && empty($params['nota'])) {
             throw ValidationException::withMessages([
-                'nota' => 'La motivazione è obbligatoria per annullare una segnalazione.',
+                'motivo' => 'Indica perché si chiude senza intervento.',
             ]);
         }
 
@@ -267,24 +274,22 @@ class SegnalazioneWorkflowService
             'id_appalto'            => $params['id_appalto'] ?? 0,
         ]);
 
-        $notaTesto = $params['nota'] ?? '';
-        if (isset($params['ore_lavoro']) || isset($params['materiali'])) {
-            $rapportinoTesto = "Rapportino di fine lavoro:\n";
-            if (filled($params['ore_lavoro'] ?? null)) {
-                $rapportinoTesto .= "- Ore impiegate: " . $params['ore_lavoro'] . "\n";
-            }
-            if (filled($params['materiali'] ?? null)) {
-                $rapportinoTesto .= "- Materiali usati: " . $params['materiali'] . "\n";
-            }
-            $notaTesto = $rapportinoTesto . "\nDescrizione:\n" . $notaTesto;
+        $notaTesto = trim((string) ($params['nota'] ?? ''));
+        $visibileWeb = false;
+        if ($azione->codice === 'annulla') {
+            // Il motivo lo deve capire anche chi ha segnalato.
+            $motivo = self::MOTIVI_SENZA_INTERVENTO[$params['motivo'] ?? 'altro'] ?? 'Altro';
+            $notaTesto = "Chiusa senza intervento: {$motivo}.".($notaTesto !== '' ? "
+{$notaTesto}" : '');
+            $visibileWeb = true;
         }
 
-        if (! empty($notaTesto)) {
+        if ($notaTesto !== '') {
             $segnalazione->note()->create([
                 'testo'            => $notaTesto,
                 'id_utente'        => $user->id,
-                'visibile_web'     => false,
-                'visibile_impresa' => $azione->flag_notifica || isset($params['ore_lavoro']),
+                'visibile_web'     => $visibileWeb,
+                'visibile_impresa' => (bool) $azione->flag_notifica,
             ]);
         }
 
