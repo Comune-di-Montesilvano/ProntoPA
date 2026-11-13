@@ -138,7 +138,7 @@ class EntiTest extends TestCase
         $this->assertTrue(CategoriaEnte::where('nome', 'Terza')->sole()->import_miur);
     }
 
-    public function test_select_sede_raggruppata_per_categoria(): void
+    public function test_form_mostra_ente_e_sede_senza_categoria(): void
     {
         $this->seed(\Database\Seeders\TabelleRiferimentoSeeder::class);
         $cat = CategoriaEnte::factory()->create(['nome' => 'Comune']);
@@ -149,7 +149,9 @@ class EntiTest extends TestCase
 
         $this->actingAs($u)->get(route('segnalazioni.create'))
             ->assertOk()
-            ->assertSee('<optgroup label="Comune">', false)
+            // 1.0.1: prima l'ente poi la sede, la categoria non si mostra.
+            ->assertDontSee('<optgroup', false)
+            ->assertSee('Palazzo')
             ->assertSee('Municipio');
     }
 
