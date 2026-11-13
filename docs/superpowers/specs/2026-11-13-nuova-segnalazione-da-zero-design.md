@@ -1,165 +1,192 @@
 # Nuova segnalazione rifatta da zero — design
 
-Data: 2026-11-13 · Stato: bozza da approvare · Versione prevista: patch successiva alla 0.9.20
+Data: 2026-11-13 · Stato: rivista (revisore + risposte del committente) · Un solo rilascio, patch dopo la 0.9.20
 
 ## Perché
 
-Il form "Nuova segnalazione" è il punto da cui parte tutto, ed è rimasto quello di prima mentre
-l'iter dopo è stato semplificato (0.9.19/0.9.20). Chi entra per segnalare un guasto trova:
-- 12 tipologie divise in gruppi, di cui molte non c'entrano con la sede;
-- un riquadro "Per conto di" e una provenienza che a chi segnala non dicono niente;
-- un placeholder con dati reali ("Fornitura 15 panchine plesso Colonnetta");
-- "Più dettagli" chiuso, con dentro un campo obbligatorio e le foto: nessuno lo apre;
-- una mappa enorme, anche quando la sede è già scelta.
+Il form "Nuova segnalazione" è il punto da cui parte tutto ed è rimasto quello di prima, mentre l'iter
+dopo è stato semplificato (0.9.19/0.9.20). Chi entra per segnalare un guasto trova 12 tipologie divise
+in gruppi che non c'entrano con la sede, un riquadro "Per conto di" e una provenienza che non dicono
+niente, un placeholder con dati reali, "Più dettagli" chiuso con dentro un campo obbligatorio e le
+foto, e una mappa enorme anche con la sede già scelta.
 
-Parole del committente: "un cristo che si collega per segnalare un guasto può trovarsi questo
-schifo?" — e "fondamentalmente lo stiamo rifacendo da zero". Il form cambia **per tutti**
-(scuole via SPID, personale del comune, URP), non solo per un ruolo.
+Parole del committente: "un cristo che si collega per segnalare un guasto può trovarsi questo schifo?"
+e "fondamentalmente lo stiamo rifacendo da zero". Il form cambia **per tutti** (scuole via SPID,
+personale del comune, URP).
 
-Successo: chi segnala vede solo campi che capisce, tutti in vista, e arriva in fondo senza
-errori "nascosti". Chi lavora (operaio, ditta) trova subito il posto sulla mappa.
+Successo: chi segnala vede solo campi che capisce, tutti in vista, e arriva in fondo senza errori
+nascosti. Chi lavora (operaio, ditta) trova subito il posto sulla mappa.
 
 ## Decisioni del committente
 
-1. **Si parte sempre da una sede.** Sede obbligatoria per tutti. Niente segnalazioni senza sede
-   (strade, piazze): i cittadini si valuteranno più avanti, se e quando entreranno.
-2. **Tipologie: un solo elenco, uguale per tutte le sedi.** "Che sia una scuola lo dice la sede,
-   non la tipologia". I **gruppi di tipologie vanno cancellati** (tabella `gruppi_segnalazioni`,
-   colonna `tipologie_segnalazioni.id_gruppo`, flag `cittadini`, la scritta "· EDILIZIA SCOLASTICA"
-   ovunque compaia).
-3. **Appalti come i gestori: legati alle tipologie** (elenco di tipologie oppure "tutte"). Il
-   pannello Assegna propone le ditte con un appalto valido per la tipologia della segnalazione.
-4. **Priorità: resta com'è** nel form.
-5. **Titolo: resta obbligatorio** (max 100). Si toglie solo il placeholder con dati reali.
-6. **Mappa: esce dal form** (la posizione la dà la sede) e **resta lato backoffice**: le sedi hanno
-   coordinate, ricavate dall'indirizzo o fissate a mano e salvate, così ditte e operai
-   individuano subito il posto.
-7. **Niente "Più dettagli"**: quello che resta è sempre in vista ("se le mettiamo in dettagli non le
-   compilerà mai nessuno").
-8. **"Per conto di": via** (inutile).
-9. **Provenienza: deve sparire dal database**, non solo dal form.
-10. **"Dove si trova il problema"** (interno, esterno, impianto, area verde): resta, **facoltativo**.
-11. **Foto: restano, facoltative**, in vista.
-12. **Specializzazioni ("Tipo di intervento richiesto"): via.** L'operaio che non può fare un lavoro
-    lo scrive nel testo e lo rimanda al gestore.
-13. **"Rimanda al gestore"** per operaio **e ditta** (nuova azione, vedi sotto).
-14. **Appalti nel pannello Assegna**: prima le ditte con appalto valido per la tipologia, sotto
-    "Altre ditte" con tutti gli altri appalti validi. Nessuno resta bloccato.
-15. **API**: nessuno la usa oggi → sede obbligatoria anche via API, campi tolti ignorati.
-16. **Dati del chiamante** ("Per conto di"): **cancellati dal database** come la provenienza; le
-    adesioni "per conto" diventano adesioni normali.
+1. **Si parte sempre da una sede**, obbligatoria per tutti. Niente segnalazioni senza sede (strade,
+   piazze). I cittadini si valuteranno più avanti.
+2. **Tipologie: un solo elenco, uguale per tutte le sedi.** "Che sia una scuola lo dice la sede, non
+   la tipologia". **I gruppi di tipologie si cancellano** (tabella, colonna, flag `cittadini`, la
+   scritta "· EDILIZIA SCOLASTICA" ovunque).
+3. **Pagina admin delle tipologie**: aggiungi, rinomina, unisci, disattiva. Il programma smette di
+   ricrearle a ogni avvio. Le due "SFALCI E POTATURE" si uniscono subito.
+4. **Appalti come i gestori: legati alle tipologie** (elenco oppure "tutte").
+5. **Pannello Assegna**: prima le ditte con appalto valido per la tipologia, sotto "Altre ditte" con
+   tutti gli altri appalti validi. Nessuno resta bloccato.
+6. **Priorità** come oggi. **Titolo** obbligatorio, senza il placeholder con dati reali.
+7. **Mappa fuori dal form**, resta nel backoffice: le sedi hanno coordinate (ricavate dall'indirizzo
+   o fissate a mano) così ditte e operai trovano subito il posto.
+8. **Niente "Più dettagli"**: tutto in vista.
+9. **"Per conto di": via.** **Provenienza: via dal database.** **Specializzazioni: via** (l'operaio
+   scrive nel testo e rimanda al gestore).
+10. **Dati del chiamante/segnalante** (`segnalante`, `email`, `telefono` su segnalazioni e adesioni):
+    **cancellati dal database**, anche se per le segnalazioni vecchie sono l'unica traccia di chi ha
+    segnalato. Conseguenza accettata: le segnalazioni senza account attivo non mostrano più chi le
+    ha fatte e non ricevono l'avviso di chiusura.
+11. **"Dove si trova il problema"** e **foto**: restano, facoltativi, in vista.
+12. **Segnalazioni simili**: restano nel form, per sede e tipologia, con "Anche per me".
+13. **"Rimanda al gestore"** per operaio **e ditta**.
+14. **API**: nessuno la usa → sede obbligatoria anche via API, campi tolti ignorati.
+15. **Un solo rilascio**, con le cancellazioni dentro (non si torna alla versione precedente).
 
 ## Il form
 
-Ordine dei campi, tutti visibili, nessuna sezione richiudibile:
+Tutti i campi visibili, nessuna sezione richiudibile, in quest'ordine:
 
-1. **Sede** (obbligatoria) — solo le sedi che l'utente può usare (scuola SPID: quelle coperte dalle
-   sue deleghe; personale del comune: tutte le sedi attive). Se ne ha una sola è già selezionata.
-   Sotto la select: indirizzo della sede (testo, niente mappa).
-2. **Tipologia** (obbligatoria) — elenco unico, senza intestazioni di gruppo.
-3. **Priorità** — come oggi (Bassa/Media/Alta/Critica, testo "intervento previsto entro…").
-4. **Titolo** (obbligatorio, max 100) — senza placeholder di esempio con dati reali.
-5. **Descrizione** (obbligatoria).
-6. **Dove si trova il problema** (facoltativo) — interno, esterno, impianto, area verde; nessuna
-   scelta = non specificato.
-7. **Foto** (facoltative) — pulsante in vista.
-8. Avviso 112 e pulsante **Invia segnalazione**.
+1. **Sede** (obbligatoria): scuola SPID → sedi coperte dalle sue deleghe; personale del comune → sedi
+   di enti attivi (`istituti.attivo`). Una sola → già selezionata. Sotto: indirizzo (testo).
+2. **Tipologia** (obbligatoria): elenco unico delle tipologie attive, ordinato per nome.
+3. **Segnalazioni simili**: appena scelte sede e tipologia, le aperte della stessa sede e tipologia
+   (riuso della rotta `segnalazioni.simili` filtrata così) con "Anche per me" (adesione).
+4. **Priorità**: come oggi.
+5. **Titolo** (obbligatorio, max 100): nessun esempio con nomi reali.
+6. **Descrizione** (obbligatoria).
+7. **Dove si trova il problema** (facoltativo): interno, esterno, impianto, area verde, più
+   "Non so" preselezionato (un gruppo di radio non si può deselezionare). Mai obbligatorio, neanche
+   per le scuole.
+8. **Foto** (facoltative): pulsante in vista.
+9. Avviso 112 e **Invia segnalazione**.
 
-Spariscono: riquadro "Per conto di" (nome/telefono/email chiamante), provenienza (select o testo),
-"Tipo di intervento richiesto", "Più dettagli", la mappa e i campi nascosti latitudine/longitudine.
+Spariscono: "Per conto di", provenienza, "Tipo di intervento richiesto", "Più dettagli", mappa e
+campi latitudine/longitudine, il pulsante "Salva e inserisci nuova" (era legato al "per conto").
 
 ## Fuori dal form
 
-### Tipologie senza gruppi
-- Migration: drop di `tipologie_segnalazioni.id_gruppo` e della tabella `gruppi_segnalazioni`
-  (dopo aver convertito gli appalti, sotto).
-- Tutte le viste che raggruppano o mostrano il gruppo diventano elenco piatto ordinato per nome:
-  form, scheda (riga "Tipologia"), stampa scheda, tipologie dei gestori, tipologie orfane, filtri
-  della gestione, statistiche/report, demo.
-- API (`POST /api/segnalazioni`): nessun riferimento ai gruppi; `docs/API.md` e `openapi.yaml`
-  aggiornati.
+### Tipologie
+- Tabella `tipologie_segnalazioni` + colonna `attiva` (le disattivate non compaiono nel form né in
+  filtri nuovi, restano sulle segnalazioni vecchie).
+- **Admin → Tipologie** (nuova voce nel menu Amministrazione, solo admin): elenco, aggiungi
+  (nome + icona), rinomina, disattiva/riattiva, **unisci A in B** (sposta su B segnalazioni,
+  regole di scadenza, `gestori_tipologie`, appalti→tipologie; poi elimina A).
+- Il seeder **inserisce le tipologie solo se la tabella è vuota** (installazione nuova); non le
+  ricrea mai su un'installazione esistente.
+- Migration: unisce i doppioni "SFALCI E POTATURE" (id 4 e 11) nella più usata, stesso
+  procedimento di "unisci".
+- Tutte le viste con gruppi diventano elenco piatto: form, scheda, stampa scheda e stampe multiple
+  (oggi il gruppo è l'intestazione), fascicolo PDF, tipologie dei gestori ("Tutto il gruppo" sparisce),
+  tipologie orfane, filtri gestione, appalti, `CoperturaTipologie`, demo, factory.
 
 ### Appalti legati alle tipologie
-- Nuova relazione appalto ↔ tipologie (stesso schema di gestori: pivot + flag "tutte").
-- Migration: ogni appalto esistente prende **le tipologie che oggi stanno nel suo gruppo**; poi si
-  toglie `appalti.id_gruppo`.
-- Form appalto: scelta delle tipologie come nella pagina "Tipologie dei gestori" (con "tutte").
-- Pannello Assegna (scheda e azioni multiple): ditte/appalti validi che coprono la tipologia della
-  segnalazione.
+- Pivot appalto ↔ tipologia + flag `tutte_tipologie`, stesso schema dei gestori.
+- Migration (SQL puro, senza model: viene rieseguita anche nel ripristino di backup vecchi): ogni
+  appalto prende le tipologie del suo gruppo; **appalti di gruppi senza tipologie** (Viabilità,
+  Segnaletica, Rifiuti) → `tutte_tipologie` = vero.
+- Form appalto: scelta tipologie come in "Tipologie dei gestori", con "tutte".
+- Pannello Assegna: ditte che coprono la tipologia in cima, poi "Altre ditte". Azioni multiple:
+  in cima quelle che coprono **tutte** le tipologie selezionate.
 
-### Provenienza eliminata
-- Drop di `segnalazioni.id_provenienza`, `users.id_provenienza` e della tabella delle provenienze
-  (model `Provenienza`).
-- Oggi la provenienza serve anche a riconoscere le scuole (`User` riga ~153, `SpidLoginService::
-  PROVENIENZA_SCUOLE`) e a distinguere l'URP (`MappaGruppiLdap`, provenienza 3 + permesso
-  `segnalazioni.per-conto`): va sostituita da ciò che c'è già (utente `spid` con delega = scuola;
-  gruppo AD URP = segnalatore del comune, senza "per conto").
-- Via filtri e colonne "Provenienza" in gestione, statistiche, export XLSX, PDF, API.
-- Il permesso `segnalazioni.per-conto` va eliminato; le colonne del chiamante (`segnalante`,
-  `email`, `telefono` su segnalazioni e adesioni) vengono **cancellate** con i loro dati. Le adesioni
-  dell'URP restano come adesioni dell'utente; il dedup "per chiamante" sparisce.
-- API `POST /api/segnalazioni`: `id_plesso` obbligatorio (422 se manca o non valido), `id_provenienza`
-  non più richiesto; `segnalante`/`email`/`telefono`/`latitudine`/`longitudine`/`id_specializzazione`
-  ignorati se inviati. `docs/API.md`, `openapi.yaml` e CHANGELOG aggiornati (nessun integratore
-  attivo, conferma del committente).
+### Provenienza, "per conto", chiamante, specializzazioni, coordinate per segnalazione: eliminati
+- **Chi è una scuola**: utente `spid` (con delega) — sostituisce `segnalaComeScuola()` e
+  `puoScegliereProvenienza()`; `SpidLoginService` non scrive più `id_provenienza`.
+- **URP**: il gruppo AD `PRONTOPA_URP` resta e dà ruolo `segnalatore` come `PRONTOPA_SEGNALATORI`,
+  senza "per conto". **Sync AD**: la protezione "manca in AD un gruppo i cui utenti hanno ancora quel
+  ruolo" conta URP e segnalatori insieme (gruppo assente blocca solo se **entrambi** mancano e ci sono
+  segnalatori `ldap` attivi). Da sistemare `SincronizzaUtentiAd`, `MappaGruppiLdap`, `RuoloLdap`,
+  `AllineaUtenteAd`, `ProvaLdap`.
+- **Adesioni**: prima del drop delle colonne del chiamante, la migration deduplica le adesioni per
+  (segnalazione, utente) tenendo la più vecchia; poi indice unique. Il controllo "già aderito" non
+  usa più `segnalante`.
+- **Avviso di chiusura**: solo all'account del segnalante (attivo) e agli aderenti; il ripiego
+  sull'email salvata sparisce (`SegnalazioneWorkflowService`, `AccorpamentoService`).
+- **Ricerca "segnalante" in gestione**: su `users.name` dell'autore.
+- **Specializzazioni**: via tabella `db_specializzazioni`, `imprese_specializzazioni`,
+  `segnalazioni.id_specializzazione`, `sla_configurazioni.id_specializzazione` (+ indice
+  `sla_lookup_idx` rifatto senza). **Regole di scadenza**: quelle con specializzazione si
+  **eliminano** se esiste la regola tipologia+priorità equivalente; se non esiste, diventano quella
+  regola (senza specializzazione). Le scadenze delle aperte **non si ricalcolano**. Triage AI
+  (`SuggerisciTriageSegnalazione`, `AiTriageController`) senza specializzazione; nel prompt si
+  corregge anche "tipologia intero 1-3" con l'elenco reale; chiavi vecchie nei JSON già salvati
+  ignorate. Anche `Inattivita`, `SlaService`, form regole di scadenza.
+- **Coordinate per segnalazione**: prima del drop, ogni sede senza coordinate prende la **mediana**
+  delle coordinate (≠ 0) delle sue segnalazioni. Poi via `segnalazioni.latitudine/longitudine`.
+  Dedup per vicinanza → "stessa sede" (via `dedup_raggio_metri` da `Sezioni` e seeder impostazioni).
+- **Permesso `segnalazioni.per-conto`**: tolto da migration (righe pivot Spatie + reset cache
+  permessi) e dal seeder dei ruoli.
+- **API**: `id_plesso` obbligatorio (sede di ente attivo, 422 altrimenti), `id_provenienza` non più
+  richiesto, `segnalante/email/telefono/latitudine/longitudine/id_specializzazione` ignorati.
+  `docs/API.md`, `openapi.yaml` aggiornati.
+- Utenti admin (`UtentiController`, `admin/utenti/edit`): via la provenienza.
+- `ImportLegacy`: adattato per non scrivere i campi tolti (o dismesso se non serve più: decide il
+  costruttore guardando se è ancora richiamato).
+- Nota: export XLSX, statistiche e webhook in uscita **non** usano provenienza/specializzazioni
+  (verificato dal revisore): nessun intervento lì.
 
-### Specializzazioni eliminate
-- **Eliminate dal database** (tabella, `segnalazioni.id_specializzazione`,
-  `sla_configurazioni.id_specializzazione`) — *scelta di Claude, coerente con provenienza e chiamante*;
-  il triage AI smette di suggerirle.
-- Via dal form, dai filtri e dalle regole di scadenza (oggi una regola SLA può dipendere da
-  tipologia, **specializzazione** e priorità: resta tipologia e priorità). Le regole che
-  differivano solo per specializzazione vanno unite in modo deterministico (vedi "Lasciato al
-  costruttore").
+### Ordine obbligato delle migration
+Nomi successivi a `2026_11_14_000001`. Mai `DELETE` sulle tabelle di riferimento (la FK
+`tipologie.id_gruppo` è `cascadeOnDelete`: cancellerebbe tutte le tipologie).
+1. Aggiunte: `tipologie.attiva`, coordinate `plessi`, pivot appalti↔tipologie + flag.
+2. Conversioni (SQL puro): appalti→tipologie, unione Sfalci, regole SLA, adesioni dedup, coordinate
+   sedi dalla mediana, permesso per-conto.
+3. `dropForeign` di tutte le FK coinvolte (tipologie.id_gruppo, appalti.id_gruppo,
+   segnalazioni.id_provenienza, id_specializzazione su segnalazioni e sla_configurazioni,
+   imprese_specializzazioni).
+4. `dropColumn`.
+5. `drop table` (gruppi, provenienze, specializzazioni, imprese_specializzazioni).
+
+**Seeder** (`AllineamentoSeeder`, a ogni avvio) aggiornato nello stesso commit: niente gruppi,
+provenienze, specializzazioni, per-conto; tipologie solo su tabella vuota. Test: `migrate:fresh` +
+seeder due volte + `migrate` da uno schema 0.9.20 con dati, seeder dopo, app risponde.
 
 ### Coordinate delle sedi
-- `plessi` ottiene latitudine/longitudine.
-- Admin → Enti e sedi → scheda sede: mappa con il punto; pulsante "Trova dall'indirizzo"
-  (geocoding OpenStreetMap/Nominatim, **scelta di Claude**: gratuito, esce solo l'indirizzo
-  dell'edificio pubblico, rispettando i limiti d'uso di Nominatim) e punto trascinabile a mano;
-  si salva.
-- Comando per ricavare in blocco le coordinate delle sedi che non le hanno (con pausa tra le
-  richieste), utilizzabile anche dopo l'import MIUR.
-- Scheda segnalazione (gestore, operaio, ditta): mappa piccola della sede + link "Apri in Maps".
-  Sede senza coordinate: solo l'indirizzo, niente mappa vuota.
-- Le coordinate per segnalazione (`segnalazioni.latitudine/longitudine`) **si eliminano** — *scelta di
-  Claude*: la mappa della dashboard operaio usa le coordinate della sede; il dedup "per vicinanza"
-  diventa "stessa sede". Segnalazioni storiche senza sede (`id_plesso` 0): in scheda nessuna mappa.
-- "Tutte le sedi attive" = sedi di enti attivi (`istituti.attivo`), anche per gestori e admin —
-  *scelta di Claude*; nessun flag nuovo sulle sedi.
+- `plessi.latitudine/longitudine`.
+- Scheda sede (Admin → Enti e sedi): mappa con punto trascinabile, "Trova dall'indirizzo", salva.
+- **Geocoding**: Nominatim (OpenStreetMap) via `Http` di Laravel, User-Agent che identifica l'app (senza
+  dati personali), massimo 1 richiesta al secondo, mai dal browser. Indirizzo + **comune**: nuova
+  impostazione `geocoding_comune` (Aspetto, default vuoto; se vuota si usa solo l'indirizzo).
+- **In blocco da UI** (mai da console): pulsante "Trova le posizioni mancanti" nella pagina sedi →
+  job in coda, 1 req/s, esito salvato; riquadro in **Stato del sistema** (sedi senza coordinate,
+  esito ultimo giro, mai chiamate di rete).
+- Scheda segnalazione: riuso di `scheda/_dove.blade.php` (mappa piccola, "Apri in Maps", "Chiama il
+  referente") con le coordinate della sede; sede senza coordinate → solo indirizzo. Mappa della
+  dashboard operaio: coordinate della sede.
 
-### "Rimanda al gestore" (operaio e ditta)
-- Nuova azione da **Assegnata** (operaio/squadra) e **Assegnata a ditta**, **nota obbligatoria** (il
-  perché: "serve un elettricista"). Torna a **In carico** al gestore che aveva fatto l'ultima
-  assegnazione, che riceve un'email con la nota; chi rimanda perde il lavoro (come una riassegnazione).
-- Chi aveva assegnato non è più attivo o non è un gestore → torna **In carico** senza nome e l'email
-  va ai supervisori — *scelta di Claude*.
-- La scadenza resta com'è (manuale o calcolata) — *scelta di Claude*.
+### "Rimanda al gestore" (operaio, squadra, ditta)
+- Nuova azione (riga in `db_azioni` dal seeder e dalla migration), da **Assegnata** (3),
+  **Assegnata a ditta** (4) e **Preventivo in attesa** (5), **nota obbligatoria**.
+- Chi può: operaio assegnato, caposquadra della squadra assegnata (non ogni membro), persone della
+  ditta assegnata.
+- Torna a **In carico** (2) al gestore dell'ultima assegnazione (`stati_segnalazioni.id_utente`
+  dell'ultimo passaggio a 3/4), email con la nota. Se quel gestore non è attivo o non è più gestore
+  → torna a **Nuova** (1), già coperta da avvisi per tipologia e supervisori.
+- Chi rimanda perde il lavoro (ditta senza visibilità, come una riassegnazione). Scadenza invariata.
+- Notifica nuova con etichetta in `NotificaSegnalazione::ETICHETTE`, frase nel feed `Attività`
+  ("ha rimandato al comune"), pulsante nel `ProssimoPasso` di operaio e ditta.
 
 ## Non obiettivi
-- Segnalazioni senza sede, cittadini, portale pubblico.
-- Cambiare l'iter dopo l'invio (0.9.19/0.9.20).
-- Ridisegnare la scheda o gli elenchi oltre a quanto serve per togliere gruppi/provenienza.
+Segnalazioni senza sede, cittadini, portale pubblico; cambiare l'iter dopo l'invio; ridisegnare
+scheda o elenchi oltre quanto serve per togliere gruppi/provenienza.
 
-## Anti-obiettivi (fallimento anche se "funziona")
-- Un campo obbligatorio che non si vede.
-- Una sezione richiudibile nel form.
-- Esempi o placeholder con nomi di sedi/persone reali.
-- I gruppi o la provenienza che sopravvivono in qualche schermata, export o API.
-- Una mappa nel form di invio.
+## Anti-obiettivi
+Un campo obbligatorio che non si vede; una sezione richiudibile nel form; esempi con nomi reali;
+gruppi, provenienza o specializzazioni che sopravvivono in schermate, stampe, export o API; una
+mappa nel form; l'app che non riparte dopo l'aggiornamento.
 
 ## Vincoli
-- È in produzione (deploy automatico ~1 h dal tag): le migration convertono i dati, non li perdono
-  dove servono (appalti → tipologie); provenienza e gruppi si eliminano per scelta del committente
-  (il backup notturno c'è).
-- Tutto ciò che sta in `AllineamentoSeeder` resta idempotente (il seeder non deve ricreare gruppi,
-  provenienze o specializzazioni).
-- Niente CDN: Leaflet già servito da `public/build/vendor/`.
-- Nuove dipendenze: nessuna. Geocoding via `Http` di Laravel.
+- In produzione, deploy ~1 h dal tag. **Non si torna indietro**: la versione precedente non riparte
+  sul database aggiornato. Prima del tag: **backup manuale** da Admin → Backup ("pre-aggiornamento"),
+  scritto nel CHANGELOG come avviso.
+- `AllineamentoSeeder` idempotente e coerente con lo schema nuovo nello stesso rilascio.
+- Niente CDN (Leaflet già in `public/build/vendor/`), nessuna dipendenza nuova.
+- Ripristino di backup vecchi: le migration di conversione devono funzionare sui dati importati.
 
 ## Lasciato al costruttore
-- Struttura delle migration e ordine (appalti prima del drop dei gruppi).
-- Come unire le regole SLA che differivano solo per specializzazione (proposta: tenere la più
-  stringente).
-- Layout esatto del form dentro i componenti `x-pa.*` esistenti.
-- Dimensione e posizione della mappa nella scheda.
+- Suddivisione esatta delle migration dentro l'ordine sopra.
+- Layout del form e della pagina tipologie con i componenti `x-pa.*`.
+- Icone delle tipologie nuove (elenco Font Awesome già usato).
+- Destino di `ImportLegacy`.
