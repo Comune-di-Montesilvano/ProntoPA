@@ -4,6 +4,43 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.0] - 2026-11-13
+
+> **Aggiornamento senza ritorno: prima di aggiornare fare un backup da Admin → Backup
+> ("Backup ora").** Le migration cancellano dati (provenienza, dati del chiamante, specializzazioni,
+> gruppi di tipologie, coordinate delle segnalazioni) e la versione precedente non riparte sul
+> database aggiornato: per tornare indietro si ripristina quel backup.
+
+### Changed
+- **Nuova segnalazione rifatta da zero**, uguale per tutti e tutta in vista: sede (obbligatoria,
+  indirizzo sotto, già scelta se è una sola), tipologia, segnalazioni simili della stessa sede e
+  tipologia con "Anche per me", priorità, titolo, descrizione, "Dove si trova il problema"
+  (facoltativo, "Non so" di partenza), foto facoltative. Spariscono "Più dettagli", mappa,
+  "Per conto di", provenienza e tipo di intervento.
+- Le scuole segnalano solo per le sedi delle loro deleghe, il personale del comune per le sedi di
+  enti attivi. API: `id_plesso` obbligatorio, i campi tolti sono ignorati.
+- **Tipologie in un elenco unico**: niente più gruppi (né "· EDILIZIA SCOLASTICA" in scheda e
+  stampe); le due "SFALCI E POTATURE" diventano una.
+- **Appalti legati alle tipologie** come i gestori (elenco o "tutte"): nel pannello Assegna prima
+  le ditte con appalto per quella tipologia, sotto "Altre ditte".
+- Regole di scadenza su tipologia + priorità (specializzazioni eliminate); l'assistente AI propone
+  solo tipologie esistenti.
+- Adesioni: una per persona. Chi ha segnalato è sempre un account: le segnalazioni vecchie senza
+  account attivo non mostrano più l'autore e non ricevono l'avviso di chiusura.
+
+### Added
+- **Admin → Tipologie**: aggiungi, rinomina, unisci, disattiva (il programma non le ricrea più).
+- **Coordinate delle sedi**: ricavate dall'indirizzo (OpenStreetMap, "Trova coordinate mancanti" in
+  Enti e sedi) o fissate sulla mappa della sede; la mappa della scheda e "Apri in Maps" usano la sede.
+  Impostazione "Comune per la ricerca indirizzi" in Aspetto.
+- **Rimanda al comune** per operaio, caposquadra e ditta (da Assegnata, Assegnata a ditta,
+  Preventivo in attesa), con motivo obbligatorio: torna in carico al gestore che aveva assegnato
+  (o Nuova ai supervisori se non c'è più), chi rimanda perde il lavoro, la scadenza resta.
+
+### Removed
+- Provenienza, permesso "per conto", nome/email/telefono del chiamante, specializzazioni, gruppi di
+  tipologie, coordinate per segnalazione, impostazione "distanza massima" dei simili.
+
 ## [0.9.20] - 2026-11-13
 
 ### Changed

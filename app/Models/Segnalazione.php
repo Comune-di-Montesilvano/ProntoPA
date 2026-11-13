@@ -111,7 +111,6 @@ class Segnalazione extends Model
         return $this->belongsTo(TipologiaSegnalazione::class, 'id_tipologia_segnalazione', 'id_tipologia_segnalazione');
     }
 
-    /** @return BelongsTo<Plesso, $this> */
     /**
      * Dove mostrare la segnalazione su una mappa: la posizione della sede (1.0.0).
      *
@@ -127,6 +126,7 @@ class Segnalazione extends Model
         return null;
     }
 
+    /** @return BelongsTo<Plesso, $this> */
     public function plesso(): BelongsTo
     {
         return $this->belongsTo(Plesso::class, 'id_plesso', 'id_plesso');

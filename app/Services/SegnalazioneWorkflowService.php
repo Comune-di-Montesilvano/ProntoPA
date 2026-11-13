@@ -137,10 +137,11 @@ class SegnalazioneWorkflowService
                 $gestore = null;
             }
             $stato = $gestore ? SegnalazioneStato::IN_CARICO : SegnalazioneStato::NUOVA;
+            $idGestore = $gestore ? $gestore->id : 0;
 
             $segnalazione->update([
                 'id_stato_segnalazione' => $stato->value,
-                'id_operatore_assegnato' => $gestore?->id ?? 0,
+                'id_operatore_assegnato' => $idGestore,
                 'id_squadra_assegnata' => null,
                 'id_appalto' => null,
                 'fine_lavori_at' => null,
@@ -150,7 +151,7 @@ class SegnalazioneWorkflowService
                 'id_segnalazione' => $segnalazione->id_segnalazione,
                 'id_stato_segnalazione' => $stato->value,
                 'id_utente' => $autore->id,
-                'id_utente_collegato' => $gestore?->id ?? 0,
+                'id_utente_collegato' => $idGestore,
                 'id_appalto' => 0,
             ]);
 
