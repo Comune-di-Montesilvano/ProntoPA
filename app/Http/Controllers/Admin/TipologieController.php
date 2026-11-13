@@ -59,9 +59,13 @@ class TipologieController extends Controller
         }
 
         /** @var array{descrizione: string, icona: ?string} */
-        return $request->validate([
-            'descrizione' => ['required', 'string', 'max:100', $unica],
+        $dati = $request->validate([
+            // La colonna è varchar(50) e icona NOT NULL default '' (MariaDB strict).
+            'descrizione' => ['required', 'string', 'max:50', $unica],
             'icona' => ['nullable', 'string', 'max:50', 'regex:/^fa[bsr]? fa-[a-z0-9-]+$/'],
         ]);
+        $dati['icona'] = $dati['icona'] ?? '';
+
+        return $dati;
     }
 }

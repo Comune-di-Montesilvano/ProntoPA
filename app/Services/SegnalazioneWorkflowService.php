@@ -128,12 +128,15 @@ class SegnalazioneWorkflowService
     public function rimandaAlGestore(Segnalazione $segnalazione, User $autore, string $nota): void
     {
         $gestore = DB::transaction(function () use ($segnalazione, $autore, $nota) {
+            // Ultima assegnazione fatta dal comune: lo smistamento del caposquadra
+            // (storico 3 scritto da un operaio) non conta.
             $ultima = StoricoStatoSegnalazione::where('id_segnalazione', $segnalazione->id_segnalazione)
                 ->whereIn('id_stato_segnalazione', [SegnalazioneStato::ASSEGNATA_OPERATORE->value, SegnalazioneStato::ASSEGNATA_IMPRESA->value])
+                ->whereIn('id_utente', User::role(['gestore', 'admin'])->select('users.id'))
                 ->orderByDesc('data_registrazione')->orderByDesc('id')
                 ->first();
             $gestore = $ultima ? User::find($ultima->id_utente) : null;
-            if (! $gestore || $gestore->attivo === false || ! $gestore->hasAnyRole(['gestore', 'admin'])) {
+            if (! $gestore || $gestore->attivo === false) {
                 $gestore = null;
             }
             $stato = $gestore ? SegnalazioneStato::IN_CARICO : SegnalazioneStato::NUOVA;

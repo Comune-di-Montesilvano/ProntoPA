@@ -32,6 +32,20 @@ class TipologieTest extends TestCase
         $this->admin->assignRole('admin');
     }
 
+    public function test_icona_facoltativa_e_nome_entro_50_caratteri(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.tipologie.store'), ['descrizione' => 'Ascensori', 'icona' => ''])
+            ->assertRedirect(route('admin.tipologie.index'))->assertSessionHasNoErrors();
+        $t = TipologiaSegnalazione::where('descrizione', 'Ascensori')->firstOrFail();
+        $this->assertSame('', (string) $t->icona);
+
+        $this->actingAs($this->admin)->patch(route('admin.tipologie.update', $t), ['descrizione' => 'Ascensori e scale', 'icona' => '', 'attiva' => '1'])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($this->admin)->post(route('admin.tipologie.store'), ['descrizione' => str_repeat('a', 51)])
+            ->assertSessionHasErrors('descrizione');
+    }
+
     public function test_admin_aggiunge_rinomina_disattiva(): void
     {
         $this->actingAs($this->admin)->get(route('admin.tipologie.index'))->assertOk()->assertSee('IMPIANTO ELETTRICO');

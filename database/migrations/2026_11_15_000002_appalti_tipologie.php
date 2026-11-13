@@ -28,6 +28,9 @@ return new class extends Migration
         });
 
         $this->converti();
+
+        // Dopo la conversione: UnisciTipologie sposta anche le righe di appalti_tipologie.
+        (require __DIR__.'/2026_11_15_000001_tipologie_gestibili.php')->unisciSfalci();
     }
 
     /** Idempotente: salta gli appalti già convertiti (con tipologie o "tutte"). */

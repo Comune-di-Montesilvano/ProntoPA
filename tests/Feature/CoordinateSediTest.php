@@ -74,6 +74,18 @@ class CoordinateSediTest extends TestCase
         $this->assertSame(0, $esito['trovate']);
     }
 
+    public function test_job_sulla_coda_dei_lavori_lunghi(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+        $admin = \App\Models\User::factory()->create();
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)->post(route('admin.sedi.geocodifica-mancanti'));
+
+        \Illuminate\Support\Facades\Queue::assertPushed(GeocodificaSedi::class,
+            fn (GeocodificaSedi $j) => $j->connection === config('backup.connessione_coda') && $j->queue === 'lunghi');
+    }
+
     public function test_job_solo_sedi_senza_coordinate(): void
     {
         $altra = Plesso::create(['id_istituto' => $this->sede->id_istituto, 'nome' => 'Già fatta', 'indirizzo' => 'Via Milano 2', 'latitudine' => 41, 'longitudine' => 13]);

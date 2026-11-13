@@ -12,7 +12,7 @@
             @csrf
             <div class="pa-field grow">
                 <label for="nuova-descrizione" class="pa-field-label">Nuova tipologia</label>
-                <input id="nuova-descrizione" name="descrizione" required maxlength="100" class="pa-input" value="{{ old('descrizione') }}">
+                <input id="nuova-descrizione" name="descrizione" required maxlength="50" class="pa-input" value="{{ old('descrizione') }}">
             </div>
             <div class="pa-field">
                 <label for="nuova-icona" class="pa-field-label">Icona (facoltativa)</label>
@@ -34,7 +34,7 @@
                         <span class="w-6 text-center text-gray-500"><i class="{{ $t->icona ?: 'fas fa-tag' }}" aria-hidden="true"></i></span>
                         <div class="pa-field grow">
                             <label class="sr-only" for="descrizione-{{ $t->id_tipologia_segnalazione }}">Nome</label>
-                            <input id="descrizione-{{ $t->id_tipologia_segnalazione }}" name="descrizione" required maxlength="100" class="pa-input" value="{{ $t->descrizione }}">
+                            <input id="descrizione-{{ $t->id_tipologia_segnalazione }}" name="descrizione" required maxlength="50" class="pa-input" value="{{ $t->descrizione }}">
                         </div>
                         <div class="pa-field">
                             <label class="sr-only" for="icona-{{ $t->id_tipologia_segnalazione }}">Icona</label>

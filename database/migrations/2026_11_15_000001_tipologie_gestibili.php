@@ -19,8 +19,8 @@ return new class extends Migration
             // Le tipologie nuove non hanno gruppo (i gruppi spariscono con la migration 000006).
             $table->unsignedBigInteger('id_gruppo')->nullable()->change();
         });
-
-        $this->unisciSfalci();
+        // L'unione dei due "SFALCI E POTATURE" la fa la 000002 dopo aver convertito gli appalti
+        // per gruppo: unendo prima, l'appalto del gruppo della tipologia assorbita la perderebbe.
     }
 
     public function unisciSfalci(): void

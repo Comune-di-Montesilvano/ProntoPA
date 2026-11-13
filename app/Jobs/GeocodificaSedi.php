@@ -25,6 +25,12 @@ class GeocodificaSedi implements ShouldBeUnique, ShouldQueue
 
     public int $uniqueFor = 3600;
 
+    /** Coda dei lavori lunghi (retry_after ~2 h): sulla coda normale (90 s) verrebbe riconsegnato a metà. */
+    public function __construct()
+    {
+        $this->onConnection((string) config('backup.connessione_coda'))->onQueue('lunghi');
+    }
+
     public function handle(Geocoding $geocoding): void
     {
         $conteggi = ['trovate' => 0, 'non_trovate' => 0, 'errori' => 0];

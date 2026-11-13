@@ -71,7 +71,9 @@ class AggiornamentoDa0920Test extends TestCase
 
         // Appalti: gruppo senza tipologie → "tutte"; gruppo edilizia → le sue tipologie.
         $this->assertTrue((bool) DB::table('appalti')->where('id_appalto', 2)->value('tutte_tipologie'));
-        $this->assertSame([1, 7], DB::table('appalti_tipologie')->where('id_appalto', 1)->orderBy('id_tipologia_segnalazione')->pluck('id_tipologia_segnalazione')->map(fn ($v) => (int) $v)->all());
+        // Il gruppo 1 aveva la SFALCI 11 (unita nella 4): il suo appalto la copre ancora.
+        $this->assertSame([1, 4, 7], DB::table('appalti_tipologie')->where('id_appalto', 1)->orderBy('id_tipologia_segnalazione')->pluck('id_tipologia_segnalazione')->map(fn ($v) => (int) $v)->all());
+        $this->assertSame([4], DB::table('appalti_tipologie')->where('id_appalto', 3)->pluck('id_tipologia_segnalazione')->map(fn ($v) => (int) $v)->all());
 
         // Adesioni URP doppie → una; dati del chiamante e provenienza spariti.
         $this->assertSame(1, DB::table('adesioni_segnalazioni')->where('id_segnalazione', 1)->count());
@@ -136,6 +138,7 @@ class AggiornamentoDa0920Test extends TestCase
         DB::table('appalti')->insert([
             ['id_appalto' => 1, 'id_gruppo' => 1, 'descrizione' => 'Manutenzione scuole', 'id_impresa' => 1, 'valido' => true],
             ['id_appalto' => 2, 'id_gruppo' => 2, 'descrizione' => 'Strade', 'id_impresa' => 1, 'valido' => true],
+            ['id_appalto' => 3, 'id_gruppo' => 4, 'descrizione' => 'Verde', 'id_impresa' => 1, 'valido' => true],
         ]);
 
         $urp = User::factory()->create(['id_provenienza' => 3]);

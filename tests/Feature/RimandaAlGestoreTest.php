@@ -126,6 +126,25 @@ class RimandaAlGestoreTest extends TestCase
         $this->assertNull($s->fresh()->id_squadra_assegnata);
     }
 
+    public function test_dopo_smista_del_caposquadra_torna_al_gestore(): void
+    {
+        $capo = User::factory()->create();
+        $capo->assignRole('operaio');
+        $squadra = Squadra::create(['nome' => 'Edile', 'id_caposquadra' => $capo->id, 'attiva' => true]);
+        $squadra->membri()->attach([$capo->id, $this->operaio->id]);
+        $s = $this->assegnata(3, ['id_operatore_assegnato' => 0, 'id_squadra_assegnata' => $squadra->id_squadra]);
+        $this->travel(1)->minutes();
+        // Il caposquadra smista al membro: storico 3 scritto da lui.
+        StoricoStatoSegnalazione::create(['id_segnalazione' => $s->id_segnalazione, 'id_stato_segnalazione' => 3, 'id_utente' => $capo->id, 'id_utente_collegato' => $this->operaio->id, 'id_appalto' => 0]);
+        $s->update(['id_operatore_assegnato' => $this->operaio->id]);
+
+        $this->actingAs($this->operaio)->post(route('segnalazioni.rimanda', $s), ['nota' => 'Serve altro'])->assertSessionHasNoErrors();
+
+        $this->assertSame(SegnalazioneStato::IN_CARICO, $s->fresh()->statoEnum());
+        $this->assertSame($this->gestore->id, (int) $s->fresh()->id_operatore_assegnato);
+        Notification::assertSentTo($this->gestore, RimandataAlGestoreNotification::class);
+    }
+
     public function test_altri_e_stati_sbagliati_403(): void
     {
         $altro = User::factory()->create();
