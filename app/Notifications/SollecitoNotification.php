@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\Segnalazione;
 use App\Models\User;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -15,6 +16,7 @@ use Illuminate\Support\Str;
 class SollecitoNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
@@ -35,11 +37,13 @@ class SollecitoNotification extends Notification implements ShouldQueue
         // Le ditte entrano solo via SPID: niente link diretto alla scheda.
         $interno = $notifiable instanceof User && ! $notifiable->hasRole('impresa');
 
-        return $this->baseMailMessage("Sollecito sulla segnalazione #{$id}")
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Sollecito'))
             ->line($this->dalSegnalante
                 ? "Chi ha aperto la segnalazione #{$id} chiede un aggiornamento."
                 : "Il comune chiede un aggiornamento sulla segnalazione #{$id}.")
-            ->line(Str::limit($this->testo, 500))
+            ->line(Str::limit($this->testo, 500));
+
+        return $this->riepilogoSegnalazione($mail, $this->segnalazione, perChiLavora: ! $this->dalSegnalante)
             ->action($interno ? 'Apri segnalazione' : 'Accedi con SPID o CIE', $interno ? route('segnalazioni.show', $id) : route('accesso'))
             ->salutation('ProntoPA');
     }

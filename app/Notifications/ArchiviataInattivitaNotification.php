@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\Segnalazione;
 use App\Models\User;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,6 +15,7 @@ use Illuminate\Notifications\Notification;
 class ArchiviataInattivitaNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(public readonly Segnalazione $segnalazione) {}
@@ -29,9 +31,11 @@ class ArchiviataInattivitaNotification extends Notification implements ShouldQue
         $id = $this->segnalazione->id_segnalazione;
         $interno = $notifiable instanceof User && ! $notifiable->hasRole('impresa');
 
-        return $this->baseMailMessage("Segnalazione #{$id} archiviata per inattività")
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Archiviata per inattività'))
             ->line("La segnalazione #{$id} è stata archiviata: nessun aggiornamento dopo l'avviso di inattività.")
-            ->line('Se il problema c\'è ancora, scrivi al comune o apri una nuova segnalazione.')
+            ->line('Se il problema c\'è ancora, scrivi al comune o apri una nuova segnalazione.');
+
+        return $this->riepilogoSegnalazione($mail, $this->segnalazione)
             ->action($interno ? 'Apri segnalazione' : 'Accedi con SPID o CIE', $interno ? route('segnalazioni.show', $id) : route('accesso'))
             ->salutation('ProntoPA');
     }

@@ -7,6 +7,7 @@ use App\Models\Impostazione;
 use App\Models\NotaSegnalazione;
 use App\Models\Segnalazione;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -16,6 +17,7 @@ use Illuminate\Support\Str;
 class NuovaNotaSegnalazione extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
@@ -36,9 +38,11 @@ class NuovaNotaSegnalazione extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return $this->baseMailMessage('Nuova nota su #' . $this->segnalazione->id_segnalazione)
-            ->line('È stata aggiunta una nota alla segnalazione #' . $this->segnalazione->id_segnalazione . '.')
-            ->line(Str::limit($this->nota->testo, 300))
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Nuovo messaggio'))
+            ->line('È stata aggiunta una nota alla segnalazione #' . $this->segnalazione->id_segnalazione . ':')
+            ->line(Str::limit($this->nota->testo, 300));
+
+        return $this->riepilogoSegnalazione($mail, $this->segnalazione)
             ->action('Apri segnalazione', route('segnalazioni.show', $this->segnalazione->id_segnalazione))
             ->salutation('ProntoPA');
     }
@@ -47,7 +51,7 @@ class NuovaNotaSegnalazione extends Notification implements ShouldQueue
     {
         return [
             'text' => implode("\n", [
-                '📝 Nuova nota su #' . $this->segnalazione->id_segnalazione,
+                '📝 Nuova nota su ' . $this->rigaSegnalazione($this->segnalazione),
                 Str::limit($this->nota->testo, 200),
             ]),
         ];

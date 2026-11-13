@@ -296,7 +296,7 @@ class SegnalazioneWorkflowService
         $fresca = $segnalazione->fresh();
 
         if ($this->deveInviareNotifiche($azione, $fresca)) {
-            $this->inviaNotifiche($fresca, $azione, $user);
+            $this->inviaNotifiche($fresca, $azione, $user, filled($params['nota'] ?? null) ? (string) $params['nota'] : null);
         }
 
         $this->automaticallyPublish($fresca, $previousStateId, $nuovoStato->value);
@@ -344,7 +344,7 @@ class SegnalazioneWorkflowService
 
     // ── Notifiche ────────────────────────────────────────────────────────────
 
-    private function inviaNotifiche(Segnalazione $segnalazione, Azione $azione, User $attore): void
+    private function inviaNotifiche(Segnalazione $segnalazione, Azione $azione, User $attore, ?string $nota = null): void
     {
         if ($segnalazione->id_squadra_assegnata && $azione->flag_operatore) {
             $squadra = Squadra::with('caposquadra')->find($segnalazione->id_squadra_assegnata);
@@ -355,6 +355,7 @@ class SegnalazioneWorkflowService
                 $squadra->caposquadra->notify(new SquadraAssegnataNotification(
                     $segnalazione->id_segnalazione,
                     $squadra->id_squadra,
+                    $nota,
                 ));
             }
 
@@ -365,7 +366,7 @@ class SegnalazioneWorkflowService
             $operatore = User::find($segnalazione->id_operatore_assegnato);
 
             if ($operatore && $operatore->id !== $attore->id && $operatore->attivo !== false) {
-                $operatore->notify(new OperatoreAssegnatoNotification($segnalazione, $azione, $attore));
+                $operatore->notify(new OperatoreAssegnatoNotification($segnalazione, $azione, $attore, $nota));
             }
 
             return;
@@ -376,11 +377,11 @@ class SegnalazioneWorkflowService
             $destinatari = DestinatariAssegnatario::per($segnalazione);
 
             if ($destinatari['utenti']->isNotEmpty()) {
-                Notification::send($destinatari['utenti'], new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
+                Notification::send($destinatari['utenti'], new ImpresaAssegnataNotification($segnalazione, $azione, $attore, $nota));
             }
             foreach ($destinatari['email'] as $email) {
                 Notification::route('mail', $email)
-                    ->notify(new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
+                    ->notify(new ImpresaAssegnataNotification($segnalazione, $azione, $attore, $nota));
             }
 
             return;

@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Segnalazione;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -13,6 +14,7 @@ use Illuminate\Notifications\Notification;
 class NuovaSegnalazioneNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
@@ -32,21 +34,14 @@ class NuovaSegnalazioneNotification extends Notification implements ShouldQueue
     {
         $s = $this->segnalazione;
         $tipologia = (string) ($s->tipologia()->value('descrizione') ?? 'tipologia non indicata');
-        $oggetto = $this->riclassificata
-            ? "Segnalazione #{$s->id_segnalazione} riclassificata in {$tipologia}"
-            : "Nuova segnalazione #{$s->id_segnalazione} – {$tipologia}";
+        $oggetto = $this->oggettoSegnalazione($s, $this->riclassificata ? 'Riclassificata' : 'Nuova segnalazione');
 
         $mail = $this->baseMailMessage($oggetto)
             ->line($this->riclassificata
                 ? "La segnalazione è stata spostata in una tipologia di cui ti occupi ({$tipologia})."
-                : "È arrivata una nuova segnalazione di una tipologia di cui ti occupi ({$tipologia}).")
-            ->line('**'.$s->titoloLeggibile().'**');
+                : "È arrivata una nuova segnalazione di una tipologia di cui ti occupi ({$tipologia}).");
 
-        if ($s->plesso) {
-            $mail->line('Dove: '.$s->plesso->nome);
-        }
-
-        return $mail
+        return $this->riepilogoSegnalazione($mail, $s, perChiLavora: true)
             ->action('Apri segnalazione', route('segnalazioni.show', $s->id_segnalazione))
             ->salutation('ProntoPA');
     }

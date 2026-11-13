@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\Segnalazione;
 use App\Models\User;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -19,6 +20,7 @@ use Illuminate\Support\Str;
 class AccorpataNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
@@ -44,7 +46,7 @@ class AccorpataNotification extends Notification implements ShouldQueue
         $id = $this->destinazione->id_segnalazione;
 
         if ($this->variante === 'segnalante') {
-            $messaggio = $this->baseMailMessage("La tua segnalazione #{$this->nuova->id_segnalazione}")
+            $messaggio = $this->baseMailMessage($this->oggettoSegnalazione($this->nuova, 'Accorpata'))
                 ->line("Lo stesso problema era già stato segnalato: abbiamo unito la tua segnalazione alla #{$id}.")
                 ->line('Riceverai gli aggiornamenti di quella.');
 
@@ -56,9 +58,11 @@ class AccorpataNotification extends Notification implements ShouldQueue
         $interno = $notifiable instanceof User && ! $notifiable->hasRole('impresa');
         $volte = $this->destinazione->volteSegnalata();
 
-        return $this->baseMailMessage("Segnalazione #{$id} segnalata di nuovo")
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->destinazione, 'Accorpata'))
             ->line("La segnalazione #{$id} è stata segnalata di nuovo (in tutto {$volte} volte).")
-            ->line(Str::limit((string) $this->nuova->testo_segnalazione, 300))
+            ->line(Str::limit((string) $this->nuova->testo_segnalazione, 300));
+
+        return $this->riepilogoSegnalazione($mail, $this->destinazione)
             ->action($interno ? 'Apri segnalazione' : 'Accedi con SPID o CIE', $interno ? route('segnalazioni.show', $id) : route('accesso'))
             ->salutation('ProntoPA');
     }

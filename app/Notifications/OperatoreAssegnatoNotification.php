@@ -6,6 +6,7 @@ use App\Models\Azione;
 use App\Models\Segnalazione;
 use App\Models\User;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use App\Channels\TelegramChannel;
 use App\Models\Impostazione;
 use Illuminate\Bus\Queueable;
@@ -16,12 +17,14 @@ use Illuminate\Notifications\Notification;
 class OperatoreAssegnatoNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
         public readonly Segnalazione $segnalazione,
         public readonly Azione $azione,
         public readonly User $attore,
+        public readonly ?string $nota = null,
     ) {}
 
     public function via(object $notifiable): array
@@ -37,10 +40,10 @@ class OperatoreAssegnatoNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return $this->baseMailMessage('Nuova segnalazione assegnata #' . $this->segnalazione->id_segnalazione)
-            ->line('Ti è stata assegnata la segnalazione #' . $this->segnalazione->id_segnalazione . '.')
-            ->line('Stato corrente: ' . ($this->segnalazione->stato?->descrizione ?? 'N/D'))
-            ->line('Azione eseguita da: ' . $this->attore->name)
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Assegnata a te'))
+            ->line('Ti è stato assegnato un lavoro da ' . $this->attore->name . '.');
+
+        return $this->riepilogoSegnalazione($mail, $this->segnalazione, perChiLavora: true, nota: $this->nota)
             ->action('Apri segnalazione', route('segnalazioni.show', $this->segnalazione->id_segnalazione))
             ->salutation('ProntoPA');
     }
@@ -49,9 +52,8 @@ class OperatoreAssegnatoNotification extends Notification implements ShouldQueue
     {
         return [
             'text' => implode("\n", [
-                'Nuova segnalazione assegnata',
-                '#' . $this->segnalazione->id_segnalazione,
-                'Stato: ' . ($this->segnalazione->stato?->descrizione ?? 'N/D'),
+                'Assegnata a te',
+                $this->rigaSegnalazione($this->segnalazione),
                 'Da: ' . $this->attore->name,
             ]),
         ];

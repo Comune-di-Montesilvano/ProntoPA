@@ -171,8 +171,8 @@ class AvvisoNuovaSegnalazioneTest extends TestCase
         $s = Segnalazione::factory()->create(['id_tipologia_segnalazione' => 1, 'titolo' => 'Lampione spento']);
         $mail = (new NuovaSegnalazioneNotification($s))->toMail($this->gestore([1]));
 
-        $this->assertStringContainsString('Nuova segnalazione #'.$s->id_segnalazione, $mail->subject);
+        $this->assertStringStartsWith('Nuova segnalazione — #'.$s->id_segnalazione.' · IMPIANTO ELETTRICO · Lampione spento', $mail->subject);
         $this->assertSame(route('segnalazioni.show', $s->id_segnalazione), $mail->actionUrl);
-        $this->assertStringContainsString('riclassificata', (new NuovaSegnalazioneNotification($s, true))->toMail($this->gestore([1]))->subject);
+        $this->assertStringContainsString('Riclassificata — #', (new NuovaSegnalazioneNotification($s, true))->toMail($this->gestore([1]))->subject);
     }
 }

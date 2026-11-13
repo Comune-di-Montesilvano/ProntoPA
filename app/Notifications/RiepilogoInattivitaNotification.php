@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Segnalazione;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,6 +15,7 @@ use Illuminate\Support\Str;
 class RiepilogoInattivitaNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     /**
@@ -56,8 +58,8 @@ class RiepilogoInattivitaNotification extends Notification implements ShouldQueu
 
     private function riga(Segnalazione $s): string
     {
-        $titolo = $s->titoloLeggibile(70);
+        $id = '#'.$s->id_segnalazione;
 
-        return "- [#{$s->id_segnalazione}](".route('segnalazioni.show', $s->id_segnalazione).") {$titolo}";
+        return '- ['.$id.']('.route('segnalazioni.show', $s->id_segnalazione).')'.substr($this->rigaSegnalazione($s), strlen($id));
     }
 }
