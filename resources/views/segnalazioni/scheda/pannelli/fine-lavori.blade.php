@@ -1,4 +1,4 @@
-{{-- Ditta / operaio: "ho finito", con le foto. Lo stato non cambia: chiude il comune. --}}
+{{-- Ditta / operaio: "ho finito", foto facoltative. Chiude subito, salvo lavoro di ditta con preventivo (verifica il comune). --}}
 @php
     $mime = \App\Models\Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png');
     $mio = old('_pannello') === 'fine-lavori';
@@ -9,8 +9,8 @@
         <input type="hidden" name="_pannello" value="fine-lavori">
         <div class="flex flex-1 flex-col gap-4 px-6 py-5">
             <div class="pa-field">
-                <label for="fine-foto" class="pa-field-label">Foto del lavoro finito</label>
-                <input id="fine-foto" type="file" name="allegati[]" multiple accept="{{ $mime }}" capture="environment" required class="text-sm">
+                <label for="fine-foto" class="pa-field-label">Foto del lavoro finito (facoltative)</label>
+                <input id="fine-foto" type="file" name="allegati[]" multiple accept="{{ $mime }}" capture="environment" class="text-sm">
                 <x-input-error :messages="array_merge($errors->get('allegati'), $errors->get('allegati.*'))" />
             </div>
             <div class="pa-field">

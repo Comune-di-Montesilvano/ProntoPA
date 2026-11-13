@@ -21,10 +21,11 @@ class CambioStatoTest extends DuskTestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    public function test_gestore_prende_in_carico_una_segnalazione_nuova(): void
+    public function test_gestore_assegna_a_se_una_segnalazione_nuova(): void
     {
         $gestore = User::factory()->create([
             'username'                 => 'e2e.gestore',
+            'name'                     => 'Gestore Prova',
             'gestore_segnalazioni'     => true,
             'supervisore_segnalazioni' => true,
         ]);
@@ -38,8 +39,11 @@ class CambioStatoTest extends DuskTestCase
             $browser->loginAs($gestore)
                 ->visit('/segnalazioni/' . $segnalazione->id_segnalazione)
                 ->assertSee('Da smistare')
-                ->within('@prossimo-passo', fn (Browser $b) => $b->press('Prendi in carico'))
-                ->waitForText('Da assegnare')
+                ->within('@prossimo-passo', fn (Browser $b) => $b->press('Assegna…'))
+                ->waitForText('A me')
+                ->click('@assegna-me')
+                ->click('@assegna-invia')
+                ->waitForText('In carico a Gestore Prova')
                 ->assertSee('In carico');
         });
     }

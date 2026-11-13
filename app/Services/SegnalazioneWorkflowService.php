@@ -6,6 +6,7 @@ use App\Enums\SegnalazioneStato;
 use App\Events\SegnalazionePublishedAutomatically;
 use App\Jobs\InviaWebhookOutbound;
 use App\Services\Segnalazioni\DestinatariAssegnatario;
+use App\Services\Segnalazioni\ScadenzaManuale;
 use App\Models\Azione;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
@@ -19,13 +20,23 @@ use App\Notifications\SegnalazioneStatoCambiato;
 use App\Notifications\SquadraAssegnataNotification;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 class SegnalazioneWorkflowService
 {
+    /** Motivi di "Chiudi senza intervento" (azione annulla, stato 9). */
+    public const MOTIVI_SENZA_INTERVENTO = [
+        'non_pertinente' => 'Non pertinente',
+        'errata' => 'Segnalazione errata',
+        'gia_risolta' => 'Già risolta',
+        'altro' => 'Altro',
+    ];
+
     public function __construct(
         private readonly SlaService $sla,
+        private readonly ScadenzaManuale $scadenzaManuale,
     ) {}
 
     /**
@@ -37,13 +48,7 @@ class SegnalazioneWorkflowService
     {
         $statoCorrente = $segnalazione->statoEnum();
 
-        $query = Azione::orderBy('ordine');
-
-        if ($user->hasRole('impresa')) {
-            $query->whereIn('competenza_azione', [1, 2]);
-        } else {
-            $query->whereIn('competenza_azione', [0, 2]);
-        }
+        $query = Azione::orderBy('ordine')->whereIn('competenza_azione', $this->competenzeDi($user));
 
         return $query->get()->filter(function (Azione $azione) use ($segnalazione, $user, $statoCorrente) {
             return $this->azioneApplicabile($azione, $segnalazione, $user, $statoCorrente);
@@ -55,8 +60,11 @@ class SegnalazioneWorkflowService
      */
     public function getAzioniRapide(Segnalazione $segnalazione, User $user): Collection
     {
+        // Solo azioni senza campi da compilare: le altre hanno il loro pannello nella scheda.
+        $conCampi = ['prendi_in_carico', 'sospendi', 'annulla', 'rifiuta_preventivo', 'presenta_preventivo', 'collega'];
+
         return $this->getAzioniDisponibili($segnalazione, $user)
-            ->reject(fn (Azione $a) => $a->flag_operatore || $a->flag_appalto)
+            ->reject(fn (Azione $a) => $a->flag_operatore || $a->flag_appalto || in_array($a->codice, $conCampi, true))
             ->values();
     }
 
@@ -78,10 +86,25 @@ class SegnalazioneWorkflowService
         User         $user,
         array        $params = []
     ): void {
-        $azione        = Azione::findOrFail($idAzione);
+        $this->esegui($segnalazione, Azione::findOrFail($idAzione), $user, $params, controllaCompetenza: true);
+    }
+
+    /**
+     * Fine lavori di ditta od operaio: chiude a nome di chi ha finito, anche se "Chiudi"
+     * è un'azione del comune. Lo stato deve comunque ammetterla.
+     */
+    public function chiudiPerFineLavori(Segnalazione $segnalazione, User $autore): void
+    {
+        $this->esegui($segnalazione, Azione::where('codice', 'chiudi')->firstOrFail(), $autore, [], controllaCompetenza: false);
+    }
+
+    /** @param  array<string, mixed>  $params */
+    private function esegui(Segnalazione $segnalazione, Azione $azione, User $user, array $params, bool $controllaCompetenza): void
+    {
         $statoCorrente = $segnalazione->statoEnum();
 
-        if (! $this->azioneApplicabile($azione, $segnalazione, $user, $statoCorrente)) {
+        if (($controllaCompetenza && ! in_array((int) $azione->competenza_azione, $this->competenzeDi($user), true))
+            || ! $this->azioneApplicabile($azione, $segnalazione, $user, $statoCorrente)) {
             throw ValidationException::withMessages([
                 'azione' => 'Azione non applicabile allo stato attuale della segnalazione.',
             ]);
@@ -130,6 +153,9 @@ class SegnalazioneWorkflowService
                 'visibile_impresa' => false,
             ]);
         }
+
+        // La data della sospensione non ha più senso: si torna al calcolo dalla regola.
+        $this->scadenzaManuale->rimuovi($segnalazione->refresh());
 
         InviaWebhookOutbound::dispatch($segnalazione->fresh());
     }
@@ -180,6 +206,23 @@ class SegnalazioneWorkflowService
 
         $update = ['id_stato_segnalazione' => $nuovoStato->value];
 
+        // Assegnare sostituisce chi c'era prima: operatore, squadra e ditta sono alternativi.
+        $assegnazione = $azione->flag_operatore || $azione->flag_appalto || $azione->codice === 'prendi_in_carico';
+        if ($assegnazione) {
+            $update['fine_lavori_at'] = null;
+        }
+
+        if ($azione->codice === 'prendi_in_carico') {
+            $update['id_operatore_assegnato'] = $user->id;
+            $update['id_squadra_assegnata'] = null;
+            $update['id_appalto'] = null;
+        }
+
+        if ($azione->flag_operatore) {
+            $update['id_appalto'] = null;
+            $update['id_squadra_assegnata'] = null;
+        }
+
         if ($azione->flag_operatore && ! empty($params['id_operatore'])) {
             $update['id_operatore_assegnato'] = $params['id_operatore'];
         }
@@ -195,16 +238,17 @@ class SegnalazioneWorkflowService
 
         if ($azione->flag_appalto && ! empty($params['id_appalto'])) {
             $update['id_appalto'] = $params['id_appalto'];
+            $update['id_operatore_assegnato'] = 0;
+            $update['id_squadra_assegnata'] = null;
         }
 
         if ($azione->flag_preventivo && isset($params['importo_preventivo'])) {
             $update['importo_preventivo'] = $params['importo_preventivo'];
         }
 
-        // Motivazione obbligatoria per ANNULLATA
-        if ($azione->codice === 'annulla' && empty($params['nota'])) {
+        if ($azione->codice === 'annulla' && empty($params['motivo']) && empty($params['nota'])) {
             throw ValidationException::withMessages([
-                'nota' => 'La motivazione è obbligatoria per annullare una segnalazione.',
+                'motivo' => 'Indica perché si chiude senza intervento.',
             ]);
         }
 
@@ -212,12 +256,16 @@ class SegnalazioneWorkflowService
         if ($azione->codice === 'riapri') {
             $update['data_chiusura'] = null;
             $update['sla_violato']   = false;
+            $update['fine_lavori_at'] = null;
+            $update['id_operatore_assegnato'] = $user->id; // torna "in carico" a chi riapre
+            $update['id_appalto'] = null; // la ditta di prima non la vede più
+            $update['id_squadra_assegnata'] = null;
         }
 
         if ($nuovoStato->isTerminale() && $azione->codice !== 'riapri') {
             $update['data_chiusura'] = now();
             $update['sla_violato']   = false;
-        } elseif ($azione->codice !== 'riapri') {
+        } elseif ($azione->codice !== 'riapri' && ! $segnalazione->scadenza_manuale) {
             $scadenza = $this->sla->calcolaScadenza($segnalazione);
             if ($scadenza) {
                 $update['data_scadenza_sla'] = $scadenza;
@@ -226,39 +274,43 @@ class SegnalazioneWorkflowService
 
         $segnalazione->update($update);
 
+        if ($azione->codice === 'riapri') {
+            $this->scadenzaManuale->rimuovi($segnalazione);
+        } elseif (! $nuovoStato->isTerminale() && ! empty($params['data_scadenza'])) {
+            $this->scadenzaManuale->imposta($segnalazione, Carbon::parse($params['data_scadenza']), $user);
+        }
+
         StoricoStatoSegnalazione::create([
             'id_segnalazione'       => $segnalazione->id_segnalazione,
             'id_stato_segnalazione' => $nuovoStato->value,
             'id_utente'             => $user->id,
-            'id_utente_collegato'   => $params['id_operatore'] ?? 0,
+            'id_utente_collegato'   => $azione->codice === 'prendi_in_carico' ? $user->id : ($params['id_operatore'] ?? 0),
             'id_appalto'            => $params['id_appalto'] ?? 0,
         ]);
 
-        $notaTesto = $params['nota'] ?? '';
-        if (isset($params['ore_lavoro']) || isset($params['materiali'])) {
-            $rapportinoTesto = "Rapportino di fine lavoro:\n";
-            if (filled($params['ore_lavoro'] ?? null)) {
-                $rapportinoTesto .= "- Ore impiegate: " . $params['ore_lavoro'] . "\n";
-            }
-            if (filled($params['materiali'] ?? null)) {
-                $rapportinoTesto .= "- Materiali usati: " . $params['materiali'] . "\n";
-            }
-            $notaTesto = $rapportinoTesto . "\nDescrizione:\n" . $notaTesto;
+        $notaTesto = trim((string) ($params['nota'] ?? ''));
+        $visibileWeb = false;
+        if ($azione->codice === 'annulla') {
+            // Il motivo lo deve capire anche chi ha segnalato.
+            $motivo = self::MOTIVI_SENZA_INTERVENTO[$params['motivo'] ?? 'altro'] ?? 'Altro';
+            $notaTesto = "Chiusa senza intervento: {$motivo}.".($notaTesto !== '' ? "
+{$notaTesto}" : '');
+            $visibileWeb = true;
         }
 
-        if (! empty($notaTesto)) {
+        if ($notaTesto !== '') {
             $segnalazione->note()->create([
                 'testo'            => $notaTesto,
                 'id_utente'        => $user->id,
-                'visibile_web'     => false,
-                'visibile_impresa' => $azione->flag_notifica || isset($params['ore_lavoro']),
+                'visibile_web'     => $visibileWeb,
+                'visibile_impresa' => (bool) $azione->flag_notifica,
             ]);
         }
 
         $fresca = $segnalazione->fresh();
 
         if ($this->deveInviareNotifiche($azione, $fresca)) {
-            $this->inviaNotifiche($fresca, $azione, $user);
+            $this->inviaNotifiche($fresca, $azione, $user, filled($params['nota'] ?? null) ? (string) $params['nota'] : null);
         }
 
         $this->automaticallyPublish($fresca, $previousStateId, $nuovoStato->value);
@@ -267,6 +319,16 @@ class SegnalazioneWorkflowService
     }
 
     // ── Filtro applicabilità ─────────────────────────────────────────────────
+
+    /**
+     * Competenza: 0=Ente (admin/gestore), 1=Impresa, 2=Entrambi.
+     *
+     * @return list<int>
+     */
+    private function competenzeDi(User $user): array
+    {
+        return $user->hasRole('impresa') ? [1, 2] : [0, 2];
+    }
 
     private function azioneApplicabile(Azione $azione, Segnalazione $segnalazione, User $user, SegnalazioneStato $statoCorrente): bool
     {
@@ -306,7 +368,7 @@ class SegnalazioneWorkflowService
 
     // ── Notifiche ────────────────────────────────────────────────────────────
 
-    private function inviaNotifiche(Segnalazione $segnalazione, Azione $azione, User $attore): void
+    private function inviaNotifiche(Segnalazione $segnalazione, Azione $azione, User $attore, ?string $nota = null): void
     {
         if ($segnalazione->id_squadra_assegnata && $azione->flag_operatore) {
             $squadra = Squadra::with('caposquadra')->find($segnalazione->id_squadra_assegnata);
@@ -317,6 +379,7 @@ class SegnalazioneWorkflowService
                 $squadra->caposquadra->notify(new SquadraAssegnataNotification(
                     $segnalazione->id_segnalazione,
                     $squadra->id_squadra,
+                    $nota,
                 ));
             }
 
@@ -327,7 +390,7 @@ class SegnalazioneWorkflowService
             $operatore = User::find($segnalazione->id_operatore_assegnato);
 
             if ($operatore && $operatore->id !== $attore->id && $operatore->attivo !== false) {
-                $operatore->notify(new OperatoreAssegnatoNotification($segnalazione, $azione, $attore));
+                $operatore->notify(new OperatoreAssegnatoNotification($segnalazione, $azione, $attore, $nota));
             }
 
             return;
@@ -338,11 +401,11 @@ class SegnalazioneWorkflowService
             $destinatari = DestinatariAssegnatario::per($segnalazione);
 
             if ($destinatari['utenti']->isNotEmpty()) {
-                Notification::send($destinatari['utenti'], new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
+                Notification::send($destinatari['utenti'], new ImpresaAssegnataNotification($segnalazione, $azione, $attore, $nota));
             }
             foreach ($destinatari['email'] as $email) {
                 Notification::route('mail', $email)
-                    ->notify(new ImpresaAssegnataNotification($segnalazione, $azione, $attore));
+                    ->notify(new ImpresaAssegnataNotification($segnalazione, $azione, $attore, $nota));
             }
 
             return;

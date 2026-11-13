@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\NotaSegnalazione;
 use App\Models\Segnalazione;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -15,12 +16,14 @@ use Illuminate\Support\Str;
 class FineLavoriNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
         public readonly Segnalazione $segnalazione,
         public readonly NotaSegnalazione $nota,
         public readonly string $mittente,
+        public readonly bool $chiusa = false,
     ) {}
 
     /** @return list<string> */
@@ -33,10 +36,14 @@ class FineLavoriNotification extends Notification implements ShouldQueue
     {
         $id = $this->segnalazione->id_segnalazione;
 
-        return $this->baseMailMessage("Fine lavori comunicata su #{$id}")
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Fine lavori'))
             ->line("{$this->mittente} ha comunicato la fine dei lavori sulla segnalazione #{$id}.")
             ->line(Str::limit($this->nota->testo, 500))
-            ->line('Verifica le foto e chiudi la segnalazione.')
+            ->line($this->chiusa
+                ? 'La segnalazione è stata chiusa.'
+                : 'Verifica il lavoro e chiudi la segnalazione.');
+
+        return $this->riepilogoSegnalazione($mail, $this->segnalazione)
             ->action('Apri segnalazione', route('segnalazioni.show', $id))
             ->salutation('ProntoPA');
     }

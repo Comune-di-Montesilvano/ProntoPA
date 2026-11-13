@@ -6,6 +6,7 @@ use App\Channels\TelegramChannel;
 use App\Models\Segnalazione;
 use App\Models\Squadra;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,11 +15,13 @@ use Illuminate\Notifications\Notification;
 class SquadraAssegnataNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
         public readonly int $idSegnalazione,
         public readonly int $idSquadra,
+        public readonly ?string $nota = null,
     ) {}
 
     public function via(object $notifiable): array
@@ -42,10 +45,11 @@ class SquadraAssegnataNotification extends Notification implements ShouldQueue
                 ->line('La segnalazione collegata a questa notifica non è più disponibile.');
         }
 
-        return $this->baseMailMessage('Nuovo lavoro per la squadra ' . $squadra->nome)
-            ->line('Alla squadra "' . $squadra->nome . '" è stata assegnata la segnalazione #' . $segnalazione->id_segnalazione . '.')
-            ->line(\Illuminate\Support\Str::limit($segnalazione->testo_segnalazione, 120))
-            ->line('Priorità: ' . $segnalazione->label_priorita)
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($segnalazione, 'Assegnata alla tua squadra'))
+            ->line('Alla squadra "' . $squadra->nome . '" è stato assegnato un lavoro: affidalo a uno dei membri.')
+            ->line('Priorità: ' . $segnalazione->label_priorita);
+
+        return $this->riepilogoSegnalazione($mail, $segnalazione, perChiLavora: true, nota: $this->nota)
             ->action('Apri segnalazione', route('segnalazioni.show', $segnalazione->id_segnalazione))
             ->salutation('ProntoPA');
     }
@@ -62,7 +66,7 @@ class SquadraAssegnataNotification extends Notification implements ShouldQueue
         return [
             'text' => implode("\n", [
                 '👷 Nuovo lavoro squadra ' . $squadra->nome,
-                '#' . $segnalazione->id_segnalazione,
+                $this->rigaSegnalazione($segnalazione),
                 'Priorità: ' . $segnalazione->label_priorita,
             ]),
         ];

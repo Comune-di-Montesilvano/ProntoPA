@@ -6,6 +6,8 @@ use App\Channels\TelegramChannel;
 use App\Models\Azione;
 use App\Models\Segnalazione;
 use App\Models\User;
+use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -13,6 +15,8 @@ use Illuminate\Notifications\Notification;
 
 class SegnalazioneStatoCambiato extends Notification implements ShouldQueue
 {
+    use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
@@ -36,12 +40,11 @@ class SegnalazioneStatoCambiato extends Notification implements ShouldQueue
     {
         $url = route('segnalazioni.show', $this->segnalazione->id_segnalazione);
 
-        return (new MailMessage)
-            ->subject('Aggiornamento segnalazione #' . $this->segnalazione->id_segnalazione)
-            ->greeting('Buongiorno,')
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Aggiornamento'))
             ->line('La segnalazione **#' . $this->segnalazione->id_segnalazione . '** ha ricevuto un aggiornamento.')
-            ->line('**Azione eseguita:** ' . $this->azione->descrizione)
-            ->line('**Nuovo stato:** ' . $this->segnalazione->stato->descrizione)
+            ->line('**Azione eseguita:** ' . $this->azione->descrizione);
+
+        return $this->riepilogoSegnalazione($mail, $this->segnalazione)
             ->action('Visualizza segnalazione', $url)
             ->salutation('ProntoPA');
     }
@@ -50,7 +53,7 @@ class SegnalazioneStatoCambiato extends Notification implements ShouldQueue
     {
         return [
             'text' => implode("\n", [
-                'Aggiornamento segnalazione #' . $this->segnalazione->id_segnalazione,
+                'Aggiornamento ' . $this->rigaSegnalazione($this->segnalazione),
                 'Azione: ' . $this->azione->descrizione,
                 'Nuovo stato: ' . ($this->segnalazione->stato?->descrizione ?? 'N/D'),
             ]),

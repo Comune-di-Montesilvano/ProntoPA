@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SegnalazioneStato;
+use App\Models\Appalto;
+use App\Models\Impostazione;
 use App\Models\Provenienza;
 use App\Models\Segnalazione;
 use App\Models\Specializzazione;
+use App\Models\Squadra;
 use App\Models\TipologiaSegnalazione;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -83,12 +86,19 @@ class GestioneController extends Controller
 
         $filtri = $this->parametriFiltro($request);
 
+        // Pannelli delle azioni multiple: stessi elenchi del pannello Assegna della scheda.
+        $operatoriAssegnabili = User::assegnabili()->orderBy('name')->get();
+        $squadre = Impostazione::get('squadre_enabled', false)
+            ? Squadra::where('attiva', true)->orderBy('nome')->get()
+            : collect();
+        $appaltiValidi = Appalto::where('valido', true)->with('impresa')->orderBy('descrizione')->get();
+
         return view('gestione.dashboard', compact(
             'segnalazioni', 'tab', 'conteggi',
             'q', 'idTipologia', 'idProvenienza',
             'idOperatore', 'dataDa', 'dataA', 'livelloPriorita', 'idSpecializzazione',
             'ordine', 'filtro', 'tipologie', 'provenienze', 'specializzazioni', 'operatori',
-            'azioniRapidePerSegnalazione', 'filtri'
+            'azioniRapidePerSegnalazione', 'filtri', 'operatoriAssegnabili', 'squadre', 'appaltiValidi'
         ));
     }
 
@@ -145,21 +155,51 @@ class GestioneController extends Controller
     /** Tutte le schede dell'elenco filtrato, una per pagina, in un unico documento. */
     public function stampaSchede(Request $request): View
     {
+        // Selezione dall'elenco (azioni multiple): solo quelle, raggruppate per chi lavora e sede.
+        $ids = array_slice(array_filter(array_map('intval', (array) $request->query('ids', []))), 0, 100);
+        $query = $ids
+            ? Segnalazione::visibileA($request->user())->whereIn('id_segnalazione', $ids)
+            : $this->elencoFiltrato($request);
+
         // Stesse relazioni di SegnalazioneController::stampa (scheda singola).
-        $segnalazioni = $this->elencoFiltrato($request)
+        $segnalazioni = $query
             ->with([
                 'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
-                'operatore', 'utente', 'appalto.impresa',
+                'operatore', 'utente', 'appalto.impresa', 'squadraAssegnata',
                 'note' => fn ($q) => $q->visibiliA($request->user()),
                 'storicoStati.stato', 'storicoStati.utente',
             ])
             ->get();
+
+        if ($ids) {
+            // Un mazzo di fogli per chi va sul posto: per nome di chi lavora, poi per sede.
+            $segnalazioni = $segnalazioni->sortBy([
+                fn ($a, $b) => self::chiLavora($a) <=> self::chiLavora($b),
+                fn ($a, $b) => strcasecmp((string) $a->plesso?->nome, (string) $b->plesso?->nome),
+                fn ($a, $b) => $a->id_segnalazione <=> $b->id_segnalazione,
+            ])->values();
+        }
 
         return view('segnalazioni.print-multiple', [
             'segnalazioni' => $segnalazioni,
             'tab' => $request->get('tab', 'aperte'),
             'tabLabels' => self::TAB_LABELS,
         ]);
+    }
+
+    /**
+     * Chiave di ordinamento: non assegnate in fondo, poi ditta, squadra o persona per nome.
+     *
+     * @return array{0: int, 1: string}
+     */
+    private static function chiLavora(Segnalazione $s): array
+    {
+        $nome = $s->appalto->impresa->ragione_sociale
+            ?? $s->squadraAssegnata->nome
+            ?? $s->operatore->name
+            ?? null;
+
+        return $nome === null ? [1, ''] : [0, mb_strtolower((string) $nome)];
     }
 
     /**

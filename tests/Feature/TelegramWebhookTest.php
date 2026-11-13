@@ -194,4 +194,37 @@ class TelegramWebhookTest extends TestCase
                 && Str::contains((string) $request['text'], 'Stato:');
         });
     }
+
+    public function test_chiudi_su_nuova_non_chiude_senza_intervento_e_non_va_in_errore(): void
+    {
+        Http::fake(['https://api.telegram.org/*' => Http::response(['ok' => true], 200)]);
+        $admin = User::factory()->create(['telegram_chat_id' => '445566', 'telegram_verified_at' => now(), 'amministratore' => true]);
+        $admin->syncRoles(['admin']);
+        $s = Segnalazione::create([
+            'id_tipologia_segnalazione' => 1, 'id_utente_segnalazione' => $admin->id, 'testo_segnalazione' => 'Lampada rotta',
+            'flag_riservata' => false, 'flag_pubblicata' => true, 'id_stato_segnalazione' => 1, 'id_provenienza' => 1,
+        ]);
+
+        $this->postJson('/api/telegram/webhook', ['message' => ['chat' => ['id' => '445566'], 'text' => '/chiudi '.$s->id_segnalazione]],
+            ['X-Telegram-Bot-Api-Secret-Token' => 'secret-token'])->assertOk();
+
+        $this->assertSame(SegnalazioneStato::NUOVA, $s->fresh()->id_stato_segnalazione);
+    }
+
+    public function test_operaio_non_riceve_pulsanti_ne_esegue_azioni_del_comune(): void
+    {
+        Http::fake(['https://api.telegram.org/*' => Http::response(['ok' => true], 200)]);
+        $operaio = User::factory()->create(['telegram_chat_id' => '778899', 'telegram_verified_at' => now()]);
+        $operaio->syncRoles(['operaio']);
+        $s = Segnalazione::create([
+            'id_tipologia_segnalazione' => 1, 'id_utente_segnalazione' => $operaio->id, 'testo_segnalazione' => 'Porta bloccata',
+            'flag_riservata' => false, 'flag_pubblicata' => true, 'id_stato_segnalazione' => 3, 'id_provenienza' => 1,
+            'id_operatore_assegnato' => $operaio->id,
+        ]);
+
+        $this->postJson('/api/telegram/webhook', ['callback_query' => ['id' => 'cbq-2', 'data' => 'azione:'.$s->id_segnalazione.':1', 'message' => ['chat' => ['id' => '778899']]]],
+            ['X-Telegram-Bot-Api-Secret-Token' => 'secret-token'])->assertOk();
+
+        $this->assertSame(SegnalazioneStato::ASSEGNATA_OPERATORE, $s->fresh()->id_stato_segnalazione);
+    }
 }

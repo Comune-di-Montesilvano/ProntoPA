@@ -4,6 +4,51 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.19] - 2026-11-13
+
+### Changed
+- Iter delle segnalazioni semplificato: si assegna (a sé, a un operaio, a una squadra o a una
+  ditta) direttamente da Nuova e si può riassegnare in ogni momento; chi aveva il lavoro prima
+  non lo vede più e viene avvisato solo il nuovo.
+- Chiudere non chiede più ore, materiali e foto: nota e foto sono facoltative.
+- Da Nuova si chiude "senza intervento" (non pertinente, errata, già risolta, altro) con un
+  motivo che vede anche chi ha segnalato. "Annullata" diventa "Chiusa senza intervento".
+- Fine lavori di operaio o caposquadra chiude subito la segnalazione; quella della ditta chiude
+  subito se non c'è stato un preventivo, altrimenti resta al comune da verificare. Foto facoltative.
+- Sospendere e rifiutare un preventivo richiedono un motivo.
+- Tutte le email sulle segnalazioni hanno nell'oggetto numero, tipologia e titolo e in testa un
+  riepilogo; chi riceve il lavoro trova anche testo segnalato, sede, referente, scadenza e la nota
+  di chi assegna.
+
+### Added
+- Scadenza fissata a mano dal pannello Assegna: non viene più ricalcolata in automatico
+  (si torna al calcolo automatico dallo stesso pannello).
+- Azioni multiple nell'elenco gestione: seleziona le righe e assegna, chiudi, chiudi senza
+  intervento o stampa le schede (fino a 100 per volta).
+
+### Security
+- Una ditta non può più eseguire azioni riservate al comune (chiudere, accettare il proprio
+  preventivo, assegnare) inviando a mano la richiesta: la competenza dell'azione ora è verificata
+  anche all'esecuzione, non solo nel menu.
+- Telegram: pulsanti e `/chiudi` solo per chi può aggiornare la segnalazione dalla scheda e solo
+  per azioni senza campi da compilare; un'azione rifiutata risponde con il motivo invece di un errore.
+
+### Fixed
+- "Riassegna" compariva ma non si poteva usare.
+- Riaprire una segnalazione la stacca dalla ditta e dalla squadra di prima.
+- L'email di chiusura a scuole e cittadini dice "dal comune" invece del nome di chi ha chiuso.
+- Il menu ⋮ dell'elenco non propone più azioni che chiedono un motivo o un pannello.
+- Tornare al calcolo automatico con una scadenza già passata fa partire l'avviso di scadenza superata.
+- Assegna (scheda e azioni multiple) accetta solo personale del comune attivo e squadre attive con
+  le squadre accese, come negli elenchi del pannello.
+- Azioni multiple: "0 fatte" è segnalato come errore; un errore imprevisto su una segnalazione non
+  ferma le altre e compare tra le saltate.
+- Stampa schede delle selezionate raggruppata per ditta, squadra o persona (in ordine di nome), poi
+  per sede.
+- Digest mattutino: niente più una query per riga per la tipologia.
+- Testi allineati ai nomi nuovi degli stati (attività, notifiche tracciate, documentazione API).
+- Il digest mattutino usava una funzione SQL solo MariaDB per l'ordinamento.
+
 ## [0.9.18] - 2026-11-12
 
 ### Changed

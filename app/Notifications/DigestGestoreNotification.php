@@ -4,14 +4,17 @@ namespace App\Notifications;
 
 use App\Channels\TelegramChannel;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Carbon;
 
 class DigestGestoreNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
@@ -42,23 +45,21 @@ class DigestGestoreNotification extends Notification implements ShouldQueue
         if ($inRitardo->isNotEmpty()) {
             $mail->line('🔴 In ritardo (' . $inRitardo->count() . '):');
             foreach ($inRitardo as $s) {
-                $mail->line('#' . $s->id_segnalazione . ' — ' . \Illuminate\Support\Str::limit($s->testo_segnalazione, 60)
-                    . ' (scaduta il ' . $s->data_scadenza_sla?->format('d/m') . ')');
+                $mail->line($this->rigaSegnalazione($s) . ' (scaduta il ' . Carbon::parse($s->data_scadenza_sla)->format('d/m') . ')');
             }
         }
 
         if ($inScadenza->isNotEmpty()) {
             $mail->line('🟡 In scadenza (' . $inScadenza->count() . '):');
             foreach ($inScadenza as $s) {
-                $mail->line('#' . $s->id_segnalazione . ' — ' . \Illuminate\Support\Str::limit($s->testo_segnalazione, 60)
-                    . ' (scade il ' . $s->data_scadenza_sla?->format('d/m H:i') . ')');
+                $mail->line($this->rigaSegnalazione($s) . ' (scade il ' . Carbon::parse($s->data_scadenza_sla)->format('d/m H:i') . ')');
             }
         }
 
         if ($nonAssegnate->isNotEmpty()) {
             $mail->line('⚪ Nuove non assegnate (' . $nonAssegnate->count() . '):');
             foreach ($nonAssegnate as $s) {
-                $mail->line('#' . $s->id_segnalazione . ' — ' . \Illuminate\Support\Str::limit($s->testo_segnalazione, 60));
+                $mail->line($this->rigaSegnalazione($s));
             }
         }
 
@@ -95,8 +96,11 @@ class DigestGestoreNotification extends Notification implements ShouldQueue
             return collect();
         }
 
-        return \App\Models\Segnalazione::whereIn('id_segnalazione', $ids)
-            ->orderByRaw('FIELD(id_segnalazione, ' . implode(',', array_map('intval', $ids)) . ')')
-            ->get();
+        // Ordine dei parametri (già ordinati da chi chiama), senza FIELD(): solo MariaDB.
+        $posizione = array_flip(array_map('intval', $ids));
+
+        return \App\Models\Segnalazione::with('tipologia')->whereIn('id_segnalazione', $ids)->get()
+            ->sortBy(fn ($s) => $posizione[$s->id_segnalazione] ?? PHP_INT_MAX)
+            ->values();
     }
 }

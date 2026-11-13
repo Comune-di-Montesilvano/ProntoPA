@@ -74,7 +74,7 @@ class SegnalazionePolicy
         return $this->update($user, $segnalazione);
     }
 
-    /** Ditta o operaio assegnati comunicano la fine dei lavori (rapportino), senza chiudere. */
+    /** Ditta o operaio assegnati comunicano la fine dei lavori: chiude, salvo ditta con preventivo (verifica del comune). */
     public function comunicaFineLavori(User $user, Segnalazione $segnalazione): bool
     {
         if ($segnalazione->isChiusa() || ! in_array($segnalazione->statoEnum(), [

@@ -268,12 +268,7 @@ class SegnalazioneController extends Controller
         $squadre = collect();
         $appaltiValidi = collect();
         if ($lettura === 'gestore') {
-            $operatori = User::where(fn ($q) => $q->where('gestore_segnalazioni', true)
-                    ->orWhere('amministratore', true)
-                    ->orWhereHas('roles', fn ($r) => $r->whereIn('name', ['operaio', 'gestore', 'admin'])))
-                ->where(fn ($q) => $q->whereNull('attivo')->orWhere('attivo', true))
-                ->orderBy('name')
-                ->get();
+            $operatori = User::assegnabili()->orderBy('name')->get();
             if (Impostazione::get('squadre_enabled', false)) {
                 $squadre = Squadra::where('attiva', true)->orderBy('nome')->get();
             }
@@ -301,12 +296,13 @@ class SegnalazioneController extends Controller
 
         $rules = [
             'id_azione'                 => ['required', 'integer', 'exists:db_azioni,id_azione'],
-            'id_operatore'              => ['nullable', 'integer', 'exists:users,id'],
+            'id_operatore'              => ['nullable', ...\App\Support\Segnalazioni\RegoleAssegnazione::operatore()],
             'id_appalto'                => ['nullable', 'integer', 'exists:appalti,id_appalto'],
-            'id_squadra'                => ['nullable', 'integer', 'exists:squadre,id_squadra'],
+            'id_squadra'                => ['nullable', ...\App\Support\Segnalazioni\RegoleAssegnazione::squadra()],
             'nota'                      => ['nullable', 'string', 'max:2000'],
             'id_segnalazione_correlata' => ['nullable', 'integer', 'exists:segnalazioni,id_segnalazione'],
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
+            'data_scadenza'             => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
         ];
 
         // Il pannello Assegna fissa anche la priorità: permesso controllato prima,
@@ -320,20 +316,26 @@ class SegnalazioneController extends Controller
             $rules['importo_preventivo'] = ['required', 'numeric', 'min:0'];
         }
 
+        // Chiudere non chiede nulla: nota e foto facoltative (spec 2026-11-13 §1).
         if ($azione->codice === 'chiudi') {
-            // Se ditta/operaio hanno già mandato il rapportino con le foto, il comune chiude e basta.
-            $giaRendicontata = $segnalazione->haFineLavori();
-            $obbligo = $giaRendicontata ? 'nullable' : 'required';
-            $rules['ore_lavoro'] = [$obbligo, 'numeric', 'min:0'];
-            $rules['materiali']  = [$obbligo, 'string', 'max:1000'];
-            $rules['nota']       = [$obbligo, 'string', 'max:2000'];
-            $rules += CaricaAllegati::regole(obbligatori: ! $giaRendicontata);
+            $rules += CaricaAllegati::regole(obbligatori: false);
+        }
+
+        if (in_array($azione->codice, ['sospendi', 'rifiuta_preventivo'], true)) {
+            $rules['nota'] = ['required', 'string', 'max:2000'];
+        }
+
+        if ($azione->codice === 'annulla') {
+            $rules['motivo'] = ['required', Rule::in(array_keys(SegnalazioneWorkflowService::MOTIVI_SENZA_INTERVENTO))];
+            $rules['nota'] = ['required_if:motivo,altro', 'nullable', 'string', 'max:2000'];
         }
 
         $data = $request->validate($rules, [
             ...CaricaAllegati::messaggi(),
-            'allegati.required' => 'Devi caricare almeno una foto dell\'intervento per proporre la chiusura.',
-            'allegati.min' => 'Devi caricare almeno una foto dell\'intervento per proporre la chiusura.',
+            'motivo.required' => 'Indica perché si chiude senza intervento.',
+            'nota.required_if' => 'Scrivi il motivo.',
+            'nota.required' => 'Scrivi il motivo.',
+            'data_scadenza.after_or_equal' => 'La nuova scadenza non può essere nel passato.',
         ]);
 
         $this->workflow->eseguiAzione(
@@ -365,17 +367,13 @@ class SegnalazioneController extends Controller
             'ore_lavoro' => ['nullable', 'numeric', 'min:0'],
             'materiali'  => ['nullable', 'string', 'max:1000'],
             'nota'       => ['required', 'string', 'max:2000'],
-            ...CaricaAllegati::regole(obbligatori: true),
-        ], [
-            ...CaricaAllegati::messaggi(),
-            'allegati.required' => 'Serve almeno una foto del lavoro finito.',
-            'allegati.min'      => 'Serve almeno una foto del lavoro finito.',
-        ]);
+            ...CaricaAllegati::regole(obbligatori: false),
+        ], CaricaAllegati::messaggi());
 
-        $servizio->comunica($segnalazione, auth()->user(), $data, $request->file('allegati'));
+        $chiusa = $servizio->comunica($segnalazione, auth()->user(), $data, $request->file('allegati') ?? []);
 
         return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
-            ->with('success', 'Fine lavori comunicata al comune.');
+            ->with('success', $chiusa ? 'Lavoro chiuso. Grazie!' : 'Fine lavori comunicata al comune.');
     }
 
     // ── Aggiungi nota ─────────────────────────────────────────────────────────
@@ -527,6 +525,17 @@ class SegnalazioneController extends Controller
             ->with('success', 'Titolo aggiornato.');
     }
 
+    /** Toglie la scadenza fissata a mano: torna quella calcolata dalla regola (spec §3). */
+    public function scadenzaAutomatica(Segnalazione $segnalazione, \App\Services\Segnalazioni\ScadenzaManuale $scadenze): RedirectResponse
+    {
+        $this->authorize('modificaPriorita', $segnalazione);
+
+        $scadenze->rimuovi($segnalazione);
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Scadenza di nuovo calcolata in automatico.');
+    }
+
     public function aggiornaPriorita(Request $request, Segnalazione $segnalazione): RedirectResponse
     {
         $this->authorize('modificaPriorita', $segnalazione);
@@ -555,7 +564,8 @@ class SegnalazioneController extends Controller
         }
 
         // La scadenza SLA dipende dalla priorità: va ricalcolata sulle aperte.
-        if (! $segnalazione->isChiusa()) {
+        // Scadenza fissata a mano: la priorità cambia solo l'etichetta.
+        if (! $segnalazione->isChiusa() && ! $segnalazione->scadenza_manuale) {
             $scadenza = $this->sla->calcolaScadenza($segnalazione);
             if ($scadenza) {
                 $segnalazione->data_scadenza_sla = $scadenza;

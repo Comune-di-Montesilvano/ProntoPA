@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\Segnalazione;
 use App\Models\User;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -15,6 +16,7 @@ use Illuminate\Support\Carbon;
 class InattivitaNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
@@ -36,7 +38,7 @@ class InattivitaNotification extends Notification implements ShouldQueue
         // Ditte (utenti impresa o email aziendale) entrano solo via SPID: niente link diretto alla scheda.
         $interno = $notifiable instanceof User && ! $notifiable->hasRole('impresa');
 
-        $messaggio = $this->baseMailMessage("Segnalazione #{$id} ferma")
+        $messaggio = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Ferma da tempo'))
             ->line("Sulla segnalazione #{$id} non ci sono aggiornamenti dal {$this->ultimaAttivita->format('d/m/Y')}.");
 
         $messaggio = $this->archiviazione
@@ -47,7 +49,7 @@ class InattivitaNotification extends Notification implements ShouldQueue
             ? $messaggio->line('Se il problema c\'è ancora, apri la segnalazione e sollecita: basta per tenerla aperta.')
             : $messaggio->line('Aggiorna la segnalazione con una nota, la fine lavori o un cambio di stato.');
 
-        return $messaggio
+        return $this->riepilogoSegnalazione($messaggio, $this->segnalazione)
             ->action($interno ? 'Apri segnalazione' : 'Accedi con SPID o CIE', $interno ? route('segnalazioni.show', $id) : route('accesso'))
             ->salutation('ProntoPA');
     }

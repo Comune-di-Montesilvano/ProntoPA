@@ -114,7 +114,7 @@ Restituisce lo stato corrente di una segnalazione.
     "id_segnalazione": 42,
     "stato": {
         "id": 3,
-        "descrizione": "Assegnata a operatore"
+        "descrizione": "Assegnata"
     },
     "data_segnalazione": "2026-05-01T10:00:00+02:00",
     "data_chiusura": null,
@@ -146,7 +146,7 @@ se configurato in **Admin → Ente e sistema → Integrazioni → Webhook cittad
     "id_segnalazione": 42,
     "stato": {
         "id": 3,
-        "descrizione": "Assegnata a operatore"
+        "descrizione": "Assegnata"
     },
     "data_aggiornamento": "2026-05-13T14:30:00+02:00"
 }

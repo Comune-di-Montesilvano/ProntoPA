@@ -193,13 +193,24 @@
             </div>
         @endif
 
-        <div class="pa-card overflow-hidden">
+        @if($errors->any())
+            <div class="rounded-lg border border-[var(--rose)] bg-[var(--rose-100)] px-4 py-2.5 text-sm text-[var(--rose)]" role="alert">
+                {{ $errors->first() }}
+            </div>
+        @endif
+
+        <div class="pa-card overflow-hidden" x-data="{ scelte: [], pagina: @js($segnalazioni->pluck('id_segnalazione')->map(fn ($id) => (string) $id)->values()) }">
             @if($segnalazioni->isEmpty())
                 <p class="m-0 p-10 text-center text-sm text-[var(--slate-500)]">Nessuna segnalazione in questa vista.</p>
             @else
                 <table class="pa-elenco">
                     <thead>
                         <tr>
+                            <th scope="col" class="w-8">
+                                <input type="checkbox" aria-label="Seleziona tutte le righe della pagina"
+                                       :checked="pagina.length && pagina.every(id => scelte.includes(id))"
+                                       x-on:change="scelte = $event.target.checked ? [...new Set([...scelte, ...pagina])] : scelte.filter(id => !pagina.includes(id))">
+                            </th>
                             <th scope="col">Priorità</th>
                             <th scope="col">Segnalazione</th>
                             <th scope="col">Stato</th>
@@ -211,7 +222,7 @@
                     <tbody>
                         @foreach($segnalazioni as $s)
                             @include('segnalazioni._riga', [
-                                'colonne' => ['priorita', 'segnalazione', 'stato', 'assegnata', 'scadenza', 'azioni'],
+                                'colonne' => ['seleziona', 'priorita', 'segnalazione', 'stato', 'assegnata', 'scadenza', 'azioni'],
                                 'rapide' => $azioniRapidePerSegnalazione[$s->id_segnalazione] ?? collect(),
                             ])
                         @endforeach
@@ -222,6 +233,7 @@
                         {{ $segnalazioni->withQueryString()->links() }}
                     </div>
                 @endif
+                @include('gestione._azioni-multiple')
             @endif
         </div>
     </div>

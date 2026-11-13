@@ -5,22 +5,26 @@ namespace App\Services\Segnalazioni;
 use App\Models\Segnalazione;
 use App\Models\User;
 use App\Notifications\FineLavoriNotification;
+use App\Services\SegnalazioneWorkflowService;
 use App\Support\Segnalazioni\CaricaAllegati;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
 /**
- * Ditta o operaio dicono "ho finito": rapportino come nota, foto del lavoro finito,
- * avviso al comune. Lo stato non cambia: chiude il comune dopo aver verificato.
+ * Ditta o operaio dicono "ho finito": rapportino come nota, foto facoltative, avviso al comune.
+ * La segnalazione si chiude subito, salvo lavoro di ditta con preventivo: lì verifica il comune.
  */
 class FineLavoriService
 {
+    public function __construct(private readonly SegnalazioneWorkflowService $workflow) {}
+
     /**
      * @param  array{ore_lavoro?: mixed, materiali?: ?string, nota: string}  $dati
      * @param  iterable<UploadedFile>  $foto
+     * @return bool true se la segnalazione è stata chiusa
      */
-    public function comunica(Segnalazione $segnalazione, User $autore, array $dati, iterable $foto): void
+    public function comunica(Segnalazione $segnalazione, User $autore, array $dati, iterable $foto): bool
     {
         $righe = ['Fine lavori comunicata:'];
         if (filled($dati['ore_lavoro'] ?? null)) {
@@ -33,6 +37,7 @@ class FineLavoriService
 
         $nota = DB::transaction(function () use ($segnalazione, $autore, $testo, $foto) {
             CaricaAllegati::salva($segnalazione, $foto, $autore, 'dopo');
+            $segnalazione->forceFill(['fine_lavori_at' => now()])->save();
 
             return $segnalazione->note()->create([
                 'testo' => $testo,
@@ -42,10 +47,17 @@ class FineLavoriService
             ]);
         });
 
+        $chiusa = ! ($autore->hasRole('impresa') && $segnalazione->haPreventivo());
+        if ($chiusa) {
+            $this->workflow->chiudiPerFineLavori($segnalazione->refresh(), $autore);
+        }
+
         $comune = DestinatariComune::per($segnalazione, $autore);
         if ($comune->isNotEmpty()) {
-            Notification::send($comune, new FineLavoriNotification($segnalazione, $nota, $this->mittente($autore)));
+            Notification::send($comune, new FineLavoriNotification($segnalazione, $nota, $this->mittente($autore), $chiusa));
         }
+
+        return $chiusa;
     }
 
     private function mittente(User $autore): string

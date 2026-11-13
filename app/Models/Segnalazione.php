@@ -55,6 +55,8 @@ class Segnalazione extends Model
         'id_segnalazione_correlata',
         'data_chiusura',
         'data_scadenza_sla',
+        'scadenza_manuale',
+        'fine_lavori_at',
         'sla_violato',
         'sla_warning_inviato',
         'avviso_inattivita_at',
@@ -86,6 +88,8 @@ class Segnalazione extends Model
             'livello_priorita'       => 'integer',
             'ubicazione_tipo'        => 'integer',
             'data_scadenza_sla'      => 'datetime',
+            'scadenza_manuale'       => 'boolean',
+            'fine_lavori_at'         => 'datetime',
             'sla_violato'            => 'boolean',
             'sla_warning_inviato'    => 'boolean',
             'avviso_inattivita_at'   => 'datetime',
@@ -296,10 +300,19 @@ class Segnalazione extends Model
         ];
     }
 
-    /** Ditta o operaio hanno già mandato le foto del lavoro finito. */
+    /**
+     * Ditta o operaio hanno comunicato la fine dei lavori per l'assegnazione in corso:
+     * ogni assegnazione azzera fine_lavori_at, le foto "dopo" di prima restano solo storia.
+     */
     public function haFineLavori(): bool
     {
-        return $this->allegati()->where('fase', 'dopo')->exists();
+        return $this->fine_lavori_at !== null;
+    }
+
+    /** La ditta ha presentato un preventivo: la fine lavori la verifica il comune. */
+    public function haPreventivo(): bool
+    {
+        return $this->storicoStati()->where('id_stato_segnalazione', SegnalazioneStato::PREVENTIVO_IN_ATTESA->value)->exists();
     }
 
     public function statoEnum(): SegnalazioneStato

@@ -6,6 +6,7 @@ use App\Channels\TelegramChannel;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,6 +15,7 @@ use Illuminate\Notifications\Notification;
 class SlaViolazioneNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
@@ -36,10 +38,11 @@ class SlaViolazioneNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return $this->baseMailMessage('SLA VIOLATO — Segnalazione #' . $this->segnalazione->id_segnalazione)
-            ->line('La segnalazione #' . $this->segnalazione->id_segnalazione . ' ha superato il limite SLA.')
-            ->line('Priorità: ' . $this->segnalazione->label_priorita)
-            ->line('Scadenza era: ' . $this->segnalazione->data_scadenza_sla?->format('d/m/Y H:i'))
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Scaduta'))
+            ->line('La segnalazione #' . $this->segnalazione->id_segnalazione . ' ha superato la scadenza.')
+            ->line('Priorità: ' . $this->segnalazione->label_priorita);
+
+        return $this->riepilogoSegnalazione($mail, $this->segnalazione, perChiLavora: true)
             ->action('Apri segnalazione', route('segnalazioni.show', $this->segnalazione->id_segnalazione))
             ->salutation('ProntoPA');
     }
@@ -48,8 +51,8 @@ class SlaViolazioneNotification extends Notification implements ShouldQueue
     {
         return [
             'text' => implode("\n", [
-                '🚨 SLA VIOLATO',
-                '#' . $this->segnalazione->id_segnalazione,
+                '🚨 Scaduta',
+                $this->rigaSegnalazione($this->segnalazione),
                 'Priorità: ' . $this->segnalazione->label_priorita,
                 'Scadenza: ' . $this->segnalazione->data_scadenza_sla?->format('d/m/Y H:i'),
             ]),

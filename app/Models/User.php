@@ -98,6 +98,22 @@ class User extends Authenticatable
         return (bool) $this->gestore_segnalazioni;
     }
 
+    /**
+     * Chi può ricevere un lavoro dal pannello Assegna: personale del comune attivo
+     * (operai, gestori, admin). Mai scuole, cittadini o persone delle ditte.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<User>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<User>
+     */
+    public function scopeAssegnabili(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query
+            ->where(fn ($q) => $q->where('gestore_segnalazioni', true)
+                ->orWhere('amministratore', true)
+                ->orWhereHas('roles', fn ($r) => $r->whereIn('name', ['operaio', 'gestore', 'admin'])))
+            ->where(fn ($q) => $q->whereNull('attivo')->orWhere('attivo', true));
+    }
+
     public function isSupervisore(): bool
     {
         return (bool) $this->supervisore_segnalazioni;

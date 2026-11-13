@@ -2,7 +2,7 @@
 @php
     // Pannello di ogni azione del workflow; quelle senza un pannello dedicato usano il generico.
     $pannelloDi = fn ($a) => match ($a->codice) {
-        'assegna_operatore', 'assegna_impresa' => 'assegna',
+        'assegna_operatore', 'assegna_impresa', 'prendi_in_carico' => 'assegna',
         'sospendi' => 'sospendi',
         'chiudi' => 'chiudi',
         'annulla' => 'annulla',
@@ -40,7 +40,7 @@
         {{-- Chi ci lavora: sotto il prossimo passo anche su telefono --}}
         <div class="lg:col-start-3 lg:row-start-1">
             <x-pa.card titolo="Chi ci lavora">
-                @if($disponibile('assegna_operatore') || $disponibile('assegna_impresa'))
+                @if($disponibile('assegna_operatore') || $disponibile('assegna_impresa') || $disponibile('prendi_in_carico'))
                     <x-slot name="azione">
                         <button type="button" class="text-sm font-semibold text-[var(--ente-primary)] underline" x-data
                                 x-on:click="$dispatch('apri-pannello', 'assegna')">{{ $segnalazione->id_operatore_assegnato || $segnalazione->id_appalto || $segnalazione->id_squadra_assegnata ? 'Riassegna' : 'Assegna' }}</button>

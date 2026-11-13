@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\NotaSegnalazione;
 use App\Models\Segnalazione;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -15,6 +16,7 @@ use Illuminate\Support\Str;
 class NotaDaEsternoNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
@@ -33,9 +35,11 @@ class NotaDaEsternoNotification extends Notification implements ShouldQueue
     {
         $id = $this->segnalazione->id_segnalazione;
 
-        return $this->baseMailMessage("Nuovo messaggio su #{$id}")
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Nuovo messaggio'))
             ->line("{$this->mittente} ha scritto sulla segnalazione #{$id}:")
-            ->line(Str::limit($this->nota->testo, 500))
+            ->line(Str::limit($this->nota->testo, 500));
+
+        return $this->riepilogoSegnalazione($mail, $this->segnalazione)
             ->action('Apri segnalazione', route('segnalazioni.show', $id))
             ->salutation('ProntoPA');
     }

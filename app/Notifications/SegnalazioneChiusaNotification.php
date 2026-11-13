@@ -6,6 +6,7 @@ use App\Models\Azione;
 use App\Models\Segnalazione;
 use App\Models\User;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
 use App\Channels\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,6 +16,7 @@ use Illuminate\Notifications\Notification;
 class SegnalazioneChiusaNotification extends Notification implements ShouldQueue
 {
     use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
     use Queueable;
 
     public function __construct(
@@ -36,10 +38,10 @@ class SegnalazioneChiusaNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return $this->baseMailMessage('Segnalazione chiusa #' . $this->segnalazione->id_segnalazione)
-            ->line('La tua segnalazione #' . $this->segnalazione->id_segnalazione . ' è stata chiusa.')
-            ->line('Stato finale: ' . ($this->segnalazione->stato?->descrizione ?? 'N/D'))
-            ->line('Operazione registrata da: ' . $this->attore->name)
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Chiusa'))
+            ->line('La tua segnalazione #' . $this->segnalazione->id_segnalazione . ' è stata chiusa ' . $this->daChi($notifiable) . '.');
+
+        return $this->riepilogoSegnalazione($mail, $this->segnalazione)
             ->action('Apri segnalazione', route('segnalazioni.show', $this->segnalazione->id_segnalazione))
             ->salutation('ProntoPA');
     }
@@ -49,10 +51,18 @@ class SegnalazioneChiusaNotification extends Notification implements ShouldQueue
         return [
             'text' => implode("\n", [
                 'Segnalazione chiusa',
-                '#' . $this->segnalazione->id_segnalazione,
+                $this->rigaSegnalazione($this->segnalazione),
                 'Stato finale: ' . ($this->segnalazione->stato?->descrizione ?? 'N/D'),
-                'Operatore: ' . $this->attore->name,
+                'Chiusa ' . $this->daChi($notifiable),
             ]),
         ];
+    }
+
+    /** Il nome di chi ha chiuso solo al personale: scuole e cittadini leggono "dal comune" (spec §8). */
+    private function daChi(object $notifiable): string
+    {
+        $interno = $notifiable instanceof User && $notifiable->hasAnyRole(['admin', 'gestore', 'operaio']);
+
+        return $interno ? 'da ' . $this->attore->name : 'dal comune';
     }
 }

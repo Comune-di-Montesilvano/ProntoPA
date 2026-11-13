@@ -72,17 +72,20 @@ class ProssimoPasso
         } else {
             switch ($stato) {
                 case SegnalazioneStato::NUOVA:
-                    $titolo = 'Da smistare: conferma priorità e assegna';
-                    $this->azione($azioni, 1, 'Prendi in carico', primaria: true);
-                    $this->pannelloAssegna($azioni, 'Assegna…');
+                    $titolo = 'Da smistare';
+                    $this->pannelloAssegna($azioni, 'Assegna…', primaria: true);
+                    // Da Nuova si chiude solo senza intervento (errata, non pertinente, già risolta).
+                    $this->pannello($azioni, 'annulla', 'Chiudi', 12);
                     $this->pannelloPriorita($azioni);
                     if (Gate::forUser($this->u)->allows('accorpa', $this->s)) {
                         $azioni[] = ['tipo' => 'pannello', 'etichetta' => 'Accorpa a…', 'pannello' => 'accorpa', 'primaria' => false];
                     }
                     break;
                 case SegnalazioneStato::IN_CARICO:
-                    $titolo = 'Da assegnare';
+                    $nome = $this->s->id_operatore_assegnato ? User::whereKey($this->s->id_operatore_assegnato)->value('name') : null;
+                    $titolo = $nome ? "In carico a {$nome}" : 'In carico';
                     $this->pannelloAssegna($azioni, 'Assegna…', primaria: true);
+                    $this->pannello($azioni, 'chiudi', 'Chiudi', 9);
                     $this->pannelloPriorita($azioni);
                     break;
                 case SegnalazioneStato::ASSEGNATA_OPERATORE:
@@ -91,8 +94,9 @@ class ProssimoPasso
                     if (Gate::forUser($this->u)->allows('sollecita', $this->s)) {
                         $azioni[] = ['tipo' => 'pannello', 'etichetta' => 'Sollecita', 'pannello' => 'sollecita', 'primaria' => true];
                     }
-                    $this->pannello($azioni, 'sospendi', 'Sospendi', 4);
+                    $this->pannello($azioni, 'chiudi', 'Chiudi', 9);
                     $this->pannelloAssegna($azioni, 'Riassegna');
+                    $this->pannello($azioni, 'sospendi', 'Sospendi', 4);
                     break;
                 case SegnalazioneStato::PREVENTIVO_IN_ATTESA:
                     $titolo = 'Preventivo di € '.number_format((float) $this->s->importo_preventivo, 2, ',', '.').' da valutare';
@@ -152,7 +156,7 @@ class ProssimoPasso
 
             return [
                 'tono' => $this->tonoScadenza(),
-                'titolo' => 'Quando hai finito, comunica la fine dei lavori con le foto',
+                'titolo' => 'Quando hai finito, comunica la fine dei lavori',
                 'sottotitolo' => Scadenza::estesa($this->s)['testo'] ?? null,
                 'azioni' => $azioni,
             ];
@@ -264,7 +268,7 @@ class ProssimoPasso
 
     private function dataFineLavori(): string
     {
-        return $this->data($this->s->allegati()->where('fase', 'dopo')->max('created_at'));
+        return $this->data($this->s->fine_lavori_at);
     }
 
     private function ultimoPassaggioA(SegnalazioneStato $stato): mixed

@@ -28,13 +28,13 @@ enum SegnalazioneStato: int
         return match($this) {
             self::NUOVA                => 'Nuova',
             self::IN_CARICO            => 'In carico',
-            self::ASSEGNATA_OPERATORE  => 'Assegnata a operatore',
-            self::ASSEGNATA_IMPRESA    => 'Assegnata a impresa',
+            self::ASSEGNATA_OPERATORE  => 'Assegnata',
+            self::ASSEGNATA_IMPRESA    => 'Assegnata a ditta',
             self::PREVENTIVO_IN_ATTESA => 'Preventivo in attesa',
             self::SOSPESA              => 'Sospesa',
             self::COMPLETATA           => 'Completata',
             self::DUPLICATA            => 'Duplicata',
-            self::ANNULLATA            => 'Annullata',
+            self::ANNULLATA            => 'Chiusa senza intervento',
             self::ARCHIVIATA           => 'Archiviata',
         };
     }

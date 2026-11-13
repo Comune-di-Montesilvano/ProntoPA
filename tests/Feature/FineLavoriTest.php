@@ -2,13 +2,16 @@
 
 namespace Tests\Feature;
 
-use App\Models\AllegatoSegnalazione;
+use App\Enums\SegnalazioneStato;
 use App\Models\Appalto;
 use App\Models\Impresa;
 use App\Models\NotaSegnalazione;
 use App\Models\Segnalazione;
+use App\Models\StoricoStatoSegnalazione;
 use App\Models\User;
 use App\Notifications\FineLavoriNotification;
+use App\Notifications\SegnalazioneChiusaNotification;
+use App\Support\Segnalazioni\ProssimoPasso;
 use Database\Seeders\ImpostazioniSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\TabelleRiferimentoSeeder;
@@ -61,43 +64,67 @@ class FineLavoriTest extends TestCase
         ];
     }
 
-    public function test_ditta_comunica_fine_lavori(): void
+    private function conPreventivo(Segnalazione $s): void
     {
+        StoricoStatoSegnalazione::create(['id_segnalazione' => $s->id_segnalazione, 'id_stato_segnalazione' => 5, 'id_utente' => $this->ditta->id, 'id_utente_collegato' => 0, 'id_appalto' => 0]);
+    }
+
+    public function test_ditta_senza_preventivo_chiude(): void
+    {
+        $segnalante = User::factory()->create();
+        $segnalante->assignRole('segnalatore');
+        $this->s->update(['id_utente_segnalazione' => $segnalante->id]);
+
         $this->actingAs($this->ditta)->post(route('segnalazioni.fine-lavori', $this->s), $this->rapportino())
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('segnalazioni.show', $this->s->id_segnalazione));
 
         $s = $this->s->fresh();
-        $this->assertSame(4, $s->statoEnum()->value);
-        $this->assertSame(1, AllegatoSegnalazione::where('id_segnalazione', $s->id_segnalazione)->where('fase', 'dopo')->count());
-        $nota = NotaSegnalazione::where('id_segnalazione', $s->id_segnalazione)->firstOrFail();
+        $this->assertSame(SegnalazioneStato::COMPLETATA, $s->statoEnum());
+        $this->assertNotNull($s->fine_lavori_at);
+        $nota = NotaSegnalazione::where('id_segnalazione', $s->id_segnalazione)->oldest('id_nota')->firstOrFail();
         $this->assertStringContainsString('Fine lavori comunicata', $nota->testo);
         $this->assertStringContainsString('Ore impiegate: 3', $nota->testo);
-        $this->assertTrue($nota->visibile_impresa);
-        $this->assertTrue($s->haFineLavori());
         Notification::assertSentTo($this->gestore, FineLavoriNotification::class);
+        Notification::assertSentTo($segnalante, SegnalazioneChiusaNotification::class);
     }
 
-    public function test_operaio_assegnato_comunica_fine_lavori(): void
+    public function test_ditta_con_preventivo_resta_aperta(): void
+    {
+        $this->conPreventivo($this->s);
+
+        $this->actingAs($this->ditta)->post(route('segnalazioni.fine-lavori', $this->s), $this->rapportino())
+            ->assertSessionHasNoErrors();
+
+        $s = $this->s->fresh();
+        $this->assertSame(SegnalazioneStato::ASSEGNATA_IMPRESA, $s->statoEnum());
+        $this->assertNotNull($s->fine_lavori_at);
+        $this->assertTrue($s->haFineLavori());
+        $this->assertStringContainsString('verifica e chiudi', ProssimoPasso::per($s, $this->gestore)['titolo']);
+    }
+
+    public function test_operaio_fine_lavori_chiude(): void
     {
         $operaio = User::factory()->create();
         $operaio->assignRole('operaio');
         $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 3, 'id_operatore_assegnato' => $operaio->id]);
 
         $this->actingAs($operaio)->post(route('segnalazioni.fine-lavori', $s), $this->rapportino())
-            ->assertSessionHasNoErrors()->assertRedirect();
+            ->assertSessionHasNoErrors()->assertRedirect()->assertSessionHas('success', 'Lavoro chiuso. Grazie!');
 
-        $this->assertTrue($s->fresh()->haFineLavori());
+        $this->assertSame(SegnalazioneStato::COMPLETATA, $s->fresh()->statoEnum());
         Notification::assertSentTo($this->gestore, FineLavoriNotification::class);
     }
 
-    public function test_senza_foto_errore(): void
+    public function test_fine_lavori_senza_foto_accettata(): void
     {
         $dati = $this->rapportino();
         unset($dati['allegati']);
 
         $this->actingAs($this->ditta)->post(route('segnalazioni.fine-lavori', $this->s), $dati)
-            ->assertSessionHasErrors('allegati');
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(SegnalazioneStato::COMPLETATA, $this->s->fresh()->statoEnum());
     }
 
     public function test_ditta_su_segnalazione_chiusa_403(): void
@@ -108,21 +135,54 @@ class FineLavoriTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_chiudi_dopo_fine_lavori_non_richiede_rapportino(): void
+    public function test_chiudi_dopo_fine_lavori_con_preventivo(): void
     {
+        $this->conPreventivo($this->s);
         $this->actingAs($this->ditta)->post(route('segnalazioni.fine-lavori', $this->s), $this->rapportino());
 
         $this->actingAs($this->gestore)->post(route('segnalazioni.azione', $this->s), ['id_azione' => 9])
             ->assertSessionHasNoErrors();
 
-        $this->assertSame(7, $this->s->fresh()->statoEnum()->value);
+        $this->assertSame(SegnalazioneStato::COMPLETATA, $this->s->fresh()->statoEnum());
     }
 
-    public function test_chiudi_senza_fine_lavori_richiede_rapportino(): void
+    public function test_riassegna_dopo_fine_lavori_riparte_da_capo(): void
     {
-        $this->actingAs($this->gestore)->post(route('segnalazioni.azione', $this->s), ['id_azione' => 9])
-            ->assertSessionHasErrors(['ore_lavoro', 'materiali', 'allegati']);
+        $this->conPreventivo($this->s);
+        $this->actingAs($this->ditta)->post(route('segnalazioni.fine-lavori', $this->s), $this->rapportino());
+        $operaio = User::factory()->create();
+        $operaio->assignRole('operaio');
 
-        $this->assertSame(4, $this->s->fresh()->statoEnum()->value);
+        $this->actingAs($this->gestore)->post(route('segnalazioni.azione', $this->s), ['id_azione' => 2, 'id_operatore' => $operaio->id])
+            ->assertSessionHasNoErrors();
+
+        $s = $this->s->fresh();
+        $this->assertTrue($s->allegati()->where('fase', 'dopo')->exists());
+        $this->assertFalse($s->haFineLavori());
+        $this->assertStringNotContainsString('fine dei lavori', ProssimoPasso::per($s, $this->gestore)['titolo']);
+    }
+
+    public function test_migration_ricava_fine_lavori_dalle_foto_delle_aperte(): void
+    {
+        $this->s->forceFill(['fine_lavori_at' => null])->save();
+        $foto = $this->s->allegati()->create(['percorso' => 'x.jpg', 'tipo' => 'image/jpeg', 'nome_originale' => 'x.jpg', 'dimensione' => 1, 'id_utente_creazione' => $this->ditta->id, 'fase' => 'dopo']);
+        $chiusa = Segnalazione::factory()->create(['id_stato_segnalazione' => 7, 'data_chiusura' => now()]);
+        $chiusa->allegati()->create(['percorso' => 'y.jpg', 'tipo' => 'image/jpeg', 'nome_originale' => 'y.jpg', 'dimensione' => 1, 'id_utente_creazione' => $this->ditta->id, 'fase' => 'dopo']);
+
+        (require database_path('migrations/2026_11_13_000002_fine_lavori_da_foto.php'))->up();
+
+        $this->assertTrue($this->s->fresh()->fine_lavori_at->equalTo($foto->fresh()->created_at));
+        $this->assertNull($chiusa->fresh()->fine_lavori_at);
+    }
+
+    public function test_migration_ignora_foto_precedenti_alla_riassegnazione(): void
+    {
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 3]);
+        $s->allegati()->create(['percorso' => 'x.jpg', 'tipo' => 'image/jpeg', 'nome_originale' => 'x.jpg', 'dimensione' => 1, 'id_utente_creazione' => $this->ditta->id, 'fase' => 'dopo']);
+        StoricoStatoSegnalazione::forceCreate(['id_segnalazione' => $s->id_segnalazione, 'id_stato_segnalazione' => 3, 'id_utente' => $this->gestore->id, 'id_utente_collegato' => 0, 'id_appalto' => 0, 'data_registrazione' => now()->addMinute()]);
+
+        (require database_path('migrations/2026_11_13_000002_fine_lavori_da_foto.php'))->up();
+
+        $this->assertNull($s->fresh()->fine_lavori_at);
     }
 }

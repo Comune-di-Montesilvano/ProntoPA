@@ -54,24 +54,28 @@ class ProssimoPassoTest extends TestCase
         return Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
     }
 
-    public function test_gestore_nuova_prendi_in_carico(): void
+    public function test_gestore_nuova_assegna_o_chiudi(): void
     {
         $passo = ProssimoPasso::per(Segnalazione::factory()->create(['id_stato_segnalazione' => 1]), $this->gestore);
 
-        $this->assertSame('Da smistare: conferma priorità e assegna', $passo['titolo']);
-        $this->assertSame('Prendi in carico', $this->primaria($passo));
+        $this->assertSame('Da smistare', $passo['titolo']);
+        $this->assertSame('Assegna…', $this->primaria($passo));
+        $this->assertNotContains('Prendi in carico', $this->etichette($passo));
+        $this->assertContains('Chiudi', $this->etichette($passo));
+        $this->assertSame('annulla', collect($passo['azioni'])->firstWhere('etichetta', 'Chiudi')['pannello']);
         $this->assertContains('Accorpa a…', $this->etichette($passo));
         $this->assertContains('Priorità…', $this->etichette($passo));
         $this->assertSame('primary', $passo['tono']);
     }
 
-    public function test_gestore_in_carico_assegna(): void
+    public function test_gestore_in_carico_assegna_o_chiudi(): void
     {
-        $passo = ProssimoPasso::per(Segnalazione::factory()->create(['id_stato_segnalazione' => 2]), $this->gestore);
+        $this->gestore->update(['name' => 'Anna Bianchi']);
+        $passo = ProssimoPasso::per(Segnalazione::factory()->create(['id_stato_segnalazione' => 2, 'id_operatore_assegnato' => $this->gestore->id]), $this->gestore);
 
-        $this->assertSame('Da assegnare', $passo['titolo']);
+        $this->assertSame('In carico a Anna Bianchi', $passo['titolo']);
         $this->assertSame('Assegna…', $this->primaria($passo));
-        $this->assertContains('Priorità…', $this->etichette($passo));
+        $this->assertSame('chiudi', collect($passo['azioni'])->firstWhere('etichetta', 'Chiudi')['pannello']);
     }
 
     public function test_priorita_nel_passo_solo_a_chi_la_decide(): void
@@ -101,6 +105,8 @@ class ProssimoPassoTest extends TestCase
         $this->assertStringContainsString('è in ritardo di 2 giorni', $passo['titolo'].' '.$passo['sottotitolo']);
         $this->assertContains('Sollecita', $this->etichette($passo));
         $this->assertContains('Sospendi', $this->etichette($passo));
+        $this->assertContains('Chiudi', $this->etichette($passo));
+        $this->assertContains('Riassegna', $this->etichette($passo));
     }
 
     public function test_gestore_assegnata_impresa(): void
@@ -116,7 +122,7 @@ class ProssimoPassoTest extends TestCase
     public function test_gestore_dopo_fine_lavori_chiude(): void
     {
         $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 4, 'id_appalto' => $this->ditta()->id_appalto]);
-        AllegatoSegnalazione::create(['id_segnalazione' => $s->id_segnalazione, 'percorso' => 'x.jpg', 'tipo' => 'image/jpeg', 'nome_originale' => 'x.jpg', 'dimensione' => 1, 'id_utente_creazione' => $this->gestore->id, 'fase' => 'dopo']);
+        $s->forceFill(['fine_lavori_at' => now()])->save();
 
         $passo = ProssimoPasso::per($s, $this->gestore);
 
@@ -165,7 +171,7 @@ class ProssimoPassoTest extends TestCase
 
         $passo = ProssimoPasso::per($s, $ditta);
 
-        $this->assertSame('Quando hai finito, comunica la fine dei lavori con le foto', $passo['titolo']);
+        $this->assertSame('Quando hai finito, comunica la fine dei lavori', $passo['titolo']);
         $this->assertSame('Comunica fine lavori', $this->primaria($passo));
         $this->assertContains('Scrivi al comune', $this->etichette($passo));
     }
@@ -176,7 +182,7 @@ class ProssimoPassoTest extends TestCase
         $ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $appalto->id_impresa]);
         $ditta->assignRole('impresa');
         $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 4, 'id_appalto' => $appalto->id_appalto]);
-        AllegatoSegnalazione::create(['id_segnalazione' => $s->id_segnalazione, 'percorso' => 'x.jpg', 'tipo' => 'image/jpeg', 'nome_originale' => 'x.jpg', 'dimensione' => 1, 'id_utente_creazione' => $ditta->id, 'fase' => 'dopo']);
+        $s->forceFill(['fine_lavori_at' => now()])->save();
 
         $passo = ProssimoPasso::per($s, $ditta);
 
