@@ -54,10 +54,43 @@ return new class extends Migration
         }
     }
 
+    /** Valori prima di questa migration (TabelleRiferimentoSeeder 0.9.18). */
+    private const AZIONI_PRIMA = [
+        'prendi_in_carico' => ['Prendi in carico', [1]],
+        'assegna_operatore' => ['Assegna operatore', [2, 6]],
+        'assegna_impresa' => ['Assegna impresa', [2, 6]],
+        'sospendi' => ['Sospendi', [1, 2, 3, 4, 5]],
+        'chiudi' => ['Chiudi', [2, 3, 4, 5]],
+        'annulla' => ['Annulla', [1, 2, 3, 4, 5, 6]],
+        'archivia' => ['Archivia', [1, 2, 3, 4, 5, 6]],
+    ];
+
+    private const STATI_PRIMA = [
+        3 => 'Assegnata a operatore',
+        4 => 'Assegnata a impresa',
+        9 => 'Annullata',
+    ];
+
     public function down(): void
     {
+        $this->ripristinaRiferimenti();
+
         Schema::table('segnalazioni', function (Blueprint $table) {
             $table->dropColumn(['scadenza_manuale', 'fine_lavori_at']);
         });
+    }
+
+    public function ripristinaRiferimenti(): void
+    {
+        foreach (self::AZIONI_PRIMA as $codice => [$descrizione, $stati]) {
+            DB::table('db_azioni')->where('codice', $codice)->update([
+                'descrizione' => $descrizione,
+                'parametri_filtro' => json_encode(['stati' => $stati]),
+            ]);
+        }
+
+        foreach (self::STATI_PRIMA as $id => $descrizione) {
+            DB::table('db_stato_segnalazioni')->where('id_stato', $id)->update(['descrizione' => $descrizione]);
+        }
     }
 };

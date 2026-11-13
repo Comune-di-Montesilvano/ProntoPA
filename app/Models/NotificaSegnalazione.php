@@ -24,7 +24,7 @@ class NotificaSegnalazione extends Model
         'NotaDaEsternoNotification'        => 'Nuovo messaggio',
         'NuovaSegnalazioneNotification'    => 'Nuova segnalazione (gestori)',
         'NuovaNotaSegnalazione'            => 'Nuova nota',
-        'OperatoreAssegnatoNotification'   => 'Assegnata a operatore',
+        'OperatoreAssegnatoNotification'   => 'Assegnata',
         'RiepilogoInattivitaNotification'  => 'Riepilogo inattività (supervisori)',
         'SegnalazioneChiusaNotification'   => 'Chiusa',
         'SegnalazioneStatoCambiato'        => 'Cambio di stato',

@@ -87,6 +87,21 @@ class AzioniMultipleTest extends TestCase
         $this->assertSame(SegnalazioneStato::NUOVA, Segnalazione::find($altrui)->statoEnum());
     }
 
+    public function test_visibile_ma_non_di_competenza_saltata(): void
+    {
+        $gestore = User::factory()->create(['supervisore_segnalazioni' => false, 'gestore_segnalazioni' => true, 'gestore_tutte_tipologie' => false]);
+        $gestore->assignRole('gestore');
+        $gestore->tipologieGestite()->sync([1]);
+        // Aperta da lui: la vede, ma la tipologia non è sua.
+        [$aperta] = $this->crea(1, ['id_tipologia_segnalazione' => 2, 'id_utente_segnalazione' => $gestore->id]);
+        $this->assertTrue(Segnalazione::visibileA($gestore)->whereKey($aperta)->exists());
+
+        $this->invia(['ids' => [$aperta], 'operazione' => 'chiudi_senza_intervento', 'motivo' => 'errata'], $gestore)
+            ->assertSessionHas('error', fn ($m) => str_contains($m, "#{$aperta}: non di tua competenza"));
+
+        $this->assertSame(SegnalazioneStato::NUOVA, Segnalazione::find($aperta)->statoEnum());
+    }
+
     public function test_chiudi_senza_intervento_multipla_con_motivo(): void
     {
         $ids = $this->crea(2);
@@ -115,9 +130,48 @@ class AzioniMultipleTest extends TestCase
         }
     }
 
+    public function test_nessuna_fatta_e_un_errore(): void
+    {
+        $ids = $this->crea(2);
+
+        $this->invia(['ids' => $ids, 'operazione' => 'chiudi'])
+            ->assertSessionHas('error', fn ($m) => str_contains($m, '0 fatte'))
+            ->assertSessionMissing('success');
+    }
+
+    public function test_errore_imprevisto_su_una_riga_non_ferma_le_altre(): void
+    {
+        [$a, $b] = $this->crea(2, ['id_stato_segnalazione' => 3]);
+        $vero = app(\App\Services\SegnalazioneWorkflowService::class);
+        $this->mock(\App\Services\SegnalazioneWorkflowService::class, function ($m) use ($a, $vero) {
+            $m->shouldReceive('eseguiAzione')->andReturnUsing(function ($s, ...$resto) use ($a, $vero) {
+                if ($s->id_segnalazione === $a) {
+                    throw new \RuntimeException('boom');
+                }
+                $vero->eseguiAzione($s, ...$resto);
+            });
+        });
+
+        $this->invia(['ids' => [$a, $b], 'operazione' => 'chiudi'])
+            ->assertSessionHas('success', fn ($m) => str_contains($m, '1 fatte') && str_contains($m, "#{$a}"));
+
+        $this->assertSame(SegnalazioneStato::COMPLETATA, Segnalazione::find($b)->statoEnum());
+    }
+
     public function test_max_100_ids(): void
     {
         $this->invia(['ids' => range(1, 101), 'operazione' => 'chiudi'])->assertSessionHasErrors('ids');
+    }
+
+    public function test_stampa_schede_raggruppa_per_nome_di_chi_lavora(): void
+    {
+        $zeta = User::factory()->create(['name' => 'Zeta Rossi']);
+        $alfa = User::factory()->create(['name' => 'Alfa Bianchi']);
+        [$a] = $this->crea(1, ['id_stato_segnalazione' => 3, 'id_operatore_assegnato' => $zeta->id, 'testo_segnalazione' => 'LAVORO-DI-ZETA']);
+        [$b] = $this->crea(1, ['id_stato_segnalazione' => 3, 'id_operatore_assegnato' => $alfa->id, 'testo_segnalazione' => 'LAVORO-DI-ALFA']);
+
+        $this->actingAs($this->gestore)->get(route('gestione.stampa-schede', ['ids' => [$a, $b]]))
+            ->assertOk()->assertSeeInOrder(['LAVORO-DI-ALFA', 'LAVORO-DI-ZETA']);
     }
 
     public function test_stampa_schede_con_ids_solo_selezionate(): void

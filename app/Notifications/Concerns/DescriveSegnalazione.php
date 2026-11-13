@@ -64,7 +64,10 @@ trait DescriveSegnalazione
             return null;
         }
 
-        $descrizione = $s->tipologia()->value('descrizione');
+        // Relazione già caricata (digest, riepiloghi): niente query per riga.
+        $descrizione = $s->relationLoaded('tipologia')
+            ? $s->getRelation('tipologia')?->getAttribute('descrizione')
+            : $s->tipologia()->value('descrizione');
 
         return filled($descrizione) ? (string) $descrizione : null;
     }

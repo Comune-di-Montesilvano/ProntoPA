@@ -126,6 +126,22 @@ class EmailDescrizioneSegnalazioneTest extends TestCase
         $this->assertStringNotContainsString('·  ·', $mail->subject);
     }
 
+    public function test_digest_non_fa_una_query_per_riga(): void
+    {
+        $conta = function (int $n): int {
+            $ids = Segnalazione::factory()->count($n)->create(['id_tipologia_segnalazione' => 6])->pluck('id_segnalazione')->all();
+            \Illuminate\Support\Facades\DB::flushQueryLog();
+            \Illuminate\Support\Facades\DB::enableQueryLog();
+            (new DigestGestoreNotification([], [], $ids))->toMail($this->gestore);
+            $q = count(\Illuminate\Support\Facades\DB::getQueryLog());
+            \Illuminate\Support\Facades\DB::disableQueryLog();
+
+            return $q;
+        };
+
+        $this->assertSame($conta(1), $conta(5));
+    }
+
     public function test_riepilogo_digest_righe_con_tipologia(): void
     {
         $s = $this->segnalazione();

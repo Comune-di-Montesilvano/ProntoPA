@@ -87,12 +87,7 @@ class GestioneController extends Controller
         $filtri = $this->parametriFiltro($request);
 
         // Pannelli delle azioni multiple: stessi elenchi del pannello Assegna della scheda.
-        $operatoriAssegnabili = User::where(fn ($q) => $q->where('gestore_segnalazioni', true)
-                ->orWhere('amministratore', true)
-                ->orWhereHas('roles', fn ($r) => $r->whereIn('name', ['operaio', 'gestore', 'admin'])))
-            ->where(fn ($q) => $q->whereNull('attivo')->orWhere('attivo', true))
-            ->orderBy('name')
-            ->get();
+        $operatoriAssegnabili = User::assegnabili()->orderBy('name')->get();
         $squadre = Impostazione::get('squadre_enabled', false)
             ? Squadra::where('attiva', true)->orderBy('nome')->get()
             : collect();
@@ -164,24 +159,47 @@ class GestioneController extends Controller
         $ids = array_slice(array_filter(array_map('intval', (array) $request->query('ids', []))), 0, 100);
         $query = $ids
             ? Segnalazione::visibileA($request->user())->whereIn('id_segnalazione', $ids)
-                ->orderBy('id_operatore_assegnato')->orderBy('id_appalto')->orderBy('id_plesso')->orderBy('id_segnalazione')
             : $this->elencoFiltrato($request);
 
         // Stesse relazioni di SegnalazioneController::stampa (scheda singola).
         $segnalazioni = $query
             ->with([
                 'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
-                'operatore', 'utente', 'appalto.impresa',
+                'operatore', 'utente', 'appalto.impresa', 'squadraAssegnata',
                 'note' => fn ($q) => $q->visibiliA($request->user()),
                 'storicoStati.stato', 'storicoStati.utente',
             ])
             ->get();
+
+        if ($ids) {
+            // Un mazzo di fogli per chi va sul posto: per nome di chi lavora, poi per sede.
+            $segnalazioni = $segnalazioni->sortBy([
+                fn ($a, $b) => self::chiLavora($a) <=> self::chiLavora($b),
+                fn ($a, $b) => strcasecmp((string) $a->plesso?->nome, (string) $b->plesso?->nome),
+                fn ($a, $b) => $a->id_segnalazione <=> $b->id_segnalazione,
+            ])->values();
+        }
 
         return view('segnalazioni.print-multiple', [
             'segnalazioni' => $segnalazioni,
             'tab' => $request->get('tab', 'aperte'),
             'tabLabels' => self::TAB_LABELS,
         ]);
+    }
+
+    /**
+     * Chiave di ordinamento: non assegnate in fondo, poi ditta, squadra o persona per nome.
+     *
+     * @return array{0: int, 1: string}
+     */
+    private static function chiLavora(Segnalazione $s): array
+    {
+        $nome = $s->appalto->impresa->ragione_sociale
+            ?? $s->squadraAssegnata->nome
+            ?? $s->operatore->name
+            ?? null;
+
+        return $nome === null ? [1, ''] : [0, mb_strtolower((string) $nome)];
     }
 
     /**

@@ -38,6 +38,15 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 - Riaprire una segnalazione la stacca dalla ditta e dalla squadra di prima.
 - L'email di chiusura a scuole e cittadini dice "dal comune" invece del nome di chi ha chiuso.
 - Il menu ⋮ dell'elenco non propone più azioni che chiedono un motivo o un pannello.
+- Tornare al calcolo automatico con una scadenza già passata fa partire l'avviso di scadenza superata.
+- Assegna (scheda e azioni multiple) accetta solo personale del comune attivo e squadre attive con
+  le squadre accese, come negli elenchi del pannello.
+- Azioni multiple: "0 fatte" è segnalato come errore; un errore imprevisto su una segnalazione non
+  ferma le altre e compare tra le saltate.
+- Stampa schede delle selezionate raggruppata per ditta, squadra o persona (in ordine di nome), poi
+  per sede.
+- Digest mattutino: niente più una query per riga per la tipologia.
+- Testi allineati ai nomi nuovi degli stati (attività, notifiche tracciate, documentazione API).
 - Il digest mattutino usava una funzione SQL solo MariaDB per l'ordinamento.
 
 ## [0.9.18] - 2026-11-12

@@ -147,4 +147,24 @@ class RevisioneIterTest extends TestCase
         $this->assertStringContainsString('dal comune', $esterna);
         $this->assertStringContainsString('Paolo Neri', $interna);
     }
+
+    public function test_assegna_solo_a_utenti_assegnabili_e_squadre_attive(): void
+    {
+        $scuola = User::factory()->create(['auth_source' => 'spid']);
+        $scuola->assignRole('segnalatore');
+        $squadra = \App\Models\Squadra::create(['nome' => 'Elettricisti', 'id_caposquadra' => $this->gestore->id, 'attiva' => true]);
+        \App\Models\Impostazione::set('squadre_enabled', false);
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 1]);
+
+        $this->actingAs($this->gestore)->post(route('segnalazioni.azione', $s), ['id_azione' => 2, 'id_operatore' => $scuola->id])
+            ->assertSessionHasErrors('id_operatore');
+        $this->actingAs($this->gestore)->post(route('segnalazioni.azione', $s), ['id_azione' => 2, 'id_squadra' => $squadra->id_squadra])
+            ->assertSessionHasErrors('id_squadra');
+        $this->actingAs($this->gestore)->post(route('gestione.azioni-multiple'), ['ids' => [$s->id_segnalazione], 'operazione' => 'assegna', 'tipo' => 'operaio', 'id_operatore' => $scuola->id])
+            ->assertSessionHasErrors('id_operatore');
+        $this->actingAs($this->gestore)->post(route('gestione.azioni-multiple'), ['ids' => [$s->id_segnalazione], 'operazione' => 'assegna', 'tipo' => 'squadra', 'id_squadra' => $squadra->id_squadra])
+            ->assertSessionHasErrors('id_squadra');
+
+        $this->assertSame(SegnalazioneStato::NUOVA, $s->fresh()->statoEnum());
+    }
 }

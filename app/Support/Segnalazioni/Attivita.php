@@ -126,7 +126,7 @@ class Attivita
             SegnalazioneStato::SOSPESA => 'ha sospeso',
             SegnalazioneStato::COMPLETATA => 'ha chiuso',
             SegnalazioneStato::DUPLICATA => 'ha accorpato a una segnalazione precedente',
-            SegnalazioneStato::ANNULLATA => 'ha annullato',
+            SegnalazioneStato::ANNULLATA => 'ha chiuso senza intervento',
             SegnalazioneStato::ARCHIVIATA => 'ha archiviato',
             null => 'ha aggiornato lo stato',
         };

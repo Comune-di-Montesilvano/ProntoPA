@@ -55,7 +55,9 @@ class ScadenzaManuale
         $scadenza = $this->sla->calcolaScadenza($s);
         if ($scadenza) {
             $s->data_scadenza_sla = $scadenza;
-            $s->sla_violato = $scadenza->isPast();
+            // La segna (e avvisa) sla:check, come per ogni scadenza appena superata.
+            $s->sla_violato = false;
+            $s->sla_warning_inviato = false;
         }
         $s->save();
     }

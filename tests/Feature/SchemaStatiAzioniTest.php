@@ -48,6 +48,19 @@ class SchemaStatiAzioniTest extends TestCase
         $this->assertSame('Chiusa senza intervento', SegnalazioneStato::from(9)->label());
     }
 
+    public function test_down_ripristina_descrizioni_e_filtri(): void
+    {
+        $this->seed(TabelleRiferimentoSeeder::class);
+        $migration = require database_path('migrations/2026_11_13_000001_schema_stati_azioni_semplice.php');
+
+        $migration->ripristinaRiferimenti();
+
+        $this->assertSame('Annulla', Azione::where('codice', 'annulla')->value('descrizione'));
+        $this->assertSame([1], Azione::where('codice', 'prendi_in_carico')->firstOrFail()->parametri_filtro['stati']);
+        $this->assertSame([2, 3, 4, 5], Azione::where('codice', 'chiudi')->firstOrFail()->parametri_filtro['stati']);
+        $this->assertSame('Annullata', DB::table('db_stato_segnalazioni')->where('id_stato', 9)->value('descrizione'));
+    }
+
     public function test_migration_aggiorna_righe_esistenti(): void
     {
         DB::table('db_azioni')->where('codice', 'chiudi')->delete();

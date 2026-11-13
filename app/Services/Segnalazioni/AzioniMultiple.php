@@ -50,6 +50,10 @@ class AzioniMultiple
                 $fatte++;
             } catch (ValidationException $e) {
                 $saltate[$s->id_segnalazione] = (string) collect($e->errors())->flatten()->first();
+            } catch (\Throwable $e) {
+                // Un errore su una riga non deve lasciare le altre a metà senza dirlo.
+                report($e);
+                $saltate[$s->id_segnalazione] = 'errore imprevisto, riprova dalla scheda';
             }
         }
 

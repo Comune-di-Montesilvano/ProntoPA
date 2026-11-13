@@ -268,12 +268,7 @@ class SegnalazioneController extends Controller
         $squadre = collect();
         $appaltiValidi = collect();
         if ($lettura === 'gestore') {
-            $operatori = User::where(fn ($q) => $q->where('gestore_segnalazioni', true)
-                    ->orWhere('amministratore', true)
-                    ->orWhereHas('roles', fn ($r) => $r->whereIn('name', ['operaio', 'gestore', 'admin'])))
-                ->where(fn ($q) => $q->whereNull('attivo')->orWhere('attivo', true))
-                ->orderBy('name')
-                ->get();
+            $operatori = User::assegnabili()->orderBy('name')->get();
             if (Impostazione::get('squadre_enabled', false)) {
                 $squadre = Squadra::where('attiva', true)->orderBy('nome')->get();
             }
@@ -301,9 +296,9 @@ class SegnalazioneController extends Controller
 
         $rules = [
             'id_azione'                 => ['required', 'integer', 'exists:db_azioni,id_azione'],
-            'id_operatore'              => ['nullable', 'integer', 'exists:users,id'],
+            'id_operatore'              => ['nullable', ...\App\Support\Segnalazioni\RegoleAssegnazione::operatore()],
             'id_appalto'                => ['nullable', 'integer', 'exists:appalti,id_appalto'],
-            'id_squadra'                => ['nullable', 'integer', 'exists:squadre,id_squadra'],
+            'id_squadra'                => ['nullable', ...\App\Support\Segnalazioni\RegoleAssegnazione::squadra()],
             'nota'                      => ['nullable', 'string', 'max:2000'],
             'id_segnalazione_correlata' => ['nullable', 'integer', 'exists:segnalazioni,id_segnalazione'],
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],

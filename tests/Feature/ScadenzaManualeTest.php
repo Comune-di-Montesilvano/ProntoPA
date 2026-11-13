@@ -106,6 +106,19 @@ class ScadenzaManualeTest extends TestCase
         $this->assertTrue($prima->equalTo($s->data_scadenza_sla));
     }
 
+    public function test_rimuovi_con_scadenza_passata_lascia_avvisare_sla_check(): void
+    {
+        SlaConfigurazione::create(['livello_priorita' => 2, 'ore_target' => 3, 'ore_warning' => 4, 'unita' => 'giorni', 'descrizione' => 'Media']);
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 3, 'livello_priorita' => 2, 'data_segnalazione' => Carbon::parse('2026-10-01 09:00')]);
+        app(ScadenzaManuale::class)->imposta($s, Carbon::parse('2026-11-30'), $this->gestore);
+
+        app(ScadenzaManuale::class)->rimuovi($s);
+
+        $s->refresh();
+        $this->assertTrue($s->data_scadenza_sla->isPast());
+        $this->assertFalse((bool) $s->sla_violato, 'sla:check deve poterla segnare e avvisare');
+    }
+
     public function test_rimuovi_torna_al_calcolo(): void
     {
         SlaConfigurazione::create(['livello_priorita' => 2, 'ore_target' => 3, 'ore_warning' => 4, 'unita' => 'giorni', 'descrizione' => 'Media']);

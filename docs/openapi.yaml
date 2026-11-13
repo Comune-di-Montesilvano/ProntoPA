@@ -164,7 +164,7 @@ components:
         stato:
           type: object
           properties:
-            id: { type: integer, description: "1=Nuova 2=In carico 3=Assegnata a operatore 4=Assegnata a impresa 5=Preventivo in attesa 6=Sospesa 7=Completata 8=Duplicata 9=Annullata 10=Archiviata" }
+            id: { type: integer, description: "1=Nuova 2=In carico 3=Assegnata 4=Assegnata a ditta 5=Preventivo in attesa 6=Sospesa 7=Completata 8=Accorpata 9=Chiusa senza intervento 10=Archiviata" }
             descrizione: { type: string }
         data_segnalazione: { type: string, format: date-time }
         data_chiusura: { type: string, format: date-time, nullable: true }

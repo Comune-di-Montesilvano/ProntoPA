@@ -21,8 +21,8 @@ class AzioniMultipleController extends Controller
             'ids.*' => ['integer'],
             'operazione' => ['required', Rule::in(AzioniMultiple::OPERAZIONI)],
             'tipo' => ['required_if:operazione,assegna', 'nullable', Rule::in(['me', 'operaio', 'squadra', 'ditta'])],
-            'id_operatore' => ['required_if:tipo,operaio', 'nullable', 'integer', 'exists:users,id'],
-            'id_squadra' => ['required_if:tipo,squadra', 'nullable', 'integer', 'exists:squadre,id_squadra'],
+            'id_operatore' => ['required_if:tipo,operaio', 'nullable', ...\App\Support\Segnalazioni\RegoleAssegnazione::operatore()],
+            'id_squadra' => ['required_if:tipo,squadra', 'nullable', ...\App\Support\Segnalazioni\RegoleAssegnazione::squadra()],
             'id_appalto' => ['required_if:tipo,ditta', 'nullable', 'integer', 'exists:appalti,id_appalto'],
             'data_scadenza' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
             'motivo' => ['required_if:operazione,chiudi_senza_intervento', 'nullable', Rule::in(array_keys(SegnalazioneWorkflowService::MOTIVI_SENZA_INTERVENTO))],
@@ -52,7 +52,8 @@ class AzioniMultipleController extends Controller
                 ->take(10)->map(fn (string $motivo, int $id) => "#{$id}: {$motivo}")->implode('; ');
         }
 
-        return redirect()->to($this->ritorno($dati['ritorno'] ?? null))->with('success', $messaggio);
+        return redirect()->to($this->ritorno($dati['ritorno'] ?? null))
+            ->with($esito['fatte'] > 0 ? 'success' : 'error', $messaggio);
     }
 
     /** Torna all'elenco con gli stessi filtri: accetta solo una query string, mai un altro URL. */
