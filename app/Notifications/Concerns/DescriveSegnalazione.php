@@ -4,6 +4,7 @@ namespace App\Notifications\Concerns;
 
 use App\Models\Segnalazione;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -48,7 +49,7 @@ trait DescriveSegnalazione
             $m->line('**Referente:** '.implode(' · ', array_filter([$plesso->referente, $plesso->recapiti], 'filled')));
         }
         if ($s->data_scadenza_sla) {
-            $m->line('**Scadenza:** '.$s->data_scadenza_sla->format('d/m/Y H:i'));
+            $m->line('**Scadenza:** '.Carbon::parse($s->data_scadenza_sla)->format('d/m/Y H:i'));
         }
         if (filled($nota)) {
             $m->line('**Nota del comune:** '.Str::limit((string) $nota, 1000));
@@ -63,7 +64,7 @@ trait DescriveSegnalazione
             return null;
         }
 
-        $descrizione = $s->tipologia?->descrizione;
+        $descrizione = $s->tipologia()->value('descrizione');
 
         return filled($descrizione) ? (string) $descrizione : null;
     }

@@ -9,6 +9,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Carbon;
 
 class DigestGestoreNotification extends Notification implements ShouldQueue
 {
@@ -44,14 +45,14 @@ class DigestGestoreNotification extends Notification implements ShouldQueue
         if ($inRitardo->isNotEmpty()) {
             $mail->line('🔴 In ritardo (' . $inRitardo->count() . '):');
             foreach ($inRitardo as $s) {
-                $mail->line($this->rigaSegnalazione($s) . ' (scaduta il ' . $s->data_scadenza_sla?->format('d/m') . ')');
+                $mail->line($this->rigaSegnalazione($s) . ' (scaduta il ' . Carbon::parse($s->data_scadenza_sla)->format('d/m') . ')');
             }
         }
 
         if ($inScadenza->isNotEmpty()) {
             $mail->line('🟡 In scadenza (' . $inScadenza->count() . '):');
             foreach ($inScadenza as $s) {
-                $mail->line($this->rigaSegnalazione($s) . ' (scade il ' . $s->data_scadenza_sla?->format('d/m H:i') . ')');
+                $mail->line($this->rigaSegnalazione($s) . ' (scade il ' . Carbon::parse($s->data_scadenza_sla)->format('d/m H:i') . ')');
             }
         }
 

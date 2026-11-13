@@ -183,9 +183,12 @@ Primo login AD: aggancio account legacy `locale` non-ditta con stessa email (se 
 
 Fonte di verità: `app/Enums/SegnalazioneStato.php` (int-backed enum, **non** una tabella di riferimento).
 
-1=Nuova 2=In carico 3=Assegnata a operatore 4=Assegnata a impresa 5=Preventivo in attesa 6=Sospesa 7=Completata† 8=Duplicata† 9=Annullata† 10=Archiviata† († = `isTerminale()`)
+Schema semplificato v0.9.19 (spec `docs/superpowers/specs/2026-11-13-iter-segnalazioni-semplice-design.md`): 1=Nuova 2=In carico (a un gestore, "Assegna a me") 3=Assegnata (operaio/squadra) 4=Assegnata a ditta 5=Preventivo in attesa 6=Sospesa 7=Completata† 8=Accorpata† 9=Chiusa senza intervento† 10=Archiviata† (solo automatica per inattività) († = `isTerminale()`). Valori invariati, descrizioni/stati ammessi delle azioni allineati dalla migration `2026_11_13_000001` (`aggiornaRiferimenti()`, anche nel seeder).
 
-Azioni: assegna impresa/operatore/squadra · chiudi · invia/accetta preventivo · comunica fine lavori (ditta/operaio, foto `fase=dopo`: poi "Chiudi" non richiede il rapportino) · archivia · sospendi · riapri · sollecita · accorpa (sostituisce "segna duplicata"/"unisci", v0.9) · collega a precedente (guasto ricorrente, `id_segnalazione_correlata`, resta aperta)
+Azioni: **Assegna/Riassegna** da 1–5 (me/operaio/squadra/ditta; riassegnare sostituisce il precedente, la ditta perde la visibilità, avvisato solo il nuovo) · **Chiudi** da 2/3/4 (nota e foto facoltative, niente rapportino) · **Chiudi senza intervento** da 1–6 (azione `annulla`, `motivo` obbligatorio `SegnalazioneWorkflowService::MOTIVI_SENZA_INTERVENTO`, nota obbligatoria se `altro`, nota visibile al segnalante) · **fine lavori** (ditta/operaio, foto facoltative, `fine_lavori_at`): chiude subito, salvo ditta con preventivo nello storico (`Segnalazione::haPreventivo()`) → resta 4 "verifica e chiudi" · sospendi e rifiuta preventivo con motivo obbligatorio · riapri (→ 2 in carico a chi riapre) · sollecita · accorpa · collega a precedente.
+**Scadenza manuale** (`segnalazioni.scadenza_manuale`, `Services/Segnalazioni/ScadenzaManuale`): data dal pannello Assegna (`data_scadenza`) = chiusura d'ufficio di quel giorno, nessun ricalcolo automatico (job SLA, priorità) la tocca; Riapri/Riprendi la tolgono.
+**Azioni multiple** in elenco gestione (`AzioniMultipleController`, `Services/Segnalazioni/AzioniMultiple`, max 100): assegna/chiudi/chiudi senza intervento/stampa schede (`stampa-schede?ids[]=`); ognuna passa dal workflow in transazione propria, le non applicabili saltate col motivo.
+**Email** (`Notifications/Concerns/DescriveSegnalazione`): oggetto `<motivo> — #id · TIPOLOGIA · titolo` + riepilogo; a chi lavora anche testo, sede, referente, scadenza, nota del comune (assegnazioni: ultimo argomento `?string $nota`).
 
 Transizioni: `app/Services/SegnalazioneWorkflowService.php` · storico: tabella `stati_segnalazioni` (model `StoricoStatoSegnalazione`, alimenta i KPI)
 

@@ -65,7 +65,7 @@ class DitteECanaliTest extends TestCase
 
     // ── 1. TEST RAPPORTINO DI FINE LAVORO ──────────────────────────────────────
 
-    public function test_proposta_chiusura_richiede_foto_e_campi_rapportino(): void
+    public function test_chiusura_senza_rapportino_con_foto_facoltativa(): void
     {
         $gestore = $this->gestore();
 
@@ -73,39 +73,22 @@ class DitteECanaliTest extends TestCase
             'id_stato_segnalazione' => \App\Enums\SegnalazioneStato::IN_CARICO, // stato 2
         ]);
 
-        // 1. Invio senza dati e senza foto -> fallisce
-        $response = $this->actingAs($gestore)->post(route('segnalazioni.azione', $segnalazione), [
-            'id_azione' => 9, // CHIUDI (richiede rapportino)
-        ]);
-
-        $response->assertSessionHasErrors(['ore_lavoro', 'materiali', 'nota', 'allegati']);
-
-        // 2. Invio con dati completi e foto -> ha successo
+        // Dalla 0.9.19 chiudere non chiede ore, materiali né foto.
         $response = $this->actingAs($gestore)->post(route('segnalazioni.azione', $segnalazione), [
             'id_azione' => 9,
-            'ore_lavoro' => 4.5,
-            'materiali' => 'Miscelatore, guarnizioni, canapa',
             'nota' => 'Sostituito il rubinetto che perdeva.',
             'allegati' => [UploadedFile::fake()->image('dopo.jpg')],
         ]);
 
-        $response->assertRedirect();
+        $response->assertSessionHasNoErrors()->assertRedirect();
 
         $segnalazione->refresh();
         $this->assertEquals(\App\Enums\SegnalazioneStato::COMPLETATA, $segnalazione->id_stato_segnalazione);
 
-        // Verifica che la foto sia stata salvata con fase 'dopo'
         $allegato = AllegatoSegnalazione::where('id_segnalazione', $segnalazione->id_segnalazione)->first();
         $this->assertNotNull($allegato);
         $this->assertEquals('dopo', $allegato->fase);
-
-        // Verifica che la nota contenga ore e materiali
-        $nota = $segnalazione->note()->first();
-        $this->assertNotNull($nota);
-        $this->assertStringContainsString('Rapportino di fine lavoro:', $nota->testo);
-        $this->assertStringContainsString('Ore impiegate: 4.5', $nota->testo);
-        $this->assertStringContainsString('Materiali usati: Miscelatore, guarnizioni, canapa', $nota->testo);
-        $this->assertStringContainsString('Sostituito il rubinetto che perdeva.', $nota->testo);
+        $this->assertStringContainsString('Sostituito il rubinetto che perdeva.', $segnalazione->note()->first()->testo);
     }
 
     public function test_gestore_puo_annullare_segnalazione_con_nota(): void
@@ -116,7 +99,8 @@ class DitteECanaliTest extends TestCase
         ]);
 
         $response = $this->actingAs($gestore)->post(route('segnalazioni.azione', $segnalazione), [
-            'id_azione' => 12, // ANNULLA
+            'id_azione' => 12, // CHIUDI SENZA INTERVENTO
+            'motivo' => 'altro',
             'nota' => 'Intervento non eseguito a regola d\'arte. La perdita persiste.',
         ]);
 

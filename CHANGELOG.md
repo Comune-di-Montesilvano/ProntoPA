@@ -4,6 +4,31 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [0.9.19] - 2026-11-13
+
+### Changed
+- Iter delle segnalazioni semplificato: si assegna (a sé, a un operaio, a una squadra o a una
+  ditta) direttamente da Nuova e si può riassegnare in ogni momento; chi aveva il lavoro prima
+  non lo vede più e viene avvisato solo il nuovo.
+- Chiudere non chiede più ore, materiali e foto: nota e foto sono facoltative.
+- Da Nuova si chiude "senza intervento" (non pertinente, errata, già risolta, altro) con un
+  motivo che vede anche chi ha segnalato. "Annullata" diventa "Chiusa senza intervento".
+- Fine lavori di operaio o caposquadra chiude subito la segnalazione; quella della ditta chiude
+  subito se non c'è stato un preventivo, altrimenti resta al comune da verificare. Foto facoltative.
+- Sospendere e rifiutare un preventivo richiedono un motivo.
+- Tutte le email sulle segnalazioni hanno nell'oggetto numero, tipologia e titolo e in testa un
+  riepilogo; chi riceve il lavoro trova anche testo segnalato, sede, referente, scadenza e la nota
+  di chi assegna.
+
+### Added
+- Scadenza fissata a mano dal pannello Assegna: non viene più ricalcolata in automatico.
+- Azioni multiple nell'elenco gestione: seleziona le righe e assegna, chiudi, chiudi senza
+  intervento o stampa le schede (fino a 100 per volta).
+
+### Fixed
+- "Riassegna" compariva ma non si poteva usare.
+- Il digest mattutino usava una funzione SQL solo MariaDB per l'ordinamento.
+
 ## [0.9.18] - 2026-11-12
 
 ### Changed
