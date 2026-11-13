@@ -8,7 +8,18 @@
     </x-slot>
 
     @php
+        // Prima l'istituto, poi la sede: scelta già fatta quando ce n'è una sola.
+        $perIstituto = $plessi->groupBy('id_istituto');
         $sedeScelta = old('id_plesso', $plessi->count() === 1 ? $plessi->first()->id_plesso : null);
+        $istitutoScelto = $sedeScelta
+            ? $plessi->firstWhere('id_plesso', (int) $sedeScelta)?->id_istituto
+            : ($perIstituto->count() === 1 ? $perIstituto->keys()->first() : null);
+        if (! $sedeScelta && $istitutoScelto && $perIstituto[$istitutoScelto]->count() === 1) {
+            $sedeScelta = $perIstituto[$istitutoScelto]->first()->id_plesso;
+        }
+        $indirizzi = $plessi->mapWithKeys(fn ($p) => [(string) $p->id_plesso => (string) $p->indirizzo]);
+        $sediUniche = $perIstituto->filter(fn ($sedi) => $sedi->count() === 1)
+            ->mapWithKeys(fn ($sedi, $id) => [(string) $id => (string) $sedi->first()->id_plesso]);
         $allegatiMaxSizeMb     = (int) \App\Models\Impostazione::get('allegati_max_size_mb', 10);
         $allegatiMaxPerRequest = (int) \App\Models\Impostazione::get('allegati_max_per_request', 5);
         $allegatiMime          = \App\Models\Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png');
@@ -18,43 +29,75 @@
         <form method="POST" action="{{ route('segnalazioni.store') }}" class="p-6 space-y-6"
               enctype="multipart/form-data"
               x-data="{
+                  istituto: @js($istitutoScelto ? (string) $istitutoScelto : ''),
                   sede: @js($sedeScelta ? (string) $sedeScelta : ''),
+                  indirizzi: @js($indirizzi),
+                  sediUniche: @js($sediUniche),
                   tipologiaId: @js(old('id_tipologia_segnalazione') ? (int) old('id_tipologia_segnalazione') : null),
                   simili: [],
                   ignora: false,
-                  indirizzo() { return this.$refs.sede?.selectedOptions[0]?.dataset.indirizzo ?? '' },
+                  indirizzo() { return this.indirizzi[this.sede] ?? '' },
+                  scegliIstituto() { this.sede = this.sediUniche[this.istituto] ?? '' },
               }"
               x-init="$watch('tipologiaId', () => { ignora = false; controllaSimili($data) });
                       $watch('sede', () => { ignora = false; controllaSimili($data) });
                       controllaSimili($data)">
             @csrf
 
-            {{-- 1. Sede --}}
-            <div>
-                <x-input-label for="id_plesso" value="Sede *" />
-                @if($plessi->isEmpty())
+            {{-- 1. Istituto, poi sede --}}
+            @if($plessi->isEmpty())
+                <div>
+                    <x-input-label value="Sede *" />
                     <p class="mt-1 rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
                         Non hai sedi su cui segnalare. Le scuole segnalano per le sedi coperte dalle loro deleghe.
                     </p>
-                @endif
-                <select id="id_plesso" name="id_plesso" required x-ref="sede" x-model="sede"
-                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_plesso') border-red-500 @enderror">
-                    @if($plessi->count() !== 1)
-                        <option value="">— Scegli la sede —</option>
-                    @endif
-                    @foreach($plessi->groupBy(fn ($p) => $p->istituto?->categoria?->nome ?? 'Altro') as $categoria => $items)
-                        <optgroup label="{{ $categoria }}">
-                            @foreach($items as $p)
-                                <option value="{{ $p->id_plesso }}" @selected((string) $sedeScelta === (string) $p->id_plesso) data-indirizzo="{{ $p->indirizzo }}">
-                                    {{ $p->istituto ? $p->istituto->descrizione.' — ' : '' }}{{ $p->etichetta() }}
-                                </option>
+                </div>
+            @else
+                <div>
+                    <x-input-label for="istituto" value="Istituto *" />
+                    @if($perIstituto->count() === 1)
+                        <p class="mt-1 font-medium text-gray-900">{{ $plessi->first()->istituto?->descrizione }}</p>
+                    @else
+                        <select id="istituto" x-model="istituto" @change="scegliIstituto()" required
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">— Scegli l'istituto —</option>
+                            @foreach($perIstituto->sortBy(fn ($sedi) => $sedi->first()->istituto?->descrizione) as $idIstituto => $sedi)
+                                <option value="{{ $idIstituto }}" @selected((string) $istitutoScelto === (string) $idIstituto)>{{ $sedi->first()->istituto?->descrizione }}</option>
                             @endforeach
-                        </optgroup>
+                        </select>
+                    @endif
+                </div>
+
+                <div x-show="istituto" @if(! $istitutoScelto) style="display: none" @endif>
+                    <x-input-label value="Sede *" />
+                    {{-- Un campo per istituto: solo quello attivo viene inviato (i disabilitati no).
+                         Sede unica: solo il nome, niente da scegliere. --}}
+                    @foreach($perIstituto as $idIstituto => $sedi)
+                        @php $attiva = (string) $istitutoScelto === (string) $idIstituto; @endphp
+                        @if($sedi->count() === 1)
+                            @php $unica = $sedi->first(); @endphp
+                            <div x-show="istituto == '{{ $idIstituto }}'" @if(! $attiva) style="display: none" @endif>
+                                <input type="hidden" name="id_plesso" value="{{ $unica->id_plesso }}" data-istituto="{{ $idIstituto }}"
+                                       :disabled="istituto != '{{ $idIstituto }}'" @if(! $attiva) disabled @endif>
+                                <p class="mt-1 font-medium text-gray-900">{{ $unica->nome }}@if($unica->ordineScuola()) · {{ $unica->ordineScuola() }}@endif</p>
+                            </div>
+                            @continue
+                        @endif
+                        <select name="id_plesso" data-istituto="{{ $idIstituto }}" required
+                                x-model="sede" x-show="istituto == '{{ $idIstituto }}'" :disabled="istituto != '{{ $idIstituto }}'"
+                                @if(! $attiva) disabled style="display: none" @endif
+                                aria-label="Sede"
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('id_plesso') border-red-500 @enderror">
+                            <option value="">— Scegli la sede —</option>
+                            @foreach($sedi->sortBy('nome') as $p)
+                                <option value="{{ $p->id_plesso }}" @selected((string) $sedeScelta === (string) $p->id_plesso)>{{ $p->nome }}@if($p->ordineScuola()) · {{ $p->ordineScuola() }}@endif</option>
+                            @endforeach
+                        </select>
                     @endforeach
-                </select>
-                <p class="mt-1 text-sm text-gray-600" x-show="indirizzo()" x-text="indirizzo()"></p>
-                <x-input-error :messages="$errors->get('id_plesso')" class="mt-1" />
-            </div>
+                    <p class="mt-1 text-sm text-gray-600" x-show="indirizzo()" x-text="indirizzo()"></p>
+                </div>
+            @endif
+            <x-input-error :messages="$errors->get('id_plesso')" class="-mt-4" />
 
             {{-- 2. Tipologia --}}
             <div>
