@@ -4,6 +4,13 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.1] - 2026-11-13
+
+### Changed
+- Nuova segnalazione: prima si sceglie l'istituto, poi la sede tra le sue (nome e ordine di
+  scuola, indirizzo sotto). Niente più categoria né codice meccanografico nell'elenco. Con un
+  solo istituto o una sola sede non c'è niente da scegliere: si vede solo il nome.
+
 ## [1.0.0] - 2026-11-13
 
 > **Aggiornamento senza ritorno: prima di aggiornare fare un backup da Admin → Backup

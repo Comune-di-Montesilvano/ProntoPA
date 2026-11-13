@@ -63,6 +63,25 @@ class FormNuovaSegnalazioneTest extends TestCase
             ->assertDontSee('name="latitudine"', false);
     }
 
+    public function test_prima_istituto_poi_sede_senza_categoria_ne_codice(): void
+    {
+        $altro = $this->istitutoConPlessi('PEIC777777', 'peic777777@istruzione.it');
+        $categoria = $this->ente->categoria->nome;
+
+        $html = $this->actingAs($this->urp)->get(route('segnalazioni.create'))
+            ->assertOk()
+            ->assertSeeInOrder(['Istituto', 'Sede'])
+            ->assertSee("— Scegli l'istituto —", false)
+            ->assertDontSee('<optgroup', false)
+            ->assertDontSee($categoria)
+            ->getContent();
+
+        // Una select di sedi per istituto: solo quella dell'istituto scelto viene inviata.
+        $this->assertStringContainsString('data-istituto="'.$this->ente->id_istituto.'"', $html);
+        $this->assertStringContainsString('data-istituto="'.$altro->id_istituto.'"', $html);
+        $this->assertSame(2, substr_count($html, 'name="id_plesso"'));
+    }
+
     public function test_sede_unica_preselezionata(): void
     {
         $scuola = $this->utenteSpid();
@@ -70,7 +89,11 @@ class FormNuovaSegnalazioneTest extends TestCase
 
         $this->actingAs($scuola)->get(route('segnalazioni.create'))
             ->assertOk()
-            ->assertSee('value="'.$this->idPlessi($this->ente)[1].'" selected', false)
+            // Un solo istituto e una sola sede: niente da scegliere, solo i nomi.
+            ->assertSee('type="hidden" name="id_plesso" value="'.$this->idPlessi($this->ente)[1].'"', false)
+            ->assertSee('Plesso 2 PEIC828004')
+            ->assertDontSee('<select name="id_plesso"', false)
+            ->assertDontSee('id="istituto"', false)
             ->assertDontSee('Plesso 1 PEIC828004');
     }
 
