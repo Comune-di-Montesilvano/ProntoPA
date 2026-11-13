@@ -153,7 +153,7 @@ class AccorpaTest extends TestCase
     public function test_assegnatario_ditta_notificato(): void
     {
         $impresa = Impresa::create(['ragione_sociale' => 'Edil']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $delegato = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa]);
         $delegato->assignRole('impresa');
         $vecchia = Segnalazione::factory()->create(['id_stato_segnalazione' => 4, 'id_appalto' => $appalto->id_appalto]);
@@ -210,9 +210,9 @@ class AccorpaTest extends TestCase
 
     public function test_candidati_json_include_simile_ed_esclude_se_stessa(): void
     {
-        $posto = ['latitudine' => 42.5, 'longitudine' => 14.1, 'id_tipologia_segnalazione' => 1];
+        $posto = ['id_plesso' => 5, 'id_tipologia_segnalazione' => 1];
         $simile = Segnalazione::factory()->create($posto);
-        $altrove = Segnalazione::factory()->create(['latitudine' => 45.0, 'longitudine' => 9.0]);
+        $altrove = Segnalazione::factory()->create(['id_plesso' => 6, 'id_tipologia_segnalazione' => 1]);
         $nuova = Segnalazione::factory()->create($posto);
 
         $ids = collect($this->actingAs($this->admin)->getJson(route('segnalazioni.candidati-accorpa', $nuova))
@@ -227,7 +227,7 @@ class AccorpaTest extends TestCase
     {
         $gestore = User::factory()->create(['supervisore_segnalazioni' => false]);
         $gestore->assignRole('gestore');
-        $posto = ['latitudine' => 42.5, 'longitudine' => 14.1, 'id_tipologia_segnalazione' => 1];
+        $posto = ['id_plesso' => 5, 'id_tipologia_segnalazione' => 1];
         $sua = Segnalazione::factory()->create($posto + ['id_operatore_assegnato' => $gestore->id]);
         $altrui = Segnalazione::factory()->create($posto);
         $nuova = Segnalazione::factory()->create($posto + ['id_operatore_assegnato' => $gestore->id]);

@@ -77,7 +77,7 @@ class SegnalazioneWorkflowNotificationsTest extends TestCase
         $utenteImpresa->syncRoles(['impresa']);
 
         $appalto = Appalto::create([
-            'id_gruppo' => 1,
+            
             'descrizione' => 'Appalto test',
             'id_impresa' => $impresa->id_impresa,
             'valido' => true,

@@ -157,7 +157,7 @@ class GestioneController extends Controller
         // Stesse relazioni di SegnalazioneController::stampa (scheda singola).
         $segnalazioni = $query
             ->with([
-                'stato', 'tipologia.gruppo', 'plesso.istituto',
+                'stato', 'tipologia', 'plesso.istituto',
                 'operatore', 'utente', 'appalto.impresa', 'squadraAssegnata',
                 'note' => fn ($q) => $q->visibiliA($request->user()),
                 'storicoStati.stato', 'storicoStati.utente',

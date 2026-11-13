@@ -26,8 +26,7 @@
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
 
-                    @foreach($tipologie->groupBy(fn($t) => $t->gruppo?->descrizione ?? 'Altro') as $gruppo => $items)
-                        <p class="mt-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-widest">{{ $gruppo }}</p>
+                    @foreach(['' => $tipologie] as $items)
                         <div class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2">
                             @foreach($items as $t)
                                 <button type="button"

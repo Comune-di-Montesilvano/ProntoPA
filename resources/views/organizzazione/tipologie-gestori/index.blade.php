@@ -55,16 +55,13 @@
         <x-pa.card titolo="Per tipologia">
             <table class="min-w-full divide-y divide-gray-100 text-sm">
                 <tbody class="divide-y divide-gray-50">
-                    @foreach($tipologie->groupBy(fn ($t) => $t->gruppo?->descrizione ?? 'Senza gruppo') as $gruppo => $voci)
-                        <tr><th colspan="2" class="pt-3 pb-1 text-left text-xs uppercase tracking-wider text-[var(--slate-500)]">{{ $gruppo }}</th></tr>
-                        @foreach($voci as $t)
-                            <tr>
-                                <td class="py-1.5 pr-4 text-[var(--ink)]">{{ $t->descrizione }}</td>
-                                <td class="py-1.5 text-[var(--slate-700)]">
-                                    {{ $copertura[$t->id_tipologia_segnalazione]->pluck('name')->implode(', ') ?: '—' }}
-                                </td>
-                            </tr>
-                        @endforeach
+                    @foreach($tipologie as $t)
+                        <tr>
+                            <td class="py-1.5 pr-4 text-[var(--ink)]">{{ $t->descrizione }}</td>
+                            <td class="py-1.5 text-[var(--slate-700)]">
+                                {{ $copertura[$t->id_tipologia_segnalazione]->pluck('name')->implode(', ') ?: '—' }}
+                            </td>
+                        </tr>
                     @endforeach
                 </tbody>
             </table>

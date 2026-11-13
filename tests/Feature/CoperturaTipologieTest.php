@@ -51,7 +51,7 @@ class CoperturaTipologieTest extends TestCase
     public function test_gestore_tutte_copre_anche_tipologie_nuove(): void
     {
         $g = $this->gestore([], tutte: true);
-        $nuova = TipologiaSegnalazione::create(['descrizione' => 'NUOVA', 'icona' => 'fas fa-star', 'id_gruppo' => 1]);
+        $nuova = TipologiaSegnalazione::create(['descrizione' => 'NUOVA', 'icona' => 'fas fa-star']);
 
         $this->assertTrue($this->copertura->gestoriDi($nuova->id_tipologia_segnalazione)->contains('id', $g->id));
         $this->assertFalse($this->copertura->orfane()->contains('id_tipologia_segnalazione', $nuova->id_tipologia_segnalazione));

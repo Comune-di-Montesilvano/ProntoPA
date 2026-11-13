@@ -230,7 +230,7 @@ class PopulateDemoData extends Command
     private function creaAppalti($imprese)
     {
         return $imprese->map(fn (Impresa $impresa) => Appalto::create([
-            'id_gruppo' => 1, 'descrizione' => 'DEMO manutenzione ' . $impresa->ragione_sociale,
+            'descrizione' => 'DEMO manutenzione ' . $impresa->ragione_sociale,
             'id_impresa' => $impresa->id_impresa, 'valido' => true,
         ]));
     }
@@ -294,9 +294,6 @@ class PopulateDemoData extends Command
                     'id_stradario'               => 0,
                     'id_area'                    => 0,
                     'id_immobile'                => 0,
-                    'latitudine'                 => 0,
-                    'longitudine'                => 0,
-                    'zoom'                       => 18,
                     'testo_segnalazione'         => fake()->randomElement($testi),
                     'flag_riservata'             => ! $stato->isTerminale() || fake()->boolean(30),
                     'flag_pubblicata'            => $stato->isTerminale() && fake()->boolean(60),

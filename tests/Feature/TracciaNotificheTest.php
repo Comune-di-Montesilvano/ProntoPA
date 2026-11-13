@@ -40,7 +40,7 @@ class TracciaNotificheTest extends TestCase
         $this->segnalatore = User::factory()->create(['name' => 'Giulia Ferri']);
         $this->segnalatore->assignRole('segnalatore');
         $impresa = Impresa::create(['ragione_sociale' => 'Edil Adriatica', 'email' => 'ufficio@ediladriatica.it']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'Edile', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'Edile', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $this->ditta = User::factory()->create(['name' => 'Marco Ditta', 'auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'email_verified_at' => now()]);
         $this->ditta->assignRole('impresa');
 

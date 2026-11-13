@@ -95,7 +95,7 @@
             <x-pa.card titolo="Dettagli">
                 <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
                     <dt class="text-[var(--slate-500)]">Tipologia</dt>
-                    <dd class="m-0">{{ $segnalazione->tipologia?->descrizione ?? '—' }}@if($segnalazione->tipologia?->gruppo) <span class="text-[var(--slate-500)]">· {{ $segnalazione->tipologia->gruppo->descrizione }}</span>@endif</dd>
+                    <dd class="m-0">{{ $segnalazione->tipologia?->descrizione ?? '—' }}</dd>
                     @if($segnalazione->utente)
                         <dt class="text-[var(--slate-500)]">Registrata da</dt><dd class="m-0">{{ $segnalazione->utente->name }}</dd>
                     @endif

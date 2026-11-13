@@ -26,8 +26,6 @@ class SegnalazioneApiController extends Controller
             'titolo'                    => ['nullable', 'string', 'max:100'],
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
             'id_plesso'                 => ['nullable', 'integer', 'exists:plessi,id_plesso'],
-            'latitudine'                => ['nullable', 'numeric'],
-            'longitudine'               => ['nullable', 'numeric'],
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
             'ubicazione_tipo'           => ['nullable', 'integer', 'between:0,4'],
             'force'                     => ['nullable', 'boolean'],
@@ -37,8 +35,6 @@ class SegnalazioneApiController extends Controller
             $simili = app(\App\Services\DedupService::class)->trovaSimili(
                 (int) $request->input('id_tipologia_segnalazione'),
                 $request->filled('id_plesso') ? (int) $request->input('id_plesso') : null,
-                $request->filled('latitudine') ? (float) $request->input('latitudine') : null,
-                $request->filled('longitudine') ? (float) $request->input('longitudine') : null,
             );
 
             if ($simili->isNotEmpty()) {
@@ -59,8 +55,6 @@ class SegnalazioneApiController extends Controller
             'id_utente_segnalazione' => $request->user()?->id,
             'id_stato_segnalazione'  => $statoIniziale?->id_stato ?? 1,
             'id_plesso'              => $data['id_plesso'] ?? 0,
-            'latitudine'             => $data['latitudine'] ?? 0,
-            'longitudine'            => $data['longitudine'] ?? 0,
         ]));
 
         // Senza titolo dal portale lo propone l'assistente AI, se attivo.

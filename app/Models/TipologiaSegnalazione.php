@@ -12,7 +12,7 @@ class TipologiaSegnalazione extends Model
     protected $primaryKey = 'id_tipologia_segnalazione';
     public    $timestamps = false;
 
-    protected $fillable = ['descrizione', 'icona', 'id_gruppo', 'attiva'];
+    protected $fillable = ['descrizione', 'icona', 'attiva'];
 
     protected function casts(): array
     {
@@ -25,10 +25,6 @@ class TipologiaSegnalazione extends Model
         return $query->where('attiva', true);
     }
 
-    public function gruppo(): BelongsTo
-    {
-        return $this->belongsTo(GruppoSegnalazione::class, 'id_gruppo', 'id_gruppo');
-    }
 
     public function segnalazioni(): HasMany
     {

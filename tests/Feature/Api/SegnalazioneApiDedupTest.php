@@ -24,23 +24,26 @@ class SegnalazioneApiDedupTest extends TestCase
         \Illuminate\Support\Facades\Cache::flush();
         Impostazione::set('adesioni_enabled', true);
 
+        $istituto = \App\Models\Istituto::create(['descrizione' => 'IC Prova', 'id_categoria' => \App\Models\CategoriaEnte::factory()->create()->id_categoria]);
+        $this->idPlesso = \App\Models\Plesso::create(['id_istituto' => $istituto->id_istituto, 'nome' => 'Sede'])->id_plesso;
+
         $this->actingAs(User::factory()->create());
     }
+
+    private int $idPlesso;
 
     public function test_api_409_se_esiste_simile(): void
     {
         Segnalazione::factory()->create([
             'id_tipologia_segnalazione' => 1,
-            'latitudine'                => 42.5145,
-            'longitudine'               => 14.1500,
+            'id_plesso'                 => $this->idPlesso,
         ]);
 
         $response = $this->postJson('/api/segnalazioni', [
             'id_tipologia_segnalazione' => 1,
             'testo_segnalazione'        => 'Buca in strada',
             'id_provenienza'            => 1,
-            'latitudine'                => 42.5146,
-            'longitudine'               => 14.1501,
+            'id_plesso'                 => $this->idPlesso,
             'segnalante'                => 'Portale Cittadino',
         ]);
 
@@ -53,16 +56,14 @@ class SegnalazioneApiDedupTest extends TestCase
     {
         Segnalazione::factory()->create([
             'id_tipologia_segnalazione' => 1,
-            'latitudine'                => 42.5145,
-            'longitudine'               => 14.1500,
+            'id_plesso'                 => $this->idPlesso,
         ]);
 
         $response = $this->postJson('/api/segnalazioni', [
             'id_tipologia_segnalazione' => 1,
             'testo_segnalazione'        => 'Buca in strada',
             'id_provenienza'            => 1,
-            'latitudine'                => 42.5146,
-            'longitudine'               => 14.1501,
+            'id_plesso'                 => $this->idPlesso,
             'segnalante'                => 'Portale Cittadino',
             'force'                     => true,
         ]);
@@ -77,16 +78,14 @@ class SegnalazioneApiDedupTest extends TestCase
 
         Segnalazione::factory()->create([
             'id_tipologia_segnalazione' => 1,
-            'latitudine'                => 42.5145,
-            'longitudine'               => 14.1500,
+            'id_plesso'                 => $this->idPlesso,
         ]);
 
         $response = $this->postJson('/api/segnalazioni', [
             'id_tipologia_segnalazione' => 1,
             'testo_segnalazione'        => 'Buca in strada',
             'id_provenienza'            => 1,
-            'latitudine'                => 42.5146,
-            'longitudine'               => 14.1501,
+            'id_plesso'                 => $this->idPlesso,
             'segnalante'                => 'Portale Cittadino',
         ]);
 

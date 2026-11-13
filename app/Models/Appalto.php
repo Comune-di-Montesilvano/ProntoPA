@@ -11,7 +11,7 @@ class Appalto extends Model
     protected $primaryKey = 'id_appalto';
 
     protected $fillable = [
-        'id_gruppo', 'descrizione', 'id_impresa', 'CIG', 'importo_appalto', 'valido', 'tutte_tipologie',
+        'descrizione', 'id_impresa', 'CIG', 'importo_appalto', 'valido', 'tutte_tipologie',
     ];
 
     protected function casts(): array
@@ -46,8 +46,4 @@ class Appalto extends Model
             : $this->tipologie()->whereKey($idTipologia)->exists();
     }
 
-    public function gruppo(): BelongsTo
-    {
-        return $this->belongsTo(GruppoSegnalazione::class, 'id_gruppo', 'id_gruppo');
-    }
 }

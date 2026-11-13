@@ -21,7 +21,6 @@ class ImpreseDashboardController extends Controller
 
         $appaltiAttivi = Appalto::where('id_impresa', $idImpresa)
             ->where('valido', true)
-            ->with('gruppo')
             ->get();
 
         // Tutti i lavori della ditta, anche su appalti scaduti (stessa visibilità della scheda)

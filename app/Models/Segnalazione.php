@@ -35,9 +35,6 @@ class Segnalazione extends Model
         'id_stradario',
         'id_area',
         'id_immobile',
-        'latitudine',
-        'longitudine',
-        'zoom',
         'testo_segnalazione',
         'flag_riservata',
         'flag_pubblicata',
@@ -71,8 +68,6 @@ class Segnalazione extends Model
             'data_segnalazione'      => 'datetime',
             'data_chiusura'          => 'datetime',
             'id_stato_segnalazione'  => SegnalazioneStato::class,
-            'latitudine'             => 'float',
-            'longitudine'            => 'float',
             'flag_riservata'         => 'boolean',
             'flag_pubblicata'        => 'boolean',
             'flag_evidenza'          => 'boolean',
@@ -118,8 +113,7 @@ class Segnalazione extends Model
 
     /** @return BelongsTo<Plesso, $this> */
     /**
-     * Dove mostrare la segnalazione su una mappa: la posizione della sede (1.0.0);
-     * le vecchie coordinate proprie solo come ripiego finché esistono.
+     * Dove mostrare la segnalazione su una mappa: la posizione della sede (1.0.0).
      *
      * @return array{lat: float, lng: float}|null
      */
@@ -129,10 +123,8 @@ class Segnalazione extends Model
         if ($plesso?->haCoordinate()) {
             return ['lat' => (float) $plesso->latitudine, 'lng' => (float) $plesso->longitudine];
         }
-        $lat = (float) ($this->attributes['latitudine'] ?? 0);
-        $lng = (float) ($this->attributes['longitudine'] ?? 0);
 
-        return $lat != 0 && $lng != 0 ? ['lat' => $lat, 'lng' => $lng] : null;
+        return null;
     }
 
     public function plesso(): BelongsTo

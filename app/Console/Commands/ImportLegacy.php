@@ -191,7 +191,6 @@ class ImportLegacy extends Command
             DB::table('appalti')->updateOrInsert(
                 ['id_appalto' => $r->id_appalto],
                 [
-                    'id_gruppo'       => $r->id_gruppo,
                     'descrizione'     => $r->descrizione,
                     'id_impresa'      => is_numeric($r->id_impresa) ? (int) $r->id_impresa : null,
                     'CIG'             => $r->CIG,
@@ -325,8 +324,6 @@ class ImportLegacy extends Command
                 'id_tipologia_segnalazione' => $s->id_tipologia_segnalazione,
                 'id_plesso'                 => $idPlesso ?? 0,
                 'id_utente_segnalazione'    => $idUtenteSeg ?? 0,
-                'latitudine'                => $s->latitudine,
-                'longitudine'               => $s->longitudine,
                 'testo_segnalazione'        => $s->testo_segnalazione,
                 'id_stato_segnalazione'     => $this->mapStato((int) $s->id_stato_segnalazione),
                 'id_appalto'                => $idAppalto,

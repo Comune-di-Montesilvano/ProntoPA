@@ -48,7 +48,7 @@ class DelegaImpresaTest extends TestCase
     private function segnalazioneDi(Impresa $impresa, bool $appaltoValido = true): Segnalazione
     {
         $appalto = Appalto::create([
-            'id_gruppo' => 1, 'descrizione' => 'Appalto', 'id_impresa' => $impresa->id_impresa, 'valido' => $appaltoValido,
+            'descrizione' => 'Appalto', 'id_impresa' => $impresa->id_impresa, 'valido' => $appaltoValido,
         ]);
 
         return Segnalazione::create([

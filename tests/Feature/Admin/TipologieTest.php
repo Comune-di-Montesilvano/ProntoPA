@@ -89,7 +89,7 @@ class TipologieTest extends TestCase
 
     public function test_migration_unisce_sfalci_doppi(): void
     {
-        DB::table('tipologie_segnalazioni')->insertOrIgnore(['id_tipologia_segnalazione' => 11, 'descrizione' => 'SFALCI E POTATURE', 'icona' => 'fab fa-pagelines', 'id_gruppo' => 5]);
+        DB::table('tipologie_segnalazioni')->insertOrIgnore(['id_tipologia_segnalazione' => 11, 'descrizione' => 'SFALCI E POTATURE', 'icona' => 'fab fa-pagelines']);
         Segnalazione::factory()->count(2)->create(['id_tipologia_segnalazione' => 11]);
         Segnalazione::factory()->create(['id_tipologia_segnalazione' => 4]);
 

@@ -52,9 +52,8 @@ class CoperturaTipologie
             ->distinct()
             ->pluck('id_tipologia_segnalazione');
 
-        return TipologiaSegnalazione::with('gruppo')
+        return TipologiaSegnalazione::attive()
             ->whereNotIn('id_tipologia_segnalazione', $coperte)
-            ->orderBy('id_gruppo')
             ->orderBy('descrizione')
             ->get();
     }

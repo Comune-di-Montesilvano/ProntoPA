@@ -94,7 +94,7 @@ class TipologieGestoriController extends Controller
     /** @return Collection<int, TipologiaSegnalazione> */
     private function tipologie(): Collection
     {
-        return TipologiaSegnalazione::with('gruppo')->orderBy('id_gruppo')->orderBy('descrizione')->get();
+        return TipologiaSegnalazione::attive()->orderBy('descrizione')->get();
     }
 
     /** I supervisori vedono già tutto: non hanno tipologie. Gli admin sì, se fanno anche i gestori. */

@@ -36,31 +36,12 @@ class AppaltiTipologieTest extends TestCase
     {
         $impresa = Impresa::create(['ragione_sociale' => $ditta]);
 
-        return Appalto::create(array_merge(['id_gruppo' => 1, 'descrizione' => 'Appalto '.$ditta, 'id_impresa' => $impresa->id_impresa, 'valido' => true], $attr));
+        return Appalto::create(array_merge(['descrizione' => 'Appalto '.$ditta, 'id_impresa' => $impresa->id_impresa, 'valido' => true], $attr));
     }
 
     private function converti(): void
     {
         (require database_path('migrations/2026_11_15_000002_appalti_tipologie.php'))->converti();
-    }
-
-    public function test_migration_appalto_prende_tipologie_del_gruppo(): void
-    {
-        $a = $this->appalto('Edil');
-        $this->converti();
-
-        $attese = DB::table('tipologie_segnalazioni')->where('id_gruppo', 1)->pluck('id_tipologia_segnalazione')->map(fn ($v) => (int) $v)->sort()->values()->all();
-        $this->assertSame($attese, $a->tipologie()->pluck('tipologie_segnalazioni.id_tipologia_segnalazione')->map(fn ($v) => (int) $v)->sort()->values()->all());
-        $this->assertFalse((bool) $a->fresh()->tutte_tipologie);
-    }
-
-    public function test_appalto_di_gruppo_senza_tipologie_diventa_tutte(): void
-    {
-        $a = $this->appalto('Strade', ['id_gruppo' => 2]);
-        $this->converti();
-
-        $this->assertTrue((bool) $a->fresh()->tutte_tipologie);
-        $this->assertTrue($a->fresh()->copreTipologia(7));
     }
 
     public function test_assegna_mostra_prima_chi_copre(): void

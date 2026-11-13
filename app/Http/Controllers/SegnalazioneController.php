@@ -76,7 +76,7 @@ class SegnalazioneController extends Controller
     {
         $user = auth()->user();
 
-        $tipologie  = TipologiaSegnalazione::with('gruppo')->orderBy('descrizione')->get();
+        $tipologie  = TipologiaSegnalazione::attive()->orderBy('descrizione')->get();
 
         if ($user->isSpid()) {
             $plessi = Plesso::with('istituto.categoria')
@@ -114,7 +114,6 @@ class SegnalazioneController extends Controller
 
         $scuola = $request->user()->segnalaComeScuola();
         if ($scuola) {
-            $request->merge(['latitudine' => null, 'longitudine' => null]);
         }
         $obbligatorioScuola = $scuola ? 'required' : 'nullable';
 
@@ -129,8 +128,6 @@ class SegnalazioneController extends Controller
             'titolo'                    => ['required', 'string', 'max:100'],
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
             'id_plesso'                 => $regolePlesso,
-            'latitudine'                => ['nullable', 'numeric'],
-            'longitudine'               => ['nullable', 'numeric'],
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
             'ubicazione_tipo'           => $scuola ? ['required', 'integer', 'between:1,4'] : ['nullable', 'integer', 'between:0,4'],
             'allegati'                  => ['nullable', 'array', 'max:' . $maxPerRequest],
@@ -156,8 +153,6 @@ class SegnalazioneController extends Controller
                 'id_utente_segnalazione' => $user->id,
                 'id_stato_segnalazione'  => SegnalazioneStato::NUOVA->value,
                 'id_plesso'              => $data['id_plesso'] ?? 0,
-                'latitudine'             => $data['latitudine'] ?? 0,
-                'longitudine'            => $data['longitudine'] ?? 0,
                 'livello_priorita'       => $data['livello_priorita'] ?? 2,
                 'ubicazione_tipo'        => $data['ubicazione_tipo'] ?? null,
             ]
@@ -211,7 +206,7 @@ class SegnalazioneController extends Controller
         $this->authorize('view', $segnalazione);
 
         $segnalazione->load([
-            'stato', 'tipologia.gruppo', 'plesso.istituto',
+            'stato', 'tipologia', 'plesso.istituto',
             'operatore', 'utente', 'appalto',
             'squadraAssegnata',
             'segnalazioneMadre', 'duplicati', 'segnalazioneCorrelata', 'correlate',
@@ -457,7 +452,7 @@ class SegnalazioneController extends Controller
         $this->authorize('view', $segnalazione);
 
         $segnalazione->load([
-            'stato', 'tipologia.gruppo', 'plesso.istituto',
+            'stato', 'tipologia', 'plesso.istituto',
             'operatore', 'utente', 'appalto.impresa',
             'note' => fn ($q) => $q->visibiliA(auth()->user()),
             'storicoStati.stato', 'storicoStati.utente',
@@ -604,16 +599,12 @@ class SegnalazioneController extends Controller
         $data = $request->validate([
             'id_tipologia_segnalazione' => ['required', 'integer'],
             'id_plesso'                 => ['nullable', 'integer'],
-            'latitudine'                => ['nullable', 'numeric'],
-            'longitudine'               => ['nullable', 'numeric'],
             'testo'                     => ['nullable', 'string', 'max:2000'],
         ]);
 
         $simili = $this->dedup->trovaSimili(
             (int) $data['id_tipologia_segnalazione'],
             isset($data['id_plesso']) ? (int) $data['id_plesso'] : null,
-            isset($data['latitudine']) ? (float) $data['latitudine'] : null,
-            isset($data['longitudine']) ? (float) $data['longitudine'] : null,
             $data['testo'] ?? null,
         );
 
@@ -667,8 +658,6 @@ class SegnalazioneController extends Controller
             $candidati = $dedup->trovaSimili(
                 (int) $segnalazione->id_tipologia_segnalazione,
                 $segnalazione->id_plesso ? (int) $segnalazione->id_plesso : null,
-                $segnalazione->latitudine !== null ? (float) $segnalazione->latitudine : null,
-                $segnalazione->longitudine !== null ? (float) $segnalazione->longitudine : null,
                 $segnalazione->testo_segnalazione,
                 9,
                 soloSeAttivo: false,

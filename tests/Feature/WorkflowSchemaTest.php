@@ -62,7 +62,7 @@ class WorkflowSchemaTest extends TestCase
     private function ditta(): array
     {
         $impresa = Impresa::create(['ragione_sociale' => 'Edil']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $utente = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'email_verified_at' => now()]);
         $utente->assignRole('impresa');
 

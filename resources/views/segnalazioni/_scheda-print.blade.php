@@ -4,7 +4,7 @@
     <div class="header">
         <div class="header-left">
             <div class="ente">
-                {{ $segnalazione->tipologia?->gruppo?->descrizione ?? \App\Models\Impostazione::get('ente_nome', 'ProntoPA') }}
+                {{ \App\Models\Impostazione::get('ente_nome', 'ProntoPA') }}
             </div>
             <div class="titolo">Scheda Segnalazione #{{ $segnalazione->id_segnalazione }}</div>
         </div>

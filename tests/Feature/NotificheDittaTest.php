@@ -44,7 +44,7 @@ class NotificheDittaTest extends TestCase
 
     private function assegna(Impresa $impresa): Segnalazione
     {
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'Appalto', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'Appalto', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $segnalazione = Segnalazione::create([
             'id_tipologia_segnalazione' => 1, 'id_utente_segnalazione' => $this->attore->id,
             'testo_segnalazione' => 'Guasto', 'flag_riservata' => false, 'flag_pubblicata' => false,

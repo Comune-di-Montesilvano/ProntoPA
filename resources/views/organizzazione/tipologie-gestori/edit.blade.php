@@ -25,25 +25,18 @@
         @endif
 
         <div x-show="!tutte" class="flex flex-col gap-4">
-            @foreach($tipologie->groupBy(fn ($t) => $t->gruppo?->descrizione ?? 'Senza gruppo') as $gruppo => $voci)
-                <x-pa.card :titolo="$gruppo">
-                    <div x-data class="flex flex-col gap-2">
-                        <label class="flex items-center gap-2 text-xs text-[var(--slate-600)]">
-                            <input type="checkbox" class="rounded border-gray-300"
-                                   @change="$el.closest('[x-data]').querySelectorAll('input[name=\'tipologie[]\']').forEach(c => c.checked = $el.checked)">
-                            Tutto il gruppo
+            <x-pa.card titolo="Tipologie">
+                <div class="flex flex-col gap-2">
+                    @foreach($tipologie as $t)
+                        <label class="flex items-center gap-2 text-sm text-[var(--ink)]">
+                            <input type="checkbox" name="tipologie[]" value="{{ $t->id_tipologia_segnalazione }}"
+                                   class="rounded border-gray-300 text-blue-600"
+                                   @checked(in_array($t->id_tipologia_segnalazione, old('tipologie', $selezionate)))>
+                            {{ $t->descrizione }}
                         </label>
-                        @foreach($voci as $t)
-                            <label class="flex items-center gap-2 text-sm text-[var(--ink)]">
-                                <input type="checkbox" name="tipologie[]" value="{{ $t->id_tipologia_segnalazione }}"
-                                       class="rounded border-gray-300 text-blue-600"
-                                       @checked(in_array($t->id_tipologia_segnalazione, old('tipologie', $selezionate)))>
-                                {{ $t->descrizione }}
-                            </label>
-                        @endforeach
-                    </div>
-                </x-pa.card>
-            @endforeach
+                    @endforeach
+                </div>
+            </x-pa.card>
         </div>
 
         <x-input-error :messages="$errors->get('tipologie')" />

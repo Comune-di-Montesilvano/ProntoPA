@@ -11,7 +11,6 @@
             aiuto="Chi segnala vede se esiste già una segnalazione uguale e può aderire invece di crearne una nuova." />
         <x-pa.impostazione chiave="adesioni_soglia_priorita" tipo="intero" etichetta="Adesioni per aumentare la priorità"
             aiuto="Ogni quante adesioni la priorità sale di un livello." />
-        <x-pa.impostazione chiave="dedup_raggio_metri" tipo="intero" etichetta="Distanza massima per considerarle simili (metri)"
             aiuto="Due segnalazioni con posizione entro questa distanza sono considerate la stessa." />
         <x-pa.impostazione chiave="dedup_giorni" tipo="intero" etichetta="Giorni in cui cercare segnalazioni simili"
             aiuto="Si confrontano solo le segnalazioni degli ultimi giorni indicati." />

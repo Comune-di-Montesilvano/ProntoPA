@@ -47,19 +47,6 @@ class CoordinateSediTest extends TestCase
         Http::fake(['nominatim.openstreetmap.org/*' => Http::response([['lat' => (string) $lat, 'lon' => (string) $lng]])]);
     }
 
-    public function test_migration_mediana_da_segnalazioni(): void
-    {
-        foreach ([[42.1, 14.1], [42.3, 14.3], [42.2, 14.9], [0, 0]] as [$lat, $lng]) {
-            Segnalazione::factory()->create(['id_plesso' => $this->sede->id_plesso, 'latitudine' => $lat, 'longitudine' => $lng]);
-        }
-
-        (require database_path('migrations/2026_11_15_000003_coordinate_sedi.php'))->mediane();
-
-        $this->sede->refresh();
-        $this->assertEqualsWithDelta(42.2, (float) $this->sede->latitudine, 0.0001);
-        $this->assertEqualsWithDelta(14.3, (float) $this->sede->longitudine, 0.0001);
-    }
-
     public function test_trova_dall_indirizzo_usa_comune_e_user_agent(): void
     {
         Impostazione::set('geocoding_comune', 'Montesilvano');
@@ -112,7 +99,7 @@ class CoordinateSediTest extends TestCase
     public function test_scheda_mostra_mappa_sede_e_link_maps(): void
     {
         $this->sede->update(['latitudine' => 42.4, 'longitudine' => 14.2]);
-        $s = Segnalazione::factory()->create(['id_plesso' => $this->sede->id_plesso, 'latitudine' => 0, 'longitudine' => 0]);
+        $s = Segnalazione::factory()->create(['id_plesso' => $this->sede->id_plesso]);
 
         $this->actingAs($this->admin)->get(route('segnalazioni.show', $s))
             ->assertOk()
@@ -122,7 +109,7 @@ class CoordinateSediTest extends TestCase
 
     public function test_scheda_sede_senza_coordinate_solo_indirizzo(): void
     {
-        $s = Segnalazione::factory()->create(['id_plesso' => $this->sede->id_plesso, 'latitudine' => 0, 'longitudine' => 0]);
+        $s = Segnalazione::factory()->create(['id_plesso' => $this->sede->id_plesso]);
 
         $this->actingAs($this->admin)->get(route('segnalazioni.show', $s))
             ->assertOk()

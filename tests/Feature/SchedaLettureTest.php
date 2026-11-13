@@ -43,7 +43,7 @@ class SchedaLettureTest extends TestCase
         $this->segnalatore->assignRole('segnalatore');
 
         $impresa = Impresa::create(['ragione_sociale' => 'Edil Adriatica']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'Manutenzione edile', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'Manutenzione edile', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $this->ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'email_verified_at' => now()]);
         $this->ditta->assignRole('impresa');
 
@@ -53,7 +53,6 @@ class SchedaLettureTest extends TestCase
             'id_appalto' => $appalto->id_appalto,
             'id_operatore_assegnato' => $this->operaio->id,
             'testo_segnalazione' => 'Finestra rotta in aula 3',
-            'latitudine' => 42.46, 'longitudine' => 14.2,
         ]);
     }
 
@@ -80,6 +79,10 @@ class SchedaLettureTest extends TestCase
 
     public function test_ditta_vede_fine_lavori_e_naviga(): void
     {
+        $istituto = Istituto::create(['descrizione' => 'IC Mappa', 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => true]);
+        $sede = Plesso::create(['id_istituto' => $istituto->id_istituto, 'nome' => 'Sede mappa', 'latitudine' => 42.46, 'longitudine' => 14.2]);
+        $this->s->update(['id_plesso' => $sede->id_plesso]);
+
         $this->actingAs($this->ditta)->get(route('segnalazioni.show', $this->s))
             ->assertOk()
             ->assertSee('Comunica fine lavori')

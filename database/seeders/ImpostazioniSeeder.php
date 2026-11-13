@@ -240,13 +240,6 @@ class ImpostazioniSeeder extends Seeder
                 'descrizione' => 'Ogni quante adesioni la priorità aumenta di un livello',
             ],
             [
-                'chiave'      => 'dedup_raggio_metri',
-                'valore'      => '150',
-                'tipo'        => 'integer',
-                'gruppo'      => 'adesioni',
-                'descrizione' => 'Raggio in metri per considerare simili due segnalazioni geolocalizzate',
-            ],
-            [
                 'chiave'      => 'dedup_giorni',
                 'valore'      => '90',
                 'tipo'        => 'integer',

@@ -39,29 +39,20 @@ class TabelleRiferimentoSeeder extends Seeder
             ['id_azione' => 14, 'codice' => 'riapri',             'descrizione' => 'Riapri',               'id_stato_segnalazione' => 2,    'competenza_azione' => 0, 'colore' => 'warning',   'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 1, 'ordine' => 120, 'parametri_filtro' => '{"stati":[7,8,9,10]}'],
         ]);
 
-        DB::table('gruppi_segnalazioni')->insertOrIgnore([
-            ['id_gruppo' => 1, 'descrizione' => 'EDILIZIA SCOLASTICA', 'icona' => 'fas fa-building',      'tipologia' => 0, 'cittadini' => 0],
-            ['id_gruppo' => 2, 'descrizione' => "VIABILITA'",          'icona' => 'fas fa-road',           'tipologia' => 3, 'cittadini' => 1],
-            ['id_gruppo' => 3, 'descrizione' => 'SEGNALETICA',         'icona' => 'fas fa-traffic-light',  'tipologia' => 3, 'cittadini' => 1],
-            ['id_gruppo' => 4, 'descrizione' => 'VERDE PUBBLICO',      'icona' => 'fas fa-seedling',       'tipologia' => 3, 'cittadini' => 1],
-            ['id_gruppo' => 5, 'descrizione' => 'PARCHI E GIARDINI',   'icona' => 'fas fa-tree',           'tipologia' => 2, 'cittadini' => 1],
-            ['id_gruppo' => 6, 'descrizione' => 'ABBANDONO RIFIUTI',   'icona' => 'fas fa-recycle',        'tipologia' => 3, 'cittadini' => 1],
-        ]);
-
         // Le tipologie le gestisce l'admin (1.0.0): solo su un'installazione nuova.
         if (! DB::table('tipologie_segnalazioni')->exists()) {
         DB::table('tipologie_segnalazioni')->insertOrIgnore([
-            ['id_tipologia_segnalazione' => 1,  'descrizione' => 'IMPIANTO ELETTRICO',    'icona' => 'fas fa-bolt',       'id_gruppo' => 1],
-            ['id_tipologia_segnalazione' => 2,  'descrizione' => 'INFISSI E PORTE',       'icona' => 'fas fa-door-open',  'id_gruppo' => 1],
-            ['id_tipologia_segnalazione' => 3,  'descrizione' => 'IMPIANTO IDRICO',       'icona' => 'fas fa-faucet',     'id_gruppo' => 1],
-            ['id_tipologia_segnalazione' => 4,  'descrizione' => 'SFALCI E POTATURE',     'icona' => 'fab fa-pagelines',  'id_gruppo' => 4],
-            ['id_tipologia_segnalazione' => 5,  'descrizione' => 'MANUTENZIONE EDILE',    'icona' => 'fas fa-building',   'id_gruppo' => 1],
-            ['id_tipologia_segnalazione' => 6,  'descrizione' => 'IMPIANTO TERMICO',      'icona' => 'fas fa-fire-alt',   'id_gruppo' => 1],
-            ['id_tipologia_segnalazione' => 7,  'descrizione' => 'RETE TELEFONICA / DATI','icona' => 'fas fa-globe',      'id_gruppo' => 1],
-            ['id_tipologia_segnalazione' => 8,  'descrizione' => 'VERDE E GIARDINI',      'icona' => 'fas fa-seedling',   'id_gruppo' => 1],
-            ['id_tipologia_segnalazione' => 9,  'descrizione' => 'ARREDI',                'icona' => 'fas fa-chair',      'id_gruppo' => 1],
-            ['id_tipologia_segnalazione' => 10, 'descrizione' => 'GIOCHI',                'icona' => 'fas fa-running',    'id_gruppo' => 5],
-            ['id_tipologia_segnalazione' => 12, 'descrizione' => 'FONTANE PUBBLICHE',     'icona' => 'fas fa-faucet',     'id_gruppo' => 5],
+            ['id_tipologia_segnalazione' => 1,  'descrizione' => 'IMPIANTO ELETTRICO',    'icona' => 'fas fa-bolt'],
+            ['id_tipologia_segnalazione' => 2,  'descrizione' => 'INFISSI E PORTE',       'icona' => 'fas fa-door-open'],
+            ['id_tipologia_segnalazione' => 3,  'descrizione' => 'IMPIANTO IDRICO',       'icona' => 'fas fa-faucet'],
+            ['id_tipologia_segnalazione' => 4,  'descrizione' => 'SFALCI E POTATURE',     'icona' => 'fab fa-pagelines'],
+            ['id_tipologia_segnalazione' => 5,  'descrizione' => 'MANUTENZIONE EDILE',    'icona' => 'fas fa-building'],
+            ['id_tipologia_segnalazione' => 6,  'descrizione' => 'IMPIANTO TERMICO',      'icona' => 'fas fa-fire-alt'],
+            ['id_tipologia_segnalazione' => 7,  'descrizione' => 'RETE TELEFONICA / DATI','icona' => 'fas fa-globe'],
+            ['id_tipologia_segnalazione' => 8,  'descrizione' => 'VERDE E GIARDINI',      'icona' => 'fas fa-seedling'],
+            ['id_tipologia_segnalazione' => 9,  'descrizione' => 'ARREDI',                'icona' => 'fas fa-chair'],
+            ['id_tipologia_segnalazione' => 10, 'descrizione' => 'GIOCHI',                'icona' => 'fas fa-running'],
+            ['id_tipologia_segnalazione' => 12, 'descrizione' => 'FONTANE PUBBLICHE',     'icona' => 'fas fa-faucet'],
         ]);
         }
 

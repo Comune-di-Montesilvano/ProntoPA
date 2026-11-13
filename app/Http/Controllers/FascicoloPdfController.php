@@ -15,7 +15,7 @@ class FascicoloPdfController extends Controller
 
         $segnalazione->load([
             'stato',
-            'tipologia.gruppo',
+            'tipologia',
             'plesso.istituto',
             'operatore',
             'utente',
