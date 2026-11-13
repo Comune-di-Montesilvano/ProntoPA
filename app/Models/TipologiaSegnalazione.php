@@ -12,7 +12,18 @@ class TipologiaSegnalazione extends Model
     protected $primaryKey = 'id_tipologia_segnalazione';
     public    $timestamps = false;
 
-    protected $fillable = ['descrizione', 'icona', 'id_gruppo'];
+    protected $fillable = ['descrizione', 'icona', 'id_gruppo', 'attiva'];
+
+    protected function casts(): array
+    {
+        return ['attiva' => 'boolean'];
+    }
+
+    /** Quelle proponibili nel form e nei filtri nuovi (le disattivate restano sulle vecchie). */
+    public function scopeAttive(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where('attiva', true);
+    }
 
     public function gruppo(): BelongsTo
     {

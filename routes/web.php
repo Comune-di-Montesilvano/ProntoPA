@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AnagrafeMiurController;
 use App\Http\Controllers\Admin\AspettoController;
+use App\Http\Controllers\Admin\TipologieController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\IntegrazioniController;
 use App\Http\Controllers\Admin\DelegheController;
@@ -192,6 +193,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('utenti', UtentiController::class)
         ->except(['show', 'create', 'store'])
         ->parameters(['utenti' => 'utente']);
+
+    // Tipologie (1.0.0): un solo elenco, le gestisce l'admin.
+    Route::get('tipologie', [TipologieController::class, 'index'])->name('tipologie.index');
+    Route::post('tipologie', [TipologieController::class, 'store'])->name('tipologie.store');
+    Route::patch('tipologie/{tipologia}', [TipologieController::class, 'update'])->name('tipologie.update');
+    Route::post('tipologie/{tipologia}/unisci', [TipologieController::class, 'unisci'])->name('tipologie.unisci');
 
     // Enti (ex Organizzazioni) e sedi in una sezione sola.
     Route::get('enti', [EntiController::class, 'index'])->name('enti.index');

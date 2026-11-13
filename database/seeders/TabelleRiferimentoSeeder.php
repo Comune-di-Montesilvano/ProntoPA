@@ -55,6 +55,8 @@ class TabelleRiferimentoSeeder extends Seeder
             ['id_gruppo' => 6, 'descrizione' => 'ABBANDONO RIFIUTI',   'icona' => 'fas fa-recycle',        'tipologia' => 3, 'cittadini' => 1],
         ]);
 
+        // Le tipologie le gestisce l'admin (1.0.0): solo su un'installazione nuova.
+        if (! DB::table('tipologie_segnalazioni')->exists()) {
         DB::table('tipologie_segnalazioni')->insertOrIgnore([
             ['id_tipologia_segnalazione' => 1,  'descrizione' => 'IMPIANTO ELETTRICO',    'icona' => 'fas fa-bolt',       'id_gruppo' => 1],
             ['id_tipologia_segnalazione' => 2,  'descrizione' => 'INFISSI E PORTE',       'icona' => 'fas fa-door-open',  'id_gruppo' => 1],
@@ -66,9 +68,9 @@ class TabelleRiferimentoSeeder extends Seeder
             ['id_tipologia_segnalazione' => 8,  'descrizione' => 'VERDE E GIARDINI',      'icona' => 'fas fa-seedling',   'id_gruppo' => 1],
             ['id_tipologia_segnalazione' => 9,  'descrizione' => 'ARREDI',                'icona' => 'fas fa-chair',      'id_gruppo' => 1],
             ['id_tipologia_segnalazione' => 10, 'descrizione' => 'GIOCHI',                'icona' => 'fas fa-running',    'id_gruppo' => 5],
-            ['id_tipologia_segnalazione' => 11, 'descrizione' => 'SFALCI E POTATURE',     'icona' => 'fab fa-pagelines',  'id_gruppo' => 5],
             ['id_tipologia_segnalazione' => 12, 'descrizione' => 'FONTANE PUBBLICHE',     'icona' => 'fas fa-faucet',     'id_gruppo' => 5],
         ]);
+        }
 
         DB::table('db_specializzazioni')->insertOrIgnore([
             ['id_specializzazione' => 1, 'descrizione' => 'Edifici Civili ed Industriali (OG1)'],
