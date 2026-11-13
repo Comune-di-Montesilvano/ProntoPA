@@ -41,11 +41,8 @@ paths:
                 value:
                   id_tipologia_segnalazione: 3
                   testo_segnalazione: "Infiltrazione d'acqua nel tetto della palestra"
-                  id_provenienza: 1
-                  segnalante: "Mario Rossi"
-                  email: "mario@example.it"
-                  latitudine: 42.461
-                  longitudine: 14.214
+                  id_plesso: 12
+                  titolo: "Infiltrazione tetto palestra"
       responses:
         '201':
           description: Segnalazione creata
@@ -137,21 +134,14 @@ components:
   schemas:
     NuovaSegnalazione:
       type: object
-      required: [id_tipologia_segnalazione, testo_segnalazione, id_provenienza]
+      required: [id_tipologia_segnalazione, testo_segnalazione, id_plesso]
       properties:
-        id_tipologia_segnalazione: { type: integer, description: "Deve esistere in tipologie_segnalazioni" }
+        id_tipologia_segnalazione: { type: integer, description: "Tipologia attiva in tipologie_segnalazioni" }
         titolo: { type: string, maxLength: 100, nullable: true, description: "Titolo breve; se assente lo propone l'assistente AI (se attivo), altrimenti si mostra l'inizio del testo" }
         testo_segnalazione: { type: string, maxLength: 2000 }
-        id_provenienza: { type: integer, description: "Deve esistere in provenienze_segnalazioni" }
-        id_plesso: { type: integer, nullable: true }
-        segnalante: { type: string, maxLength: 100, nullable: true }
-        email: { type: string, format: email, maxLength: 100, nullable: true }
-        telefono: { type: string, maxLength: 50, nullable: true }
-        latitudine: { type: number, nullable: true }
-        longitudine: { type: number, nullable: true }
+        id_plesso: { type: integer, description: "Sede (plessi) di un ente attivo; dalla 1.0.0 obbligatoria" }
         livello_priorita: { type: integer, minimum: 1, maximum: 4, nullable: true }
-        id_specializzazione: { type: integer, nullable: true, description: "Deve esistere in db_specializzazioni" }
-        ubicazione_tipo: { type: integer, minimum: 0, maximum: 4, nullable: true }
+        ubicazione_tipo: { type: integer, minimum: 0, maximum: 4, nullable: true, description: "0 = non so (default)" }
         force:
           type: boolean
           nullable: true

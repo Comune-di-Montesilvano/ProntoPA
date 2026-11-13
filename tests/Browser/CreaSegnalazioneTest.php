@@ -29,13 +29,15 @@ class CreaSegnalazioneTest extends DuskTestCase
             'supervisore_segnalazioni' => true,
         ]);
         $admin->assignRole('admin');
+        $ente = \App\Models\Istituto::create(['descrizione' => 'IC E2E', 'id_categoria' => \App\Models\CategoriaEnte::factory()->create()->id_categoria, 'attivo' => true]);
+        \App\Models\Plesso::create(['id_istituto' => $ente->id_istituto, 'nome' => 'Sede E2E', 'indirizzo' => 'Via Roma 1']);
 
         $this->browse(function (Browser $browser) use ($admin) {
             $browser->loginAs($admin)
                 ->visit('/segnalazioni/create')
                 ->assertSee('Nuova segnalazione')
+                ->assertSee('Via Roma 1')
                 ->press('IMPIANTO ELETTRICO')
-                ->select('id_provenienza', '1')
                 ->type('titolo', 'Lampione spento via Roma')
                 ->type('testo_segnalazione', 'Lampione spento in via Roma, test E2E Dusk.')
                 ->waitFor('@submit-segnalazione')

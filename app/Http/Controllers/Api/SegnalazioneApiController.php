@@ -10,6 +10,8 @@ use App\Models\Segnalazione;
 use App\Models\StatoSegnalazione;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class SegnalazioneApiController extends Controller
 {
@@ -22,10 +24,11 @@ class SegnalazioneApiController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'id_tipologia_segnalazione' => ['required', 'integer', 'exists:tipologie_segnalazioni,id_tipologia_segnalazione'],
+            'id_tipologia_segnalazione' => ['required', 'integer', Rule::exists('tipologie_segnalazioni', 'id_tipologia_segnalazione')->where('attiva', true)],
             'titolo'                    => ['nullable', 'string', 'max:100'],
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
-            'id_plesso'                 => ['nullable', 'integer', 'exists:plessi,id_plesso'],
+            // 1.0.0: sede obbligatoria, di un ente attivo. Campi tolti (provenienza, chiamante, coordinate) ignorati.
+            'id_plesso'                 => ['required', 'integer', Rule::exists('plessi', 'id_plesso')->whereIn('id_istituto', DB::table('istituti')->where('attivo', true)->pluck('id_istituto')->all())],
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
             'ubicazione_tipo'           => ['nullable', 'integer', 'between:0,4'],
             'force'                     => ['nullable', 'boolean'],

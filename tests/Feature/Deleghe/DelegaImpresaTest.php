@@ -54,7 +54,7 @@ class DelegaImpresaTest extends TestCase
         return Segnalazione::create([
             'id_tipologia_segnalazione' => 1, 'id_utente_segnalazione' => $this->operatore->id,
             'testo_segnalazione' => 'Guasto', 'flag_riservata' => false, 'flag_pubblicata' => false,
-            'id_stato_segnalazione' => 4, 'id_provenienza' => 1, 'id_appalto' => $appalto->id_appalto,
+            'id_stato_segnalazione' => 4, 'id_appalto' => $appalto->id_appalto,
         ]);
     }
 

@@ -42,7 +42,6 @@ class SegnalazioneApiDedupTest extends TestCase
         $response = $this->postJson('/api/segnalazioni', [
             'id_tipologia_segnalazione' => 1,
             'testo_segnalazione'        => 'Buca in strada',
-            'id_provenienza'            => 1,
             'id_plesso'                 => $this->idPlesso,
             'segnalante'                => 'Portale Cittadino',
         ]);
@@ -62,7 +61,6 @@ class SegnalazioneApiDedupTest extends TestCase
         $response = $this->postJson('/api/segnalazioni', [
             'id_tipologia_segnalazione' => 1,
             'testo_segnalazione'        => 'Buca in strada',
-            'id_provenienza'            => 1,
             'id_plesso'                 => $this->idPlesso,
             'segnalante'                => 'Portale Cittadino',
             'force'                     => true,
@@ -84,7 +82,6 @@ class SegnalazioneApiDedupTest extends TestCase
         $response = $this->postJson('/api/segnalazioni', [
             'id_tipologia_segnalazione' => 1,
             'testo_segnalazione'        => 'Buca in strada',
-            'id_provenienza'            => 1,
             'id_plesso'                 => $this->idPlesso,
             'segnalante'                => 'Portale Cittadino',
         ]);

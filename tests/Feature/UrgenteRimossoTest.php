@@ -52,7 +52,7 @@ class UrgenteRimossoTest extends TestCase
             'id_tipologia_segnalazione' => 1,
             'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Perdita acqua',
-            'id_provenienza'            => 1,
+            'id_plesso'                 => \Tests\Support\SedeDiProva::id(),
             'segnalazione_urgente'      => 1,
         ])->assertRedirect();
 

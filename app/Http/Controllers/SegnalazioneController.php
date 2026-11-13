@@ -20,6 +20,7 @@ use App\Services\Segnalazioni\DestinatariAssegnatario;
 use App\Services\Segnalazioni\DestinatariComune;
 use App\Services\Segnalazioni\FineLavoriService;
 use App\Models\Appalto;
+use App\Support\Segnalazioni\SediSegnalabili;
 use App\Support\Segnalazioni\AppaltiPerTipologia;
 use App\Models\Squadra;
 use App\Support\Segnalazioni\Attivita;
@@ -76,23 +77,8 @@ class SegnalazioneController extends Controller
     {
         $user = auth()->user();
 
-        $tipologie  = TipologiaSegnalazione::attive()->orderBy('descrizione')->get();
-
-        if ($user->isSpid()) {
-            $plessi = Plesso::with('istituto.categoria')
-                            ->whereIn('id_plesso', Delega::plessiCopertiDa($user))
-                            ->get();
-        } else {
-            $plessi = Plesso::with('istituto.categoria')->get();
-        }
-        // Per categoria (ordine configurato), poi ente, poi sede: la select le raggruppa in questo ordine.
-        $plessi = $plessi->sortBy([
-            ['istituto.categoria.ordine', 'asc'],
-            ['istituto.categoria.nome', 'asc'],
-            ['istituto.descrizione', 'asc'],
-            ['nome', 'asc'],
-        ])->values();
-
+        $tipologie = TipologiaSegnalazione::attive()->orderBy('descrizione')->get();
+        $plessi    = SediSegnalabili::per($user);
 
         // Tempo previsto per tipologia (0 = regola valida per tutte) e priorità.
         $tempiPrevisti = SlaConfigurazione::all()
@@ -112,24 +98,16 @@ class SegnalazioneController extends Controller
             array_map('trim', explode(',', Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png')))
         );
 
-        $scuola = $request->user()->segnalaComeScuola();
-        if ($scuola) {
-        }
-        $obbligatorioScuola = $scuola ? 'required' : 'nullable';
-
-        $regolePlesso = [$obbligatorioScuola, 'integer', 'exists:plessi,id_plesso'];
-        if ($request->user()->isSpid()) {
-            // Scuole via SPID: si segnala solo su un plesso coperto da delega.
-            $regolePlesso = ['required', 'integer', Rule::in(Delega::plessiCopertiDa($request->user())->pluck('id_plesso')->all())];
-        }
+        // 1.0.0: la sede è obbligatoria per tutti (scuola: sedi delle deleghe; enti attivi).
+        $regolePlesso = ['required', 'integer', Rule::in(SediSegnalabili::per($request->user())->pluck('id_plesso')->all())];
 
         $data = $request->validate([
-            'id_tipologia_segnalazione' => ['required', 'integer', 'exists:tipologie_segnalazioni,id_tipologia_segnalazione'],
+            'id_tipologia_segnalazione' => ['required', 'integer', Rule::exists('tipologie_segnalazioni', 'id_tipologia_segnalazione')->where('attiva', true)],
             'titolo'                    => ['required', 'string', 'max:100'],
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
             'id_plesso'                 => $regolePlesso,
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
-            'ubicazione_tipo'           => $scuola ? ['required', 'integer', 'between:1,4'] : ['nullable', 'integer', 'between:0,4'],
+            'ubicazione_tipo'           => ['nullable', 'integer', 'between:0,4'],
             'allegati'                  => ['nullable', 'array', 'max:' . $maxPerRequest],
             'allegati.*'                => [
                 'file',
@@ -137,10 +115,10 @@ class SegnalazioneController extends Controller
                 'mimetypes:' . implode(',', $mimeConsentiti),
             ],
         ], [
-            'id_plesso.required'           => 'Scegli il plesso.',
-            'id_plesso.in'                 => 'Puoi segnalare solo per i plessi coperti dalle tue deleghe.',
-            'ubicazione_tipo.required'     => 'Indica dove si trova il problema.',
-            'ubicazione_tipo.between'      => 'Indica dove si trova il problema.',
+            'id_plesso.required'           => 'Scegli la sede.',
+            'id_plesso.in'                 => 'Scegli una delle sedi in elenco.',
+            'id_tipologia_segnalazione.required' => 'Scegli la tipologia.',
+            'id_tipologia_segnalazione.exists'   => 'Scegli una delle tipologie in elenco.',
             'titolo.required'              => 'Scrivi un titolo breve.',
             'titolo.max'                   => 'Il titolo può avere al massimo 100 caratteri.',
         ]);
@@ -152,9 +130,8 @@ class SegnalazioneController extends Controller
             [
                 'id_utente_segnalazione' => $user->id,
                 'id_stato_segnalazione'  => SegnalazioneStato::NUOVA->value,
-                'id_plesso'              => $data['id_plesso'] ?? 0,
                 'livello_priorita'       => $data['livello_priorita'] ?? 2,
-                'ubicazione_tipo'        => $data['ubicazione_tipo'] ?? null,
+                'ubicazione_tipo'        => $data['ubicazione_tipo'] ?? 0,
             ]
         ));
 

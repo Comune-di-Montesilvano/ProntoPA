@@ -38,7 +38,7 @@ class TitoloAutomaticoTest extends TestCase
             'id_tipologia_segnalazione' => 1,
             'titolo'                    => 'Perdita rubinetto docce',
             'testo_segnalazione'        => 'Perdita acqua dal rubinetto bagno docce piano terra',
-            'id_provenienza'            => 1,
+            'id_plesso' => \Tests\Support\SedeDiProva::id(),
         ]);
 
         Queue::assertNotPushed(GeneraTitoloSegnalazione::class);
@@ -53,7 +53,7 @@ class TitoloAutomaticoTest extends TestCase
         $user->assignRole('segnalatore');
         $this->actingAs($user);
 
-        $base = ['id_tipologia_segnalazione' => 1, 'testo_segnalazione' => 'Perdita acqua dal rubinetto', 'id_provenienza' => 1, 'force' => true];
+        $base = ['id_tipologia_segnalazione' => 1, 'testo_segnalazione' => 'Perdita acqua dal rubinetto', 'id_plesso' => \Tests\Support\SedeDiProva::id(), 'force' => true];
         $this->postJson('/api/segnalazioni', $base + ['titolo' => 'Rubinetto'])->assertCreated();
         Queue::assertNotPushed(GeneraTitoloSegnalazione::class);
 
@@ -73,7 +73,7 @@ class TitoloAutomaticoTest extends TestCase
             'id_tipologia_segnalazione' => 1,
             'titolo'                    => 'Prova',
             'testo_segnalazione'        => 'Test disabilitato',
-            'id_provenienza'            => 1,
+            'id_plesso' => \Tests\Support\SedeDiProva::id(),
         ]);
 
         Queue::assertNothingPushed();

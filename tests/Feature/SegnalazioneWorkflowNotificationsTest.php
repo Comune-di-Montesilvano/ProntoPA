@@ -120,7 +120,6 @@ class SegnalazioneWorkflowNotificationsTest extends TestCase
             'flag_riservata' => false,
             'flag_pubblicata' => true,
             'id_stato_segnalazione' => 2,
-            'id_provenienza' => 1,
         ]);
     }
 }
