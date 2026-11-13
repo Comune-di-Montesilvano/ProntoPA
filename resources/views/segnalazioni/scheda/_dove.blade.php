@@ -3,9 +3,10 @@
     $conAzioni = $conAzioni ?? false;
     $conMappa = $conMappa ?? false;
     $plesso = $segnalazione->id_plesso ? $segnalazione->plesso : null;
-    $haCoordinate = $segnalazione->latitudine && $segnalazione->longitudine && (float) $segnalazione->latitudine != 0;
+    $posizione = $segnalazione->posizione();
+    $haCoordinate = $posizione !== null;
     $naviga = $haCoordinate
-        ? 'https://www.google.com/maps/search/?api=1&query='.(float) $segnalazione->latitudine.','.(float) $segnalazione->longitudine
+        ? 'https://www.google.com/maps/search/?api=1&query='.$posizione['lat'].','.$posizione['lng']
         : ($plesso?->indirizzo ? 'https://www.google.com/maps/search/?api=1&query='.urlencode($plesso->indirizzo) : null);
     $primoNumero = $plesso?->recapiti ? trim(preg_split('/[,;\/]| - /', $plesso->recapiti)[0]) : '';
     $telefono = preg_replace('/[^\d+]/', '', $primoNumero);
@@ -23,6 +24,10 @@
     @endif
     @if(! $plesso && ! $haCoordinate && ! $segnalazione->ubicazione_tipo)
         <p class="m-0 text-[var(--slate-500)]">Luogo non indicato.</p>
+    @endif
+
+    @if(! $conAzioni && $haCoordinate)
+        <a href="{{ $naviga }}" target="_blank" rel="noopener" class="text-[var(--ente-primary)] underline">Apri in Maps</a>
     @endif
 
     @if($conAzioni && ($naviga || $telefono))

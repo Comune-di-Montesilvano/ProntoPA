@@ -76,7 +76,6 @@ class TelegramWebhookTest extends TestCase
             'flag_riservata' => false,
             'flag_pubblicata' => true,
             'id_stato_segnalazione' => 2,
-            'id_provenienza' => 1,
         ]);
 
         $response = $this->postJson('/api/telegram/webhook', [
@@ -115,7 +114,6 @@ class TelegramWebhookTest extends TestCase
             'flag_riservata' => false,
             'flag_pubblicata' => true,
             'id_stato_segnalazione' => 2,
-            'id_provenienza' => 1,
         ]);
 
         $response = $this->postJson('/api/telegram/webhook', [
@@ -160,7 +158,6 @@ class TelegramWebhookTest extends TestCase
             'flag_riservata' => false,
             'flag_pubblicata' => true,
             'id_stato_segnalazione' => 2,
-            'id_provenienza' => 1,
         ]);
 
         $response = $this->postJson('/api/telegram/webhook', [
@@ -202,7 +199,7 @@ class TelegramWebhookTest extends TestCase
         $admin->syncRoles(['admin']);
         $s = Segnalazione::create([
             'id_tipologia_segnalazione' => 1, 'id_utente_segnalazione' => $admin->id, 'testo_segnalazione' => 'Lampada rotta',
-            'flag_riservata' => false, 'flag_pubblicata' => true, 'id_stato_segnalazione' => 1, 'id_provenienza' => 1,
+            'flag_riservata' => false, 'flag_pubblicata' => true, 'id_stato_segnalazione' => 1, 
         ]);
 
         $this->postJson('/api/telegram/webhook', ['message' => ['chat' => ['id' => '445566'], 'text' => '/chiudi '.$s->id_segnalazione]],
@@ -218,7 +215,7 @@ class TelegramWebhookTest extends TestCase
         $operaio->syncRoles(['operaio']);
         $s = Segnalazione::create([
             'id_tipologia_segnalazione' => 1, 'id_utente_segnalazione' => $operaio->id, 'testo_segnalazione' => 'Porta bloccata',
-            'flag_riservata' => false, 'flag_pubblicata' => true, 'id_stato_segnalazione' => 3, 'id_provenienza' => 1,
+            'flag_riservata' => false, 'flag_pubblicata' => true, 'id_stato_segnalazione' => 3, 
             'id_operatore_assegnato' => $operaio->id,
         ]);
 

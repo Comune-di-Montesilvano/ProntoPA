@@ -65,6 +65,10 @@
             <x-pa.impostazione chiave="osm_lng" tipo="decimale" etichetta="Longitudine" />
             <x-pa.impostazione chiave="osm_zoom" tipo="intero" etichetta="Ingrandimento" />
         </div>
+        <div class="max-w-md">
+            <x-pa.impostazione chiave="geocoding_comune" etichetta="Comune delle sedi" />
+            <p class="text-xs text-gray-500 mt-1">Aggiunto agli indirizzi delle sedi quando se ne cerca la posizione (es. "Montesilvano" o "65015 Montesilvano PE").</p>
+        </div>
 
         <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">Salva</button>
     </form>

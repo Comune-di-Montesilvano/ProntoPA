@@ -149,7 +149,7 @@ class AvvisoNuovaSegnalazioneTest extends TestCase
         $segnalatore->assignRole('segnalatore');
 
         $this->actingAs($segnalatore)->postJson('/api/segnalazioni', [
-            'id_tipologia_segnalazione' => 1, 'testo_segnalazione' => 'Perdita acqua', 'id_provenienza' => 1, 'force' => true,
+            'id_tipologia_segnalazione' => 1, 'testo_segnalazione' => 'Perdita acqua', 'id_plesso'      => \Tests\Support\SedeDiProva::id(), 'force' => true,
         ])->assertCreated();
 
         Notification::assertSentTo($a, NuovaSegnalazioneNotification::class);

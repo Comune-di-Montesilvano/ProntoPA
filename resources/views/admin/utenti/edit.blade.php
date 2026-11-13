@@ -26,7 +26,6 @@
                     <div><dt class="inline text-blue-700">Username:</dt> <dd class="inline m-0">{{ $utente->username }}</dd></div>
                     <div><dt class="inline text-blue-700">Email:</dt> <dd class="inline m-0">{{ $utente->email }}</dd></div>
                     <div><dt class="inline text-blue-700">Ruolo:</dt> <dd class="inline m-0">{{ ucfirst($ruoloCorrente) }}@if($ruoloCorrente === 'gestore' && $utente->supervisore_segnalazioni) (supervisore)@endif</dd></div>
-                    <div><dt class="inline text-blue-700">Provenienza:</dt> <dd class="inline m-0">{{ $provenienze->firstWhere('id_provenienza', $utente->id_provenienza)?->descrizione ?? '—' }}</dd></div>
                     <div><dt class="inline text-blue-700">Stato:</dt> <dd class="inline m-0">{{ $utente->attivo !== false ? 'attivo' : 'disattivato' }}</dd></div>
                 </dl>
             </div>
@@ -113,23 +112,6 @@
             </div>
             @endif
 
-            {{-- Provenienza (per gli utenti di dominio la decide il gruppo AD) --}}
-            @unless($daAd)
-            <div>
-                <x-input-label for="id_provenienza" value="Provenienza" />
-                <select id="id_provenienza" name="id_provenienza"
-                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    <option value="">— Nessuna —</option>
-                    @foreach($provenienze as $p)
-                        <option value="{{ $p->id_provenienza }}"
-                            {{ old('id_provenienza', $utente->id_provenienza) == $p->id_provenienza ? 'selected' : '' }}>
-                            {{ $p->descrizione }}
-                        </option>
-                    @endforeach
-                </select>
-                <x-input-error :messages="$errors->get('id_provenienza')" class="mt-1" />
-            </div>
-            @endunless
 
             <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
                 <a href="{{ route($lista) }}" class="text-sm text-gray-500 hover:text-gray-700">Annulla</a>

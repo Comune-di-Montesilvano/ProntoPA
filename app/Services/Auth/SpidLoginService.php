@@ -13,9 +13,6 @@ use Illuminate\Support\Facades\DB;
  */
 final class SpidLoginService
 {
-    /** provenienze_segnalazioni: 2 = DIREZIONI DIDATTICHE (scuole) */
-    public const PROVENIENZA_SCUOLE = 2;
-
     /**
      * @throws AccessoSpidNegato
      */
@@ -67,7 +64,6 @@ final class SpidLoginService
                     'email' => mb_strtolower(trim($email)),
                     'email_verified_at' => null,
                     'password' => null,
-                    'id_provenienza' => self::PROVENIENZA_SCUOLE,
                     'attivo' => true,
                     'approval_status' => 'approved',
                     'last_login' => now(),

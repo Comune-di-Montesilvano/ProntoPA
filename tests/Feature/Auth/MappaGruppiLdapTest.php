@@ -18,20 +18,18 @@ class MappaGruppiLdapTest extends TestCase
     public function test_ogni_gruppo_default_mappa_il_suo_ruolo(): void
     {
         $casi = [
-            'PRONTOPA_ADMIN' => ['admin', false, false, 1],
-            'PRONTOPA_SUPERVISORI' => ['gestore', true, false, 1],
-            'PRONTOPA_GESTORI' => ['gestore', false, false, 1],
-            'PRONTOPA_OPERAI' => ['operaio', false, false, 1],
-            'PRONTOPA_URP' => ['segnalatore', false, true, 3],
-            'PRONTOPA_SEGNALATORI' => ['segnalatore', false, false, 1],
+            'PRONTOPA_ADMIN' => ['admin', false],
+            'PRONTOPA_SUPERVISORI' => ['gestore', true],
+            'PRONTOPA_GESTORI' => ['gestore', false],
+            'PRONTOPA_OPERAI' => ['operaio', false],
+            'PRONTOPA_URP' => ['segnalatore', false],
+            'PRONTOPA_SEGNALATORI' => ['segnalatore', false],
         ];
 
-        foreach ($casi as $gruppo => [$ruolo, $sup, $perConto, $prov]) {
+        foreach ($casi as $gruppo => [$ruolo, $sup]) {
             $r = $this->mappa()->risolvi([$gruppo]);
             $this->assertSame($ruolo, $r->ruolo, $gruppo);
             $this->assertSame($sup, $r->supervisore, $gruppo);
-            $this->assertSame($perConto, $r->perConto, $gruppo);
-            $this->assertSame($prov, $r->idProvenienza, $gruppo);
         }
     }
 
@@ -40,7 +38,7 @@ class MappaGruppiLdapTest extends TestCase
         $r = $this->mappa()->risolvi(['PRONTOPA_OPERAI', 'PRONTOPA_GESTORI', 'PRONTOPA_URP']);
 
         $this->assertSame('gestore', $r->ruolo);
-        $this->assertFalse($r->perConto);
+        $this->assertFalse($r->supervisore);
     }
 
     public function test_confronto_case_insensitive_e_gruppi_estranei_ignorati(): void

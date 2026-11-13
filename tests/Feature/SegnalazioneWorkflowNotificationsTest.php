@@ -77,7 +77,7 @@ class SegnalazioneWorkflowNotificationsTest extends TestCase
         $utenteImpresa->syncRoles(['impresa']);
 
         $appalto = Appalto::create([
-            'id_gruppo' => 1,
+            
             'descrizione' => 'Appalto test',
             'id_impresa' => $impresa->id_impresa,
             'valido' => true,
@@ -120,7 +120,6 @@ class SegnalazioneWorkflowNotificationsTest extends TestCase
             'flag_riservata' => false,
             'flag_pubblicata' => true,
             'id_stato_segnalazione' => 2,
-            'id_provenienza' => 1,
         ]);
     }
 }

@@ -41,7 +41,7 @@ class SlaOrarioUfficioTest extends TestCase
             'id_tipologia_segnalazione' => 1,
             'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Perdita acqua dal rubinetto',
-            'id_provenienza'            => 1,
+            'id_plesso' => \Tests\Support\SedeDiProva::id(),
             'livello_priorita'          => 2,
         ])->assertRedirect();
 

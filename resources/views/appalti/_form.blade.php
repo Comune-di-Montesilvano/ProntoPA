@@ -10,21 +10,6 @@
 
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
-        <x-input-label for="id_gruppo" value="Gruppo *" />
-        <select id="id_gruppo" name="id_gruppo"
-                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
-                required>
-            <option value="">— Seleziona —</option>
-            @foreach($gruppi as $g)
-                <option value="{{ $g->id_gruppo }}"
-                    {{ old('id_gruppo', $appalto->id_gruppo ?? '') == $g->id_gruppo ? 'selected' : '' }}>
-                    {{ $g->descrizione }}
-                </option>
-            @endforeach
-        </select>
-        <x-input-error :messages="$errors->get('id_gruppo')" class="mt-1" />
-    </div>
-    <div>
         <x-input-label for="id_impresa" value="Impresa" />
         <select id="id_impresa" name="id_impresa"
                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
@@ -60,3 +45,26 @@
            {{ old('valido', $appalto->valido ?? true) ? 'checked' : '' }}>
     <x-input-label for="valido" value="Appalto attivo (valido)" />
 </div>
+
+@php
+    $selezionate = array_map('intval', old('tipologie', isset($appalto) ? $appalto->tipologie->pluck('id_tipologia_segnalazione')->all() : []));
+@endphp
+<fieldset x-data="{ tutte: {{ old('tutte_tipologie', $appalto->tutte_tipologie ?? false) ? 'true' : 'false' }} }" class="flex flex-col gap-3">
+    <legend class="text-sm font-medium text-gray-700">Tipologie coperte</legend>
+    <p class="m-0 text-xs text-gray-500">Nel pannello Assegna la ditta compare per prima sulle segnalazioni di queste tipologie.</p>
+    <label class="flex items-center gap-2 text-sm">
+        <input type="hidden" name="tutte_tipologie" value="0">
+        <input type="checkbox" name="tutte_tipologie" value="1" x-model="tutte" class="rounded border-gray-300 text-blue-600">
+        Tutte le tipologie
+    </label>
+    <div x-show="!tutte" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        @foreach($tipologie as $t)
+            <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="tipologie[]" value="{{ $t->id_tipologia_segnalazione }}" class="rounded border-gray-300 text-blue-600"
+                       @checked(in_array($t->id_tipologia_segnalazione, $selezionate))>
+                {{ $t->descrizione }}
+            </label>
+        @endforeach
+    </div>
+    <x-input-error :messages="$errors->get('tipologie')" class="mt-1" />
+</fieldset>

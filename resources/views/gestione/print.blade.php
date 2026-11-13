@@ -111,7 +111,6 @@
                     <th style="width:110px">Tipologia</th>
                     <th>Descrizione</th>
                     <th style="width:110px">Plesso</th>
-                    <th style="width:90px">Provenienza</th>
                     <th style="width:90px">Operatore</th>
                     <th style="width:120px">Stato</th>
                 </tr>
@@ -127,7 +126,6 @@
                         <td>{{ $s->tipologia?->descrizione ?? '—' }}</td>
                         <td>{{ \Illuminate\Support\Str::limit($s->testo_segnalazione, 100) }}</td>
                         <td>{{ $s->plesso?->nome ?? '—' }}</td>
-                        <td>{{ $s->provenienza?->descrizione ?? '—' }}</td>
                         <td>{{ $s->operatore?->name ?? '—' }}</td>
                         <td><span class="stato">{{ $s->statoEnum()->label() }}</span></td>
                     </tr>

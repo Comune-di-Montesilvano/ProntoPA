@@ -65,7 +65,7 @@ class ProvaLdap extends Command
             ['Email', $identita->email ?? '— (manca: login rifiutato)'],
             ['Gruppi', implode(', ', $identita->groups) ?: '—'],
             ['Ruolo ProntoPA', $ruolo
-                ? $ruolo->ruolo.($ruolo->supervisore ? ' (supervisore)' : '').($ruolo->perConto ? ' + per-conto' : '')
+                ? $ruolo->ruolo.($ruolo->supervisore ? ' (supervisore)' : '')
                 : '— (nessun gruppo: login rifiutato)'],
         ]);
 

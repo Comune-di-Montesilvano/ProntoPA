@@ -73,7 +73,7 @@ class VisibilitaSchedaTest extends TestCase
     public function test_comunica_fine_lavori_ditta_e_operaio_assegnati(): void
     {
         $impresa = Impresa::create(['ragione_sociale' => 'Ditta']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $ditta = $this->utente('impresa', ['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'email_verified_at' => now()]);
         $operaio = $this->utente('operaio');
         $gestore = $this->utente('gestore', ['supervisore_segnalazioni' => true]);

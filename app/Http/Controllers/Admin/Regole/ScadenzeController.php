@@ -16,7 +16,7 @@ class ScadenzeController extends Controller
 {
     public function index(): View
     {
-        $regole = SlaConfigurazione::with(['tipologia', 'specializzazione'])
+        $regole = SlaConfigurazione::with(['tipologia'])
             ->orderBy('livello_priorita')
             ->get();
         $anno = now()->year;

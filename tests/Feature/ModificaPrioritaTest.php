@@ -95,7 +95,7 @@ class ModificaPrioritaTest extends TestCase
     public function test_segnalatore_operaio_e_impresa_non_possono(): void
     {
         $impresa = Impresa::create(['ragione_sociale' => 'Ditta']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $segnalatore = User::factory()->create();
         $segnalatore->assignRole('segnalatore');
         $operaio = User::factory()->create();
@@ -178,7 +178,7 @@ class ModificaPrioritaTest extends TestCase
     public function test_impresa_non_cambia_priorita_via_azione(): void
     {
         $impresa = Impresa::create(['ragione_sociale' => 'Ditta']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'email_verified_at' => now()]);
         $ditta->assignRole('impresa');
         $s = $this->segnalazione(['id_appalto' => $appalto->id_appalto, 'id_stato_segnalazione' => 4]);
@@ -206,7 +206,7 @@ class ModificaPrioritaTest extends TestCase
 
         // La ditta vede la scheda (e ha `update`), ma la priorità non la tocca.
         $impresa = Impresa::create(['ragione_sociale' => 'Ditta']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'email_verified_at' => now()]);
         $ditta->assignRole('impresa');
         $s->update(['id_appalto' => $appalto->id_appalto, 'id_stato_segnalazione' => 4]);

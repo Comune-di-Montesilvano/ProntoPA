@@ -43,7 +43,7 @@ class InattivitaTest extends TestCase
         $this->supervisore = User::factory()->create(['supervisore_segnalazioni' => true]);
         $this->supervisore->assignRole('gestore');
         $impresa = Impresa::create(['ragione_sociale' => 'Edil Adriatica']);
-        $this->appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'Edile', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $this->appalto = Appalto::create(['descrizione' => 'Edile', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $this->ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'email_verified_at' => now()]);
         $this->ditta->assignRole('impresa');
 

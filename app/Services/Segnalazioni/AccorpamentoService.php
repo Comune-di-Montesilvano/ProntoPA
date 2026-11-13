@@ -100,21 +100,14 @@ class AccorpamentoService
             return;
         }
 
-        // id_utente è obbligatorio: per chi ha segnalato senza account resta l'attore, con l'anagrafica.
-        $destinazione->adesioni()->create([
-            'id_utente' => $idUtente > 0 ? $idUtente : $attore->id,
-            'segnalante' => $nuova->segnalante,
-            'telefono' => $nuova->telefono,
-            'email' => $nuova->email,
-        ]);
+        // Senza account (segnalazioni vecchie) non c'è nessuno da far seguire.
+        if ($idUtente > 0) {
+            $destinazione->adesioni()->firstOrCreate(['id_utente' => $idUtente]);
+        }
     }
 
     private function nomeSegnalante(Segnalazione $s): string
     {
-        if (filled($s->segnalante)) {
-            return (string) $s->segnalante;
-        }
-
         $utente = $s->id_utente_segnalazione ? User::find($s->id_utente_segnalazione) : null;
 
         return $utente !== null && $utente->name ? $utente->name : 'un altro segnalante';
@@ -140,12 +133,8 @@ class AccorpamentoService
         $segnalante = new AccorpataNotification($destinazione, $nuova, 'segnalante');
         $utente = $nuova->id_utente_segnalazione ? User::find($nuova->id_utente_segnalazione) : null;
 
-        if ($utente !== null) {
-            if ($utente->id !== $attore->id && $utente->attivo !== false) {
-                $utente->notify($segnalante);
-            }
-        } elseif (filled($nuova->email)) {
-            Notification::route('mail', (string) $nuova->email)->notify($segnalante);
+        if ($utente !== null && $utente->id !== $attore->id && $utente->attivo !== false) {
+            $utente->notify($segnalante);
         }
     }
 }

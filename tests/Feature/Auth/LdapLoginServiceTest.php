@@ -45,7 +45,6 @@ class LdapLoginServiceTest extends TestCase
         $this->assertTrue($user->hasRole('gestore'));
         $this->assertTrue($user->gestore_segnalazioni);
         $this->assertFalse($user->supervisore_segnalazioni);
-        $this->assertSame(1, $user->id_provenienza);
         $this->assertNotNull($user->last_login);
     }
 
@@ -63,18 +62,13 @@ class LdapLoginServiceTest extends TestCase
         $this->assertFalse($secondo->gestore_segnalazioni);
     }
 
-    public function test_urp_riceve_permesso_per_conto_e_lo_perde_se_cambia_gruppo(): void
+    public function test_urp_e_segnalatore_come_gli_altri(): void
     {
         $this->dir->aggiungi('pw', FakeDirectory::identita('urp1', ['PRONTOPA_URP'], guid: 'g-urp'));
         $user = $this->service()->login('urp1', 'pw');
 
-        $this->assertTrue($user->can('segnalazioni.per-conto'));
-        $this->assertSame(3, $user->id_provenienza);
-
-        $this->dir->aggiungi('pw', FakeDirectory::identita('urp1', ['PRONTOPA_SEGNALATORI'], guid: 'g-urp'));
-        $user = $this->service()->login('urp1', 'pw');
-
-        $this->assertFalse($user->fresh()->can('segnalazioni.per-conto'));
+        $this->assertTrue($user->hasRole('segnalatore'));
+        $this->assertTrue($user->getDirectPermissions()->isEmpty());
     }
 
     public function test_credenziali_errate_o_password_vuota_restituiscono_null(): void

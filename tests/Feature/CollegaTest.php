@@ -77,7 +77,7 @@ class CollegaTest extends TestCase
     public function test_riparazione_precedente_con_ditta(): void
     {
         $impresa = Impresa::create(['ragione_sociale' => 'Edil Adriatica']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $prima = $this->chiusa(['id_appalto' => $appalto->id_appalto, 'data_chiusura' => now()->subDays(40)]);
         $nuova = Segnalazione::factory()->create(['id_segnalazione_correlata' => $prima->id_segnalazione]);
 

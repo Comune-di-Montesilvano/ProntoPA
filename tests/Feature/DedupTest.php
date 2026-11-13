@@ -63,32 +63,6 @@ class DedupTest extends TestCase
         $response->assertJsonFragment(['id' => $aperta->id_segnalazione]);
     }
 
-    public function test_trova_simile_per_vicinanza_geografica(): void
-    {
-        $vicina = Segnalazione::factory()->create([
-            'id_tipologia_segnalazione' => 2,
-            'latitudine'                => 42.5145,
-            'longitudine'               => 14.1500,
-        ]);
-        Segnalazione::factory()->create([
-            'id_tipologia_segnalazione' => 2,
-            'latitudine'                => 42.5600,
-            'longitudine'               => 14.1500,
-        ]);
-
-        $response = $this->actingAs($this->utente())->getJson(
-            route('segnalazioni.simili', [
-                'id_tipologia_segnalazione' => 2,
-                'latitudine'                => 42.5146,
-                'longitudine'               => 14.1501,
-            ])
-        );
-
-        $response->assertOk();
-        $response->assertJsonCount(1);
-        $response->assertJsonFragment(['id' => $vicina->id_segnalazione]);
-    }
-
     public function test_flag_spento_restituisce_lista_vuota(): void
     {
         Impostazione::set('adesioni_enabled', false);

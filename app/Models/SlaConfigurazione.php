@@ -13,7 +13,6 @@ class SlaConfigurazione extends Model
 
     protected $fillable = [
         'id_tipologia_segnalazione',
-        'id_specializzazione',
         'livello_priorita',
         'ore_target',
         'unita',
@@ -49,43 +48,23 @@ class SlaConfigurazione extends Model
         return $this->belongsTo(TipologiaSegnalazione::class, 'id_tipologia_segnalazione', 'id_tipologia_segnalazione');
     }
 
-    public function specializzazione(): BelongsTo
-    {
-        return $this->belongsTo(Specializzazione::class, 'id_specializzazione', 'id_specializzazione');
-    }
 
     /**
-     * Trova la regola SLA applicabile con fallback:
-     * 1. match esatto (tipologia + specializzazione + priorità)
-     * 2. solo tipologia + priorità
-     * 3. default (nessuna tipologia) + priorità
+     * Regola applicabile: tipologia + priorità, altrimenti quella senza tipologia (stessa priorità).
+     * 1.0.0: niente più specializzazioni.
      */
-    public static function applicabileA(
-        ?int $idTipologia,
-        ?int $idSpecializzazione,
-        int  $livelloPriorita
-    ): ?self {
-        // Tentativo 1: match esatto
-        if ($idTipologia && $idSpecializzazione) {
-            $regola = self::where('id_tipologia_segnalazione', $idTipologia)
-                ->where('id_specializzazione', $idSpecializzazione)
-                ->where('livello_priorita', $livelloPriorita)
-                ->first();
-            if ($regola) return $regola;
-        }
-
-        // Tentativo 2: solo tipologia
+    public static function applicabileA(?int $idTipologia, int $livelloPriorita): ?self
+    {
         if ($idTipologia) {
             $regola = self::where('id_tipologia_segnalazione', $idTipologia)
-                ->whereNull('id_specializzazione')
                 ->where('livello_priorita', $livelloPriorita)
                 ->first();
-            if ($regola) return $regola;
+            if ($regola) {
+                return $regola;
+            }
         }
 
-        // Tentativo 3: regola default
         return self::whereNull('id_tipologia_segnalazione')
-            ->whereNull('id_specializzazione')
             ->where('livello_priorita', $livelloPriorita)
             ->first();
     }

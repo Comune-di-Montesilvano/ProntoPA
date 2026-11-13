@@ -45,7 +45,7 @@ class TriageSuggeritoTest extends TestCase
             'id_tipologia_segnalazione' => 1,
             'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Infiltrazione d\'acqua dal tetto aula 3',
-            'id_provenienza'            => 1,
+            'id_plesso' => \Tests\Support\SedeDiProva::id(),
         ]);
 
         Queue::assertPushed(SuggerisciTriageSegnalazione::class);

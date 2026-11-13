@@ -64,7 +64,7 @@ class AllegatiSegnalazioniTest extends TestCase
             'id_tipologia_segnalazione' => 1,
             'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Lampione spento via Roma',
-            'id_provenienza'            => 1,
+            'id_plesso'                 => \Tests\Support\SedeDiProva::id(),
             'allegati'                  => [UploadedFile::fake()->image('foto.jpg')],
         ]);
 
@@ -82,7 +82,7 @@ class AllegatiSegnalazioniTest extends TestCase
             'id_tipologia_segnalazione' => 1,
             'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Perdita acqua bagno secondo piano',
-            'id_provenienza'            => 1,
+            'id_plesso'                 => \Tests\Support\SedeDiProva::id(),
             'allegati'                  => [
                 UploadedFile::fake()->image('foto1.jpg'),
                 UploadedFile::fake()->image('foto2.png'),
@@ -109,7 +109,7 @@ class AllegatiSegnalazioniTest extends TestCase
             'id_tipologia_segnalazione' => 1,
             'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Test mime',
-            'id_provenienza'            => 1,
+            'id_plesso'                 => \Tests\Support\SedeDiProva::id(),
             'allegati'                  => [
                 UploadedFile::fake()->create('script.exe', 100, 'application/x-msdownload'),
             ],

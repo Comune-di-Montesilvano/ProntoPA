@@ -35,20 +35,13 @@ class Segnalazione extends Model
         'id_stradario',
         'id_area',
         'id_immobile',
-        'latitudine',
-        'longitudine',
-        'zoom',
         'testo_segnalazione',
         'flag_riservata',
         'flag_pubblicata',
         'flag_evidenza',
         'id_stato_segnalazione',
-        'id_provenienza',
         'id_appalto',
         'id_operatore_assegnato',
-        'segnalante',
-        'email',
-        'telefono',
         'importo_preventivo',
         'importo_liquidato',
         'id_segnalazione_madre',
@@ -62,7 +55,6 @@ class Segnalazione extends Model
         'avviso_inattivita_at',
         'external_id',
         'livello_priorita',
-        'id_specializzazione',
         'ubicazione_tipo',
         'id_squadra_assegnata',
         'titolo',
@@ -76,8 +68,6 @@ class Segnalazione extends Model
             'data_segnalazione'      => 'datetime',
             'data_chiusura'          => 'datetime',
             'id_stato_segnalazione'  => SegnalazioneStato::class,
-            'latitudine'             => 'float',
-            'longitudine'            => 'float',
             'flag_riservata'         => 'boolean',
             'flag_pubblicata'        => 'boolean',
             'flag_evidenza'          => 'boolean',
@@ -121,9 +111,19 @@ class Segnalazione extends Model
         return $this->belongsTo(TipologiaSegnalazione::class, 'id_tipologia_segnalazione', 'id_tipologia_segnalazione');
     }
 
-    public function provenienza(): BelongsTo
+    /**
+     * Dove mostrare la segnalazione su una mappa: la posizione della sede (1.0.0).
+     *
+     * @return array{lat: float, lng: float}|null
+     */
+    public function posizione(): ?array
     {
-        return $this->belongsTo(Provenienza::class, 'id_provenienza', 'id_provenienza');
+        $plesso = $this->id_plesso ? $this->plesso : null;
+        if ($plesso?->haCoordinate()) {
+            return ['lat' => (float) $plesso->latitudine, 'lng' => (float) $plesso->longitudine];
+        }
+
+        return null;
     }
 
     /** @return BelongsTo<Plesso, $this> */
@@ -138,10 +138,6 @@ class Segnalazione extends Model
         return $this->belongsTo(Appalto::class, 'id_appalto', 'id_appalto');
     }
 
-    public function specializzazione(): BelongsTo
-    {
-        return $this->belongsTo(Specializzazione::class, 'id_specializzazione', 'id_specializzazione');
-    }
 
     /** @return HasMany<NotaSegnalazione, $this> */
     public function note(): HasMany

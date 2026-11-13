@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AnagrafeMiurController;
 use App\Http\Controllers\Admin\AspettoController;
+use App\Http\Controllers\Admin\TipologieController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\IntegrazioniController;
 use App\Http\Controllers\Admin\DelegheController;
@@ -110,6 +111,8 @@ Route::middleware('auth')->group(function () {
         ->name('segnalazioni.sollecito-segnalante');
     Route::post('segnalazioni/{segnalazione}/fine-lavori', [SegnalazioneController::class, 'fineLavori'])
         ->name('segnalazioni.fine-lavori');
+    Route::post('segnalazioni/{segnalazione}/rimanda', [SegnalazioneController::class, 'rimanda'])
+        ->name('segnalazioni.rimanda');
 
     Route::post('segnalazioni/{segnalazione}/evidenza', [SegnalazioneController::class, 'toggleEvidenza'])
         ->name('segnalazioni.evidenza');
@@ -193,6 +196,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         ->except(['show', 'create', 'store'])
         ->parameters(['utenti' => 'utente']);
 
+    // Tipologie (1.0.0): un solo elenco, le gestisce l'admin.
+    Route::get('tipologie', [TipologieController::class, 'index'])->name('tipologie.index');
+    Route::post('tipologie', [TipologieController::class, 'store'])->name('tipologie.store');
+    Route::patch('tipologie/{tipologia}', [TipologieController::class, 'update'])->name('tipologie.update');
+    Route::post('tipologie/{tipologia}/unisci', [TipologieController::class, 'unisci'])->name('tipologie.unisci');
+
     // Enti (ex Organizzazioni) e sedi in una sezione sola.
     Route::get('enti', [EntiController::class, 'index'])->name('enti.index');
     Route::get('enti/nuovo', [EntiController::class, 'create'])->name('enti.create');
@@ -215,6 +224,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         : redirect()->route('admin.enti.index', [], 301));
     Route::redirect('sedi/create', '/admin/enti', 301);
 
+    Route::post('sedi/geocodifica-mancanti', [SediController::class, 'geocodificaMancanti'])->name('sedi.geocodifica-mancanti');
+    Route::post('sedi/{sede}/geocodifica', [SediController::class, 'geocodifica'])
+        ->middleware('throttle:30,1')->name('sedi.geocodifica');
     Route::resource('sedi', SediController::class)
         ->only(['edit', 'update', 'destroy'])
         ->parameters(['sedi' => 'sede']);

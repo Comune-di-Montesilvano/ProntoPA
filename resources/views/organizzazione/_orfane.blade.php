@@ -15,7 +15,6 @@
                 @foreach($orfane as $t)
                     <li>
                         {{ $t->descrizione }}
-                        <span class="text-[var(--slate-500)]">({{ $t->gruppo?->descrizione }})</span>
                         @foreach($nonVerificati[$t->id_tipologia_segnalazione] ?? [] as $u)
                             <span class="block text-xs text-[var(--slate-500)]">copertura non verificata: {{ $u->username ?? $u->name }} (in attesa del primo accesso)</span>
                         @endforeach

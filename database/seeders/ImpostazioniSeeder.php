@@ -100,6 +100,13 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'mappa',
                 'descrizione' => 'Livello di zoom default (1-19)',
             ],
+            [
+                'chiave'      => 'geocoding_comune',
+                'valore'      => null,
+                'tipo'        => 'text',
+                'gruppo'      => 'mappa',
+                'descrizione' => 'Comune aggiunto agli indirizzi delle sedi per trovarne la posizione',
+            ],
 
             // Pubblicazione automatica
             [
@@ -231,13 +238,6 @@ class ImpostazioniSeeder extends Seeder
                 'tipo'        => 'integer',
                 'gruppo'      => 'adesioni',
                 'descrizione' => 'Ogni quante adesioni la priorità aumenta di un livello',
-            ],
-            [
-                'chiave'      => 'dedup_raggio_metri',
-                'valore'      => '150',
-                'tipo'        => 'integer',
-                'gruppo'      => 'adesioni',
-                'descrizione' => 'Raggio in metri per considerare simili due segnalazioni geolocalizzate',
             ],
             [
                 'chiave'      => 'dedup_giorni',

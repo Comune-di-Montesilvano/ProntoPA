@@ -15,9 +15,6 @@ class AdesioneSegnalazione extends Model
     protected $fillable = [
         'id_segnalazione',
         'id_utente',
-        'segnalante',
-        'telefono',
-        'email',
     ];
 
     protected function casts(): array

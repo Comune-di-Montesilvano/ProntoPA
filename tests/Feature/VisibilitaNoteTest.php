@@ -40,7 +40,7 @@ class VisibilitaNoteTest extends TestCase
         $this->seed([TabelleRiferimentoSeeder::class, ImpostazioniSeeder::class, RolesAndPermissionsSeeder::class]);
 
         $impresa = Impresa::create(['ragione_sociale' => 'Ditta']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
 
         $this->segnalatore = User::factory()->create();
         $this->segnalatore->assignRole('segnalatore');

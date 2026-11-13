@@ -56,7 +56,6 @@ final class AllineaUtenteAd
                 'amministratore' => $ruolo->ruolo === 'admin',
                 'gestore_segnalazioni' => $ruolo->ruolo === 'gestore',
                 'supervisore_segnalazioni' => $ruolo->supervisore,
-                'id_provenienza' => $ruolo->idProvenienza,
                 'attivo' => true,
                 'approval_status' => 'approved',
             ]);
@@ -66,12 +65,6 @@ final class AllineaUtenteAd
             $user->save();
 
             $user->syncRoles([$ruolo->ruolo]);
-
-            if ($ruolo->perConto) {
-                $user->givePermissionTo('segnalazioni.per-conto');
-            } else {
-                $user->revokePermissionTo('segnalazioni.per-conto');
-            }
 
             if ($eraGestore && ! ($ruolo->ruolo === 'gestore' && ! $ruolo->supervisore)) {
                 $this->togliTipologie($user, tieniEsplicite: $ruolo->ruolo === 'admin');

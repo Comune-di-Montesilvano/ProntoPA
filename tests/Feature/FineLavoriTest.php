@@ -46,7 +46,7 @@ class FineLavoriTest extends TestCase
         $this->gestore->assignRole('gestore');
 
         $impresa = Impresa::create(['ragione_sociale' => 'Edil']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $this->ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'email_verified_at' => now()]);
         $this->ditta->assignRole('impresa');
 

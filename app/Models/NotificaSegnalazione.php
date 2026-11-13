@@ -19,6 +19,7 @@ class NotificaSegnalazione extends Model
         'ArchiviataInattivitaNotification' => 'Archiviata per inattività',
         'AccorpataNotification'            => 'Accorpata',
         'FineLavoriNotification'           => 'Fine lavori',
+        'RimandataAlGestoreNotification'   => 'Rimandata al comune',
         'ImpresaAssegnataNotification'     => 'Affidata alla ditta',
         'InattivitaNotification'           => 'Avviso di inattività',
         'NotaDaEsternoNotification'        => 'Nuovo messaggio',

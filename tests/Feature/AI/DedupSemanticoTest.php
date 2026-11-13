@@ -72,7 +72,7 @@ class DedupSemanticoTest extends TestCase
             'id_tipologia_segnalazione' => 1,
             'titolo'                    => 'Titolo di prova',
             'testo_segnalazione'        => 'Testo con embedding',
-            'id_provenienza'            => 1,
+            'id_plesso'                 => \Tests\Support\SedeDiProva::id(),
         ]);
 
         Queue::assertPushed(CalcolaEmbeddingSegnalazione::class);

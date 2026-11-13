@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Segnalazione;
+use App\Models\TipologiaSegnalazione;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -20,11 +21,10 @@ class AiTriageController extends Controller
 
         $aggiornamento = [];
 
-        if (isset($triage['id_tipologia_segnalazione'])) {
+        // Suggerimenti vecchi possono avere id_specializzazione: ignorato (1.0.0).
+        if (isset($triage['id_tipologia_segnalazione'])
+            && TipologiaSegnalazione::attive()->whereKey((int) $triage['id_tipologia_segnalazione'])->exists()) {
             $aggiornamento['id_tipologia_segnalazione'] = (int) $triage['id_tipologia_segnalazione'];
-        }
-        if (isset($triage['id_specializzazione'])) {
-            $aggiornamento['id_specializzazione'] = (int) $triage['id_specializzazione'];
         }
         if (isset($triage['livello_priorita'])) {
             $aggiornamento['livello_priorita'] = (int) $triage['livello_priorita'];

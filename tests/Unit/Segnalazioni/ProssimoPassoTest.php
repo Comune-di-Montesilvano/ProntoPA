@@ -51,7 +51,7 @@ class ProssimoPassoTest extends TestCase
     {
         $impresa = Impresa::create(['ragione_sociale' => $nome]);
 
-        return Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        return Appalto::create(['descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
     }
 
     public function test_gestore_nuova_assegna_o_chiudi(): void
@@ -81,7 +81,7 @@ class ProssimoPassoTest extends TestCase
     public function test_priorita_nel_passo_solo_a_chi_la_decide(): void
     {
         $impresa = Impresa::create(['ragione_sociale' => 'Ditta']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa]);
         $ditta->assignRole('impresa');
         $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 4, 'id_appalto' => $appalto->id_appalto]);
@@ -207,8 +207,8 @@ class ProssimoPassoTest extends TestCase
     public function test_sollecitata_prefisso_e_alza_priorita(): void
     {
         $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 2]);
-        $s->adesioni()->create(['id_utente' => $this->gestore->id]);
-        $s->adesioni()->create(['id_utente' => $this->gestore->id]);
+        $s->adesioni()->create(['id_utente' => User::factory()->create()->id]);
+        $s->adesioni()->create(['id_utente' => User::factory()->create()->id]);
 
         $passo = ProssimoPasso::per($s, $this->gestore);
 

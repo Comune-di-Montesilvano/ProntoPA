@@ -33,7 +33,6 @@ class PopulateDemoDataTest extends TestCase
     public function test_richiede_tabelle_di_riferimento_gia_seedate(): void
     {
         \App\Models\TipologiaSegnalazione::query()->delete();
-        \App\Models\Provenienza::query()->delete();
 
         $this->artisan('demo')->assertExitCode(1);
 

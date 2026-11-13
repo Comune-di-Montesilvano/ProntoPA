@@ -40,7 +40,7 @@ class TitoloSegnalazioneTest extends TestCase
         return array_merge([
             'id_tipologia_segnalazione' => 1,
             'testo_segnalazione' => 'Con la presente si richiede la fornitura di 15 panchine con schienale per le sezioni del plesso.',
-            'id_provenienza' => 1,
+            'id_plesso'      => \Tests\Support\SedeDiProva::id(),
         ], $extra);
     }
 

@@ -27,7 +27,7 @@ class ElenchiRuoliTest extends TestCase
     public function test_ditta_vede_segnalazione_su_appalto_scaduto(): void
     {
         $impresa = Impresa::create(['ragione_sociale' => 'Edil Adriatica']);
-        $scaduto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'Vecchio appalto', 'id_impresa' => $impresa->id_impresa, 'valido' => false]);
+        $scaduto = Appalto::create(['descrizione' => 'Vecchio appalto', 'id_impresa' => $impresa->id_impresa, 'valido' => false]);
         $ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'email_verified_at' => now()]);
         $ditta->assignRole('impresa');
         Segnalazione::factory()->create(['id_stato_segnalazione' => 4, 'id_appalto' => $scaduto->id_appalto, 'testo_segnalazione' => 'Lavoro su appalto scaduto']);
@@ -41,7 +41,7 @@ class ElenchiRuoliTest extends TestCase
     public function test_ditta_vista_preventivi_mostra_stato_5(): void
     {
         $impresa = Impresa::create(['ragione_sociale' => 'Edil Adriatica']);
-        $appalto = Appalto::create(['id_gruppo' => 1, 'descrizione' => 'Appalto', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $appalto = Appalto::create(['descrizione' => 'Appalto', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'email_verified_at' => now()]);
         $ditta->assignRole('impresa');
         Segnalazione::factory()->create(['id_stato_segnalazione' => 5, 'id_appalto' => $appalto->id_appalto, 'testo_segnalazione' => 'Preventivo inviato']);

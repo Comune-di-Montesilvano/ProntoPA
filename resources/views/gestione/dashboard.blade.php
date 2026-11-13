@@ -15,13 +15,11 @@
     if ($q !== '') { $attivi[] = ['Cerca: '.$q, $senza('q')]; }
     if ($filtro) { $attivi[] = [$filtriRapidi[$filtro], $senza('filtro')]; }
     if ($idTipologia) { $attivi[] = ['Tipologia: '.($tipologie->firstWhere('id_tipologia_segnalazione', $idTipologia)?->descrizione ?? $idTipologia), $senza('id_tipologia')]; }
-    if ($idProvenienza) { $attivi[] = ['Provenienza: '.($provenienze->firstWhere('id_provenienza', $idProvenienza)?->descrizione ?? $idProvenienza), $senza('id_provenienza')]; }
     if ($idOperatore) { $attivi[] = ['Operatore: '.($operatori->firstWhere('id', $idOperatore)?->name ?? $idOperatore), $senza('id_operatore')]; }
     if ($livelloPriorita) { $attivi[] = ['Priorità: '.($priorita[(int) $livelloPriorita] ?? $livelloPriorita), $senza('livello_priorita')]; }
-    if ($idSpecializzazione) { $attivi[] = ['Specializzazione: '.($specializzazioni->firstWhere('id_specializzazione', $idSpecializzazione)?->descrizione ?? $idSpecializzazione), $senza('id_specializzazione')]; }
     if ($dataDa) { $attivi[] = ['Dal '.\Illuminate\Support\Carbon::parse($dataDa)->format('d/m/Y'), $senza('data_da')]; }
     if ($dataA) { $attivi[] = ['Al '.\Illuminate\Support\Carbon::parse($dataA)->format('d/m/Y'), $senza('data_a')]; }
-    $pannelloAperto = $idTipologia || $idProvenienza || $idOperatore || $livelloPriorita || $idSpecializzazione || $dataDa || $dataA;
+    $pannelloAperto = $idTipologia || $idOperatore || $livelloPriorita || $dataDa || $dataA;
 @endphp
 
 <x-app-layout>
@@ -96,7 +94,7 @@
             <div class="flex flex-wrap items-center gap-2">
                 <label for="filtro_q" class="sr-only">Cerca</label>
                 <input type="search" name="q" id="filtro_q" value="{{ $q }}" class="pa-input pa-input-auto min-w-[220px] flex-1"
-                       placeholder="Cerca per testo, segnalante o numero…">
+                       placeholder="Cerca per testo, titolo, chi ha segnalato o numero…">
                 <label for="filtro_ordine" class="sr-only">Ordina</label>
                 <select name="ordine" id="filtro_ordine" class="pa-input pa-input-auto" onchange="this.form.submit()" @disabled($tab === 'chiuse')>
                     <option value="urgenti" @selected($ordine === 'urgenti')>Più urgenti</option>
@@ -130,15 +128,6 @@
                         </select>
                     </div>
                     <div class="pa-field">
-                        <label for="filtro_id_provenienza" class="pa-field-label">Provenienza</label>
-                        <select name="id_provenienza" id="filtro_id_provenienza" class="pa-input">
-                            <option value="">Tutte</option>
-                            @foreach($provenienze as $p)
-                                <option value="{{ $p->id_provenienza }}" @selected($idProvenienza == $p->id_provenienza)>{{ $p->descrizione }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="pa-field">
                         <label for="filtro_id_operatore" class="pa-field-label">Operatore</label>
                         <select name="id_operatore" id="filtro_id_operatore" class="pa-input">
                             <option value="">Tutti</option>
@@ -156,17 +145,6 @@
                             @endforeach
                         </select>
                     </div>
-                    @if($specializzazioni->isNotEmpty())
-                        <div class="pa-field">
-                            <label for="filtro_id_specializzazione" class="pa-field-label">Specializzazione</label>
-                            <select name="id_specializzazione" id="filtro_id_specializzazione" class="pa-input">
-                                <option value="">Tutte</option>
-                                @foreach($specializzazioni as $sp)
-                                    <option value="{{ $sp->id_specializzazione }}" @selected($idSpecializzazione == $sp->id_specializzazione)>{{ $sp->descrizione }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    @endif
                     <div class="pa-field">
                         <label for="filtro_data_da" class="pa-field-label">Segnalate dal</label>
                         <input type="date" name="data_da" id="filtro_data_da" value="{{ $dataDa }}" class="pa-input">

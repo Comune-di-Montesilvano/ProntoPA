@@ -4,7 +4,8 @@
 
     @include('segnalazioni.scheda.'.$lettura)
 
-    @if($lettura !== 'segnalante' && $segnalazione->latitudine && $segnalazione->longitudine && (float) $segnalazione->latitudine != 0)
+    @php($posizione = $segnalazione->posizione())
+    @if($lettura !== 'segnalante' && $posizione)
         @push('head')
             <link rel="stylesheet" href="{{ asset('build/vendor/leaflet/leaflet.css') }}?v={{ config('app.version') }}" />
         @endpush
@@ -14,8 +15,8 @@
                 (function () {
                     const el = document.getElementById('mappa-segnalazione');
                     if (!el) return;
-                    const lat = {{ (float) $segnalazione->latitudine }};
-                    const lng = {{ (float) $segnalazione->longitudine }};
+                    const lat = {{ $posizione['lat'] }};
+                    const lng = {{ $posizione['lng'] }};
                     const map = L.map(el, { scrollWheelZoom: false }).setView([lat, lng], 16);
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',

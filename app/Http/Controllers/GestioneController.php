@@ -5,9 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\SegnalazioneStato;
 use App\Models\Appalto;
 use App\Models\Impostazione;
-use App\Models\Provenienza;
 use App\Models\Segnalazione;
-use App\Models\Specializzazione;
 use App\Models\Squadra;
 use App\Models\TipologiaSegnalazione;
 use App\Models\User;
@@ -42,17 +40,15 @@ class GestioneController extends Controller
         $tab  = $request->get('tab', 'aperte');
         $q    = trim($request->get('q', ''));
         $idTipologia      = $request->get('id_tipologia');
-        $idProvenienza    = $request->get('id_provenienza');
         $idOperatore      = $request->get('id_operatore');
         $dataDa           = $request->get('data_da');
         $dataA            = $request->get('data_a');
         $livelloPriorita  = $request->get('livello_priorita');
-        $idSpecializzazione = $request->get('id_specializzazione');
         $ordine = in_array($request->get('ordine'), self::ORDINI, true) ? $request->get('ordine') : 'urgenti';
         $filtro = in_array($request->get('filtro'), self::FILTRI_RAPIDI, true) ? $request->get('filtro') : null;
 
         $segnalazioni = $this->elencoFiltrato($request)
-            ->with(['tipologia', 'operatore', 'provenienza', 'plesso', 'squadraAssegnata', 'appalto.impresa'])
+            ->with(['tipologia', 'operatore', 'plesso', 'squadraAssegnata', 'appalto.impresa'])
             ->withCount('adesioni')
             ->paginate(30);
 
@@ -71,8 +67,6 @@ class GestioneController extends Controller
         ];
 
         $tipologie        = TipologiaSegnalazione::orderBy('descrizione')->get();
-        $provenienze      = Provenienza::orderBy('descrizione')->get();
-        $specializzazioni = Specializzazione::orderBy('descrizione')->get();
         $operatori        = User::where(function ($q) {
                                 $q->where('gestore_segnalazioni', true)
                                   ->orWhere('amministratore', true);
@@ -91,13 +85,13 @@ class GestioneController extends Controller
         $squadre = Impostazione::get('squadre_enabled', false)
             ? Squadra::where('attiva', true)->orderBy('nome')->get()
             : collect();
-        $appaltiValidi = Appalto::where('valido', true)->with('impresa')->orderBy('descrizione')->get();
+        $appaltiValidi = Appalto::where('valido', true)->with(['impresa', 'tipologie'])->orderBy('descrizione')->get();
 
         return view('gestione.dashboard', compact(
             'segnalazioni', 'tab', 'conteggi',
-            'q', 'idTipologia', 'idProvenienza',
-            'idOperatore', 'dataDa', 'dataA', 'livelloPriorita', 'idSpecializzazione',
-            'ordine', 'filtro', 'tipologie', 'provenienze', 'specializzazioni', 'operatori',
+            'q', 'idTipologia',
+            'idOperatore', 'dataDa', 'dataA', 'livelloPriorita',
+            'ordine', 'filtro', 'tipologie', 'operatori',
             'azioniRapidePerSegnalazione', 'filtri', 'operatoriAssegnabili', 'squadre', 'appaltiValidi'
         ));
     }
@@ -105,7 +99,7 @@ class GestioneController extends Controller
     public function exportCsv(Request $request): StreamedResponse
     {
         $segnalazioni = $this->elencoFiltrato($request)
-            ->with(['tipologia', 'plesso', 'operatore', 'appalto.impresa', 'specializzazione'])
+            ->with(['tipologia', 'plesso', 'operatore', 'appalto.impresa'])
             ->get();
 
         $filename = 'segnalazioni-' . now()->format('Y-m-d') . '.csv';
@@ -115,7 +109,7 @@ class GestioneController extends Controller
             fputs($handle, "\xEF\xBB\xBF"); // BOM UTF-8 per Excel
             fputcsv($handle, [
                 'ID', 'Data', 'Tipologia', 'Plesso', 'Stato', 'Operatore',
-                'Priorità', 'Specializzazione',
+                'Priorità',
                 'Importo preventivo', 'Importo liquidato', 'Data chiusura', 'Testo',
             ], ';');
             foreach ($segnalazioni as $s) {
@@ -127,7 +121,6 @@ class GestioneController extends Controller
                     $s->statoEnum()->label(),
                     $s->operatore?->name,
                     $s->label_priorita,
-                    $s->specializzazione?->descrizione,
                     $s->importo_preventivo ? number_format((float) $s->importo_preventivo, 2, ',', '') : '',
                     $s->importo_liquidato  ? number_format((float) $s->importo_liquidato,  2, ',', '') : '',
                     $s->data_chiusura?->format('d/m/Y'),
@@ -141,7 +134,7 @@ class GestioneController extends Controller
     public function stampaLista(Request $request): View
     {
         $segnalazioni = $this->elencoFiltrato($request)
-            ->with(['tipologia', 'operatore', 'provenienza', 'plesso.istituto', 'utente'])
+            ->with(['tipologia', 'operatore', 'plesso.istituto', 'utente'])
             ->get();
 
         return view('gestione.print', [
@@ -164,7 +157,7 @@ class GestioneController extends Controller
         // Stesse relazioni di SegnalazioneController::stampa (scheda singola).
         $segnalazioni = $query
             ->with([
-                'stato', 'tipologia.gruppo', 'provenienza', 'plesso.istituto',
+                'stato', 'tipologia', 'plesso.istituto',
                 'operatore', 'utente', 'appalto.impresa', 'squadraAssegnata',
                 'note' => fn ($q) => $q->visibiliA($request->user()),
                 'storicoStati.stato', 'storicoStati.utente',
@@ -225,17 +218,16 @@ class GestioneController extends Controller
                                ->orWhere('testo_segnalazione', 'like', "%{$q}%");
                         }
                     })
-                      ->orWhere('segnalante', 'like', "%{$q}%")
+                      ->orWhere('titolo', 'like', "%{$q}%")
+                      ->orWhereHas('utente', fn ($u) => $u->where('name', 'like', "%{$q}%"))
                       ->orWhere('id_segnalazione', $q);
             });
         }
 
         $colonne = [
             'id_tipologia' => 'id_tipologia_segnalazione',
-            'id_provenienza' => 'id_provenienza',
             'id_operatore' => 'id_operatore_assegnato',
             'livello_priorita' => 'livello_priorita',
-            'id_specializzazione' => 'id_specializzazione',
         ];
         foreach ($colonne as $parametro => $colonna) {
             if ($request->filled($parametro)) {
@@ -293,8 +285,8 @@ class GestioneController extends Controller
     private function parametriFiltro(Request $request): array
     {
         return array_filter($request->only([
-            'tab', 'q', 'id_tipologia', 'id_provenienza', 'id_operatore',
-            'data_da', 'data_a', 'livello_priorita', 'id_specializzazione', 'ordine', 'filtro',
+            'tab', 'q', 'id_tipologia', 'id_operatore',
+            'data_da', 'data_a', 'livello_priorita', 'ordine', 'filtro',
         ]), fn ($v) => $v !== null && $v !== '');
     }
 

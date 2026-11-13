@@ -23,6 +23,7 @@ final class Sezioni
         'osm_lat'                => 'decimale',
         'osm_lng'                => 'decimale',
         'osm_zoom'               => 'intero',
+        'geocoding_comune'       => 'testo',
     ];
 
     public const SCADENZE = [
@@ -40,7 +41,6 @@ final class Sezioni
         'reopen_days_limit'            => 'intero',
         'adesioni_enabled'             => 'bool',
         'adesioni_soglia_priorita'     => 'intero',
-        'dedup_raggio_metri'           => 'intero',
         'dedup_giorni'                 => 'intero',
         'publication_enabled'          => 'bool',
         'publication_auto_state_id'    => 'stato',

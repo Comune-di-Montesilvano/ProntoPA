@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\GeocodificaSedi;
+use App\Services\Sedi\Geocoding;
+use Illuminate\Http\JsonResponse;
 use App\Models\Delega;
 use App\Models\Istituto;
 use App\Models\Plesso;
@@ -74,6 +77,8 @@ class SediController extends Controller
             'referente'             => ['nullable', 'string', 'max:50'],
             'email'                 => ['nullable', 'email', 'max:50'],
             'recapiti'              => ['nullable', 'string', 'max:50'],
+            'latitudine'            => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitudine'],
+            'longitudine'           => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitudine'],
         ];
 
         // validate() restituisce solo le chiavi validate: i campi MIUR inviati vengono scartati.
@@ -87,6 +92,26 @@ class SediController extends Controller
 
         return redirect()->route('admin.enti.show', $sede->id_istituto)
             ->with('success', "Sede \"{$sede->nome}\" aggiornata.");
+    }
+
+    /** "Trova dall'indirizzo": propone la posizione, si salva col form. */
+    public function geocodifica(Request $request, Plesso $sede, Geocoding $geocoding): JsonResponse
+    {
+        $indirizzo = (string) ($request->input('indirizzo') ?: $sede->indirizzo);
+        $esito = $geocoding->esegui($indirizzo);
+
+        return match ($esito['stato']) {
+            Geocoding::TROVATA => response()->json(['lat' => $esito['lat'], 'lng' => $esito['lng']]),
+            Geocoding::NON_TROVATA => response()->json(['message' => 'Indirizzo non trovato: sposta il segnaposto a mano.'], 422),
+            default => response()->json(['message' => 'Servizio di ricerca non raggiungibile, riprova più tardi.'], 503),
+        };
+    }
+
+    public function geocodificaMancanti(): RedirectResponse
+    {
+        GeocodificaSedi::dispatch();
+
+        return back()->with('success', "Ricerca delle posizioni avviata: una sede al secondo, l'esito è in Stato del sistema.");
     }
 
     public function destroy(Plesso $sede): RedirectResponse

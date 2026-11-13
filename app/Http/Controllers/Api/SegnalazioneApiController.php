@@ -10,6 +10,8 @@ use App\Models\Segnalazione;
 use App\Models\StatoSegnalazione;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class SegnalazioneApiController extends Controller
 {
@@ -22,18 +24,12 @@ class SegnalazioneApiController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'id_tipologia_segnalazione' => ['required', 'integer', 'exists:tipologie_segnalazioni,id_tipologia_segnalazione'],
+            'id_tipologia_segnalazione' => ['required', 'integer', Rule::exists('tipologie_segnalazioni', 'id_tipologia_segnalazione')->where('attiva', true)],
             'titolo'                    => ['nullable', 'string', 'max:100'],
             'testo_segnalazione'        => ['required', 'string', 'max:2000'],
-            'id_provenienza'            => ['required', 'integer', 'exists:provenienze_segnalazioni,id_provenienza'],
-            'id_plesso'                 => ['nullable', 'integer', 'exists:plessi,id_plesso'],
-            'segnalante'                => ['nullable', 'string', 'max:100'],
-            'email'                     => ['nullable', 'email', 'max:100'],
-            'telefono'                  => ['nullable', 'string', 'max:50'],
-            'latitudine'                => ['nullable', 'numeric'],
-            'longitudine'               => ['nullable', 'numeric'],
+            // 1.0.0: sede obbligatoria, di un ente attivo. Campi tolti (provenienza, chiamante, coordinate) ignorati.
+            'id_plesso'                 => ['required', 'integer', Rule::exists('plessi', 'id_plesso')->whereIn('id_istituto', DB::table('istituti')->where('attivo', true)->pluck('id_istituto')->all())],
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
-            'id_specializzazione'       => ['nullable', 'integer', 'exists:db_specializzazioni,id_specializzazione'],
             'ubicazione_tipo'           => ['nullable', 'integer', 'between:0,4'],
             'force'                     => ['nullable', 'boolean'],
         ]);
@@ -42,8 +38,6 @@ class SegnalazioneApiController extends Controller
             $simili = app(\App\Services\DedupService::class)->trovaSimili(
                 (int) $request->input('id_tipologia_segnalazione'),
                 $request->filled('id_plesso') ? (int) $request->input('id_plesso') : null,
-                $request->filled('latitudine') ? (float) $request->input('latitudine') : null,
-                $request->filled('longitudine') ? (float) $request->input('longitudine') : null,
             );
 
             if ($simili->isNotEmpty()) {
@@ -64,8 +58,6 @@ class SegnalazioneApiController extends Controller
             'id_utente_segnalazione' => $request->user()?->id,
             'id_stato_segnalazione'  => $statoIniziale?->id_stato ?? 1,
             'id_plesso'              => $data['id_plesso'] ?? 0,
-            'latitudine'             => $data['latitudine'] ?? 0,
-            'longitudine'            => $data['longitudine'] ?? 0,
         ]));
 
         // Senza titolo dal portale lo propone l'assistente AI, se attivo.

@@ -57,8 +57,8 @@
     <tr>
         <td class="label">Priorità:</td>
         <td>{{ $segnalazione->label_priorita }}</td>
-        <td class="label">Provenienza:</td>
-        <td>{{ $segnalazione->provenienza?->descrizione ?? '—' }}</td>
+        <td class="label">Segnalata da:</td>
+        <td>{{ $segnalazione->utente?->name ?? '—' }}</td>
     </tr>
     <tr>
         <td class="label">Sede / Plesso:</td>

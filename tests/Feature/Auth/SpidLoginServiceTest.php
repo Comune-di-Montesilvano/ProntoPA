@@ -47,7 +47,6 @@ class SpidLoginServiceTest extends TestCase
         $this->assertNull($user->password);
         $this->assertSame('Mario Rossi', $user->name);
         $this->assertSame('RSSMRA80A01G482X', $user->username);
-        $this->assertSame(2, (int) $user->id_provenienza);
         $this->assertTrue($user->hasRole('segnalatore'));
     }
 

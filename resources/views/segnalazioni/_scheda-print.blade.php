@@ -4,7 +4,7 @@
     <div class="header">
         <div class="header-left">
             <div class="ente">
-                {{ $segnalazione->tipologia?->gruppo?->descrizione ?? \App\Models\Impostazione::get('ente_nome', 'ProntoPA') }}
+                {{ \App\Models\Impostazione::get('ente_nome', 'ProntoPA') }}
             </div>
             <div class="titolo">Scheda Segnalazione #{{ $segnalazione->id_segnalazione }}</div>
         </div>
@@ -24,8 +24,8 @@
     <div class="meta-row">
         <div><span class="label">Data segnalazione :</span>
             {{ $segnalazione->data_segnalazione?->format('d-m-y H:i') }}</div>
-        <div><span class="label">Provenienza :</span>
-            <strong>{{ strtoupper($segnalazione->provenienza?->descrizione ?? '—') }}</strong></div>
+        <div><span class="label">Segnalata da :</span>
+            <strong>{{ $segnalazione->utente?->name ?? '—' }}</strong></div>
     </div>
 
     {{-- Plesso --}}

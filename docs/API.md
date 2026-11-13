@@ -30,20 +30,16 @@ Crea una nuova segnalazione da portale cittadini esterno.
 
 | Campo | Tipo | Obbligatorio | Note |
 |---|---|---|---|
-| `id_tipologia_segnalazione` | integer | ✅ | Deve esistere in `tipologie_segnalazioni` |
+| `id_tipologia_segnalazione` | integer | ✅ | Tipologia attiva in `tipologie_segnalazioni` |
 | `titolo` | string | — | Max 100 caratteri. Se assente lo propone l'assistente AI (se attivo), altrimenti si mostra l'inizio del testo |
 | `testo_segnalazione` | string | ✅ | Max 2000 caratteri |
-| `id_provenienza` | integer | ✅ | Deve esistere in `provenienze_segnalazioni` |
-| `id_plesso` | integer | ❌ | Sede/plesso scolastico |
-| `segnalante` | string | ❌ | Nome del segnalante, max 100 |
-| `email` | string | ❌ | Email di contatto, max 100 |
-| `telefono` | string | ❌ | Telefono di contatto, max 50 |
-| `latitudine` | numeric | ❌ | Coordinate GPS |
-| `longitudine` | numeric | ❌ | Coordinate GPS |
+| `id_plesso` | integer | ✅ | Sede (`plessi`) di un ente attivo. La posizione è quella della sede |
 | `livello_priorita` | integer | ❌ | 1–4 |
-| `id_specializzazione` | integer | ❌ | Deve esistere in `db_specializzazioni` |
-| `ubicazione_tipo` | integer | ❌ | 0–4 |
+| `ubicazione_tipo` | integer | ❌ | 0 = non so (default), 1 interno, 2 esterno, 3 impianto, 4 area verde |
 | `force` | boolean | ❌ | `true` per creare comunque nonostante segnalazioni simili aperte (vedi 409 sotto) |
+
+Dalla 1.0.0 i campi `id_provenienza`, `segnalante`, `email`, `telefono`, `latitudine`, `longitudine` e
+`id_specializzazione` non esistono più: se inviati sono ignorati. Simili = aperte della stessa sede e tipologia.
 
 **Risposta 201 Created:**
 
@@ -87,11 +83,8 @@ curl -X POST https://your-instance.example.it/api/segnalazioni \
   -d '{
     "id_tipologia_segnalazione": 3,
     "testo_segnalazione": "Infiltrazione d'\''acqua nel tetto palestra",
-    "id_provenienza": 1,
-    "segnalante": "Mario Rossi",
-    "email": "mario@example.it",
-    "latitudine": 42.461,
-    "longitudine": 14.214
+    "id_plesso": 12,
+    "titolo": "Infiltrazione tetto palestra"
   }'
 ```
 

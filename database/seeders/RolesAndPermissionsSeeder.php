@@ -19,14 +19,6 @@ class RolesAndPermissionsSeeder extends Seeder
             Role::firstOrCreate(['name' => $nome, 'guard_name' => 'web']);
         }
 
-        // Permission: inserimento segnalazioni per conto di terzi (URP)
-        $perConto = Permission::firstOrCreate([
-            'name'       => 'segnalazioni.per-conto',
-            'guard_name' => 'web',
-        ]);
-        Role::findByName('admin')->givePermissionTo($perConto);
-        Role::findByName('gestore')->givePermissionTo($perConto);
-
         // Gira a ogni avvio (AllineamentoSeeder): mai toccare i ruoli degli
         // utenti, li decidono il login AD (dai gruppi) e l'admin.
     }

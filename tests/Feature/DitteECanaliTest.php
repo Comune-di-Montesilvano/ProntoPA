@@ -124,7 +124,7 @@ class DitteECanaliTest extends TestCase
             'descrizione' => 'Appalto Preventivo',
             'importo_appalto' => 5000.00,
             'valido' => true,
-            'id_gruppo' => 1,
+            
         ]);
         $segnalazione = Segnalazione::factory()->create([
             'id_appalto' => $appalto->id_appalto,
@@ -163,7 +163,7 @@ class DitteECanaliTest extends TestCase
             'descrizione' => 'Appalto Tel',
             'importo_appalto' => 5000.00,
             'valido' => true,
-            'id_gruppo' => 1,
+            
         ]);
 
         // Crea due segnalazioni aperte sotto questo appalto
@@ -213,7 +213,7 @@ class DitteECanaliTest extends TestCase
     {
         $impresaUser = $this->impresaUser();
         $impresaUser->update(['telegram_chat_id' => '12345678', 'attivo' => false]);
-        $appalto = Appalto::create(['id_impresa' => $impresaUser->id_impresa, 'descrizione' => 'A', 'valido' => true, 'id_gruppo' => 1]);
+        $appalto = Appalto::create(['id_impresa' => $impresaUser->id_impresa, 'descrizione' => 'A', 'valido' => true]);
         $segnalazione = Segnalazione::factory()->create(['id_appalto' => $appalto->id_appalto, 'id_stato_segnalazione' => 4]);
 
         Impostazione::set('telegram_webhook_secret', 'my-secret');
@@ -244,7 +244,7 @@ class DitteECanaliTest extends TestCase
             'descrizione' => 'Appalto Tel Photo',
             'importo_appalto' => 5000.00,
             'valido' => true,
-            'id_gruppo' => 1,
+            
         ]);
 
         $segnalazione = Segnalazione::factory()->create([

@@ -60,6 +60,9 @@
         @include('segnalazioni.scheda.pannelli.fine-lavori')
     @endunless
 @endcan
+@can('rimanda', $segnalazione)
+    @include('segnalazioni.scheda.pannelli.rimanda')
+@endcan
 @if($azioniDisponibili->contains('codice', 'presenta_preventivo'))
     @include('segnalazioni.scheda.pannelli.preventivo')
 @endif

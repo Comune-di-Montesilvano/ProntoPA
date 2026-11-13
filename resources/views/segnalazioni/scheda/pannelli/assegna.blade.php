@@ -9,6 +9,7 @@
         'ditta' => $a->impresa?->ragione_sociale ?? '—',
         'descrizione' => $a->descrizione,
         'email' => (bool) $a->impresa?->email,
+        'copre' => (bool) $a->copre,
     ])->values();
 @endphp
 <x-pa.drawer name="assegna" :title="$segnalazione->statoEnum()->value >= 3 ? 'Riassegna' : 'Assegna'" :sottotitolo="'#'.$segnalazione->id_segnalazione" :aperto="old('_pannello') === 'assegna'">
@@ -77,7 +78,18 @@
                     <input id="assegna-cerca" type="search" class="pa-input" placeholder="Cerca ditta o appalto…" x-model="cerca">
                     <input type="hidden" name="id_appalto" :value="appalto || ''" :disabled="tipo !== 'ditta'">
                     <ul class="m-0 max-h-72 overflow-y-auto rounded-md border border-[var(--slate-200)] p-0 list-none">
-                        <template x-for="a in filtrati" :key="a.id">
+                        <template x-for="a in filtrati.filter(a => a.copre)" :key="a.id">
+                            <li>
+                                <button type="button" class="block w-full px-3 py-2 text-left text-sm hover:bg-[var(--slate-50)]"
+                                        :class="appalto === a.id && 'bg-[var(--ente-primary-50)]'" x-on:click="appalto = a.id">
+                                    <strong x-text="a.ditta"></strong>
+                                    <span class="block text-[var(--slate-500)]" x-text="a.descrizione"></span>
+                                </button>
+                            </li>
+                        </template>
+                        <li x-show="filtrati.some(a => a.copre) && filtrati.some(a => !a.copre)"
+                            class="border-t border-[var(--slate-200)] bg-[var(--slate-50)] px-3 py-1 text-xs font-semibold uppercase text-[var(--slate-500)]">Altre ditte</li>
+                        <template x-for="a in filtrati.filter(a => !a.copre)" :key="a.id">
                             <li>
                                 <button type="button" class="block w-full px-3 py-2 text-left text-sm hover:bg-[var(--slate-50)]"
                                         :class="appalto === a.id && 'bg-[var(--ente-primary-50)]'" x-on:click="appalto = a.id">

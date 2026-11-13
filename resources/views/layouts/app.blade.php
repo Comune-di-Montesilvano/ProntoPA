@@ -154,6 +154,9 @@
                     <x-sidebar-link href="{{ route('admin.enti.index') }}" :active="request()->routeIs('admin.enti.*', 'admin.sedi.*', 'admin.categorie-enti.*', 'admin.anagrafe-miur.*')" icon="office-building">
                         Enti e sedi
                     </x-sidebar-link>
+                    <x-sidebar-link href="{{ route('admin.tipologie.index') }}" :active="request()->routeIs('admin.tipologie.*')" icon="tag">
+                        Tipologie
+                    </x-sidebar-link>
                 </div>
 
                 <div class="pa-sb-section">

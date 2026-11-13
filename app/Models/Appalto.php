@@ -11,7 +11,7 @@ class Appalto extends Model
     protected $primaryKey = 'id_appalto';
 
     protected $fillable = [
-        'id_gruppo', 'descrizione', 'id_impresa', 'CIG', 'importo_appalto', 'valido',
+        'descrizione', 'id_impresa', 'CIG', 'importo_appalto', 'valido', 'tutte_tipologie',
     ];
 
     protected function casts(): array
@@ -19,6 +19,7 @@ class Appalto extends Model
         return [
             'importo_appalto' => 'decimal:2',
             'valido'          => 'boolean',
+            'tutte_tipologie' => 'boolean',
         ];
     }
 
@@ -28,8 +29,21 @@ class Appalto extends Model
         return $this->belongsTo(Impresa::class, 'id_impresa', 'id_impresa');
     }
 
-    public function gruppo(): BelongsTo
+    /** Tipologie che l'appalto copre (oltre al flag "tutte"). */
+    public function tipologie(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->belongsTo(GruppoSegnalazione::class, 'id_gruppo', 'id_gruppo');
+        return $this->belongsToMany(TipologiaSegnalazione::class, 'appalti_tipologie', 'id_appalto', 'id_tipologia_segnalazione');
     }
+
+    public function copreTipologia(int $idTipologia): bool
+    {
+        if ($this->tutte_tipologie) {
+            return true;
+        }
+
+        return $this->relationLoaded('tipologie')
+            ? $this->tipologie->contains('id_tipologia_segnalazione', $idTipologia)
+            : $this->tipologie()->whereKey($idTipologia)->exists();
+    }
+
 }

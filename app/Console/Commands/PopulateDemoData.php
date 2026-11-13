@@ -9,7 +9,6 @@ use App\Models\CategoriaEnte;
 use App\Models\Impresa;
 use App\Models\Istituto;
 use App\Models\Plesso;
-use App\Models\Provenienza;
 use App\Models\Segnalazione;
 use App\Models\Squadra;
 use App\Models\StoricoStatoSegnalazione;
@@ -50,7 +49,7 @@ class PopulateDemoData extends Command
             return self::FAILURE;
         }
 
-        if (TipologiaSegnalazione::count() === 0 || Provenienza::count() === 0) {
+        if (TipologiaSegnalazione::count() === 0) {
             $this->error('Tabelle di riferimento vuote. Esegui prima "php artisan migrate --seed".');
 
             return self::FAILURE;
@@ -154,8 +153,6 @@ class PopulateDemoData extends Command
     private function creaUtenti($istituti, $imprese): array
     {
         $password = Hash::make('demo1234');
-        $urp      = Provenienza::where('descrizione', 'URP')->value('id_provenienza');
-        $scuole   = Provenienza::where('descrizione', 'DIREZIONI DIDATTICHE')->value('id_provenienza');
 
         $u = [];
 
@@ -180,17 +177,16 @@ class PopulateDemoData extends Command
         $u['segnalatore1'] = User::create([
             'name' => 'Giulia Ferri', 'username' => 'segnalatore1', 'email' => 'segnalatore1' . self::EMAIL_DOMAIN,
             'password' => $password, 'attivo' => true, 'email_verified_at' => now(),
-            'id_istituto' => $istituti[0]->id_istituto, 'id_provenienza' => $scuole,
+            'id_istituto' => $istituti[0]->id_istituto,
         ]);
         $u['segnalatore2'] = User::create([
             'name' => 'Sara Colombo', 'username' => 'segnalatore2', 'email' => 'segnalatore2' . self::EMAIL_DOMAIN,
             'password' => $password, 'attivo' => true, 'email_verified_at' => now(),
-            'id_istituto' => $istituti[1]->id_istituto, 'id_provenienza' => $scuole,
+            'id_istituto' => $istituti[1]->id_istituto,
         ]);
         $u['segnalatore_urp'] = User::create([
             'name' => 'Franco Galli', 'username' => 'segnalatore-urp', 'email' => 'segnalatore-urp' . self::EMAIL_DOMAIN,
             'password' => $password, 'attivo' => true, 'email_verified_at' => now(),
-            'id_provenienza' => $urp,
         ]);
         // Ditte: persone SPID pre-delegate (entrano dal simulatore SPID con questo CF).
         foreach (self::DITTE_SPID as [$chiave, $nome, $cf]) {
@@ -234,7 +230,7 @@ class PopulateDemoData extends Command
     private function creaAppalti($imprese)
     {
         return $imprese->map(fn (Impresa $impresa) => Appalto::create([
-            'id_gruppo' => 1, 'descrizione' => 'DEMO manutenzione ' . $impresa->ragione_sociale,
+            'descrizione' => 'DEMO manutenzione ' . $impresa->ragione_sociale,
             'id_impresa' => $impresa->id_impresa, 'valido' => true,
         ]));
     }
@@ -242,8 +238,6 @@ class PopulateDemoData extends Command
     private function creaSegnalazioni($plessi, array $utenti, $appalti)
     {
         $tipologieIds = TipologiaSegnalazione::pluck('id_tipologia_segnalazione');
-        $urp          = Provenienza::where('descrizione', 'URP')->value('id_provenienza');
-        $scuole       = Provenienza::where('descrizione', 'DIREZIONI DIDATTICHE')->value('id_provenienza');
 
         // Distribuzione realistica sui 10 stati: più nuove/in lavorazione
         // che chiuse, qualche annullata/archiviata.
@@ -281,7 +275,6 @@ class PopulateDemoData extends Command
                 $plesso      = $plessi->random();
                 $dataCreata  = now()->subDays(fake()->numberBetween(1, 180))->subHours(fake()->numberBetween(0, 23));
                 $daScuola    = fake()->boolean(70);
-                $provenienza = $daScuola ? $scuole : $urp;
                 $segnalante  = $daScuola ? $utenti['segnalatore1'] : $utenti['segnalatore_urp'];
 
                 $assegnaOperatore = in_array($stato, [
@@ -301,20 +294,13 @@ class PopulateDemoData extends Command
                     'id_stradario'               => 0,
                     'id_area'                    => 0,
                     'id_immobile'                => 0,
-                    'latitudine'                 => 0,
-                    'longitudine'                => 0,
-                    'zoom'                       => 18,
                     'testo_segnalazione'         => fake()->randomElement($testi),
                     'flag_riservata'             => ! $stato->isTerminale() || fake()->boolean(30),
                     'flag_pubblicata'            => $stato->isTerminale() && fake()->boolean(60),
                     'flag_evidenza'              => false,
                     'id_stato_segnalazione'      => $stato,
-                    'id_provenienza'             => $provenienza,
                     'id_operatore_assegnato'     => $assegnaOperatore ? $utenti['operaio' . fake()->numberBetween(1, 2)]->id : 0,
                     'id_squadra_assegnata'       => null,
-                    'segnalante'                 => $segnalante->name,
-                    'email'                      => $segnalante->email,
-                    'telefono'                   => fake('it_IT')->phoneNumber(),
                     'id_appalto'                 => $assegnaImpresa ? $appalti->random()->id_appalto : null,
                     'importo_preventivo'         => $assegnaImpresa ? fake()->randomFloat(2, 150, 4500) : 0,
                     'importo_liquidato'          => $stato === SegnalazioneStato::COMPLETATA ? fake()->randomFloat(2, 150, 4500) : 0,
@@ -359,9 +345,6 @@ class PopulateDemoData extends Command
             AdesioneSegnalazione::create([
                 'id_segnalazione' => $segnalazione->id_segnalazione,
                 'id_utente'       => $utenti['segnalatore2']->id,
-                'segnalante'      => fake('it_IT')->name(),
-                'telefono'        => fake('it_IT')->phoneNumber(),
-                'email'           => fake()->safeEmail(),
             ]);
         }
     }

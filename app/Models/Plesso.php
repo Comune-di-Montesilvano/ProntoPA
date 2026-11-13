@@ -14,7 +14,20 @@ class Plesso extends Model
 
     protected $fillable = [
         'id_istituto', 'nome', 'codice_meccanografico', 'indirizzo', 'referente', 'email', 'recapiti', 'fonte_dati',
+        'latitudine', 'longitudine',
     ];
+
+    protected function casts(): array
+    {
+        return ['latitudine' => 'float', 'longitudine' => 'float'];
+    }
+
+    /** Posizione della sede (1.0.0: le segnalazioni non hanno più coordinate proprie). */
+    public function haCoordinate(): bool
+    {
+        return $this->latitudine !== null && $this->longitudine !== null
+            && ($this->latitudine != 0 || $this->longitudine != 0);
+    }
 
     /** @return BelongsTo<Istituto, $this> */
     public function istituto(): BelongsTo
