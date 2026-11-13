@@ -26,6 +26,9 @@ class RicalcolaScadenzeSla implements ShouldQueue
     {
         Segnalazione::aperte()->chunkById(200, function ($segnalazioni) use ($sla) {
             foreach ($segnalazioni as $s) {
+                if ($s->scadenza_manuale) {
+                    continue; // fissata a mano dal gestore: le regole non la toccano
+                }
                 $scadenza = $sla->calcolaScadenza($s);
                 if (! $scadenza) {
                     continue; // nessuna regola applicabile: scadenza lasciata com'è

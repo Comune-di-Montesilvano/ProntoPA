@@ -555,7 +555,8 @@ class SegnalazioneController extends Controller
         }
 
         // La scadenza SLA dipende dalla priorità: va ricalcolata sulle aperte.
-        if (! $segnalazione->isChiusa()) {
+        // Scadenza fissata a mano: la priorità cambia solo l'etichetta.
+        if (! $segnalazione->isChiusa() && ! $segnalazione->scadenza_manuale) {
             $scadenza = $this->sla->calcolaScadenza($segnalazione);
             if ($scadenza) {
                 $segnalazione->data_scadenza_sla = $scadenza;
