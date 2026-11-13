@@ -91,7 +91,7 @@ class GestioneController extends Controller
         $squadre = Impostazione::get('squadre_enabled', false)
             ? Squadra::where('attiva', true)->orderBy('nome')->get()
             : collect();
-        $appaltiValidi = Appalto::where('valido', true)->with('impresa')->orderBy('descrizione')->get();
+        $appaltiValidi = Appalto::where('valido', true)->with(['impresa', 'tipologie'])->orderBy('descrizione')->get();
 
         return view('gestione.dashboard', compact(
             'segnalazioni', 'tab', 'conteggi',

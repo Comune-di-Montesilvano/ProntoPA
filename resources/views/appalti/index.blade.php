@@ -17,7 +17,7 @@
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">#</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrizione</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gruppo</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipologie</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Impresa</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CIG</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importo</th>
@@ -30,7 +30,7 @@
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 py-3 text-gray-400 font-mono">{{ $appalto->id_appalto }}</td>
                                     <td class="px-4 py-3 font-medium text-gray-900">{{ $appalto->descrizione }}</td>
-                                    <td class="px-4 py-3 text-gray-500">{{ $appalto->gruppo?->descrizione ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-gray-500">{{ $appalto->tutte_tipologie ? 'Tutte' : ($appalto->tipologie->pluck('descrizione')->join(', ') ?: '—') }}</td>
                                     <td class="px-4 py-3 text-gray-500">{{ $appalto->impresa?->ragione_sociale ?? '—' }}</td>
                                     <td class="px-4 py-3 text-gray-500 font-mono text-xs">{{ $appalto->CIG ?? '—' }}</td>
                                     <td class="px-4 py-3 text-gray-700">

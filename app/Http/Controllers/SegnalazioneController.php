@@ -22,6 +22,7 @@ use App\Services\Segnalazioni\DestinatariAssegnatario;
 use App\Services\Segnalazioni\DestinatariComune;
 use App\Services\Segnalazioni\FineLavoriService;
 use App\Models\Appalto;
+use App\Support\Segnalazioni\AppaltiPerTipologia;
 use App\Models\Squadra;
 use App\Support\Segnalazioni\Attivita;
 use App\Support\Segnalazioni\CaricaAllegati;
@@ -272,11 +273,13 @@ class SegnalazioneController extends Controller
             if (Impostazione::get('squadre_enabled', false)) {
                 $squadre = Squadra::where('attiva', true)->orderBy('nome')->get();
             }
-            $appaltiValidi = Appalto::where('valido', true)->with('impresa')->orderBy('descrizione')->get();
-            $gruppo = TipologiaSegnalazione::whereKey($segnalazione->id_tipologia_segnalazione)->value('id_gruppo');
-            if ($gruppo && $appaltiValidi->contains('id_gruppo', $gruppo)) {
-                $appaltiValidi = $appaltiValidi->where('id_gruppo', $gruppo)->values();
-            }
+            // Prima le ditte che coprono la tipologia, poi le altre (1.0.0).
+            $ordinati = AppaltiPerTipologia::ordina(
+                Appalto::where('valido', true)->with(['impresa', 'tipologie'])->orderBy('descrizione')->get(),
+                [(int) $segnalazione->id_tipologia_segnalazione],
+            );
+            $appaltiValidi = $ordinati['coprono']->each(fn ($a) => $a->setAttribute('copre', true))
+                ->concat($ordinati['altri']->each(fn ($a) => $a->setAttribute('copre', false)));
         }
 
         return view('segnalazioni.show', compact(
