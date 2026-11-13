@@ -268,7 +268,7 @@ class ProssimoPasso
 
     private function dataFineLavori(): string
     {
-        return $this->data($this->s->allegati()->where('fase', 'dopo')->max('created_at'));
+        return $this->data($this->s->fine_lavori_at ?? $this->s->allegati()->where('fase', 'dopo')->max('created_at'));
     }
 
     private function ultimoPassaggioA(SegnalazioneStato $stato): mixed

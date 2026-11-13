@@ -372,17 +372,13 @@ class SegnalazioneController extends Controller
             'ore_lavoro' => ['nullable', 'numeric', 'min:0'],
             'materiali'  => ['nullable', 'string', 'max:1000'],
             'nota'       => ['required', 'string', 'max:2000'],
-            ...CaricaAllegati::regole(obbligatori: true),
-        ], [
-            ...CaricaAllegati::messaggi(),
-            'allegati.required' => 'Serve almeno una foto del lavoro finito.',
-            'allegati.min'      => 'Serve almeno una foto del lavoro finito.',
-        ]);
+            ...CaricaAllegati::regole(obbligatori: false),
+        ], CaricaAllegati::messaggi());
 
-        $servizio->comunica($segnalazione, auth()->user(), $data, $request->file('allegati'));
+        $chiusa = $servizio->comunica($segnalazione, auth()->user(), $data, $request->file('allegati') ?? []);
 
         return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
-            ->with('success', 'Fine lavori comunicata al comune.');
+            ->with('success', $chiusa ? 'Lavoro chiuso. Grazie!' : 'Fine lavori comunicata al comune.');
     }
 
     // ── Aggiungi nota ─────────────────────────────────────────────────────────

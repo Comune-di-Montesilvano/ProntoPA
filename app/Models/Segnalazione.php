@@ -300,10 +300,16 @@ class Segnalazione extends Model
         ];
     }
 
-    /** Ditta o operaio hanno già mandato le foto del lavoro finito. */
+    /** Ditta o operaio hanno comunicato la fine dei lavori (prima della 0.9.19 lo diceva solo la foto "dopo"). */
     public function haFineLavori(): bool
     {
-        return $this->allegati()->where('fase', 'dopo')->exists();
+        return $this->fine_lavori_at !== null || $this->allegati()->where('fase', 'dopo')->exists();
+    }
+
+    /** La ditta ha presentato un preventivo: la fine lavori la verifica il comune. */
+    public function haPreventivo(): bool
+    {
+        return $this->storicoStati()->where('id_stato_segnalazione', SegnalazioneStato::PREVENTIVO_IN_ATTESA->value)->exists();
     }
 
     public function statoEnum(): SegnalazioneStato
