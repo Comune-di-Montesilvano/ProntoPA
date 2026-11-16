@@ -63,6 +63,7 @@ class StatisticheController extends Controller
 
         $tipologiaLabel  = $perTipologia->map(fn($r) => $r->tipologia?->descrizione ?? 'N/D')->toArray();
         $tipologiaTotali = $perTipologia->pluck('totale')->toArray();
+        $tipologiaColori = $perTipologia->map(fn ($r) => \App\Support\Colori::tono($r->tipologia?->tono())['punto'])->values()->all();
 
         // Per stato
         $perStato = Segnalazione::visibileA($user)
@@ -73,6 +74,7 @@ class StatisticheController extends Controller
 
         $statoLabel  = $perStato->map(fn($r) => $r->stato?->descrizione ?? 'N/D')->toArray();
         $statoTotali = $perStato->pluck('totale')->toArray();
+        $statoColori = $perStato->map(fn ($r) => \App\Support\Colori::tono($r->statoEnum()->colore())['punto'])->values()->all();
 
         // KPI generali
         $kpi = [
@@ -192,8 +194,8 @@ class StatisticheController extends Controller
         return view('statistiche.index', compact(
             'kpi',
             'mesiLabel', 'mesiTotali',
-            'tipologiaLabel', 'tipologiaTotali',
-            'statoLabel', 'statoTotali',
+            'tipologiaLabel', 'tipologiaTotali', 'tipologiaColori',
+            'statoLabel', 'statoTotali', 'statoColori',
             'tempoMedioGg', 'slaCompliance',
             'caricoLabel', 'caricoTotali',
             'trendLabel', 'trendTotali',

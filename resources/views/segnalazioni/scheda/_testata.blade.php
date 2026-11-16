@@ -8,8 +8,8 @@
     <div class="min-w-0 flex flex-col gap-2">
         <p class="m-0 text-sm text-[var(--slate-600)]">
             <span class="pa-mono font-semibold">#{{ $segnalazione->id_segnalazione }}</span>
-            · {{ $segnalazione->tipologia?->descrizione ?? '—' }}
-            @if($segnalazione->plesso) · {{ $segnalazione->plesso->nome }} @endif
+            · <x-pa.tipologia :tipologia="$segnalazione->tipologia" />
+            @if($segnalazione->plesso) · {{ $segnalazione->plesso->nomeLeggibile() }} @endif
         </p>
         <div class="flex items-start gap-2">
             <h1 class="m-0 text-2xl font-bold text-[var(--ink)] break-words">{{ $titolo }}</h1>

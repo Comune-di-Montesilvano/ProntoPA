@@ -177,11 +177,6 @@
     @push('scripts')
         <script src="{{ asset('build/vendor/chart.umd.min.js') }}?v={{ config('app.version') }}"></script>
         <script>
-            const palette = [
-                '#0B3A8C','#1B5BD8','#E07A1F','#1F7A5A','#6B4FB0',
-                '#B23A3A','#C3640D','#0E3FA3','#E8F0FC','#ECE6F8',
-            ];
-
             const axisStyle = {
                 ticks: { color: '#6B7589', font: { size: 11, family: "'IBM Plex Mono', monospace" } },
                 grid:  { color: '#E1E5ED' },
@@ -226,7 +221,7 @@
                 type: 'doughnut',
                 data: {
                     labels: @json($tipologiaLabel),
-                    datasets: [{ data: @json($tipologiaTotali), backgroundColor: palette, borderWidth: 2, borderColor: '#fff' }],
+                    datasets: [{ data: @json($tipologiaTotali), backgroundColor: @json($tipologiaColori ?? []), borderWidth: 2, borderColor: '#fff' }],
                 },
                 options: donutOpts,
             });
@@ -237,7 +232,7 @@
                 type: 'doughnut',
                 data: {
                     labels: @json($statoLabel),
-                    datasets: [{ data: @json($statoTotali), backgroundColor: [...palette].reverse(), borderWidth: 2, borderColor: '#fff' }],
+                    datasets: [{ data: @json($statoTotali), backgroundColor: @json($statoColori ?? []), borderWidth: 2, borderColor: '#fff' }],
                 },
                 options: donutOpts,
             });

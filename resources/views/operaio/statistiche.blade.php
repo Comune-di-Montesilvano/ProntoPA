@@ -60,7 +60,7 @@
                 labels: @json($perTipologia->map(fn($r) => $r->tipologia?->descrizione ?? 'N/D')),
                 datasets: [{
                     data: @json($perTipologia->pluck('totale')),
-                    backgroundColor: ['#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444','#06b6d4','#f97316','#84cc16'],
+                    backgroundColor: @json($perTipologia->map(fn ($r) => \App\Support\Colori::tono($r->tipologia?->tono())['punto'])->values()),
                 }]
             },
             options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }

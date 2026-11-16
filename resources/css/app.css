@@ -427,3 +427,14 @@
 .pa-priorita-3 { background: var(--tono-sfondo); color: var(--tono-testo); border: 1px solid #fca5a5; }
 .pa-priorita-2 { background: var(--slate-100); color: var(--slate-700); }
 .pa-priorita-1 { background: var(--slate-100); color: var(--slate-500); }
+/* Nuova segnalazione: riquadri tipologia tenui nel loro colore, scelto = bordo pieno */
+.pa-riquadro-tipologia { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px;
+  border: 2px solid transparent; border-radius: 10px; background: var(--tono-sfondo); color: var(--tono-testo);
+  cursor: pointer; user-select: none; transition: border-color .15s, box-shadow .15s; }
+.pa-riquadro-tipologia i { color: var(--tono-punto); }
+.pa-riquadro-tipologia:hover { border-color: color-mix(in srgb, var(--tono-punto) 45%, transparent); }
+.pa-riquadro-tipologia.pa-riquadro-scelto { border-color: var(--tono-punto); box-shadow: 0 0 0 2px color-mix(in srgb, var(--tono-punto) 25%, transparent); }
+.pa-scelta-priorita { padding: 8px 16px; border: 2px solid var(--slate-200); border-radius: 8px; background: #fff;
+  color: var(--slate-600); font-size: 14px; font-weight: 600; user-select: none; }
+.pa-scelta-priorita:hover { border-color: var(--slate-400); }
+.pa-scelta-priorita.pa-riquadro-scelto { border-color: currentColor; }
