@@ -1,8 +1,28 @@
 {{-- Collegate: madre (se accorpata), accorpate qui, riparazione precedente (guasto ricorrente), ricomparse successive. --}}
-@php $precedente = $segnalazione->riparazionePrecedente(); @endphp
-@if($segnalazione->segnalazioneMadre || $segnalazione->duplicati->isNotEmpty() || $precedente || $segnalazione->correlate->isNotEmpty())
+@php
+    $precedente = $segnalazione->riparazionePrecedente();
+    // Aperta dichiarando "problema diverso" mentre questa era ancora aperta (1.0.2).
+    $apertaInsieme = $segnalazione->segnalazioneCorrelata;
+    $apertaInsieme = $apertaInsieme && ! $apertaInsieme->isChiusa() && ! $segnalazione->isChiusa()
+        && $segnalazione->data_segnalazione >= $apertaInsieme->data_segnalazione ? $apertaInsieme : null;
+@endphp
+@if($segnalazione->segnalazioneMadre || $segnalazione->duplicati->isNotEmpty() || $precedente || $segnalazione->correlate->isNotEmpty() || $apertaInsieme)
     <x-pa.card titolo="Collegate">
         <ul class="m-0 p-0 list-none flex flex-col gap-2 text-sm">
+            @if($apertaInsieme)
+                <li class="flex flex-wrap items-center justify-between gap-2">
+                    <span>Aperta con la
+                        <a class="font-semibold text-[var(--ente-primary)] underline" href="{{ route('segnalazioni.show', $apertaInsieme->id_segnalazione) }}">#{{ $apertaInsieme->id_segnalazione }}</a>
+                        ancora aperta</span>
+                    @can('accorpa', $segnalazione)
+                        <form method="POST" action="{{ route('segnalazioni.accorpa', $segnalazione) }}" class="m-0">
+                            @csrf
+                            <input type="hidden" name="id_destinazione" value="{{ $apertaInsieme->id_segnalazione }}">
+                            <x-pa.btn type="submit" size="sm" variant="outline">Accorpa alla #{{ $apertaInsieme->id_segnalazione }}</x-pa.btn>
+                        </form>
+                    @endcan
+                </li>
+            @endif
             @if($madre = $segnalazione->segnalazioneMadre)
                 <li>Accorpata alla
                     <a class="font-semibold text-[var(--ente-primary)] underline" href="{{ route('segnalazioni.show', $madre->id_segnalazione) }}">#{{ $madre->id_segnalazione }}</a>

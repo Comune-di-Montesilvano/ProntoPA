@@ -136,6 +136,38 @@ class DoppioniStoreTest extends TestCase
             ->assertJsonPath('esistente.ultima_risposta.testo', 'Guasto fibra ancora in corso');
     }
 
+    public function test_form_contiene_riquadro_esistente_e_campo_diversa_da(): void
+    {
+        $this->actingAs($this->urp)->get(route('segnalazioni.create'))
+            ->assertOk()
+            ->assertSee("C'è già una segnalazione aperta per questo", false)
+            ->assertSee('È un problema diverso, apro una nuova segnalazione')
+            ->assertSee('name="diversa_da"', false)
+            ->assertSee(route('segnalazioni.esistente'), false);
+    }
+
+    public function test_errore_esistente_mostra_il_messaggio(): void
+    {
+        $vecchia = $this->aperta();
+
+        $this->from(route('segnalazioni.create'))->invia()->assertRedirect(route('segnalazioni.create'));
+        $this->actingAs($this->urp)->get(route('segnalazioni.create'))
+            ->assertSee("C'è già la segnalazione #{$vecchia->id_segnalazione} aperta per questa sede e tipologia.");
+    }
+
+    public function test_collegate_mostra_accorpa_alla_correlata_aperta(): void
+    {
+        $vecchia = $this->aperta();
+        $nuova = $this->aperta(['id_segnalazione_correlata' => $vecchia->id_segnalazione, 'data_segnalazione' => now()]);
+        $gestore = User::factory()->create(['supervisore_segnalazioni' => true]);
+        $gestore->assignRole('gestore');
+
+        $this->actingAs($gestore)->get(route('segnalazioni.show', $nuova))
+            ->assertOk()
+            ->assertSeeInOrder(['Aperta con la', "#{$vecchia->id_segnalazione}", 'ancora aperta'])
+            ->assertSee("Accorpa alla #{$vecchia->id_segnalazione}");
+    }
+
     public function test_esistente_null_se_non_ce(): void
     {
         $this->actingAs($this->urp)
