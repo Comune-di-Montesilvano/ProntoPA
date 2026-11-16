@@ -20,6 +20,7 @@
 
 <div class="flex flex-col gap-5">
     @include('segnalazioni.scheda._testata')
+    @include('segnalazioni.scheda._fatti')
     @include('segnalazioni.scheda._cronogramma')
     @include('segnalazioni.scheda._prossimo-passo')
     @include('segnalazioni.scheda._inattivita')

@@ -313,3 +313,20 @@
   .pa-crono-tacche span:nth-child(even) { display: none; }
   .pa-crono-chiuso span { display: none; }
 }
+
+/* ── Quattro fatti in testa alla scheda gestore (scheda/_fatti) ─────────── */
+.pa-fatti { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.pa-fatto { background: #fff; border: 1px solid var(--slate-200); border-radius: var(--radius-md, 10px); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pa-fatto dt { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--slate-500); }
+.pa-fatto-valore { display: inline-flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; color: var(--ink); }
+.pa-fatto-pallino { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.pa-fatto-stato { border-left-width: 4px; }
+.pa-fatto-amber { background: var(--amber-100); border-color: var(--amber); }
+.pa-fatto-amber .pa-fatto-valore { color: var(--amber-600); }
+.pa-fatto-rose { background: var(--rose-100); border-color: var(--rose); }
+.pa-fatto-rose .pa-fatto-valore { color: var(--rose); }
+.pa-fatto-emerald .pa-fatto-valore { color: var(--emerald); }
+@media (max-width: 899px) {
+  .pa-fatti { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

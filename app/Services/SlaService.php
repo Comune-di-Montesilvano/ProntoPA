@@ -14,14 +14,18 @@ class SlaService
      * Calcola la data di scadenza SLA per una segnalazione, contando solo l'orario d'ufficio.
      * Restituisce null se nessuna regola è configurata.
      */
+    /** Regola SLA che vale per la segnalazione (tipologia + priorità, poi la generica). */
+    public function regolaPer(Segnalazione $segnalazione): ?SlaConfigurazione
+    {
+        return SlaConfigurazione::applicabileA(
+            $segnalazione->id_tipologia_segnalazione,
+            $segnalazione->livello_priorita ?? 2
+        );
+    }
+
     public function calcolaScadenza(Segnalazione $segnalazione): ?Carbon
     {
-        $priorita = $segnalazione->livello_priorita ?? 2;
-
-        $regola = SlaConfigurazione::applicabileA(
-            $segnalazione->id_tipologia_segnalazione,
-            $priorita
-        );
+        $regola = $this->regolaPer($segnalazione);
 
         if (! $regola) {
             return null;
