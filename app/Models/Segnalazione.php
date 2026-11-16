@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Squadra;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 #[ObservedBy(SegnalazioneObserver::class)]
 class Segnalazione extends Model
@@ -146,6 +147,7 @@ class Segnalazione extends Model
                     ->orderByDesc('data');
     }
 
+    /** @return HasMany<StoricoStatoSegnalazione, $this> */
     public function storicoStati(): HasMany
     {
         return $this->hasMany(StoricoStatoSegnalazione::class, 'id_segnalazione', 'id_segnalazione')
@@ -180,6 +182,18 @@ class Segnalazione extends Model
         return $this->belongsTo(self::class, 'id_segnalazione_madre', 'id_segnalazione');
     }
 
+    /**
+     * La richiesta di informazioni ancora senza esito (al massimo una).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<RichiestaInformazioni, $this>
+     */
+    public function richiestaAperta(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(RichiestaInformazioni::class, 'id_segnalazione', 'id_segnalazione')
+            ->ofMany(['id' => 'max'], fn ($q) => $q->whereNull('conclusa_at'));
+    }
+
+    /** @return HasMany<Segnalazione, $this> */
     public function duplicati(): HasMany
     {
         return $this->hasMany(self::class, 'id_segnalazione_madre', 'id_segnalazione');
@@ -224,10 +238,42 @@ class Segnalazione extends Model
         return collect($momenti)->map(fn ($m) => Carbon::parse($m))->max();
     }
 
-    /** Quante persone hanno segnalato lo stesso guasto: chi l'ha aperta più le adesioni (anche da accorpamento). */
+    /**
+     * Quante volte è stato segnalato lo stesso guasto: l'apertura, le adesioni (anche da
+     * accorpamento), i solleciti/integrazioni dell'autore dal form e le sue segnalazioni
+     * accorpate qui (per lui l'accorpamento non crea adesione). Gli altri contano con l'adesione.
+     */
     public function volteSegnalata(): int
     {
-        return 1 + (int) ($this->adesioni_count ?? $this->adesioni()->count());
+        $adesioni = $this->adesioni_count ?? $this->adesioni()->count();
+        $ripetizioni = $this->ripetizioni_autore_count ?? $this->note()
+            ->where('id_utente', $this->id_utente_segnalazione)
+            ->whereIn('origine', [NotaSegnalazione::ORIGINE_SOLLECITO, NotaSegnalazione::ORIGINE_INTEGRAZIONE])
+            ->count();
+        $accorpate = $this->accorpate_autore_count ?? $this->duplicati()
+            ->where('id_utente_segnalazione', $this->id_utente_segnalazione)
+            ->count();
+
+        return 1 + (int) $adesioni + (int) $ripetizioni + (int) $accorpate;
+    }
+
+    /** Conteggi di volteSegnalata() in una query sola, per gli elenchi. */
+    public function scopeConVolteSegnalata($query)
+    {
+        $query->withCount('adesioni')
+            ->selectSub(
+                DB::table('note_segnalazioni')->selectRaw('count(*)')
+                    ->whereColumn('note_segnalazioni.id_segnalazione', 'segnalazioni.id_segnalazione')
+                    ->whereColumn('note_segnalazioni.id_utente', 'segnalazioni.id_utente_segnalazione')
+                    ->whereIn('note_segnalazioni.origine', [NotaSegnalazione::ORIGINE_SOLLECITO, NotaSegnalazione::ORIGINE_INTEGRAZIONE]),
+                'ripetizioni_autore_count',
+            )
+            ->selectSub(
+                DB::table('segnalazioni as accorpata')->selectRaw('count(*)')
+                    ->whereColumn('accorpata.id_segnalazione_madre', 'segnalazioni.id_segnalazione')
+                    ->whereColumn('accorpata.id_utente_segnalazione', 'segnalazioni.id_utente_segnalazione'),
+                'accorpate_autore_count',
+            );
     }
 
     /** Ancora aperta e segnalata da più persone: va trattata con più urgenza. */
@@ -428,7 +474,8 @@ class Segnalazione extends Model
     /** Più urgenti prima: scadute (scadenza più vecchia) prima, poi scadenza crescente, poi priorità. */
     public function scopeOrdinaUrgenti($query)
     {
-        return $query->orderByRaw('data_scadenza_sla IS NULL')
+        return $query->orderByRaw('id_stato_segnalazione = ? ', [SegnalazioneStato::ATTESA_RISPOSTA->value])
+            ->orderByRaw('data_scadenza_sla IS NULL')
             ->orderBy('data_scadenza_sla')
             ->orderByDesc('livello_priorita')
             ->orderBy('data_segnalazione');

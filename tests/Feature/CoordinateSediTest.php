@@ -119,6 +119,18 @@ class CoordinateSediTest extends TestCase
             ->assertSee('https://www.google.com/maps/search/?api=1&amp;query=42.4,14.2', false);
     }
 
+    public function test_mappe_con_scelta_strade_o_satellite(): void
+    {
+        $this->sede->update(['latitudine' => 42.4, 'longitudine' => 14.2]);
+        $s = Segnalazione::factory()->create(['id_plesso' => $this->sede->id_plesso]);
+
+        foreach ([route('segnalazioni.show', $s), route('admin.sedi.edit', $this->sede), route('admin.aspetto')] as $url) {
+            $this->actingAs($this->admin)->get($url)->assertOk()
+                ->assertSee('paStratiMappa(', false)
+                ->assertSee('World_Imagery', false);
+        }
+    }
+
     public function test_scheda_sede_senza_coordinate_solo_indirizzo(): void
     {
         $s = Segnalazione::factory()->create(['id_plesso' => $this->sede->id_plesso]);

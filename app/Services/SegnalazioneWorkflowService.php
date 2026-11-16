@@ -29,11 +29,17 @@ use Illuminate\Validation\ValidationException;
 class SegnalazioneWorkflowService
 {
     /** Motivi di "Chiudi senza intervento" (azione annulla, stato 9). */
-    public const MOTIVI_SENZA_INTERVENTO = [
+    /** Motivi che il gestore può scegliere a mano. */
+    public const MOTIVI_MANUALI = [
         'non_pertinente' => 'Non pertinente',
         'errata' => 'Segnalazione errata',
         'gia_risolta' => 'Già risolta',
         'altro' => 'Altro',
+    ];
+
+    /** Tutti i motivi, compreso quello della chiusura automatica (1.0.2: richiesta di informazioni senza risposta). */
+    public const MOTIVI_SENZA_INTERVENTO = self::MOTIVI_MANUALI + [
+        'nessuna_risposta' => 'Nessuna risposta alla richiesta di informazioni',
     ];
 
     public function __construct(
@@ -163,6 +169,7 @@ class SegnalazioneWorkflowService
                 'id_utente' => $autore->id,
                 'visibile_web' => false,
                 'visibile_impresa' => false,
+                'origine' => \App\Models\NotaSegnalazione::ORIGINE_RIMANDO,
             ]);
 
             return $gestore;
@@ -326,6 +333,24 @@ class SegnalazioneWorkflowService
             $update['id_squadra_assegnata'] = null;
         }
 
+        if ($this->aVuoto($segnalazione, $nuovoStato, $previousStateId, $update)) {
+            // Niente da cambiare (es. "Assegna a me" su una già propria): né storico né avvisi.
+            if (! empty($params['data_scadenza']) && ! $nuovoStato->isTerminale()) {
+                $this->scadenzaManuale->imposta($segnalazione, Carbon::parse($params['data_scadenza']), $user);
+            }
+            $notaTesto = trim((string) ($params['nota'] ?? ''));
+            if ($notaTesto !== '') {
+                $segnalazione->note()->create([
+                    'testo'            => $notaTesto,
+                    'id_utente'        => $user->id,
+                    'visibile_web'     => false,
+                    'visibile_impresa' => (bool) $azione->flag_notifica,
+                ]);
+            }
+
+            return;
+        }
+
         if ($nuovoStato->isTerminale() && $azione->codice !== 'riapri') {
             $update['data_chiusura'] = now();
             $update['sla_violato']   = false;
@@ -368,6 +393,7 @@ class SegnalazioneWorkflowService
                 'id_utente'        => $user->id,
                 'visibile_web'     => $visibileWeb,
                 'visibile_impresa' => (bool) $azione->flag_notifica,
+                'origine'          => $azione->codice === 'annulla' ? \App\Models\NotaSegnalazione::ORIGINE_SENZA_INTERVENTO : null,
             ]);
         }
 
@@ -380,6 +406,31 @@ class SegnalazioneWorkflowService
         $this->automaticallyPublish($fresca, $previousStateId, $nuovoStato->value);
 
         InviaWebhookOutbound::dispatch($fresca);
+    }
+
+    /**
+     * Stesso stato e stesso assegnatario (operatore, squadra, appalto) dopo l'azione.
+     *
+     * @param  array<string, mixed>  $update
+     */
+    private function aVuoto(Segnalazione $segnalazione, SegnalazioneStato $nuovoStato, int $statoAttuale, array $update): bool
+    {
+        if ($nuovoStato->value !== $statoAttuale || $nuovoStato->isTerminale() || array_key_exists('importo_preventivo', $update)) {
+            return false;
+        }
+
+        // Riassegnare dopo una fine lavori la rimette in corso: non è a vuoto.
+        if (array_key_exists('fine_lavori_at', $update) && $segnalazione->fine_lavori_at !== null) {
+            return false;
+        }
+
+        foreach (['id_operatore_assegnato', 'id_squadra_assegnata', 'id_appalto'] as $campo) {
+            if (array_key_exists($campo, $update) && (int) $update[$campo] !== (int) $segnalazione->getAttribute($campo)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // ── Filtro applicabilità ─────────────────────────────────────────────────
@@ -404,8 +455,8 @@ class SegnalazioneWorkflowService
         }
 
         // Sostituita da "Accorpa" (AccorpamentoService): la riga resta in db_azioni per lo storico.
-        // "Rimanda al gestore" ha pannello e rotta suoi (rimandaAlGestore), mai nel menu.
-        if (in_array($azione->codice, ['segna_duplicata', 'rimanda'], true)) {
+        // "Rimanda al gestore" e "Chiedi informazioni" hanno pannello e rotta suoi, mai nel menu.
+        if (in_array($azione->codice, ['segna_duplicata', 'rimanda', 'chiedi_informazioni'], true)) {
             return false;
         }
 

@@ -38,10 +38,16 @@
             @else
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <x-input-label for="name" value="Nome completo *" />
-                    <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
-                        :value="old('name', $utente->name)" required />
-                    <x-input-error :messages="$errors->get('name')" class="mt-1" />
+                    @if($utente->auth_source === 'spid')
+                        <x-input-label value="Nome completo" />
+                        <p class="mt-1 text-gray-900">{{ $utente->name }}</p>
+                        <p class="mt-1 text-sm text-gray-600">Da SPID/CIE, si aggiorna a ogni accesso.</p>
+                    @else
+                        <x-input-label for="name" value="Nome completo *" />
+                        <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
+                            :value="old('name', $utente->name)" required />
+                        <x-input-error :messages="$errors->get('name')" class="mt-1" />
+                    @endif
                 </div>
                 <div>
                     <x-input-label for="username" value="Username *" />

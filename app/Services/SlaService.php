@@ -14,14 +14,18 @@ class SlaService
      * Calcola la data di scadenza SLA per una segnalazione, contando solo l'orario d'ufficio.
      * Restituisce null se nessuna regola è configurata.
      */
+    /** Regola SLA che vale per la segnalazione (tipologia + priorità, poi la generica). */
+    public function regolaPer(Segnalazione $segnalazione): ?SlaConfigurazione
+    {
+        return SlaConfigurazione::applicabileA(
+            $segnalazione->id_tipologia_segnalazione,
+            $segnalazione->livello_priorita ?? 2
+        );
+    }
+
     public function calcolaScadenza(Segnalazione $segnalazione): ?Carbon
     {
-        $priorita = $segnalazione->livello_priorita ?? 2;
-
-        $regola = SlaConfigurazione::applicabileA(
-            $segnalazione->id_tipologia_segnalazione,
-            $priorita
-        );
+        $regola = $this->regolaPer($segnalazione);
 
         if (! $regola) {
             return null;
@@ -29,9 +33,14 @@ class SlaService
 
         $calendario = CalendarioUfficio::daImpostazioni();
 
-        return $regola->unita === 'giorni'
+        $base = $regola->unita === 'giorni'
             ? $calendario->aggiungiGiorniLavorativi($segnalazione->data_segnalazione, $regola->ore_target)
             : $calendario->aggiungiOreLavorative($segnalazione->data_segnalazione, $regola->ore_target);
+
+        // Il tempo passato ad aspettare la risposta di chi ha segnalato non conta (1.0.2).
+        $attesa = $base ? \App\Models\RichiestaInformazioni::oreDiAttesa($segnalazione, $calendario) : 0.0;
+
+        return $attesa > 0 ? $calendario->aggiungiOreLavorative($base, $attesa) : $base;
     }
 
     /**

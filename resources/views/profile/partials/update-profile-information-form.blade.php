@@ -15,8 +15,15 @@
 
         <div>
             <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />
-            <x-input-error class="mt-2" :messages="$errors->get('name')" />
+            @if($user->auth_source === 'locale')
+                <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />
+                <x-input-error class="mt-2" :messages="$errors->get('name')" />
+            @else
+                <p id="name" class="mt-1 text-gray-900">{{ $user->name }}</p>
+                <p class="mt-1 text-sm text-gray-600">
+                    {{ $user->auth_source === 'spid' ? 'Arriva da SPID/CIE e si aggiorna a ogni accesso.' : "Arriva dall'account di dominio e si aggiorna a ogni accesso." }}
+                </p>
+            @endif
         </div>
 
         <div>

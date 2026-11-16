@@ -13,6 +13,7 @@ use Database\Seeders\ImpostazioniSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\TabelleRiferimentoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /** Il riquadro "prossimo passo" della scheda: cosa serve ora, per chi guarda, con le sole azioni eseguibili. */
@@ -64,7 +65,7 @@ class ProssimoPassoTest extends TestCase
         $this->assertContains('Chiudi', $this->etichette($passo));
         $this->assertSame('annulla', collect($passo['azioni'])->firstWhere('etichetta', 'Chiudi')['pannello']);
         $this->assertContains('Accorpa a…', $this->etichette($passo));
-        $this->assertContains('Priorità…', $this->etichette($passo));
+        $this->assertNotContains('Priorità…', $this->etichette($passo));
         $this->assertSame('primary', $passo['tono']);
     }
 
@@ -104,7 +105,7 @@ class ProssimoPassoTest extends TestCase
         $this->assertStringContainsString('Paolo Neri deve chiudere il lavoro', $passo['titolo']);
         $this->assertStringContainsString('è in ritardo di 2 giorni', $passo['titolo'].' '.$passo['sottotitolo']);
         $this->assertContains('Sollecita', $this->etichette($passo));
-        $this->assertContains('Scadenza…', $this->etichette($passo));
+        $this->assertNotContains('Scadenza…', $this->etichette($passo));
         $this->assertNotContains('Sospendi', $this->etichette($passo));
         $this->assertContains('Chiudi', $this->etichette($passo));
         $this->assertContains('Riassegna', $this->etichette($passo));
@@ -224,5 +225,99 @@ class ProssimoPassoTest extends TestCase
         $passo = ProssimoPasso::per(Segnalazione::factory()->create(['id_stato_segnalazione' => 2]), $altro);
 
         $this->assertSame([], $passo['azioni']);
+    }
+
+    public function test_etichetta_tocca_a_te(): void
+    {
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 2, 'id_operatore_assegnato' => $this->gestore->id]);
+
+        $this->assertSame('Adesso tocca a te', ProssimoPasso::per($s, $this->gestore)['etichetta']);
+    }
+
+    public function test_etichetta_tocca_a_altro(): void
+    {
+        $collega = User::factory()->create(['name' => 'Bruno Collega']);
+        $collega->assignRole('gestore');
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 2, 'id_operatore_assegnato' => $collega->id]);
+
+        $this->assertSame('Adesso tocca a Bruno Collega', ProssimoPasso::per($s, $this->gestore)['etichetta']);
+        $this->assertSame('Prossimo passo', ProssimoPasso::per(Segnalazione::factory()->create(['id_stato_segnalazione' => 1]), $this->gestore)['etichetta']);
+    }
+
+    private function risegnalataStamattina(Segnalazione $s): void
+    {
+        $scuola = User::factory()->create();
+        $scuola->assignRole('segnalatore');
+        \App\Models\NotaSegnalazione::create([
+            'id_segnalazione' => $s->id_segnalazione, 'testo' => 'Sollecito', 'id_utente' => $scuola->id,
+            'visibile_web' => true, 'visibile_impresa' => false, 'origine' => \App\Models\NotaSegnalazione::ORIGINE_SOLLECITO,
+        ])->forceFill(['data' => '2026-11-16 09:00:00'])->save();
+    }
+
+    public function test_sottotitolo_scade_e_risegnalata(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-16 10:00:00'));
+        $s = Segnalazione::factory()->create([
+            'id_stato_segnalazione' => 2, 'id_operatore_assegnato' => $this->gestore->id, 'data_scadenza_sla' => '2026-11-16 14:00:00',
+        ]);
+        $this->risegnalataStamattina($s);
+
+        $this->assertSame("Scade tra 4 ore\nChi ha segnalato l'ha segnalata di nuovo stamattina", ProssimoPasso::per($s->fresh(), $this->gestore)['sottotitolo']);
+    }
+
+    public function test_sottotitolo_massimo_due_frasi(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-16 10:00:00'));
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 6, 'data_scadenza_sla' => '2026-11-16 14:00:00']);
+        \App\Models\StoricoStatoSegnalazione::create([
+            'id_segnalazione' => $s->id_segnalazione, 'id_stato_segnalazione' => 6, 'id_utente' => $this->gestore->id,
+            'id_utente_collegato' => 0, 'id_appalto' => 0,
+        ]);
+        \App\Models\NotaSegnalazione::create([
+            'id_segnalazione' => $s->id_segnalazione, 'testo' => 'Aspettiamo il pezzo', 'id_utente' => $this->gestore->id,
+            'visibile_web' => false, 'visibile_impresa' => false,
+        ])->forceFill(['data' => '2026-11-16 08:00:00'])->save();
+        $this->risegnalataStamattina($s);
+
+        $sottotitolo = (string) ProssimoPasso::per($s->fresh(), $this->gestore)['sottotitolo'];
+
+        $this->assertSame(1, substr_count($sottotitolo, "\n"));
+    }
+
+    /** Richiesta aperta il 13/11 alle 10:00 da Anna Gestore, termine 27/11 18:00. */
+    private function richiestaAperta(Segnalazione $s, bool $chiudi = true, string $testo = 'Quale aula?'): \App\Models\RichiestaInformazioni
+    {
+        $r = \App\Models\RichiestaInformazioni::create([
+            'id_segnalazione' => $s->id_segnalazione, 'id_utente' => $this->gestore->id, 'testo' => $testo,
+            'stato_precedente' => 2, 'termine_at' => '2026-11-27 18:00:00', 'chiudi_senza_risposta' => $chiudi,
+        ]);
+        $r->forceFill(['created_at' => '2026-11-13 10:00:00'])->save();
+
+        return $r;
+    }
+
+    public function test_prossimo_passo_offre_chiedi_informazioni(): void
+    {
+        $autore = User::factory()->create(['auth_source' => 'ldap']);
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 2, 'id_utente_segnalazione' => $autore->id]);
+
+        $azione = collect(ProssimoPasso::per($s, $this->gestore)['azioni'])->firstWhere('etichetta', 'Chiedi informazioni…');
+
+        $this->assertNotNull($azione);
+        $this->assertSame('informazioni', $azione['pannello']);
+    }
+
+    public function test_prossimo_passo_in_attesa_offre_non_serve_piu(): void
+    {
+        $autore = User::factory()->create(['auth_source' => 'spid']);
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 11, 'id_utente_segnalazione' => $autore->id]);
+        $this->richiestaAperta($s);
+
+        $passo = ProssimoPasso::per($s->fresh(), $this->gestore);
+
+        $this->assertSame('Aspetti la risposta della scuola', $passo['titolo']);
+        $this->assertStringContainsString('entro venerdì 27 · poi si chiude da sola', $passo['sottotitolo']);
+        $this->assertSame(['Non serve più'], $this->etichette($passo));
+        $this->assertSame('ritira', $passo['azioni'][0]['tipo']);
     }
 }

@@ -120,4 +120,33 @@ class ProfileTest extends TestCase
 
         $this->assertNotNull($user->fresh());
     }
+
+    public function test_nome_di_spid_e_dominio_non_modificabile_dal_profilo(): void
+    {
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+        $spid = $this->utenteSpid();
+        $this->delega($spid, $this->istitutoConPlessi(), null, \App\Models\Delega::ATTIVA);
+        $spid->forceFill(['name' => 'Mario Rossi'])->save();
+        $ldap = User::factory()->create(['auth_source' => 'ldap', 'name' => 'Anna Bianchi']);
+
+        foreach ([[$spid, 'Mario Rossi'], [$ldap, 'Anna Bianchi']] as [$user, $nome]) {
+            $this->actingAs($user)->get('/profile')->assertOk()
+                ->assertDontSee('name="name"', false)
+                ->assertSee($nome);
+            $this->actingAs($user)
+                ->patch('/profile', ['name' => 'ISTITUTO COMPRENSIVO', 'email' => $user->email, 'telefono' => '085 123'])
+                ->assertSessionHasNoErrors();
+            $this->assertSame($nome, $user->fresh()->name);
+            $this->assertSame('085 123', $user->fresh()->telefono);
+        }
+    }
+
+    public function test_account_locale_cambia_ancora_il_nome(): void
+    {
+        $user = User::factory()->create(['name' => 'Vecchio']);
+
+        $this->actingAs($user)->patch('/profile', ['name' => 'Nuovo', 'email' => $user->email])->assertSessionHasNoErrors();
+
+        $this->assertSame('Nuovo', $user->fresh()->name);
+    }
 }

@@ -14,6 +14,9 @@
         <h1 class="m-0 text-2xl font-bold text-[var(--ink)] break-words">{{ $titolo }}</h1>
     </header>
 
+    @if($richiesta = $segnalazione->richiestaAperta)
+        @include('segnalazioni.scheda._richiesta-segnalante')
+    @else
     <section class="pa-card pa-passo pa-passo-{{ $prossimoPasso['tono'] }} p-5 flex flex-col gap-2" aria-live="polite">
         <h2 class="m-0 text-xl font-bold text-[var(--ink)]">{{ $prossimoPasso['titolo'] }}</h2>
         @if($madre && auth()->user()->can('view', $madre))
@@ -26,10 +29,11 @@
             <p class="m-0 mt-1 text-sm text-[var(--slate-600)]">Ultimo aggiornamento del {{ $ultimaRisposta['quando']->format('d/m') }}: «{{ \Illuminate\Support\Str::limit((string) $ultimaRisposta['testo'], 160) }}»</p>
         @endif
     </section>
+    @endif
 
     @include('segnalazioni.scheda._inattivita')
 
-    @include('segnalazioni.scheda._avanzamento')
+    @include('segnalazioni.scheda._cronogramma')
 
     <x-pa.card titolo="Messaggi con il comune">
         @if($puoScrivere)

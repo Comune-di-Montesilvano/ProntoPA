@@ -2,18 +2,24 @@
 
 namespace App\Support\Segnalazioni;
 
+use App\Enums\SegnalazioneStato;
 use App\Models\Segnalazione;
 use Illuminate\Support\Carbon;
 
 /**
  * Scadenza SLA di una segnalazione aperta, in parole: breve per gli elenchi, estesa per la scheda.
- * Rosa se superata, ambra entro 24 ore, neutra altrimenti.
+ * Rosa se superata, ambra entro 24 ore, neutra altrimenti; ferma mentre aspetta una risposta.
  */
 class Scadenza
 {
+    private const FERMA = ['testo' => 'Ferma: aspetta una risposta', 'tono' => 'slate'];
+
     /** @return array{testo: string, tono: 'rose'|'amber'|'slate'}|null */
     public static function per(Segnalazione $s, ?Carbon $ora = null): ?array
     {
+        if ($s->id_stato_segnalazione === SegnalazioneStato::ATTESA_RISPOSTA) {
+            return self::FERMA;
+        }
         $secondi = self::secondiRimasti($s, $ora);
         if ($secondi === null) {
             return null;
@@ -36,6 +42,9 @@ class Scadenza
     /** @return array{testo: string, tono: 'rose'|'amber'|'slate'}|null */
     public static function estesa(Segnalazione $s, ?Carbon $ora = null): ?array
     {
+        if ($s->id_stato_segnalazione === SegnalazioneStato::ATTESA_RISPOSTA) {
+            return self::FERMA;
+        }
         $secondi = self::secondiRimasti($s, $ora);
         if ($secondi === null) {
             return null;

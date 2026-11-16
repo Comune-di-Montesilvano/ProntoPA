@@ -1,4 +1,4 @@
-{{-- Testata della lettura gestore: dove/cosa, stato, priorità (cliccabile), scadenza, etichette, menu. --}}
+{{-- Testata della lettura gestore: dove/cosa, titolo, etichette accessorie, menu (stato, priorità e scadenza sono nei fatti). --}}
 @php
     $stato = $segnalazione->statoEnum();
     $titolo = $segnalazione->titoloLeggibile(90);
@@ -21,38 +21,17 @@
                 </button>
             @endcan
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-            <x-pa.pill :tono="$stato->tono()">{{ $stato->etichetta() }}</x-pa.pill>
-            @can('modificaPriorita', $segnalazione)
-                <button type="button" x-data x-on:click="$dispatch('apri-pannello', 'priorita')"
-                        class="inline-flex items-center gap-1 rounded-md border border-dashed border-[var(--slate-300)] px-1.5 py-0.5 hover:bg-[var(--slate-100)]"
-                        title="Cambia priorità" aria-label="Cambia priorità">
-                    <x-pa.prio :livello="$segnalazione->livello_priorita" />
-                    <span class="text-xs text-[var(--slate-500)]"><i class="fas fa-pen" aria-hidden="true"></i></span>
-                </button>
-            @else
-                <x-pa.prio :livello="$segnalazione->livello_priorita" />
-            @endcan
-            @if(! $segnalazione->isChiusa() && auth()->user()->can('modificaPriorita', $segnalazione))
-                <button type="button" x-data x-on:click="$dispatch('apri-pannello', 'scadenza')"
-                        class="inline-flex items-center gap-1 rounded-md border border-dashed border-[var(--slate-300)] px-1.5 py-0.5 hover:bg-[var(--slate-100)]"
-                        title="Sposta la scadenza" aria-label="Sposta la scadenza">
-                    <x-pa.scadenza :segnalazione="$segnalazione" estesa />
-                    <span class="text-xs text-[var(--slate-500)]"><i class="fas fa-pen" aria-hidden="true"></i></span>
-                </button>
-            @else
-                <x-pa.scadenza :segnalazione="$segnalazione" estesa />
-            @endif
-            @if($segnalazione->flag_riservata)
-                <x-pa.pill tono="slate"><i class="fas fa-lock" aria-hidden="true"></i> Riservata</x-pa.pill>
-            @endif
-            @if($segnalazione->isSollecitata())
-                <x-pa.pill tono="amber">Segnalata {{ $segnalazione->volteSegnalata() }} volte</x-pa.pill>
-            @endif
-            @if($segnalazione->isRicorrente())
-                <x-pa.pill tono="amber">Ricorrente</x-pa.pill>
-            @endif
-        </div>
+        {{-- Stato, priorità, scadenza e "segnalata N volte" stanno nei quattro fatti (_fatti). --}}
+        @if($segnalazione->flag_riservata || $segnalazione->isRicorrente())
+            <div class="flex flex-wrap items-center gap-2">
+                @if($segnalazione->flag_riservata)
+                    <x-pa.pill tono="slate"><i class="fas fa-lock" aria-hidden="true"></i> Riservata</x-pa.pill>
+                @endif
+                @if($segnalazione->isRicorrente())
+                    <x-pa.pill tono="amber">Ricorrente</x-pa.pill>
+                @endif
+            </div>
+        @endif
     </div>
 
     <div class="flex shrink-0 items-center gap-2">
@@ -80,10 +59,16 @@
         @endif
 
         <div class="relative" x-data="{ aperto: false }" x-on:click.outside="aperto = false" x-on:keydown.escape="aperto = false">
+            <button type="button" class="pa-btn pa-btn-outline pa-btn-sm" x-on:click="aperto = !aperto" :aria-expanded="aperto">Stampa ▾</button>
+            <div x-show="aperto" x-cloak class="absolute right-0 z-30 mt-1 w-56 rounded-md border border-[var(--slate-200)] bg-white py-1 shadow-lg">
+                <a href="{{ route('segnalazioni.stampa', $segnalazione->id_segnalazione) }}" target="_blank" class="block px-4 py-2 text-sm hover:bg-[var(--slate-50)]">Scheda da stampare</a>
+                <a href="{{ route('segnalazioni.fascicolo-pdf', $segnalazione) }}" class="block px-4 py-2 text-sm hover:bg-[var(--slate-50)]">PDF fascicolo</a>
+            </div>
+        </div>
+
+        <div class="relative" x-data="{ aperto: false }" x-on:click.outside="aperto = false" x-on:keydown.escape="aperto = false">
             <button type="button" class="pa-btn pa-btn-outline pa-btn-sm" x-on:click="aperto = !aperto" :aria-expanded="aperto" aria-label="Altro">⋯</button>
             <div x-show="aperto" x-cloak class="absolute right-0 z-30 mt-1 w-64 rounded-md border border-[var(--slate-200)] bg-white py-1 shadow-lg">
-                <a href="{{ route('segnalazioni.stampa', $segnalazione->id_segnalazione) }}" target="_blank" class="block px-4 py-2 text-sm hover:bg-[var(--slate-50)]">Stampa</a>
-                <a href="{{ route('segnalazioni.fascicolo-pdf', $segnalazione) }}" class="block px-4 py-2 text-sm hover:bg-[var(--slate-50)]">PDF fascicolo</a>
                 @if($puoAggiornare)
                     <form method="POST" action="{{ route('segnalazioni.toggle-riservata', $segnalazione->id_segnalazione) }}">
                         @csrf @method('PATCH')

@@ -92,6 +92,42 @@ class SegnalazionePolicy
     }
 
     /** Chi ha il lavoro (operaio assegnato, caposquadra, ditta) lo rimanda al comune. */
+    /** Chiedere informazioni a chi ha segnalato (1.0.2): comune, stati 1–4, una richiesta alla volta, autore che può rispondere. */
+    public function chiediInformazioni(User $user, Segnalazione $segnalazione): bool
+    {
+        if (\App\Support\Segnalazioni\LetturaScheda::per($user) !== 'gestore' || ! $this->update($user, $segnalazione)) {
+            return false;
+        }
+        if ($segnalazione->isChiusa() || ! in_array($segnalazione->statoEnum(), [
+            SegnalazioneStato::NUOVA, SegnalazioneStato::IN_CARICO, SegnalazioneStato::ASSEGNATA_OPERATORE, SegnalazioneStato::ASSEGNATA_IMPRESA,
+        ], true)) {
+            return false;
+        }
+        if ($segnalazione->richiestaAperta()->exists()) {
+            return false;
+        }
+
+        return self::autorePuoRispondere($segnalazione);
+    }
+
+    /** Chi ha segnalato può rispondere da qui: persona vera (SPID o dominio), attiva, con email. */
+    public static function autorePuoRispondere(Segnalazione $segnalazione): bool
+    {
+        $autore = User::find((int) $segnalazione->id_utente_segnalazione);
+
+        // Solo chi legge come segnalante può rispondere (un gestore che ha aperto da telefono no).
+        return $autore !== null && in_array($autore->auth_source, ['spid', 'ldap'], true)
+            && $autore->attivo !== false && trim((string) $autore->email) !== ''
+            && \App\Support\Segnalazioni\LetturaScheda::per($autore) === 'segnalante';
+    }
+
+    public function ritiraInformazioni(User $user, Segnalazione $segnalazione): bool
+    {
+        return \App\Support\Segnalazioni\LetturaScheda::per($user) === 'gestore'
+            && $this->update($user, $segnalazione)
+            && $segnalazione->richiestaAperta()->exists();
+    }
+
     public function rimanda(User $user, Segnalazione $segnalazione): bool
     {
         if ($segnalazione->isChiusa() || ! in_array($segnalazione->statoEnum(), [
@@ -125,6 +161,16 @@ class SegnalazionePolicy
                 SegnalazioneStato::ASSEGNATA_OPERATORE, SegnalazioneStato::ASSEGNATA_IMPRESA, SegnalazioneStato::PREVENTIVO_IN_ATTESA,
             ], true)
             && $this->modificaPriorita($user, $segnalazione);
+    }
+
+    /**
+     * Dal form di nuova segnalazione: chi la vede ed è ancora aperta può sollecitarla o
+     * aggiungere informazioni invece di aprirne un'altra (nessun limite di tempo: stava
+     * per aprirne una nuova, fermarlo sarebbe peggio).
+     */
+    public function aggiornaDalForm(User $user, Segnalazione $segnalazione): bool
+    {
+        return ! $segnalazione->isChiusa() && $this->view($user, $segnalazione);
     }
 
     /**

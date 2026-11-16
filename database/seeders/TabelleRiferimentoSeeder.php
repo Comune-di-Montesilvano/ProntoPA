@@ -20,6 +20,7 @@ class TabelleRiferimentoSeeder extends Seeder
             ['id_stato' => 8,  'descrizione' => 'Duplicata',             'iniziale' => 0, 'in_carico' => 0, 'id_gestione' => 0, 'sospesa' => 0, 'chiusura' => 1, 'colore_sfondo' => 'warning'],
             ['id_stato' => 9,  'descrizione' => 'Chiusa senza intervento', 'iniziale' => 0, 'in_carico' => 0, 'id_gestione' => 0, 'sospesa' => 0, 'chiusura' => 1, 'colore_sfondo' => 'danger'],
             ['id_stato' => 10, 'descrizione' => 'Archiviata',            'iniziale' => 0, 'in_carico' => 0, 'id_gestione' => 0, 'sospesa' => 0, 'chiusura' => 1, 'colore_sfondo' => 'secondary'],
+            ['id_stato' => 11, 'descrizione' => 'In attesa di risposta', 'iniziale' => 0, 'in_carico' => 1, 'id_gestione' => 0, 'sospesa' => 1, 'chiusura' => 0, 'colore_sfondo' => 'warning'],
         ]);
 
         DB::table('db_azioni')->insertOrIgnore([
@@ -38,6 +39,8 @@ class TabelleRiferimentoSeeder extends Seeder
             ['id_azione' => 13, 'codice' => 'archivia',           'descrizione' => 'Archivia',             'id_stato_segnalazione' => 10,   'competenza_azione' => 0, 'colore' => 'secondary', 'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 0, 'ordine' => 110, 'parametri_filtro' => '{"stati":[]}'],
             ['id_azione' => 14, 'codice' => 'riapri',             'descrizione' => 'Riapri',               'id_stato_segnalazione' => 2,    'competenza_azione' => 0, 'colore' => 'warning',   'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 1, 'ordine' => 120, 'parametri_filtro' => '{"stati":[7,8,9,10]}'],
             ['id_azione' => 15, 'codice' => 'rimanda',            'descrizione' => 'Rimanda al gestore',   'id_stato_segnalazione' => 2,    'competenza_azione' => 2, 'colore' => 'warning',   'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 1, 'ordine' => 85,  'parametri_filtro' => '{"stati":[3,4,5]}'],
+            // Come "rimanda": pannello e rotta suoi (1.0.2), qui solo per storico e descrizioni.
+            ['id_azione' => 16, 'codice' => 'chiedi_informazioni', 'descrizione' => 'Chiedi informazioni', 'id_stato_segnalazione' => 11, 'competenza_azione' => 0, 'colore' => 'warning', 'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 1, 'ordine' => 87,  'parametri_filtro' => '{"stati":[1,2,3,4]}'],
         ]);
 
         // Le tipologie le gestisce l'admin (1.0.0): solo su un'installazione nuova.

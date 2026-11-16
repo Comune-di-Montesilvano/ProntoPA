@@ -23,6 +23,9 @@
         <x-pa.impostazione chiave="etichetta_ufficio_segnalante" tipo="testo" etichetta="Come si presenta il personale a chi ha segnalato"
             aiuto="Chi ha segnalato vede questa dicitura al posto dei nomi interni (es. Ufficio manutenzioni)." />
 
+        <x-pa.impostazione chiave="giorni_risposta_informazioni" tipo="intero" etichetta="Giorni per rispondere a una richiesta di informazioni"
+            aiuto="Proposti quando si chiedono informazioni a chi ha segnalato (giorni lavorativi, 1–30). Si possono cambiare ogni volta." />
+
         <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">Salva</button>
     </form>
 

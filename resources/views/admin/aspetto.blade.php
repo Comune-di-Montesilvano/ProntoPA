@@ -74,14 +74,12 @@
     </form>
 
     <script src="{{ asset('build/vendor/leaflet/leaflet.js') }}?v={{ config('app.version') }}"></script>
+    @include('partials.strati-mappa')
     <script>
         (function () {
             const [fLat, fLng, fZoom] = document.querySelectorAll('#coordinate-mappa input');
             const mappa = L.map('mappa-aspetto').setView([{{ $lat }}, {{ $lng }}], {{ $zoom }});
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-                maxZoom: 19,
-            }).addTo(mappa);
+            paStratiMappa(mappa);
             const marker = L.marker([{{ $lat }}, {{ $lng }}], { draggable: true }).addTo(mappa);
 
             const scrivi = () => {

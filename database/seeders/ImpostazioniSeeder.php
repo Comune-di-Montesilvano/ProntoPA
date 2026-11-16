@@ -61,6 +61,13 @@ class ImpostazioniSeeder extends Seeder
                 'gruppo'      => 'brand',
                 'descrizione' => 'Come compare il personale del comune a chi ha segnalato (i nomi interni non vengono mostrati)',
             ],
+            [
+                'chiave'      => 'giorni_risposta_informazioni',
+                'valore'      => '10',
+                'tipo'        => 'integer',
+                'gruppo'      => 'workflow',
+                'descrizione' => 'Giorni lavorativi proposti per rispondere a una richiesta di informazioni',
+            ],
 
             // Email
             [

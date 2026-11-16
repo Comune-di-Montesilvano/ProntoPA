@@ -44,6 +44,12 @@ class AllegatoSegnalazione extends Model
         // dimentichi.
         static::created(function (self $allegato): void {
             ScansionaAllegato::dispatch($allegato->id_allegato);
+
+            // Un allegato di chi ha segnalato risponde a un'eventuale richiesta di informazioni.
+            $autore = (int) $allegato->id_utente_creazione > 0 ? \App\Models\User::find((int) $allegato->id_utente_creazione) : null;
+            if ($autore && $allegato->segnalazione) {
+                app(\App\Services\Segnalazioni\RichiesteInformazioni::class)->registraRisposta($allegato->segnalazione, $autore);
+            }
         });
     }
 

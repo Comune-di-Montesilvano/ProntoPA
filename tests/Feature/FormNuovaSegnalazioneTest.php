@@ -148,8 +148,10 @@ class FormNuovaSegnalazioneTest extends TestCase
         Storage::fake('local');
         $this->actingAs($this->urp)->post(route('segnalazioni.store'), $this->dati())->assertSessionHasNoErrors();
 
+        // Stessa sede e tipologia della prima, ancora aperta: va dichiarata diversa (1.0.2).
         $this->actingAs($this->urp)->post(route('segnalazioni.store'), $this->dati([
             'allegati' => [UploadedFile::fake()->image('guasto.jpg')],
+            'diversa_da' => Segnalazione::value('id_segnalazione'),
         ]))->assertSessionHasNoErrors();
 
         $this->assertSame(2, Segnalazione::count());

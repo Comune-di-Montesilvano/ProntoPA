@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
  * raccontata secondo chi la legge: il segnalante vede "l'ufficio" e non i nomi,
  * ditta e operaio vedono solo da quando il lavoro è arrivato a loro.
  *
- * @phpstan-type Voce array{quando: Carbon, autore: string, iniziali: string, tipo: 'nota'|'stato'|'allegato', testo: ?string, frase: string, tag: ?string, allegato: ?AllegatoSegnalazione}
+ * @phpstan-type Voce array{quando: Carbon, autore: string, iniziali: string, tipo: string, forma: string, stato: ?SegnalazioneStato, testo: ?string, nota: ?string, frase: string, letta_da: ?string, allegato: ?AllegatoSegnalazione}
  */
 class Attivita
 {
@@ -45,26 +45,81 @@ class Attivita
     private function voci(): Collection
     {
         /** @var Collection<int, StoricoStatoSegnalazione> $storico */
-        $storico = $this->segnalazione->storicoStati()->orderBy('data_registrazione')->get();
+        $storico = StoricoOrdinato::di($this->segnalazione);
         $dal = $this->inizioLavoro($storico);
 
-        $voci = collect();
-
-        foreach ($this->segnalazione->note()->visibiliA($this->lettore)->get() as $nota) {
-            $voci->push($this->daNota($nota));
-        }
+        /** @var list<Voce> $passaggi */
+        $passaggi = [];
+        $meta = [];
         $precedente = null;
         foreach ($storico as $evento) {
             if ($dal === null || Carbon::parse($evento->data_registrazione)->gte($dal)) {
-                $voci->push($this->daStato($evento, $precedente === SegnalazioneStato::SOSPESA->value));
+                $passaggi[] = $this->daStato($evento, $precedente);
+                $meta[] = ['autore' => (int) $evento->id_utente, 'stato' => (int) $evento->id_stato_segnalazione];
             }
             $precedente = (int) $evento->id_stato_segnalazione;
         }
+
+        /** @var list<Voce> $altre */
+        $altre = [];
+        foreach ($this->segnalazione->note()->visibiliA($this->lettore)->get() as $nota) {
+            $i = $this->lettura === 'segnalante' ? null : $this->passaggioDellaNota($nota, $passaggi, $meta);
+            if ($i !== null) {
+                $testo = $nota->origine ? $nota->testoSenzaPrefisso() : (string) $nota->testo;
+                $passaggi[$i]['nota'] = trim(($passaggi[$i]['nota'] !== null ? $passaggi[$i]['nota']."\n" : '').$testo) ?: null;
+                $passaggi[$i]['letta_da'] ??= $this->lettaDa($nota);
+
+                continue;
+            }
+            $altre[] = $this->daNota($nota);
+        }
         foreach ($this->segnalazione->allegati()->get() as $allegato) {
-            $voci->push($this->daAllegato($allegato));
+            $altre[] = $this->daAllegato($allegato);
         }
 
-        return $voci->sortByDesc(fn (array $v) => $v['quando']->getTimestamp())->values();
+        $tutte = [...$passaggi, ...$altre];
+        usort($tutte, fn (array $a, array $b) => $b['quando']->getTimestamp() <=> $a['quando']->getTimestamp());
+
+        return collect($tutte);
+    }
+
+    /**
+     * Nota scritta insieme a un passaggio (stesso autore, stesso minuto; rimando e chiusura senza
+     * intervento col loro passaggio): si mostra dentro quel passaggio, non come voce a parte.
+     *
+     * @param  list<Voce>  $passaggi
+     * @param  list<array{autore: int, stato: int}>  $meta
+     */
+    private function passaggioDellaNota(NotaSegnalazione $nota, array $passaggi, array $meta): ?int
+    {
+        $quando = Carbon::parse($nota->data);
+        $stati = match ($nota->origine) {
+            NotaSegnalazione::ORIGINE_RIMANDO => [SegnalazioneStato::NUOVA->value, SegnalazioneStato::IN_CARICO->value],
+            NotaSegnalazione::ORIGINE_SENZA_INTERVENTO => [SegnalazioneStato::ANNULLATA->value],
+            NotaSegnalazione::ORIGINE_RICHIESTA => [SegnalazioneStato::ATTESA_RISPOSTA->value],
+            null => null,
+            default => false,
+        };
+        if ($stati === false) {
+            return null;
+        }
+
+        $migliore = null;
+        $distanza = PHP_INT_MAX;
+        foreach ($passaggi as $i => $p) {
+            if ($meta[$i]['autore'] !== (int) $nota->id_utente) {
+                continue;
+            }
+            $d = abs($p['quando']->getTimestamp() - $quando->getTimestamp());
+            $va = $stati === null
+                ? $p['quando']->format('Y-m-d H:i') === $quando->format('Y-m-d H:i')
+                : in_array($meta[$i]['stato'], $stati, true) && $d <= 300;
+            if ($va && $d < $distanza) {
+                [$migliore, $distanza] = [$i, $d];
+            }
+        }
+
+        return $migliore;
     }
 
     /**
@@ -75,11 +130,17 @@ class Attivita
      */
     private function inizioLavoro(Collection $storico): ?Carbon
     {
-        if ($this->lettura !== 'lavoro') {
-            return null;
-        }
+        return $this->lettura === 'lavoro' ? self::inizioLavoroPer($this->lettore, $storico) : null;
+    }
 
-        $stati = $this->lettore->hasRole('impresa')
+    /**
+     * Quando il lavoro è arrivato a chi lo fa (usato anche dal cronogramma).
+     *
+     * @param  Collection<int, StoricoStatoSegnalazione>  $storico  ordinato crescente
+     */
+    public static function inizioLavoroPer(User $lettore, Collection $storico): ?Carbon
+    {
+        $stati = $lettore->hasRole('impresa')
             ? [SegnalazioneStato::ASSEGNATA_IMPRESA->value]
             : [SegnalazioneStato::ASSEGNATA_OPERATORE->value, SegnalazioneStato::ASSEGNATA_IMPRESA->value];
 
@@ -91,19 +152,116 @@ class Attivita
     /** @return Voce */
     private function daNota(NotaSegnalazione $nota): array
     {
-        return $this->voce($nota->data, (int) $nota->id_utente, 'nota', $nota->testo, 'ha scritto', $this->tagNota($nota));
+        $lettaDa = $this->lettaDa($nota);
+        if ($this->lettura === 'segnalante') {
+            return $this->voce($nota->data, (int) $nota->id_utente, 'nota', $nota->testo, 'ha scritto', lettaDa: null);
+        }
+
+        $senza = $nota->testoSenzaPrefisso();
+
+        return match ($nota->origine) {
+            NotaSegnalazione::ORIGINE_SCADENZA => $this->scadenzaSpostata($nota, $senza, $lettaDa),
+            NotaSegnalazione::ORIGINE_RISEGNALATA => $this->risegnalata($nota, $senza, $lettaDa),
+            NotaSegnalazione::ORIGINE_PRIORITA => $this->voce($nota->data, (int) $nota->id_utente, 'nota', null,
+                $this->prioritaAumentata($senza), forma: 'passaggio', lettaDa: $lettaDa),
+            NotaSegnalazione::ORIGINE_RIMANDO => $this->voce($nota->data, (int) $nota->id_utente, 'nota', null,
+                "l'ha rimandata al comune", forma: 'passaggio', nota: $senza, lettaDa: $lettaDa),
+            NotaSegnalazione::ORIGINE_SENZA_INTERVENTO => $this->voce($nota->data, (int) $nota->id_utente, 'nota', null,
+                "l'ha chiusa senza intervento", forma: 'passaggio', nota: $senza, lettaDa: $lettaDa),
+            NotaSegnalazione::ORIGINE_SOLLECITO => $this->voce($nota->data, (int) $nota->id_utente, 'nota',
+                $senza === self::SOLLECITO_PREDEFINITO ? null : $senza, 'ha sollecitato', lettaDa: $lettaDa),
+            NotaSegnalazione::ORIGINE_RICHIESTA => $this->voce($nota->data, (int) $nota->id_utente, 'nota', null,
+                'ha chiesto informazioni a '.$this->chiHaSegnalato(), forma: 'passaggio', nota: (string) $nota->testo, lettaDa: $lettaDa),
+            NotaSegnalazione::ORIGINE_INTEGRAZIONE => $this->voce($nota->data, (int) $nota->id_utente, 'nota', $nota->testo,
+                'ha aggiunto informazioni', lettaDa: $lettaDa),
+            default => $this->voce($nota->data, (int) $nota->id_utente, 'nota', $nota->testo, $this->fraseMessaggio($nota), lettaDa: $lettaDa),
+        };
+    }
+
+    private const SOLLECITO_PREDEFINITO = "il problema c'è ancora, chiedo un aggiornamento.";
+
+    private function chiHaSegnalato(): string
+    {
+        return User::whereKey((int) $this->segnalazione->id_utente_segnalazione)->first()?->isSpid() ? 'la scuola' : 'chi ha segnalato';
+    }
+
+    private function fraseMessaggio(NotaSegnalazione $nota): string
+    {
+        $autore = $this->utente((int) $nota->id_utente);
+        if ($autore !== null && $this->letturaDi($autore) === 'segnalante') {
+            return 'ha scritto';
+        }
+
+        if (! $nota->visibile_web) {
+            return 'ha scritto una nota';
+        }
+
+        return User::whereKey((int) $this->segnalazione->id_utente_segnalazione)->first()?->isSpid()
+            ? 'ha risposto alla scuola'
+            : 'ha risposto a chi ha segnalato';
+    }
+
+    /**
+     * "Scadenza spostata al 16/11/2026: motivo" → "ha spostato la scadenza a lunedì 16 novembre" + motivo.
+     *
+     * @return Voce
+     */
+    private function scadenzaSpostata(NotaSegnalazione $nota, string $senza, ?string $lettaDa): array
+    {
+        $frase = 'ha spostato la scadenza';
+        $motivo = null;
+        if (preg_match('#^(\d{2}/\d{2}/\d{4})(?::\s*(.*))?#s', $senza, $m)) {
+            $frase .= ' a '.Carbon::createFromFormat('d/m/Y', $m[1])->locale('it')->isoFormat('dddd D MMMM');
+            $motivo = isset($m[2]) && trim($m[2]) !== '' ? trim($m[2]) : null;
+        }
+
+        return $this->voce($nota->data, (int) $nota->id_utente, 'nota', null, $frase, forma: 'passaggio', nota: $motivo, lettaDa: $lettaDa);
+    }
+
+    /**
+     * Accorpamento: la voce sta all'ora della seconda segnalazione, a nome di chi l'ha fatta.
+     *
+     * @return Voce
+     */
+    private function risegnalata(NotaSegnalazione $nota, string $senza, ?string $lettaDa): array
+    {
+        [$intestazione, $testo] = array_pad(explode("\n", $senza, 2), 2, null);
+        $testo = $testo !== null ? trim($testo) : null;
+        $accorpata = $this->segnalazione->duplicati()->get()
+            ->first(fn (Segnalazione $d) => $testo !== null && trim((string) $d->testo_segnalazione) === $testo);
+
+        $chi = $accorpata
+            ? $this->nomeAutore((int) $accorpata->id_utente_segnalazione)
+            : (preg_replace('/ il \d{2}\/\d{2}\/\d{4}:?$/', '', trim((string) $intestazione)) ?: 'Chi ha segnalato');
+        $frase = "l'ha segnalata di nuovo".($accorpata ? ' (#'.$accorpata->id_segnalazione.')' : '')
+            .' · accorpata qui da '.$this->nomeAutore((int) $nota->id_utente).' alle '.Carbon::parse($nota->data)->format('H:i');
+
+        return $this->voce($accorpata ? $accorpata->data_segnalazione : $nota->data, 0, 'nota', null, $frase,
+            forma: 'passaggio', nota: $testo, lettaDa: $lettaDa, nomeAutore: $chi);
+    }
+
+    /** "3 dopo 2 adesioni." → "priorità aumentata a Alta dopo 2 adesioni". */
+    private function prioritaAumentata(string $senza): string
+    {
+        if (preg_match('/^(\d)\s+(dopo .+?)\.?$/u', $senza, $m)) {
+            $livello = [1 => 'Bassa', 2 => 'Media', 3 => 'Alta', 4 => 'Critica'][(int) $m[1]] ?? $m[1];
+
+            return 'priorità aumentata a '.$livello.' '.$m[2];
+        }
+
+        return 'priorità aumentata';
     }
 
     /** @return Voce */
-    private function daStato(StoricoStatoSegnalazione $evento, bool $dopoSospensione = false): array
+    private function daStato(StoricoStatoSegnalazione $evento, ?int $precedente = null): array
     {
         $stato = SegnalazioneStato::tryFrom((int) $evento->id_stato_segnalazione);
 
         $frase = $this->lettura === 'segnalante'
             ? ($stato?->fraseSegnalante()['titolo'] ?? 'Stato aggiornato')
-            : ($dopoSospensione && $stato !== SegnalazioneStato::SOSPESA ? 'ha ripreso' : $this->fraseInterna($stato, $evento));
+            : $this->fraseInterna($stato, $evento, $precedente);
 
-        return $this->voce($evento->data_registrazione, (int) $evento->id_utente, 'stato', null, $frase);
+        return $this->voce($evento->data_registrazione, (int) $evento->id_utente, 'stato', null, $frase, forma: 'passaggio', stato: $stato);
     }
 
     /** @return Voce */
@@ -114,62 +272,111 @@ class Attivita
             ? 'ha aggiunto una foto del lavoro finito'
             : ($foto ? 'ha aggiunto una foto' : 'ha allegato un file');
 
-        return $this->voce($allegato->created_at, (int) $allegato->id_utente_creazione, 'allegato', null, $frase, null, $allegato);
+        return $this->voce($allegato->created_at, (int) $allegato->id_utente_creazione, 'allegato', null, $frase, forma: 'passaggio', allegato: $allegato);
     }
 
-    private function fraseInterna(?SegnalazioneStato $stato, StoricoStatoSegnalazione $evento): string
+    /** Frasi dei passaggi (spec A6). */
+    private function fraseInterna(?SegnalazioneStato $stato, StoricoStatoSegnalazione $evento, ?int $precedente): string
     {
-        // Ritorno a "nuova"/"in carico" fatto da chi aveva il lavoro = "Rimanda al gestore".
+        $autore = (int) $evento->id_utente;
+        $collegato = (int) $evento->id_utente_collegato;
+
+        // Ritorno a "nuova"/"in carico" fatto da chi aveva il lavoro = "Rimanda al comune".
         if (in_array($stato, [SegnalazioneStato::NUOVA, SegnalazioneStato::IN_CARICO], true)) {
-            $autore = $this->utente((int) $evento->id_utente);
-            if ($autore !== null && $this->letturaDi($autore) === 'lavoro') {
-                return 'ha rimandato al comune';
+            $chi = $this->utente($autore);
+            if ($chi !== null && $this->letturaDi($chi) === 'lavoro') {
+                return "l'ha rimandata al comune";
             }
         }
+        // Uscita da "in attesa di risposta": risposta, ritiro o termine scaduto.
+        if ($precedente === SegnalazioneStato::ATTESA_RISPOSTA->value && $stato !== SegnalazioneStato::ATTESA_RISPOSTA
+            && $stato !== SegnalazioneStato::ANNULLATA) {
+            $chi = $this->utente($autore);
+
+            return match (true) {
+                $autore === 0 => 'chiusa: nessuna risposta',
+                $chi !== null && $this->letturaDi($chi) === 'segnalante' => 'ha risposto',
+                default => 'richiesta ritirata',
+            };
+        }
+        if ($precedente === SegnalazioneStato::SOSPESA->value && $stato !== SegnalazioneStato::SOSPESA) {
+            return 'ha ripreso il lavoro';
+        }
+        $giaAssegnata = in_array($precedente, [SegnalazioneStato::ASSEGNATA_OPERATORE->value, SegnalazioneStato::ASSEGNATA_IMPRESA->value], true);
+        $assegnata = $giaAssegnata ? "l'ha riassegnata a " : "l'ha assegnata a ";
 
         return match ($stato) {
-            SegnalazioneStato::NUOVA => 'ha inviato la segnalazione',
-            SegnalazioneStato::IN_CARICO => 'ha preso in carico',
-            SegnalazioneStato::ASSEGNATA_OPERATORE => 'ha assegnato a '.$this->nome((int) $evento->id_utente_collegato, 'un operatore'),
-            SegnalazioneStato::ASSEGNATA_IMPRESA => 'ha assegnato a '.($this->ditta((int) $evento->id_appalto) ?? 'una ditta'),
+            SegnalazioneStato::NUOVA => 'ha inviato la segnalazione'.$this->avvisati(),
+            SegnalazioneStato::IN_CARICO => $collegato > 0 && $collegato !== $autore
+                ? "l'ha affidata a ".$this->nome($collegato, 'un collega')
+                : "l'ha presa in carico",
+            SegnalazioneStato::ASSEGNATA_OPERATORE => $assegnata.$this->nome($collegato, 'una squadra'),
+            SegnalazioneStato::ASSEGNATA_IMPRESA => $assegnata.($this->ditta((int) $evento->id_appalto) ?? 'una ditta'),
             SegnalazioneStato::PREVENTIVO_IN_ATTESA => 'ha presentato un preventivo',
-            SegnalazioneStato::SOSPESA => 'ha sospeso',
-            SegnalazioneStato::COMPLETATA => 'ha chiuso',
-            SegnalazioneStato::DUPLICATA => 'ha accorpato a una segnalazione precedente',
-            SegnalazioneStato::ANNULLATA => 'ha chiuso senza intervento',
-            SegnalazioneStato::ARCHIVIATA => 'ha archiviato',
+            SegnalazioneStato::SOSPESA => 'ha messo in pausa',
+            SegnalazioneStato::COMPLETATA => "l'ha chiusa",
+            SegnalazioneStato::DUPLICATA => $this->segnalazione->id_segnalazione_madre
+                ? "l'ha accorpata alla #".$this->segnalazione->id_segnalazione_madre
+                : "l'ha accorpata a una segnalazione precedente",
+            SegnalazioneStato::ANNULLATA => "l'ha chiusa senza intervento",
+            SegnalazioneStato::ARCHIVIATA => 'archiviata per inattività',
+            SegnalazioneStato::ATTESA_RISPOSTA => 'ha chiesto informazioni a '.$this->chiHaSegnalato(),
             null => 'ha aggiornato lo stato',
         };
     }
 
-    private function tagNota(NotaSegnalazione $nota): ?string
+    private function avvisati(): string
+    {
+        if ($this->lettura !== 'gestore') {
+            return '';
+        }
+        $n = \App\Models\NotificaSegnalazione::where('id_segnalazione', $this->segnalazione->id_segnalazione)
+            ->where('tipo', 'NuovaSegnalazioneNotification')->distinct()->count('id_utente');
+
+        return $n > 0 ? ' · avvisati '.$n.' '.($n === 1 ? 'gestore' : 'gestori') : '';
+    }
+
+    /** Chi legge la nota, in parole (solo lettura gestore). */
+    private function lettaDa(NotaSegnalazione $nota): ?string
     {
         if ($this->lettura !== 'gestore') {
             return null;
         }
+        $ditta = (bool) $this->segnalazione->id_appalto;
+        $scuola = (bool) User::whereKey((int) $this->segnalazione->id_utente_segnalazione)->first()?->isSpid();
 
         return match (true) {
             // "Ditta" solo se una ditta c'è davvero: altrimenti la nota la vede solo il comune.
-            $nota->visibile_web && $nota->visibile_impresa && $this->segnalazione->id_appalto => 'Ditta e segnalante',
-            (bool) $nota->visibile_web => 'Segnalante',
-            $nota->visibile_impresa && $this->segnalazione->id_appalto => 'Ditta',
-            default => 'Interna',
+            $nota->visibile_web && $nota->visibile_impresa && $ditta => 'La leggono ditta e '.($scuola ? 'scuola' : 'chi ha segnalato'),
+            (bool) $nota->visibile_web => $scuola ? 'La scuola la legge' : 'La legge chi ha segnalato',
+            $nota->visibile_impresa && $ditta => 'La legge la ditta',
+            default => 'Solo il comune',
         };
     }
 
-    /** @return Voce */
-    private function voce(mixed $quando, int $idAutore, string $tipo, ?string $testo, string $frase, ?string $tag = null, ?AllegatoSegnalazione $allegato = null): array
-    {
-        $autore = $this->nomeAutore($idAutore);
+    /**
+     * @param  'nota'|'stato'|'allegato'  $tipo
+     * @param  'passaggio'|'messaggio'  $forma
+     * @return Voce
+     */
+    private function voce(
+        mixed $quando, int $idAutore, string $tipo, ?string $testo, string $frase,
+        string $forma = 'messaggio', ?SegnalazioneStato $stato = null, ?string $nota = null,
+        ?string $lettaDa = null, ?AllegatoSegnalazione $allegato = null, ?string $nomeAutore = null,
+    ): array {
+        $autore = $nomeAutore ?? $this->nomeAutore($idAutore);
 
         return [
             'quando' => Carbon::parse($quando),
             'autore' => $autore,
             'iniziali' => self::iniziali($autore),
             'tipo' => $tipo,
+            'forma' => $forma,
+            'stato' => $stato,
             'testo' => $testo,
+            'nota' => $nota,
             'frase' => $frase,
-            'tag' => $tag,
+            'letta_da' => $lettaDa,
             'allegato' => $allegato,
         ];
     }

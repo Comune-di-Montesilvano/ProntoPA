@@ -53,6 +53,7 @@ class ScadenzaManuale
             'id_utente' => $autore->id,
             'visibile_web' => $motivo !== '',
             'visibile_impresa' => (bool) $s->id_appalto,
+            'origine' => \App\Models\NotaSegnalazione::ORIGINE_SCADENZA,
         ]);
     }
 

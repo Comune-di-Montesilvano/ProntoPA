@@ -49,7 +49,7 @@ class GestioneController extends Controller
 
         $segnalazioni = $this->elencoFiltrato($request)
             ->with(['tipologia', 'operatore', 'plesso', 'squadraAssegnata', 'appalto.impresa'])
-            ->withCount('adesioni')
+            ->conVolteSegnalata()
             ->paginate(30);
 
         // Conteggi (senza filtro ricerca per non distorcere i badge)
@@ -273,8 +273,9 @@ class GestioneController extends Controller
     private static function filtroRapido(Builder $query, string $filtro): Builder
     {
         return match ($filtro) {
-            'scadute'     => $query->aperte()->where('data_scadenza_sla', '<', now()),
-            'entro24h'    => $query->aperte()->whereBetween('data_scadenza_sla', [now(), now()->addDay()]),
+            // In attesa di risposta: scadenza ferma, non è in ritardo.
+            'scadute'     => $query->aperte()->where('id_stato_segnalazione', '!=', SegnalazioneStato::ATTESA_RISPOSTA->value)->where('data_scadenza_sla', '<', now()),
+            'entro24h'    => $query->aperte()->where('id_stato_segnalazione', '!=', SegnalazioneStato::ATTESA_RISPOSTA->value)->whereBetween('data_scadenza_sla', [now(), now()->addDay()]),
             'sollecitate' => $query->aperte()->has('adesioni'),
             'ricorrenti'  => $query->whereNotNull('id_segnalazione_correlata'),
             default       => $query,

@@ -76,6 +76,8 @@ Route::middleware('throttle:20,1')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('segnalazioni/simili', [SegnalazioneController::class, 'simili'])
         ->name('segnalazioni.simili');
+    Route::get('segnalazioni/esistente', [SegnalazioneController::class, 'esistente'])
+        ->name('segnalazioni.esistente');
 
     Route::resource('segnalazioni', SegnalazioneController::class)
         ->only(['index', 'create', 'store', 'show'])
@@ -109,10 +111,17 @@ Route::middleware('auth')->group(function () {
         ->name('segnalazioni.sollecita');
     Route::post('segnalazioni/{segnalazione}/sollecito-segnalante', [SegnalazioneController::class, 'sollecitoSegnalante'])
         ->name('segnalazioni.sollecito-segnalante');
+    Route::post('segnalazioni/{segnalazione}/aggiornamento', [SegnalazioneController::class, 'aggiornamento'])
+        ->middleware('throttle:6,1')
+        ->name('segnalazioni.aggiornamento');
     Route::post('segnalazioni/{segnalazione}/fine-lavori', [SegnalazioneController::class, 'fineLavori'])
         ->name('segnalazioni.fine-lavori');
     Route::post('segnalazioni/{segnalazione}/rimanda', [SegnalazioneController::class, 'rimanda'])
         ->name('segnalazioni.rimanda');
+    Route::post('segnalazioni/{segnalazione}/richiesta-informazioni', [SegnalazioneController::class, 'chiediInformazioni'])
+        ->name('segnalazioni.richiesta-informazioni');
+    Route::delete('segnalazioni/{segnalazione}/richiesta-informazioni', [SegnalazioneController::class, 'ritiraInformazioni'])
+        ->name('segnalazioni.richiesta-informazioni.ritira');
 
     Route::post('segnalazioni/{segnalazione}/evidenza', [SegnalazioneController::class, 'toggleEvidenza'])
         ->name('segnalazioni.evidenza');

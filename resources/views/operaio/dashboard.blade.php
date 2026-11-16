@@ -74,6 +74,7 @@
     @if($tab === 'assegnate')
     @push('scripts')
         <script src="{{ asset('build/vendor/leaflet/leaflet.js') }}?v={{ config('app.version') }}"></script>
+        @include('partials.strati-mappa')
         <script>
             const mapEl = document.getElementById('mappa-operaio');
             if (mapEl) {
@@ -82,9 +83,7 @@
                     {{ \App\Models\Impostazione::get('osm_lng', 14.1443) }}
                 ], {{ \App\Models\Impostazione::get('osm_zoom', 13) }});
 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap', maxZoom: 19
-                }).addTo(map);
+                paStratiMappa(map);
 
                 fetch('{{ route('operaio.mappa') }}')
                     .then(r => r.json())

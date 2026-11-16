@@ -41,6 +41,10 @@ class AccorpamentoService
 
             $this->aggiungiAderente($nuova, $destinazione, $attore);
 
+            // Era in attesa di una risposta: non serve più, la segue la segnalazione di destinazione.
+            \App\Models\RichiestaInformazioni::aperte()->where('id_segnalazione', $nuova->id_segnalazione)
+                ->update(['conclusa_at' => now(), 'esito' => \App\Models\RichiestaInformazioni::ESITO_RITIRATA]);
+
             $nuova->update([
                 'id_stato_segnalazione' => SegnalazioneStato::DUPLICATA->value,
                 'id_segnalazione_madre' => $destinazione->id_segnalazione,
@@ -60,6 +64,7 @@ class AccorpamentoService
                 'id_utente' => $attore->id,
                 'visibile_web' => false,
                 'visibile_impresa' => (bool) $destinazione->id_appalto,
+                'origine' => \App\Models\NotaSegnalazione::ORIGINE_RISEGNALATA,
             ]);
             $nuova->note()->create([
                 'testo' => "Era già stata segnalata: segui gli aggiornamenti nella #{$destinazione->id_segnalazione}.",

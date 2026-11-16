@@ -17,7 +17,8 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'     => ['required', 'string', 'max:255'],
+            // Nome e cognome di SPID/CIE e AD arrivano dall'identità e si riscrivono a ogni accesso.
+            'name'     => $this->user()->auth_source === 'locale' ? ['required', 'string', 'max:255'] : ['exclude'],
             'telefono' => ['nullable', 'string', 'max:50'],
             'email' => [
                 'required',

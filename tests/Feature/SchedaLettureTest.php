@@ -68,6 +68,122 @@ class SchedaLettureTest extends TestCase
             ->assertSee('Finestra rotta in aula 3');
     }
 
+    private function conStorico(): void
+    {
+        \App\Models\StoricoStatoSegnalazione::create([
+            'id_segnalazione' => $this->s->id_segnalazione, 'id_stato_segnalazione' => 3, 'id_utente' => $this->gestore->id,
+            'id_utente_collegato' => $this->operaio->id, 'id_appalto' => 0,
+        ])->forceFill(['data_registrazione' => now()->subDay()])->save();
+        $this->s->update(['data_segnalazione' => now()->subDays(3)]);
+    }
+
+    public function test_scheda_gestore_ha_cronogramma(): void
+    {
+        $this->conStorico();
+
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee("Com'è andata finora", false)
+            ->assertSee('aria-label="Assegnata a Paolo Neri', false);
+    }
+
+    public function test_scheda_segnalante_ha_cronogramma_senza_nomi_e_senza_avanzamento(): void
+    {
+        $this->conStorico();
+
+        $this->actingAs($this->segnalatore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee("Com'è andata finora", false)
+            ->assertSee('Ci stiamo lavorando')
+            ->assertDontSee('Paolo Neri')
+            ->assertDontSee('Anna Gestore')
+            ->assertDontSee('aria-label="Avanzamento"', false);
+    }
+
+    public function test_scheda_lavoro_ha_cronogramma(): void
+    {
+        $this->conStorico();
+
+        $this->actingAs($this->operaio)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee("Com'è andata finora", false)
+            ->assertSee('Assegnata a te da');
+    }
+
+    public function test_storia_ha_gruppi_e_chi_la_legge(): void
+    {
+        \App\Models\NotaSegnalazione::create([
+            'id_segnalazione' => $this->s->id_segnalazione, 'testo' => 'Nota per noi',
+            'id_utente' => $this->gestore->id, 'visibile_web' => false, 'visibile_impresa' => false,
+        ]);
+
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee('>Storia<', false)
+            ->assertSee('Oggi · ')
+            ->assertSee('Solo il comune')
+            ->assertSee('Solo passaggi');
+    }
+
+    public function test_cosa_segnalato_mostra_fascia_risegnalata(): void
+    {
+        $doppia = Segnalazione::factory()->create([
+            'id_stato_segnalazione' => 8, 'id_segnalazione_madre' => $this->s->id_segnalazione,
+            'testo_segnalazione' => 'Ancora rotta la finestra',
+        ]);
+
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee('Segnalata di nuovo')
+            ->assertSee('#'.$doppia->id_segnalazione)
+            ->assertSee('accorpata qui')
+            ->assertSee('Ancora rotta la finestra');
+    }
+
+    public function test_dove_senza_coordinate_mostra_riquadro_e_link_per_admin(): void
+    {
+        $istituto = Istituto::create(['descrizione' => 'IC Senza', 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => true]);
+        $sede = Plesso::create(['id_istituto' => $istituto->id_istituto, 'nome' => 'Sede senza', 'indirizzo' => 'Via Nessuna 1']);
+        $this->s->update(['id_plesso' => $sede->id_plesso]);
+        $admin = User::factory()->create(['amministratore' => true]);
+        $admin->assignRole('admin');
+        $link = route('admin.sedi.edit', [$sede->id_plesso, 'ritorno' => '/segnalazioni/'.$this->s->id_segnalazione]);
+
+        $this->actingAs($admin)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()->assertSee('Posizione sulla mappa non trovata per Via Nessuna 1')->assertSee($link, false);
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()->assertSee('Posizione sulla mappa non trovata')->assertDontSee($link, false);
+    }
+
+    public function test_card_dettagli_assente_importi_presenti_solo_con_preventivo(): void
+    {
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()->assertDontSee('>Dettagli<', false)->assertDontSee('>Importi<', false);
+
+        $this->s->update(['importo_preventivo' => 120]);
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()->assertSee('>Importi<', false)->assertSee('120,00');
+    }
+
+    public function test_avvisi_inviati_riepilogo(): void
+    {
+        foreach ([[$this->segnalatore, 2], [$this->gestore, 1]] as [$chi, $quante]) {
+            for ($i = 0; $i < $quante; $i++) {
+                \App\Models\NotificaSegnalazione::create([
+                    'id_segnalazione' => $this->s->id_segnalazione, 'tipo' => 'NuovaNotaSegnalazione',
+                    'canale' => 'mail', 'id_utente' => $chi->id, 'destinatario' => $chi->email,
+                ]);
+            }
+        }
+
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee('Avvisi inviati')
+            ->assertSeeInOrder(['A chi ha segnalato', '2 email'])
+            ->assertSeeInOrder(['Ai gestori', 'email'])
+            ->assertSee('Vedi tutti');
+    }
+
     public function test_ditta_non_vede_evidenza_riservata_priorita(): void
     {
         $this->actingAs($this->ditta)->get(route('segnalazioni.show', $this->s))
@@ -202,5 +318,54 @@ class SchedaLettureTest extends TestCase
             ->assertDontSee('Gestione Segnalazione')
             ->assertDontSee('Unisci duplicato')
             ->assertDontSee('Storico segnalazione');
+    }
+
+    private function conRichiesta(bool $chiudi): Segnalazione
+    {
+        $this->s->update(['id_stato_segnalazione' => 11]);
+        \App\Models\RichiestaInformazioni::create([
+            'id_segnalazione' => $this->s->id_segnalazione, 'id_utente' => $this->gestore->id, 'testo' => 'In quale aula?',
+            'stato_precedente' => 4, 'termine_at' => now()->addDays(5)->setTime(18, 0), 'chiudi_senza_risposta' => $chiudi,
+        ]);
+
+        return $this->s->fresh();
+    }
+
+    public function test_scheda_segnalante_mostra_domanda_termine_e_avviso_chiusura(): void
+    {
+        $s = $this->conRichiesta(true);
+
+        $this->actingAs($this->segnalatore)->get(route('segnalazioni.show', $s))
+            ->assertOk()
+            ->assertSee("L'ufficio ti chiede", false)
+            ->assertSee('In quale aula?')
+            ->assertSee('senza risposta la segnalazione verrà chiusa')
+            ->assertSee(route('segnalazioni.aggiornamento', $s), false);
+    }
+
+    public function test_scheda_segnalante_senza_spunta_non_parla_di_chiusura(): void
+    {
+        $s = $this->conRichiesta(false);
+
+        $this->actingAs($this->segnalatore)->get(route('segnalazioni.show', $s))
+            ->assertOk()->assertSee('In quale aula?')->assertDontSee('verrà chiusa');
+    }
+
+    public function test_storia_frasi_richiesta_e_risposta(): void
+    {
+        $this->s->update(['id_stato_segnalazione' => 2, 'id_appalto' => null]);
+        $servizio = app(\App\Services\Segnalazioni\RichiesteInformazioni::class);
+        $servizio->chiedi($this->s->fresh(), $this->gestore, 'In quale aula?', 10, true);
+        $this->travel(1)->hours();
+        \App\Models\NotaSegnalazione::create([
+            'id_segnalazione' => $this->s->id_segnalazione, 'testo' => 'Aula 12',
+            'id_utente' => $this->segnalatore->id, 'visibile_web' => true, 'visibile_impresa' => false,
+        ]);
+
+        $frasi = \App\Support\Segnalazioni\Attivita::per($this->s->fresh(), $this->gestore)->pluck('frase')->all();
+
+        $this->assertContains('ha chiesto informazioni a chi ha segnalato', $frasi);
+        $this->assertContains('ha risposto', $frasi);
+        $this->assertNotContains('ha scritto', $frasi);
     }
 }

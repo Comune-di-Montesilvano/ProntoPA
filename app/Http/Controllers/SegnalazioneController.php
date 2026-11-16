@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SegnalazioneStato;
+use App\Models\AdesioneSegnalazione;
 use App\Models\AllegatoSegnalazione;
 use App\Models\Azione;
 use App\Models\Impostazione;
@@ -25,6 +26,8 @@ use App\Support\Segnalazioni\AppaltiPerTipologia;
 use App\Models\Squadra;
 use App\Support\Segnalazioni\Attivita;
 use App\Support\Segnalazioni\CaricaAllegati;
+use App\Support\Segnalazioni\Giorni;
+use Illuminate\Validation\ValidationException;
 use App\Support\Segnalazioni\ProssimoPasso;
 use App\Support\Segnalazioni\LetturaScheda;
 use App\Jobs\CalcolaEmbeddingSegnalazione;
@@ -125,6 +128,20 @@ class SegnalazioneController extends Controller
 
         $user = auth()->user();
 
+        // Già aperta per la stessa sede e tipologia: prima si propone di scrivere lì (1.0.2).
+        // Chi ha un problema diverso lo dichiara con `diversa_da`; la nuova resta collegata.
+        $esistente = $this->dedup->apertaPerSedeETipologia($user, (int) $data['id_plesso'], (int) $data['id_tipologia_segnalazione']);
+        if ($esistente !== null && (int) $request->input('diversa_da') !== $esistente->id_segnalazione) {
+            throw ValidationException::withMessages([
+                'esistente' => "C'è già la segnalazione #{$esistente->id_segnalazione} aperta per questa sede e tipologia.",
+            ]);
+        }
+        $collegata = $esistente
+            ?? $this->dedup->apertaPerSedeETipologia($user, (int) $data['id_plesso'], (int) $data['id_tipologia_segnalazione'], ancheConPreventivo: true);
+        if ($collegata !== null) {
+            $data['id_segnalazione_correlata'] = $collegata->id_segnalazione;
+        }
+
         $segnalazione = Segnalazione::create(array_merge(
             Arr::except($data, ['allegati']),
             [
@@ -201,6 +218,9 @@ class SegnalazioneController extends Controller
             : collect();
         $prossimoPasso = ProssimoPasso::per($segnalazione, $utente);
         $attivita = Attivita::per($segnalazione, $utente);
+        $fatti = $lettura === 'gestore' ? \App\Support\Segnalazioni\Fatti::per($segnalazione) : null;
+        $cronogramma = \App\Support\Segnalazioni\Cronogramma::per($segnalazione, $utente);
+        $storia = \App\Support\Segnalazioni\Storia::giorni($attivita);
 
         $fotoPrima = $segnalazione->allegati->where('fase', 'prima');
         $fotoDopo = $segnalazione->allegati->where('fase', 'dopo');
@@ -224,7 +244,7 @@ class SegnalazioneController extends Controller
         }
 
         return view('segnalazioni.show', compact(
-            'segnalazione', 'lettura', 'prossimoPasso', 'attivita', 'azioniDisponibili',
+            'segnalazione', 'lettura', 'prossimoPasso', 'attivita', 'storia', 'cronogramma', 'fatti', 'azioniDisponibili',
             'operatori', 'squadre', 'appaltiValidi', 'fotoPrima', 'fotoDopo',
         ));
     }
@@ -270,7 +290,7 @@ class SegnalazioneController extends Controller
         }
 
         if ($azione->codice === 'annulla') {
-            $rules['motivo'] = ['required', Rule::in(array_keys(SegnalazioneWorkflowService::MOTIVI_SENZA_INTERVENTO))];
+            $rules['motivo'] = ['required', Rule::in(array_keys(SegnalazioneWorkflowService::MOTIVI_MANUALI))];
             $rules['nota'] = ['required_if:motivo,altro', 'nullable', 'string', 'max:2000'];
         }
 
@@ -336,6 +356,35 @@ class SegnalazioneController extends Controller
             ->with('success', "Segnalazione #{$segnalazione->id_segnalazione} rimandata al comune.");
     }
 
+    public function chiediInformazioni(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('chiediInformazioni', $segnalazione);
+
+        $data = $request->validate([
+            'testo' => ['required', 'string', 'max:2000'],
+            'giorni' => ['required', 'integer', 'min:1', 'max:30'],
+            'chiudi_senza_risposta' => ['nullable', 'boolean'],
+        ], [
+            'testo.required' => 'Scrivi cosa ti serve sapere.',
+            'giorni.*' => 'Indica da 1 a 30 giorni lavorativi.',
+        ]);
+
+        app(\App\Services\Segnalazioni\RichiesteInformazioni::class)->chiedi(
+            $segnalazione, $request->user(), trim($data['testo']), (int) $data['giorni'], (bool) ($data['chiudi_senza_risposta'] ?? false),
+        );
+
+        return redirect()->route('segnalazioni.show', $segnalazione)->with('success', 'Richiesta inviata a chi ha segnalato.');
+    }
+
+    public function ritiraInformazioni(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('ritiraInformazioni', $segnalazione);
+
+        app(\App\Services\Segnalazioni\RichiesteInformazioni::class)->ritira($segnalazione, $request->user());
+
+        return redirect()->route('segnalazioni.show', $segnalazione)->with('success', 'Richiesta ritirata: la segnalazione è tornata dov\'era.');
+    }
+
     // ── Aggiungi nota ─────────────────────────────────────────────────────────
 
     public function aggiungiNota(Request $request, Segnalazione $segnalazione): RedirectResponse
@@ -391,6 +440,7 @@ class SegnalazioneController extends Controller
             'id_utente'        => auth()->id(),
             'visibile_web'     => false,
             'visibile_impresa' => (bool) $segnalazione->id_appalto,
+            'origine'          => \App\Models\NotaSegnalazione::ORIGINE_SOLLECITO,
         ]);
 
         $destinatari = DestinatariAssegnatario::per($segnalazione, auth()->user());
@@ -420,12 +470,94 @@ class SegnalazioneController extends Controller
             'id_utente'        => $utente->id,
             'visibile_web'     => true,
             'visibile_impresa' => (bool) $segnalazione->id_appalto,
+            'origine'          => \App\Models\NotaSegnalazione::ORIGINE_SOLLECITO,
         ]);
 
-        $notifica = new SollecitoNotification($segnalazione, $testo, dalSegnalante: true);
-        $destinatari = DestinatariAssegnatario::per($segnalazione, $utente);
+        $this->avvisaChiLaSegue($segnalazione, $utente, new SollecitoNotification($segnalazione, $testo, dalSegnalante: true));
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Sollecito inviato.');
+    }
+
+    /**
+     * Dal form di nuova segnalazione, sulla già aperta per la stessa sede e tipologia:
+     * senza testo né foto è un sollecito, altrimenti un'integrazione. Chi non l'ha aperta
+     * ne diventa aderente (la segue e conta in "segnalata N volte").
+     */
+    public function aggiornamento(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('aggiornaDalForm', $segnalazione);
+
+        $data = $request->validate(['testo' => ['nullable', 'string', 'max:2000']] + CaricaAllegati::regole(), CaricaAllegati::messaggi());
+        $utente = $request->user();
+        $testo = trim((string) ($data['testo'] ?? ''));
+        $foto = $request->file('allegati', []);
+
+        if ($segnalazione->richiestaAperta()->exists() && LetturaScheda::per($utente) === 'segnalante') {
+            return $this->rispostaInformazioni($segnalazione, $utente, $testo, $foto);
+        }
+
+        $sollecito = $testo === '' && $foto === [];
+        $nota = DB::transaction(function () use ($segnalazione, $utente, $testo, $foto, $sollecito) {
+            if ((int) $segnalazione->id_utente_segnalazione !== $utente->id) {
+                AdesioneSegnalazione::firstOrCreate(['id_segnalazione' => $segnalazione->id_segnalazione, 'id_utente' => $utente->id]);
+            }
+            if ($foto !== []) {
+                CaricaAllegati::salva($segnalazione, $foto, $utente);
+            }
+
+            return $segnalazione->note()->create([
+                'testo'            => $sollecito ? "Sollecito: il problema c'è ancora, chiedo un aggiornamento." : ($testo !== '' ? $testo : 'Ha aggiunto delle foto.'),
+                'id_utente'        => $utente->id,
+                'visibile_web'     => true,
+                'visibile_impresa' => (bool) $segnalazione->id_appalto,
+                'origine'          => $sollecito ? NotaSegnalazione::ORIGINE_SOLLECITO : NotaSegnalazione::ORIGINE_INTEGRAZIONE,
+            ]);
+        });
+
+        $this->avvisaChiLaSegue($segnalazione, $utente, new SollecitoNotification($segnalazione, $nota->testo, dalSegnalante: true));
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', "Inviato alla #{$segnalazione->id_segnalazione}.");
+    }
+
+    /**
+     * Risposta alla richiesta di informazioni dal riquadro: messaggio normale (non conta come
+     * ripetizione né avvisa come sollecito), scritto prima delle foto così la richiesta lo aggancia.
+     *
+     * @param  array<int, \Illuminate\Http\UploadedFile>  $foto
+     */
+    private function rispostaInformazioni(Segnalazione $segnalazione, User $utente, string $testo, array $foto): RedirectResponse
+    {
+        if ($testo === '' && $foto === []) {
+            return back()->withErrors(['testo' => 'Scrivi la risposta o aggiungi una foto.'])->withInput();
+        }
+
+        DB::transaction(function () use ($segnalazione, $utente, $testo, $foto) {
+            if ((int) $segnalazione->id_utente_segnalazione !== $utente->id) {
+                AdesioneSegnalazione::firstOrCreate(['id_segnalazione' => $segnalazione->id_segnalazione, 'id_utente' => $utente->id]);
+            }
+            $segnalazione->note()->create([
+                'testo'            => $testo !== '' ? $testo : 'Ha aggiunto delle foto.',
+                'id_utente'        => $utente->id,
+                'visibile_web'     => true,
+                'visibile_impresa' => (bool) $segnalazione->id_appalto,
+            ]);
+            if ($foto !== []) {
+                CaricaAllegati::salva($segnalazione, $foto, $utente);
+            }
+        });
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Risposta inviata al comune.');
+    }
+
+    /** Chi ha il lavoro (delegati ditta, operaio, caposquadra) o, se nessuno, il comune. */
+    private function avvisaChiLaSegue(Segnalazione $segnalazione, User $mittente, SollecitoNotification $notifica): void
+    {
+        $destinatari = DestinatariAssegnatario::per($segnalazione, $mittente);
         if ($destinatari['utenti']->isEmpty() && $destinatari['email'] === []) {
-            $destinatari['utenti'] = DestinatariComune::per($segnalazione, $utente);
+            $destinatari['utenti'] = DestinatariComune::per($segnalazione, $mittente);
         }
         if ($destinatari['utenti']->isNotEmpty()) {
             Notification::send($destinatari['utenti'], $notifica);
@@ -433,9 +565,6 @@ class SegnalazioneController extends Controller
         foreach ($destinatari['email'] as $email) {
             Notification::route('mail', $email)->notify($notifica);
         }
-
-        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
-            ->with('success', 'Sollecito inviato.');
     }
 
     // ── Stampa scheda ────────────────────────────────────────────────────────
@@ -595,13 +724,20 @@ class SegnalazioneController extends Controller
             'testo'                     => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $user = $request->user();
+
         $simili = $this->dedup->trovaSimili(
             (int) $data['id_tipologia_segnalazione'],
             isset($data['id_plesso']) ? (int) $data['id_plesso'] : null,
             $data['testo'] ?? null,
         );
-
-        $user = $request->user();
+        // Quella su cui scrivere ha il suo riquadro (segnalazioni.esistente): non ripeterla qui.
+        $esistente = isset($data['id_plesso'])
+            ? $this->dedup->apertaPerSedeETipologia($user, (int) $data['id_plesso'], (int) $data['id_tipologia_segnalazione'])
+            : null;
+        if ($esistente !== null) {
+            $simili = $simili->reject(fn (Segnalazione $s) => $s->id_segnalazione === $esistente->id_segnalazione);
+        }
 
         return response()->json($simili->map(function (Segnalazione $s) use ($user) {
             $puoVedere = $user->can('view', $s);
@@ -617,6 +753,39 @@ class SegnalazioneController extends Controller
                 'adesioni'  => $s->adesioni->count(),
             ];
         })->values());
+    }
+
+    /** Segnalazione già aperta per sede e tipologia, per il riquadro "Esiste già" del form. */
+    public function esistente(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'id_tipologia_segnalazione' => ['required', 'integer'],
+            'id_plesso'                 => ['required', 'integer'],
+        ]);
+        $user = $request->user();
+
+        $s = $this->dedup->apertaPerSedeETipologia($user, (int) $data['id_plesso'], (int) $data['id_tipologia_segnalazione']);
+        if ($s === null) {
+            return response()->json(['esistente' => null]);
+        }
+
+        // Ultima risposta dell'ufficio a chi ha segnalato (mai il nome di chi l'ha scritta).
+        $risposta = $s->note()
+            ->where('visibile_web', true)
+            ->whereIn('id_utente', User::role(['admin', 'gestore', 'operaio', 'impresa'])->select('users.id'))
+            ->reorder('data', 'desc')->first();
+
+        return response()->json(['esistente' => [
+            'id'              => $s->id_segnalazione,
+            'titolo'          => $s->titoloLeggibile(),
+            'stato'           => $s->statoEnum()->fraseSegnalante()['titolo'],
+            'aperta_da'       => Giorni::fa($s->data_segnalazione),
+            'tua'             => (int) $s->id_utente_segnalazione === $user->id,
+            'ultima_risposta' => $risposta ? [
+                'quando' => Giorni::breve($risposta->data),
+                'testo'  => Str::limit($risposta->testo, 120),
+            ] : null,
+        ]]);
     }
 
     // ── Accorpa a una segnalazione già aperta sullo stesso guasto ─────────────
