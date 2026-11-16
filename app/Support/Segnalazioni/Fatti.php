@@ -115,6 +115,10 @@ class Fatti
             return $this->fatto('Chiusa in '.$this->giorni($aperta, $chiusura), $dettaglio, $dettaglio === 'entro la scadenza' ? 'emerald' : 'slate');
         }
 
+        if ($this->s->statoEnum() === SegnalazioneStato::ATTESA_RISPOSTA) {
+            return $this->fatto('Ferma', 'aspetta una risposta', 'slate');
+        }
+
         if (! $scadenza) {
             return $this->fatto('—', 'nessuna scadenza', 'slate');
         }

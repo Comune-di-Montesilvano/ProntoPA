@@ -142,6 +142,7 @@
 @endcan
 @can('sollecita', $segnalazione) @include('segnalazioni.scheda.pannelli.sollecita') @endcan
 @can('accorpa', $segnalazione) @include('segnalazioni.scheda.pannelli.accorpa') @endcan
+@can('chiediInformazioni', $segnalazione) @include('segnalazioni.scheda.pannelli.informazioni') @endcan
 @foreach($generiche as $azione)
     @include('segnalazioni.scheda.pannelli.generica', ['azione' => $azione])
 @endforeach

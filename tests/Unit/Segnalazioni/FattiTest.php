@@ -178,4 +178,16 @@ class FattiTest extends TestCase
         $this->assertSame('6 giorni', $f['aperta']['valore']);
         $this->assertSame('segnalata 2 volte · 3 risposte a chi ha segnalato', $f['aperta']['dettaglio']);
     }
+
+    public function test_fatti_scadenza_ferma(): void
+    {
+        $s = $this->segnalazione(['id_stato_segnalazione' => 11, 'data_scadenza_sla' => '2026-11-12 14:00:00']);
+        $this->storico($s, 11, '2026-11-13 10:00:00');
+
+        $f = $this->fatti($s);
+
+        $this->assertSame('In attesa di risposta', $f['stato']['valore']);
+        $this->assertSame('Ferma', $f['scadenza']['valore']);
+        $this->assertSame('slate', $f['scadenza']['tono']);
+    }
 }

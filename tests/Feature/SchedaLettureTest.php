@@ -319,4 +319,53 @@ class SchedaLettureTest extends TestCase
             ->assertDontSee('Unisci duplicato')
             ->assertDontSee('Storico segnalazione');
     }
+
+    private function conRichiesta(bool $chiudi): Segnalazione
+    {
+        $this->s->update(['id_stato_segnalazione' => 11]);
+        \App\Models\RichiestaInformazioni::create([
+            'id_segnalazione' => $this->s->id_segnalazione, 'id_utente' => $this->gestore->id, 'testo' => 'In quale aula?',
+            'stato_precedente' => 4, 'termine_at' => now()->addDays(5)->setTime(18, 0), 'chiudi_senza_risposta' => $chiudi,
+        ]);
+
+        return $this->s->fresh();
+    }
+
+    public function test_scheda_segnalante_mostra_domanda_termine_e_avviso_chiusura(): void
+    {
+        $s = $this->conRichiesta(true);
+
+        $this->actingAs($this->segnalatore)->get(route('segnalazioni.show', $s))
+            ->assertOk()
+            ->assertSee("L'ufficio ti chiede", false)
+            ->assertSee('In quale aula?')
+            ->assertSee('senza risposta la segnalazione verrà chiusa')
+            ->assertSee(route('segnalazioni.aggiornamento', $s), false);
+    }
+
+    public function test_scheda_segnalante_senza_spunta_non_parla_di_chiusura(): void
+    {
+        $s = $this->conRichiesta(false);
+
+        $this->actingAs($this->segnalatore)->get(route('segnalazioni.show', $s))
+            ->assertOk()->assertSee('In quale aula?')->assertDontSee('verrà chiusa');
+    }
+
+    public function test_storia_frasi_richiesta_e_risposta(): void
+    {
+        $this->s->update(['id_stato_segnalazione' => 2, 'id_appalto' => null]);
+        $servizio = app(\App\Services\Segnalazioni\RichiesteInformazioni::class);
+        $servizio->chiedi($this->s->fresh(), $this->gestore, 'In quale aula?', 10, true);
+        $this->travel(1)->hours();
+        \App\Models\NotaSegnalazione::create([
+            'id_segnalazione' => $this->s->id_segnalazione, 'testo' => 'Aula 12',
+            'id_utente' => $this->segnalatore->id, 'visibile_web' => true, 'visibile_impresa' => false,
+        ]);
+
+        $frasi = \App\Support\Segnalazioni\Attivita::per($this->s->fresh(), $this->gestore)->pluck('frase')->all();
+
+        $this->assertContains('ha chiesto informazioni a chi ha segnalato', $frasi);
+        $this->assertContains('ha risposto', $frasi);
+        $this->assertNotContains('ha scritto', $frasi);
+    }
 }

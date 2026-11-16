@@ -29,6 +29,13 @@
                         <x-pa.btn :variant="$variante" :size="$taglia" class="{{ $grande ? 'w-full sm:w-auto' : '' }}"
                                   x-data x-on:click="$dispatch('apri-pannello', '{{ $azione['pannello'] }}')">{{ $azione['etichetta'] }}</x-pa.btn>
                         @break
+                    @case('ritira')
+                        <form method="POST" action="{{ route('segnalazioni.richiesta-informazioni.ritira', $segnalazione->id_segnalazione) }}" class="{{ $grande ? 'w-full sm:w-auto' : '' }}"
+                              onsubmit="return confirm('Ritirare la richiesta? La segnalazione torna dov\'era.')">
+                            @csrf @method('DELETE')
+                            <x-pa.btn type="submit" :variant="$variante" :size="$taglia" class="{{ $grande ? 'w-full sm:w-auto' : '' }}">{{ $azione['etichetta'] }}</x-pa.btn>
+                        </form>
+                        @break
                     @default
                         <x-pa.btn :href="$azione['route'] ?? '#'" :variant="$variante" :size="$taglia" class="{{ $grande ? 'w-full sm:w-auto' : '' }}">{{ $azione['etichetta'] }}</x-pa.btn>
                 @endswitch

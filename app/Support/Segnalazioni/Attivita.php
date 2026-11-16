@@ -91,6 +91,7 @@ class Attivita
         $stati = match ($nota->origine) {
             NotaSegnalazione::ORIGINE_RIMANDO => [SegnalazioneStato::NUOVA->value, SegnalazioneStato::IN_CARICO->value],
             NotaSegnalazione::ORIGINE_SENZA_INTERVENTO => [SegnalazioneStato::ANNULLATA->value],
+            NotaSegnalazione::ORIGINE_RICHIESTA => [SegnalazioneStato::ATTESA_RISPOSTA->value],
             null => null,
             default => false,
         };
@@ -164,6 +165,8 @@ class Attivita
                 "l'ha chiusa senza intervento", forma: 'passaggio', nota: $senza, lettaDa: $lettaDa),
             NotaSegnalazione::ORIGINE_SOLLECITO => $this->voce($nota->data, (int) $nota->id_utente, 'nota',
                 $senza === self::SOLLECITO_PREDEFINITO ? null : $senza, 'ha sollecitato', lettaDa: $lettaDa),
+            NotaSegnalazione::ORIGINE_RICHIESTA => $this->voce($nota->data, (int) $nota->id_utente, 'nota', null,
+                'ha chiesto informazioni a '.$this->chiHaSegnalato(), forma: 'passaggio', nota: (string) $nota->testo, lettaDa: $lettaDa),
             NotaSegnalazione::ORIGINE_INTEGRAZIONE => $this->voce($nota->data, (int) $nota->id_utente, 'nota', $nota->testo,
                 'ha aggiunto informazioni', lettaDa: $lettaDa),
             default => $this->voce($nota->data, (int) $nota->id_utente, 'nota', $nota->testo, $this->fraseMessaggio($nota), lettaDa: $lettaDa),
@@ -171,6 +174,11 @@ class Attivita
     }
 
     private const SOLLECITO_PREDEFINITO = "il problema c'è ancora, chiedo un aggiornamento.";
+
+    private function chiHaSegnalato(): string
+    {
+        return User::whereKey((int) $this->segnalazione->id_utente_segnalazione)->first()?->isSpid() ? 'la scuola' : 'chi ha segnalato';
+    }
 
     private function fraseMessaggio(NotaSegnalazione $nota): string
     {
@@ -267,6 +275,17 @@ class Attivita
                 return "l'ha rimandata al comune";
             }
         }
+        // Uscita da "in attesa di risposta": risposta, ritiro o termine scaduto.
+        if ($precedente === SegnalazioneStato::ATTESA_RISPOSTA->value && $stato !== SegnalazioneStato::ATTESA_RISPOSTA
+            && $stato !== SegnalazioneStato::ANNULLATA) {
+            $chi = $this->utente($autore);
+
+            return match (true) {
+                $autore === 0 => 'chiusa: nessuna risposta',
+                $chi !== null && $this->letturaDi($chi) === 'segnalante' => 'ha risposto',
+                default => 'richiesta ritirata',
+            };
+        }
         if ($precedente === SegnalazioneStato::SOSPESA->value && $stato !== SegnalazioneStato::SOSPESA) {
             return 'ha ripreso il lavoro';
         }
@@ -288,8 +307,7 @@ class Attivita
                 : "l'ha accorpata a una segnalazione precedente",
             SegnalazioneStato::ANNULLATA => "l'ha chiusa senza intervento",
             SegnalazioneStato::ARCHIVIATA => 'archiviata per inattività',
-            SegnalazioneStato::ATTESA_RISPOSTA => 'ha chiesto informazioni a '
-                .(User::whereKey((int) $this->segnalazione->id_utente_segnalazione)->first()?->isSpid() ? 'la scuola' : 'chi ha segnalato'),
+            SegnalazioneStato::ATTESA_RISPOSTA => 'ha chiesto informazioni a '.$this->chiHaSegnalato(),
             null => 'ha aggiornato lo stato',
         };
     }

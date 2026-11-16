@@ -264,6 +264,7 @@ class Cronogramma
         $lavorativi = $this->lavorativi($da, $a);
 
         $righe = match (true) {
+            $stato === SegnalazioneStato::ATTESA_RISPOSTA => $this->righeAttesa($da, $segnalante),
             $segnalante && $stato !== null => array_filter([$nome, $chi, ($stato === SegnalazioneStato::NUOVA ? 'dal ' : '').$this->momento($da)]),
             $stato === null => ['Storia non registrata', 'dal '.$this->momento($da).' al '.$this->momento($a)],
             $stato === SegnalazioneStato::NUOVA => array_filter([
@@ -303,6 +304,24 @@ class Cronogramma
         ];
     }
 
+    /** @return list<string> "Chiesto da Anna · ven 13, 10:00: «Quale aula?» · termine ven 27" */
+    private function righeAttesa(Carbon $da, bool $segnalante): array
+    {
+        $r = \App\Models\RichiestaInformazioni::where('id_segnalazione', $this->s->id_segnalazione)
+            ->where('created_at', '<=', $da->copy()->addMinutes(5))->orderByDesc('created_at')->orderByDesc('id')->first();
+        $termine = $r ? 'termine '.$r->termine_at->locale('it')->isoFormat('ddd D') : null;
+        if ($segnalante) {
+            return array_values(array_filter(["L'ufficio ti ha chiesto informazioni", $this->momento($da), $termine]));
+        }
+        $testo = $r ? ': «'.\Illuminate\Support\Str::limit($r->testo, 80).'»' : '';
+
+        return array_values(array_filter([
+            'Chiesto da '.($r ? $this->nome((int) $r->id_utente) : 'il comune'),
+            $this->momento($da).$testo,
+            $termine,
+        ]));
+    }
+
     public static function classe(?SegnalazioneStato $stato): string
     {
         return match ($stato) {
@@ -312,6 +331,7 @@ class Cronogramma
             SegnalazioneStato::ASSEGNATA_OPERATORE, SegnalazioneStato::ASSEGNATA_IMPRESA => 'assegnata',
             SegnalazioneStato::PREVENTIVO_IN_ATTESA => 'preventivo',
             SegnalazioneStato::SOSPESA => 'sospesa',
+            SegnalazioneStato::ATTESA_RISPOSTA => 'attesa',
             SegnalazioneStato::COMPLETATA => 'completata',
             default => 'finale',
         };

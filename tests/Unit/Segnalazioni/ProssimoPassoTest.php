@@ -283,4 +283,41 @@ class ProssimoPassoTest extends TestCase
 
         $this->assertSame(1, substr_count($sottotitolo, "\n"));
     }
+
+    /** Richiesta aperta il 13/11 alle 10:00 da Anna Gestore, termine 27/11 18:00. */
+    private function richiestaAperta(Segnalazione $s, bool $chiudi = true, string $testo = 'Quale aula?'): \App\Models\RichiestaInformazioni
+    {
+        $r = \App\Models\RichiestaInformazioni::create([
+            'id_segnalazione' => $s->id_segnalazione, 'id_utente' => $this->gestore->id, 'testo' => $testo,
+            'stato_precedente' => 2, 'termine_at' => '2026-11-27 18:00:00', 'chiudi_senza_risposta' => $chiudi,
+        ]);
+        $r->forceFill(['created_at' => '2026-11-13 10:00:00'])->save();
+
+        return $r;
+    }
+
+    public function test_prossimo_passo_offre_chiedi_informazioni(): void
+    {
+        $autore = User::factory()->create(['auth_source' => 'ldap']);
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 2, 'id_utente_segnalazione' => $autore->id]);
+
+        $azione = collect(ProssimoPasso::per($s, $this->gestore)['azioni'])->firstWhere('etichetta', 'Chiedi informazioni…');
+
+        $this->assertNotNull($azione);
+        $this->assertSame('informazioni', $azione['pannello']);
+    }
+
+    public function test_prossimo_passo_in_attesa_offre_non_serve_piu(): void
+    {
+        $autore = User::factory()->create(['auth_source' => 'spid']);
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 11, 'id_utente_segnalazione' => $autore->id]);
+        $this->richiestaAperta($s);
+
+        $passo = ProssimoPasso::per($s->fresh(), $this->gestore);
+
+        $this->assertSame('Aspetti la risposta della scuola', $passo['titolo']);
+        $this->assertStringContainsString('entro venerdì 27 · poi si chiude da sola', $passo['sottotitolo']);
+        $this->assertSame(['Non serve più'], $this->etichette($passo));
+        $this->assertSame('ritira', $passo['azioni'][0]['tipo']);
+    }
 }

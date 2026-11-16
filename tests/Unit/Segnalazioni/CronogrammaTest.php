@@ -354,4 +354,31 @@ class CronogrammaTest extends TestCase
 
         $this->assertEqualsWithDelta(100.0, $this->somma($this->crono($s, '2026-10-27 09:00:00')), 0.0001);
     }
+
+    /** Richiesta aperta il 13/11 alle 10:00 da Anna Gestore, termine 27/11 18:00. */
+    private function richiestaAperta(Segnalazione $s, bool $chiudi = true, string $testo = 'Quale aula?'): \App\Models\RichiestaInformazioni
+    {
+        $r = \App\Models\RichiestaInformazioni::create([
+            'id_segnalazione' => $s->id_segnalazione, 'id_utente' => $this->gestore->id, 'testo' => $testo,
+            'stato_precedente' => 2, 'termine_at' => '2026-11-27 18:00:00', 'chiudi_senza_risposta' => $chiudi,
+        ]);
+        $r->forceFill(['created_at' => '2026-11-13 10:00:00'])->save();
+
+        return $r;
+    }
+
+    public function test_cronogramma_tratto_attesa_con_chi_ha_chiesto(): void
+    {
+        $s = $this->segnalazione('2026-11-12 09:00:00', ['id_stato_segnalazione' => 11]);
+        $this->storico($s, 2, '2026-11-12 10:00:00', $this->gestore->id);
+        $this->storico($s, 11, '2026-11-13 10:00:00');
+        $this->richiestaAperta($s);
+
+        $tratto = collect($this->crono($s, '2026-11-16 10:00:00')['tratti'])->last();
+
+        $this->assertSame('attesa', $tratto['classe']);
+        $this->assertStringContainsString('Chiesto da Anna Gestore', $tratto['fumetto']);
+        $this->assertStringContainsString('«Quale aula?»', $tratto['fumetto']);
+        $this->assertStringContainsString('termine ven 27', $tratto['fumetto']);
+    }
 }

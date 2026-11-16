@@ -20,7 +20,7 @@ use Illuminate\Support\Str;
  * Il riquadro in cima alla scheda: cosa serve adesso, detto a chi guarda,
  * con le sole azioni che può eseguire davvero. Calcolato a lettura, nessuno stato salvato.
  *
- * @phpstan-type AzionePasso array{tipo: 'azione'|'pannello'|'post'|'link', etichetta: string, id_azione?: int, pannello?: string, route?: string, primaria: bool}
+ * @phpstan-type AzionePasso array{tipo: 'azione'|'pannello'|'post'|'link'|'ritira', etichetta: string, id_azione?: int, pannello?: string, route?: string, primaria: bool}
  * @phpstan-type Passo array{tono: 'rose'|'amber'|'primary'|'slate', titolo: string, sottotitolo: ?string, azioni: list<AzionePasso>, etichetta?: string}
  */
 class ProssimoPasso
@@ -102,6 +102,18 @@ class ProssimoPasso
                     $this->azione($azioni, 7, 'Accetta', primaria: true);
                     $this->azione($azioni, 8, 'Rifiuta');
                     break;
+                case SegnalazioneStato::ATTESA_RISPOSTA:
+                    $spid = (bool) User::whereKey((int) $this->s->id_utente_segnalazione)->first()?->isSpid();
+                    $titolo = 'Aspetti la risposta '.($spid ? 'della scuola' : 'di chi ha segnalato');
+                    $r = $this->s->richiestaAperta;
+                    if ($r) {
+                        $sottotitolo = 'entro '.$r->termine_at->locale('it')->isoFormat('dddd D')
+                            .($r->chiudi_senza_risposta ? ' · poi si chiude da sola' : ' · poi torna a te');
+                    }
+                    if (Gate::forUser($this->u)->allows('ritiraInformazioni', $this->s)) {
+                        $azioni[] = ['tipo' => 'ritira', 'etichetta' => 'Non serve più', 'primaria' => false];
+                    }
+                    break;
                 case SegnalazioneStato::SOSPESA:
                     $titolo = 'Sospesa dal '.$this->data($this->ultimoPassaggioA(SegnalazioneStato::SOSPESA));
                     $sottotitolo = $this->ultimaNota();
@@ -110,6 +122,10 @@ class ProssimoPasso
                 default:
                     $titolo = $stato->etichetta();
             }
+        }
+
+        if (Gate::forUser($this->u)->allows('chiediInformazioni', $this->s)) {
+            $azioni[] = ['tipo' => 'pannello', 'etichetta' => 'Chiedi informazioni…', 'pannello' => 'informazioni', 'primaria' => false];
         }
 
         if ($this->s->isSollecitata()) {

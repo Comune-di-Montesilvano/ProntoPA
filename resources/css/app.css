@@ -270,7 +270,7 @@
 .pa-crono-in-carico, .pa-crono-c-in-carico { background: var(--ente-primary); }
 .pa-crono-assegnata, .pa-crono-c-assegnata { background: var(--violet); }
 .pa-crono-preventivo, .pa-crono-c-preventivo { background: var(--amber); }
-.pa-crono-sospesa, .pa-crono-c-sospesa { background: repeating-linear-gradient(135deg, var(--amber) 0 4px, var(--amber-100) 4px 8px); }
+.pa-crono-sospesa, .pa-crono-c-sospesa, .pa-crono-attesa, .pa-crono-c-attesa { background: repeating-linear-gradient(135deg, var(--amber) 0 4px, var(--amber-100) 4px 8px); }
 .pa-crono-attesa, .pa-crono-c-attesa { background: repeating-linear-gradient(135deg, var(--amber-600) 0 3px, var(--amber-100) 3px 6px); }
 .pa-crono-completata, .pa-crono-c-completata { background: var(--emerald); }
 .pa-crono-finale, .pa-crono-c-finale { background: var(--slate-500); }
