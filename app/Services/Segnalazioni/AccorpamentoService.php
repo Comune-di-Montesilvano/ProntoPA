@@ -60,6 +60,7 @@ class AccorpamentoService
                 'id_utente' => $attore->id,
                 'visibile_web' => false,
                 'visibile_impresa' => (bool) $destinazione->id_appalto,
+                'origine' => \App\Models\NotaSegnalazione::ORIGINE_RISEGNALATA,
             ]);
             $nuova->note()->create([
                 'testo' => "Era già stata segnalata: segui gli aggiornamenti nella #{$destinazione->id_segnalazione}.",

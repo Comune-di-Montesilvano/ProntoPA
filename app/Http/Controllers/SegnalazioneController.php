@@ -391,6 +391,7 @@ class SegnalazioneController extends Controller
             'id_utente'        => auth()->id(),
             'visibile_web'     => false,
             'visibile_impresa' => (bool) $segnalazione->id_appalto,
+            'origine'          => \App\Models\NotaSegnalazione::ORIGINE_SOLLECITO,
         ]);
 
         $destinatari = DestinatariAssegnatario::per($segnalazione, auth()->user());
@@ -420,6 +421,7 @@ class SegnalazioneController extends Controller
             'id_utente'        => $utente->id,
             'visibile_web'     => true,
             'visibile_impresa' => (bool) $segnalazione->id_appalto,
+            'origine'          => \App\Models\NotaSegnalazione::ORIGINE_SOLLECITO,
         ]);
 
         $notifica = new SollecitoNotification($segnalazione, $testo, dalSegnalante: true);

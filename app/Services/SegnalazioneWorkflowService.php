@@ -163,6 +163,7 @@ class SegnalazioneWorkflowService
                 'id_utente' => $autore->id,
                 'visibile_web' => false,
                 'visibile_impresa' => false,
+                'origine' => \App\Models\NotaSegnalazione::ORIGINE_RIMANDO,
             ]);
 
             return $gestore;
@@ -386,6 +387,7 @@ class SegnalazioneWorkflowService
                 'id_utente'        => $user->id,
                 'visibile_web'     => $visibileWeb,
                 'visibile_impresa' => (bool) $azione->flag_notifica,
+                'origine'          => $azione->codice === 'annulla' ? \App\Models\NotaSegnalazione::ORIGINE_SENZA_INTERVENTO : null,
             ]);
         }
 

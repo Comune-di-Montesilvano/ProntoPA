@@ -69,6 +69,7 @@ class AdesioniSegnalazioniController extends Controller
             'id_utente'        => 0,
             'visibile_web'     => false,
             'visibile_impresa' => false,
+            'origine'          => \App\Models\NotaSegnalazione::ORIGINE_PRIORITA,
         ]);
     }
 }
