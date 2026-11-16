@@ -76,6 +76,8 @@ Route::middleware('throttle:20,1')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('segnalazioni/simili', [SegnalazioneController::class, 'simili'])
         ->name('segnalazioni.simili');
+    Route::get('segnalazioni/esistente', [SegnalazioneController::class, 'esistente'])
+        ->name('segnalazioni.esistente');
 
     Route::resource('segnalazioni', SegnalazioneController::class)
         ->only(['index', 'create', 'store', 'show'])

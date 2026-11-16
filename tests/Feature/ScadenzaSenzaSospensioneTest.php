@@ -49,6 +49,8 @@ class ScadenzaSenzaSospensioneTest extends TestCase
 
     public function test_sposta_scadenza_con_motivo_visibile_alla_scuola(): void
     {
+        // Un mercoledì: un giorno chiuso sposterebbe la scadenza al primo giorno lavorativo.
+        $this->travelTo(now()->next('Friday')->setTime(10, 0));
         $s = $this->segnalazione();
         $giorno = now()->addDays(5)->format('Y-m-d');
 

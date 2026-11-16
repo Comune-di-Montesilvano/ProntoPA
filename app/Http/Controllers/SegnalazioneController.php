@@ -26,6 +26,8 @@ use App\Support\Segnalazioni\AppaltiPerTipologia;
 use App\Models\Squadra;
 use App\Support\Segnalazioni\Attivita;
 use App\Support\Segnalazioni\CaricaAllegati;
+use App\Support\Segnalazioni\Giorni;
+use Illuminate\Validation\ValidationException;
 use App\Support\Segnalazioni\ProssimoPasso;
 use App\Support\Segnalazioni\LetturaScheda;
 use App\Jobs\CalcolaEmbeddingSegnalazione;
@@ -125,6 +127,20 @@ class SegnalazioneController extends Controller
         ]);
 
         $user = auth()->user();
+
+        // Già aperta per la stessa sede e tipologia: prima si propone di scrivere lì (1.0.2).
+        // Chi ha un problema diverso lo dichiara con `diversa_da`; la nuova resta collegata.
+        $esistente = $this->dedup->apertaPerSedeETipologia($user, (int) $data['id_plesso'], (int) $data['id_tipologia_segnalazione']);
+        if ($esistente !== null && (int) $request->input('diversa_da') !== $esistente->id_segnalazione) {
+            throw ValidationException::withMessages([
+                'esistente' => "C'è già la segnalazione #{$esistente->id_segnalazione} aperta per questa sede e tipologia.",
+            ]);
+        }
+        $collegata = $esistente
+            ?? $this->dedup->apertaPerSedeETipologia($user, (int) $data['id_plesso'], (int) $data['id_tipologia_segnalazione'], ancheConPreventivo: true);
+        if ($collegata !== null) {
+            $data['id_segnalazione_correlata'] = $collegata->id_segnalazione;
+        }
 
         $segnalazione = Segnalazione::create(array_merge(
             Arr::except($data, ['allegati']),
@@ -641,13 +657,20 @@ class SegnalazioneController extends Controller
             'testo'                     => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $user = $request->user();
+
         $simili = $this->dedup->trovaSimili(
             (int) $data['id_tipologia_segnalazione'],
             isset($data['id_plesso']) ? (int) $data['id_plesso'] : null,
             $data['testo'] ?? null,
         );
-
-        $user = $request->user();
+        // Quella su cui scrivere ha il suo riquadro (segnalazioni.esistente): non ripeterla qui.
+        $esistente = isset($data['id_plesso'])
+            ? $this->dedup->apertaPerSedeETipologia($user, (int) $data['id_plesso'], (int) $data['id_tipologia_segnalazione'])
+            : null;
+        if ($esistente !== null) {
+            $simili = $simili->reject(fn (Segnalazione $s) => $s->id_segnalazione === $esistente->id_segnalazione);
+        }
 
         return response()->json($simili->map(function (Segnalazione $s) use ($user) {
             $puoVedere = $user->can('view', $s);
@@ -663,6 +686,39 @@ class SegnalazioneController extends Controller
                 'adesioni'  => $s->adesioni->count(),
             ];
         })->values());
+    }
+
+    /** Segnalazione già aperta per sede e tipologia, per il riquadro "Esiste già" del form. */
+    public function esistente(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'id_tipologia_segnalazione' => ['required', 'integer'],
+            'id_plesso'                 => ['required', 'integer'],
+        ]);
+        $user = $request->user();
+
+        $s = $this->dedup->apertaPerSedeETipologia($user, (int) $data['id_plesso'], (int) $data['id_tipologia_segnalazione']);
+        if ($s === null) {
+            return response()->json(['esistente' => null]);
+        }
+
+        // Ultima risposta dell'ufficio a chi ha segnalato (mai il nome di chi l'ha scritta).
+        $risposta = $s->note()
+            ->where('visibile_web', true)
+            ->whereHas('autore', fn ($q) => $q->role(['admin', 'gestore', 'operaio', 'impresa']))
+            ->reorder('data', 'desc')->first();
+
+        return response()->json(['esistente' => [
+            'id'              => $s->id_segnalazione,
+            'titolo'          => $s->titoloLeggibile(),
+            'stato'           => $s->statoEnum()->fraseSegnalante()['titolo'],
+            'aperta_da'       => Giorni::fa($s->data_segnalazione),
+            'tua'             => (int) $s->id_utente_segnalazione === $user->id,
+            'ultima_risposta' => $risposta ? [
+                'quando' => Giorni::breve($risposta->data),
+                'testo'  => Str::limit($risposta->testo, 120),
+            ] : null,
+        ]]);
     }
 
     // ── Accorpa a una segnalazione già aperta sullo stesso guasto ─────────────
