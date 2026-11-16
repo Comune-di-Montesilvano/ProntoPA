@@ -11,6 +11,7 @@ use App\Models\Squadra;
 use App\Models\TipologiaSegnalazione;
 use App\Models\User;
 use App\Support\Segnalazioni\GruppiElenco;
+use App\Support\Segnalazioni\PaginaPerGruppi;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -49,14 +50,17 @@ class GestioneController extends Controller
         $ordine = in_array($request->get('ordine'), self::ORDINI, true) ? $request->get('ordine') : 'urgenti';
         $filtro = in_array($request->get('filtro'), self::FILTRI_RAPIDI, true) ? $request->get('filtro') : null;
 
-        $segnalazioni = $this->elencoFiltrato($request)
-            ->with(['tipologia', 'operatore', 'plesso', 'squadraAssegnata', 'appalto.impresa'])
-            ->conVolteSegnalata()
-            ->paginate(30);
-
-        // Raggruppa per (1.0.4): celle di gruppo con conteggi sull'intero filtro, non sulla pagina.
+        // Raggruppa per (1.0.4): pagine fatte di gruppi di primo livello interi, conteggi sull'intero filtro.
         $gruppo = array_key_exists((string) $request->get('gruppo'), GruppiElenco::GRUPPI) ? (string) $request->get('gruppo') : '';
-        $righe = $gruppo === '' ? null : $this->righeRaggruppate($request, $gruppo, $segnalazioni);
+        $righe = null;
+        if ($gruppo === '') {
+            $segnalazioni = $this->elencoFiltrato($request)
+                ->with(['tipologia', 'operatore', 'plesso', 'squadraAssegnata', 'appalto.impresa'])
+                ->conVolteSegnalata()
+                ->paginate(30);
+        } else {
+            [$segnalazioni, $righe] = $this->paginaRaggruppata($request, $gruppo);
+        }
 
         // Conteggi (senza filtro ricerca per non distorcere i badge)
         $baseCount = Segnalazione::visibileA($user);
@@ -263,10 +267,12 @@ class GestioneController extends Controller
 
         foreach (GruppiElenco::livelli($request->get('gruppo')) as $tipo) {
             if ($tipo === 'sede') {
-                $base->orderBy(Plesso::select('nome')->whereColumn('plessi.id_plesso', 'segnalazioni.id_plesso')->limit(1))
+                $base->orderByRaw('coalesce(segnalazioni.id_plesso, 0) = 0')
+                    ->orderBy(Plesso::select('nome')->whereColumn('plessi.id_plesso', 'segnalazioni.id_plesso')->limit(1))
                     ->orderBy('segnalazioni.id_plesso');
             } else {
-                $base->orderBy(TipologiaSegnalazione::select('descrizione')
+                $base->orderByRaw('coalesce(segnalazioni.id_tipologia_segnalazione, 0) = 0')
+                    ->orderBy(TipologiaSegnalazione::select('descrizione')
                     ->whereColumn('tipologie_segnalazioni.id_tipologia_segnalazione', 'segnalazioni.id_tipologia_segnalazione')->limit(1))
                     ->orderBy('segnalazioni.id_tipologia_segnalazione');
             }
@@ -284,12 +290,15 @@ class GestioneController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Pagination\LengthAwarePaginator<int, Segnalazione>  $pagina
-     * @return list<array{s: Segnalazione, celle: list<array<string, mixed>>}>
+     * Una pagina dell'elenco raggruppato: gruppi di primo livello mai spezzati (committente, 1.0.4).
+     * Si riempie fino a ~30 righe; un gruppo più grande sta comunque intero nella sua pagina.
+     *
+     * @return array{0: PaginaPerGruppi, 1: list<array{s: Segnalazione, celle: list<array<string, mixed>>}>}
      */
-    private function righeRaggruppate(Request $request, string $gruppo, $pagina): array
+    private function paginaRaggruppata(Request $request, string $gruppo): array
     {
-        $colonna = GruppiElenco::livelli($gruppo)[0] === 'sede' ? 'segnalazioni.id_plesso' : 'segnalazioni.id_tipologia_segnalazione';
+        $tipo = GruppiElenco::livelli($gruppo)[0];
+        $colonna = $tipo === 'sede' ? 'segnalazioni.id_plesso' : 'segnalazioni.id_tipologia_segnalazione';
         $conteggi = $this->elencoFiltrato($request)->reorder()->toBase()
             ->selectRaw(
                 "{$colonna} as chiave, count(*) as totale, sum(case when data_chiusura is null and id_stato_segnalazione <> ? and data_scadenza_sla < ? then 1 else 0 end) as in_ritardo",
@@ -297,15 +306,61 @@ class GestioneController extends Controller
             )
             ->groupBy($colonna)
             ->get()
-            ->mapWithKeys(fn ($r) => [(int) $r->chiave => ['totale' => (int) $r->totale, 'in_ritardo' => (int) $r->in_ritardo]])
-            ->all();
+            ->reduce(function (array $c, $r) {
+                $k = (int) $r->chiave; // null e 0 = senza sede/tipologia, un solo gruppo
+                $c[$k] = ['totale' => ($c[$k]['totale'] ?? 0) + (int) $r->totale, 'in_ritardo' => ($c[$k]['in_ritardo'] ?? 0) + (int) $r->in_ritardo];
 
-        // Ultima riga della pagina prima: se è dello stesso gruppo, la cella dice "(continua)".
-        $precedente = $pagina->currentPage() > 1 && $pagina->firstItem()
-            ? $this->elencoFiltrato($request)->with(['plesso', 'tipologia'])->skip($pagina->firstItem() - 2)->take(1)->first()
-            : null;
+                return $c;
+            }, []);
 
-        return GruppiElenco::costruisci($pagina->getCollection(), $gruppo, $conteggi, $precedente);
+        // Stesso ordine dell'elenco: per nome, i "senza" in fondo.
+        $nomi = $tipo === 'sede'
+            ? Plesso::whereIn('id_plesso', array_keys($conteggi))->pluck('nome', 'id_plesso')->all()
+            : TipologiaSegnalazione::whereIn('id_tipologia_segnalazione', array_keys($conteggi))->pluck('descrizione', 'id_tipologia_segnalazione')->all();
+        $chiavi = array_keys($conteggi);
+        usort($chiavi, fn (int $a, int $b) => [! isset($nomi[$a]), mb_strtolower((string) ($nomi[$a] ?? '')), $a]
+            <=> [! isset($nomi[$b]), mb_strtolower((string) ($nomi[$b] ?? '')), $b]);
+
+        $pagine = [];
+        $corrente = [];
+        $righeCorrenti = 0;
+        foreach ($chiavi as $k) {
+            if ($corrente !== [] && $righeCorrenti + $conteggi[$k]['totale'] > 30) {
+                $pagine[] = $corrente;
+                $corrente = [];
+                $righeCorrenti = 0;
+            }
+            $corrente[] = $k;
+            $righeCorrenti += $conteggi[$k]['totale'];
+        }
+        if ($corrente !== []) {
+            $pagine[] = $corrente;
+        }
+
+        $numero = max(1, min((int) $request->get('page', 1), max(1, count($pagine))));
+        $chiaviPagina = $pagine[$numero - 1] ?? [];
+        $prima = 1;
+        foreach (array_slice($pagine, 0, $numero - 1) as $precedente) {
+            $prima += array_sum(array_map(fn ($k) => $conteggi[$k]['totale'], $precedente));
+        }
+
+        $elementi = $chiaviPagina === [] ? collect() : $this->elencoFiltrato($request)
+            ->where(function (Builder $q) use ($colonna, $chiaviPagina) {
+                $q->whereIn($colonna, $chiaviPagina);
+                if (in_array(0, $chiaviPagina, true)) {
+                    $q->orWhereNull($colonna);
+                }
+            })
+            ->with(['tipologia', 'operatore', 'plesso', 'squadraAssegnata', 'appalto.impresa'])
+            ->conVolteSegnalata()
+            ->get();
+
+        $paginatore = new PaginaPerGruppi($elementi, max(1, count($pagine)), $numero, $prima, array_sum(array_column($conteggi, 'totale')), [
+            'path' => $request->url(),
+            'pageName' => 'page',
+        ]);
+
+        return [$paginatore, GruppiElenco::costruisci($elementi, $gruppo, $conteggi)];
     }
 
     /**

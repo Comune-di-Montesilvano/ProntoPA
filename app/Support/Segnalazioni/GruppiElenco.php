@@ -7,11 +7,11 @@ use Illuminate\Support\Collection;
 
 /**
  * Elenco gestione "Raggruppa per" (1.0.4): celle di gruppo a sinistra con rowspan, come in un foglio.
- * Il primo livello porta il conteggio sull'intero filtro (non sulla pagina); un gruppo iniziato
- * nella pagina prima ripete la cella con "(continua)".
+ * Il primo livello porta il conteggio sull'intero filtro; la paginazione non spezza mai un gruppo
+ * di primo livello (PaginaPerGruppi), quindi ogni gruppo comincia e finisce nella sua pagina.
  *
  * @phpstan-type Cella array{livello: int, tipo: string, chiave: int, nome: string, tono: ?string, icona: ?string,
- *     rowspan: int, totale: ?int, in_ritardo: ?int, continua: bool, ids: list<int>}
+ *     rowspan: int, totale: ?int, in_ritardo: ?int, ids: list<int>}
  */
 final class GruppiElenco
 {
@@ -38,7 +38,7 @@ final class GruppiElenco
      * @param  array<int, array{totale: int, in_ritardo: int}>  $conteggi  per chiave del primo livello
      * @return list<array{s: Segnalazione, celle: list<Cella>}>
      */
-    public static function costruisci(Collection $pagina, ?string $gruppo, array $conteggi, ?Segnalazione $precedente): array
+    public static function costruisci(Collection $pagina, ?string $gruppo, array $conteggi): array
     {
         $righe = $pagina->values();
         $livelli = self::livelli($gruppo);
@@ -69,7 +69,6 @@ final class GruppiElenco
                     'rowspan' => $j - $i + 1,
                     'totale' => $l === 0 ? (int) ($conteggi[$chiave]['totale'] ?? 0) : null,
                     'in_ritardo' => $l === 0 ? (int) ($conteggi[$chiave]['in_ritardo'] ?? 0) : null,
-                    'continua' => $i === 0 && $precedente !== null && $prefisso($precedente) === $k,
                     'ids' => $righe->slice($i, $j - $i + 1)->map(fn ($r) => (int) $r->id_segnalazione)->values()->all(),
                 ];
                 $i = $j + 1;

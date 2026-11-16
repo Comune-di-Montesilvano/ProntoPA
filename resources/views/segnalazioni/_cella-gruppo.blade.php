@@ -7,11 +7,10 @@
             <input type="checkbox" class="mb-1" x-data="{ ids: @js(array_map('strval', $cella['ids'])) }"
                    :checked="ids.every(id => scelte.includes(id))"
                    x-on:change="scelte = $event.target.checked ? [...new Set([...scelte, ...ids])] : scelte.filter(id => !ids.includes(id))"
-                   aria-label="Seleziona le segnalazioni di {{ $cella['nome'] }} in questa pagina">
+                   aria-label="Seleziona le segnalazioni di {{ $cella['nome'] }} ">
         @endif
         <span class="pa-cella-gruppo-nome">
             <i class="{{ $cella['icona'] }}" aria-hidden="true"></i>{{ $cella['nome'] }}
-            @if($cella['continua'])<span class="pa-cella-gruppo-continua">(continua)</span>@endif
         </span>
         @if($cella['totale'] !== null)
             <span class="pa-cella-gruppo-conto">{{ $cella['totale'] }} · {{ $cella['in_ritardo'] }} in ritardo</span>

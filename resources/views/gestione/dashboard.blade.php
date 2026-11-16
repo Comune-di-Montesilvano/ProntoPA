@@ -104,14 +104,6 @@
                 {{-- Raggruppa per (1.0.4): la scelta resta nel browser e torna alla prossima apertura dell'elenco. --}}
                 <label for="filtro_gruppo" class="text-sm text-[var(--slate-600)]">Raggruppa per</label>
                 <select name="gruppo" id="filtro_gruppo" class="pa-input pa-input-auto"
-                        x-data x-init="
-                            try {
-                                const u = new URL(location.href);
-                                const salvato = localStorage.getItem('pa-elenco-gruppo') || '';
-                                if (! u.searchParams.has('gruppo') && salvato && $el.querySelector(`option[value='${salvato}']`)) {
-                                    u.searchParams.set('gruppo', salvato); u.searchParams.delete('page'); location.replace(u);
-                                }
-                            } catch (e) {}"
                         onchange="try { localStorage.setItem('pa-elenco-gruppo', this.value) } catch (e) {} this.form.submit()">
                     <option value="" @selected($gruppo === '')>Nessun gruppo</option>
                     <option value="sede" @selected($gruppo === 'sede')>Sede</option>
@@ -119,6 +111,18 @@
                     <option value="tipologia" @selected($gruppo === 'tipologia')>Tipologia</option>
                     <option value="tipologia_sede" @selected($gruppo === 'tipologia_sede')>Tipologia, poi sede</option>
                 </select>
+                <script>
+                    (function () {
+                        try {
+                            const u = new URL(location.href);
+                            const salvato = localStorage.getItem('pa-elenco-gruppo') || '';
+                            const valido = [...document.getElementById('filtro_gruppo').options].some(o => o.value === salvato);
+                            if (! u.searchParams.has('gruppo') && salvato && valido) {
+                                u.searchParams.set('gruppo', salvato); u.searchParams.delete('page'); location.replace(u);
+                            }
+                        } catch (e) {}
+                    })();
+                </script>
                 <x-pa.btn type="submit" variant="primary">Cerca</x-pa.btn>
             </div>
 
@@ -195,6 +199,14 @@
             </div>
         @endif
 
+        <details class="pa-card px-4 py-3 2xl:hidden">
+            <summary class="cursor-pointer text-sm font-semibold text-[var(--slate-700)]">
+                <i class="fas fa-palette mr-1" aria-hidden="true"></i> Legenda dei colori
+            </summary>
+            <div class="mt-3">@include('segnalazioni._legenda')</div>
+        </details>
+
+        <div class="grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_230px]">
         <div class="pa-card overflow-hidden" x-data="{ scelte: [], pagina: @js($segnalazioni->pluck('id_segnalazione')->map(fn ($id) => (string) $id)->values()) }">
             @if($segnalazioni->isEmpty())
                 <p class="m-0 p-10 text-center text-sm text-[var(--slate-500)]">Nessuna segnalazione in questa vista.</p>
@@ -204,6 +216,11 @@
                     $colonne = array_values(array_diff(['sede', 'tipologia', 'seleziona', 'stato', 'priorita', 'scadenza', 'segnalazione', 'azioni'], $livelli));
                     $righe ??= $segnalazioni->getCollection()->map(fn ($s) => ['s' => $s, 'celle' => []])->all();
                 @endphp
+                @if($segnalazioni->hasPages())
+                    <div class="pa-paginazione border-b border-[var(--slate-100)] px-4 py-3">
+                        {{ $segnalazioni->withQueryString()->links() }}
+                    </div>
+                @endif
                 <table class="pa-elenco {{ $livelli ? 'pa-elenco-gruppi' : '' }}">
                     @include('segnalazioni._intestazione', ['colonne' => $colonne, 'gruppo' => $livelli])
                     <tbody>
@@ -218,12 +235,17 @@
                     </tbody>
                 </table>
                 @if($segnalazioni->hasPages())
-                    <div class="border-t border-[var(--slate-100)] px-4 py-3">
+                    <div class="pa-paginazione border-t border-[var(--slate-100)] px-4 py-3">
                         {{ $segnalazioni->withQueryString()->links() }}
                     </div>
                 @endif
                 @include('gestione._azioni-multiple')
             @endif
+        </div>
+        <aside class="pa-card sticky top-4 hidden p-4 2xl:block" aria-label="Legenda dei colori">
+            <h2 class="m-0 mb-3 text-sm font-bold text-[var(--slate-800)]">Legenda dei colori</h2>
+            @include('segnalazioni._legenda')
+        </aside>
         </div>
     </div>
 </x-app-layout>

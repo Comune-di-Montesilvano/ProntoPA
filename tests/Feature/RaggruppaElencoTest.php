@@ -71,15 +71,27 @@ class RaggruppaElencoTest extends TestCase
             ->assertSee('1 · 0 in ritardo', false);
     }
 
-    public function test_gruppo_spezzato_tra_pagine_continua(): void
+    /** Committente: la paginazione non spezza i gruppi di primo livello. */
+    public function test_pagine_con_gruppi_interi(): void
     {
         $alfa = $this->sede('ALFA');
-        Segnalazione::factory()->count(31)->create(['id_stato_segnalazione' => 1, 'id_plesso' => $alfa->id_plesso]);
+        $beta = $this->sede('BETA');
+        $gamma = $this->sede('GAMMA');
+        Segnalazione::factory()->count(20)->create(['id_stato_segnalazione' => 1, 'id_plesso' => $alfa->id_plesso, 'titolo' => 'Guasto alfa']);
+        Segnalazione::factory()->count(15)->create(['id_stato_segnalazione' => 1, 'id_plesso' => $beta->id_plesso, 'titolo' => 'Guasto beta']);
+        Segnalazione::factory()->count(40)->create(['id_stato_segnalazione' => 1, 'id_plesso' => $gamma->id_plesso, 'titolo' => 'Guasto gamma']);
 
-        $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => 'sede', 'page' => 2]))
-            ->assertOk()
-            ->assertSee('(continua)')
-            ->assertSee('31 · 0 in ritardo');
+        $pagina1 = $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => 'sede']))->assertOk();
+        $this->assertSame(20, substr_count($pagina1->getContent(), 'Guasto alfa'));
+        $this->assertSame(0, substr_count($pagina1->getContent(), 'Guasto beta'));
+
+        $pagina2 = $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => 'sede', 'page' => 2]))->assertOk();
+        $this->assertSame(15, substr_count($pagina2->getContent(), 'Guasto beta'));
+        $this->assertSame(0, substr_count($pagina2->getContent(), 'Guasto gamma'));
+
+        $pagina3 = $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => 'sede', 'page' => 3]))->assertOk();
+        $this->assertSame(40, substr_count($pagina3->getContent(), 'Guasto gamma'), 'gruppo grande intero anche oltre 30');
+        $pagina3->assertSee('40 · 0 in ritardo')->assertDontSee('(continua)');
     }
 
     public function test_gruppo_sconosciuto_e_chiuse(): void

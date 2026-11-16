@@ -46,6 +46,9 @@
                     {{ match ($tab) { 'chiuse' => "Nessun lavoro chiuso nell'ultimo mese.", 'squadra' => 'Nessun lavoro della squadra.', default => 'Nessun lavoro assegnato.' } }}
                 </p>
             @else
+                @if($segnalazioni->hasPages())
+                    <div class="pa-paginazione border-b border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->withQueryString()->links() }}</div>
+                @endif
                 <table class="pa-elenco">
                     @include('segnalazioni._intestazione', ['colonne' => $colonne])
                     <tbody>
@@ -55,7 +58,7 @@
                     </tbody>
                 </table>
                 @if($segnalazioni->hasPages())
-                    <div class="border-t border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->withQueryString()->links() }}</div>
+                    <div class="pa-paginazione border-t border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->withQueryString()->links() }}</div>
                 @endif
             @endif
         </div>

@@ -6,6 +6,9 @@
             <x-pa.btn variant="primary" :href="route('segnalazioni.create')">Inserisci una segnalazione</x-pa.btn>
         </div>
     @else
+        @if($segnalazioni->hasPages())
+            <div class="pa-paginazione border-b border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->links() }}</div>
+        @endif
         <table class="pa-elenco">
             @include('segnalazioni._intestazione', ['colonne' => ['sede', 'tipologia', 'stato', 'segnalazione', 'aggiornata']])
             <tbody>
@@ -19,7 +22,7 @@
             </tbody>
         </table>
         @if($segnalazioni->hasPages())
-            <div class="border-t border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->links() }}</div>
+            <div class="pa-paginazione border-t border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->links() }}</div>
         @endif
     @endif
 </div>

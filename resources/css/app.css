@@ -249,7 +249,6 @@
 .pa-cella-gruppo-tipologia .pa-cella-gruppo-nome { color: var(--tono-testo); }
 .pa-cella-gruppo-nome i { margin-top: 2px; color: var(--slate-400); }
 .pa-cella-gruppo-tipologia .pa-cella-gruppo-nome i { color: var(--tono-punto); }
-.pa-cella-gruppo-continua { font-weight: 400; color: var(--slate-500); }
 .pa-cella-gruppo-conto { font-size: 12px; color: var(--slate-600); }
 .pa-elenco-titolo:hover { color: var(--ente-primary); text-decoration: underline; }
 .pa-elenco-meta { margin-top: 2px; font-size: 13px; color: var(--slate-500); }
@@ -261,19 +260,24 @@
 @media (max-width: 767px) {
   .pa-elenco thead { display: none; }
   .pa-elenco tbody, .pa-elenco tr { display: block; }
-  .pa-elenco tr { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 6px 12px;
-    grid-template-areas: "g1 g1 g1" "g2 g2 g2" "sede sede sel" "tip tip az" "testo testo testo" "stato prio scad" "affida affida affida";
+  .pa-elenco tr { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 12px;
+    grid-template-areas: "sede sel" "tip az" "testo testo" "stato scad" "prio prio" "affida affida";
     padding: 12px 4px; border-bottom: 1px solid var(--slate-100); }
+  .pa-elenco-gruppi tr { grid-template-columns: auto 1fr auto auto;
+    grid-template-areas: "g1 g1 g1 g1" "g2 g2 g2 g2" "sede sede sede sede" "tip tip tip tip" "sel testo testo testo" ". stato scad az" ". prio prio prio"; }
+  .pa-elenco-gruppi td.pa-col-seleziona { align-self: start; justify-self: start; }
   .pa-elenco td { display: block; padding: 0; border: 0; width: auto; min-width: 0; white-space: normal; }
   .pa-elenco tbody tr:hover td { background: transparent; }
+  .pa-elenco td.pa-col-sede, .pa-elenco td.pa-cella-tipologia, .pa-elenco td.pa-cella-gruppo { width: auto; }
   .pa-elenco td.pa-col-sede { grid-area: sede; background: transparent; }
-  .pa-elenco td.pa-cella-tipologia { grid-area: tip; justify-self: start; padding: 2px 10px; border-radius: 6px; font-size: 13px;
-    background: var(--tono-sfondo); }
+  .pa-elenco td.pa-cella-tipologia { grid-area: tip; justify-self: start; display: inline-flex; align-items: center; gap: 6px;
+    padding: 2px 10px; border-radius: 6px; font-size: 13px; background: var(--tono-sfondo); }
+  .pa-elenco td.pa-cella-tipologia i { margin-right: 0; }
   .pa-elenco td.pa-col-seleziona { grid-area: sel; justify-self: end; }
   .pa-elenco td.pa-col-azioni { grid-area: az; }
   .pa-elenco td.pa-col-segnalazione { grid-area: testo; }
   .pa-elenco td.pa-col-stato { grid-area: stato; }
-  .pa-elenco td.pa-col-priorita { grid-area: prio; }
+  .pa-elenco td.pa-col-priorita { grid-area: prio; justify-self: start; }
   .pa-elenco td.pa-col-scadenza, .pa-elenco td.pa-col-aggiornata { grid-area: scad; justify-self: end; font-size: 13px; }
   .pa-elenco td.pa-col-affida { grid-area: affida; }
   /* Raggruppato: le celle di gruppo diventano fasce sopra la prima scheda del gruppo */
@@ -437,4 +441,17 @@
 .pa-scelta-priorita { padding: 8px 16px; border: 2px solid var(--slate-200); border-radius: 8px; background: #fff;
   color: var(--slate-600); font-size: 14px; font-weight: 600; user-select: none; }
 .pa-scelta-priorita:hover { border-color: var(--slate-400); }
-.pa-scelta-priorita.pa-riquadro-scelto { border-color: currentColor; }
+.pa-scelta-priorita.pa-priorita-4 { background: #dc2626; color: #fff; border-color: #dc2626; }
+.pa-scelta-priorita.pa-priorita-3 { background: var(--tono-sfondo); color: var(--tono-testo); border-color: #fca5a5; }
+.pa-scelta-priorita.pa-priorita-2 { background: var(--slate-100); color: var(--slate-700); border-color: var(--slate-400); }
+.pa-scelta-priorita.pa-priorita-1 { background: var(--slate-100); color: var(--slate-500); border-color: var(--slate-300); }
+
+/* Legenda dei colori accanto all'elenco (1.0.4) */
+.pa-legenda { display: flex; flex-direction: column; gap: 16px; font-size: 13px; }
+.pa-legenda h3 { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--slate-500); text-transform: uppercase; letter-spacing: .04em; }
+.pa-legenda ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.pa-legenda-righe { align-items: flex-start; }
+.pa-legenda-nota { margin: 0; color: var(--slate-600); font-size: 12px; }
+@media (max-width: 1535px) {
+  .pa-legenda { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+}

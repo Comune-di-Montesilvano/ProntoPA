@@ -54,6 +54,9 @@
             @if($segnalazioni->isEmpty())
                 <p class="m-0 p-10 text-center text-sm text-[var(--slate-500)]">Nessun lavoro in questa vista.</p>
             @else
+                @if($segnalazioni->hasPages())
+                    <div class="pa-paginazione border-b border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->withQueryString()->links() }}</div>
+                @endif
                 <table class="pa-elenco">
                     @include('segnalazioni._intestazione', ['colonne' => ['sede', 'tipologia', 'stato', 'priorita', 'scadenza', 'segnalazione']])
                     <tbody>
@@ -63,7 +66,7 @@
                     </tbody>
                 </table>
                 @if($segnalazioni->hasPages())
-                    <div class="border-t border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->withQueryString()->links() }}</div>
+                    <div class="pa-paginazione border-t border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->withQueryString()->links() }}</div>
                 @endif
             @endif
         </div>

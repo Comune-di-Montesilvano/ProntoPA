@@ -35,11 +35,11 @@ class GruppiElencoTest extends TestCase
     public function test_due_livelli_con_rowspan(): void
     {
         $pagina = collect([$this->riga(1, 5, 1), $this->riga(2, 5, 1), $this->riga(3, 5, 2), $this->riga(4, 6, 1)]);
-        $righe = GruppiElenco::costruisci($pagina, 'sede_tipologia', [5 => ['totale' => 9, 'in_ritardo' => 4]], null);
+        $righe = GruppiElenco::costruisci($pagina, 'sede_tipologia', [5 => ['totale' => 9, 'in_ritardo' => 4]]);
 
         $this->assertCount(4, $righe);
         [$sede, $tipo] = $righe[0]['celle'];
-        $this->assertSame(['sede', 3, 'Sede 5', 9, 4, false], [$sede['tipo'], $sede['rowspan'], $sede['nome'], $sede['totale'], $sede['in_ritardo'], $sede['continua']]);
+        $this->assertSame(['sede', 3, 'Sede 5', 9, 4], [$sede['tipo'], $sede['rowspan'], $sede['nome'], $sede['totale'], $sede['in_ritardo']]);
         $this->assertSame([1, 2, 3], $sede['ids']);
         $this->assertSame(['tipologia', 2, 'Tipo 1', null, 'verde'], [$tipo['tipo'], $tipo['rowspan'], $tipo['nome'], $tipo['totale'], $tipo['tono']]);
 
@@ -50,29 +50,16 @@ class GruppiElencoTest extends TestCase
         $this->assertSame(0, $righe[3]['celle'][0]['totale'], 'gruppo senza conteggio = 0');
     }
 
-    public function test_gruppo_che_continua_dalla_pagina_prima(): void
-    {
-        $pagina = collect([$this->riga(7, 5, 2), $this->riga(8, 6, 2)]);
-
-        $righe = GruppiElenco::costruisci($pagina, 'sede_tipologia', [], $this->riga(6, 5, 1));
-        $this->assertTrue($righe[0]['celle'][0]['continua']);
-        $this->assertFalse($righe[0]['celle'][1]['continua'], 'stessa sede, tipologia diversa');
-        $this->assertFalse($righe[1]['celle'][0]['continua']);
-
-        $righe = GruppiElenco::costruisci($pagina, 'sede_tipologia', [], $this->riga(6, 5, 2));
-        $this->assertTrue($righe[0]['celle'][1]['continua']);
-    }
-
     public function test_senza_sede(): void
     {
-        $righe = GruppiElenco::costruisci(collect([$this->riga(1, 0, 1)]), 'sede', [], null);
+        $righe = GruppiElenco::costruisci(collect([$this->riga(1, 0, 1)]), 'sede', []);
         $this->assertSame('Senza sede', $righe[0]['celle'][0]['nome']);
         $this->assertSame(0, $righe[0]['celle'][0]['chiave']);
     }
 
     public function test_senza_gruppo_nessuna_cella(): void
     {
-        $righe = GruppiElenco::costruisci(collect([$this->riga(1, 5, 1)]), '', [], null);
+        $righe = GruppiElenco::costruisci(collect([$this->riga(1, 5, 1)]), '', []);
         $this->assertSame([], $righe[0]['celle']);
     }
 }

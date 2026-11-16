@@ -139,4 +139,19 @@ class ElencoGestioneTest extends TestCase
             ->assertDontSee('pa-priorita-2', false)
             ->assertDontSee('fa-lock', false);
     }
+
+    /** 1.0.4: paginazione sopra e sotto l'elenco, legenda dei colori accanto. */
+    public function test_paginazione_sopra_e_sotto_e_legenda(): void
+    {
+        Segnalazione::factory()->count(31)->create(['id_stato_segnalazione' => 1]);
+
+        $html = $this->actingAs($this->gestore)->get(route('gestione.dashboard'))
+            ->assertOk()
+            ->assertSee('Legenda dei colori')
+            ->assertSee('pa-legenda', false)
+            ->getContent();
+
+        $this->assertSame(2, substr_count($html, 'pa-paginazione'), 'paginazione sopra e sotto');
+        $this->assertStringContainsString('Verde e Giardini', $html);
+    }
 }
