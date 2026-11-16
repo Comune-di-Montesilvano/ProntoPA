@@ -97,17 +97,46 @@ class ElencoGestioneTest extends TestCase
         $this->actingAs($this->gestore)->get(route('gestione.dashboard'))
             ->assertOk()
             ->assertSee('>Scadenza<', false)
-            ->assertSee('Superata da 2 g')
+            ->assertSee('In ritardo di 2 g')
             ->assertDontSee(route('segnalazioni.toggle-riservata', $s->id_segnalazione), false);
     }
 
-    public function test_da_assegnare_in_colonna_assegnata_a(): void
+    public function test_da_assegnare_sotto_lo_stato(): void
     {
         Segnalazione::factory()->create(['id_stato_segnalazione' => 1]);
 
         $this->actingAs($this->gestore)->get(route('gestione.dashboard'))
             ->assertOk()
-            ->assertSee('>Assegnata a<', false)
-            ->assertSee('Da assegnare');
+            ->assertSee('>Stato<', false)
+            ->assertDontSee('>Assegnata a<', false)
+            ->assertSee('da assegnare')
+            ->assertSee('pa-tono-arancio', false);
+    }
+
+    /** 1.0.4: sede e tipologia in colonna, tipologia e stato nei loro colori, niente "Media" né lucchetto. */
+    public function test_riga_con_sede_tipologia_e_colori(): void
+    {
+        $ente = \App\Models\Istituto::create(['descrizione' => 'IC Test', 'id_categoria' => \App\Models\CategoriaEnte::factory()->create()->id_categoria, 'attivo' => true]);
+        $plesso = \App\Models\Plesso::create(['id_istituto' => $ente->id_istituto, 'nome' => 'VIA VERROTTI SUD', 'indirizzo' => 'Via Verrotti']);
+        $tipologia = \App\Models\TipologiaSegnalazione::where('descrizione', 'IMPIANTO IDRICO')->firstOrFail();
+        $operaio = User::factory()->create(['name' => 'Vincenzo Caruso']);
+        Segnalazione::factory()->create([
+            'id_stato_segnalazione' => 3, 'id_operatore_assegnato' => $operaio->id, 'id_plesso' => $plesso->id_plesso,
+            'id_tipologia_segnalazione' => $tipologia->id_tipologia_segnalazione, 'livello_priorita' => 2, 'flag_riservata' => true,
+            'titolo' => 'Cassetta del bagno da sistemare',
+        ]);
+        Segnalazione::factory()->create(['id_stato_segnalazione' => 1, 'livello_priorita' => 3, 'titolo' => 'Bagni bloccati']);
+
+        $this->actingAs($this->gestore)->get(route('gestione.dashboard'))
+            ->assertOk()
+            ->assertSeeInOrder(['>Sede<', '>Tipologia<', '>Stato<', '>Priorità<', '>Scadenza<', '>Segnalazione<'], false)
+            ->assertSee('Via Verrotti Sud')
+            ->assertSee('pa-tono-blu', false)
+            ->assertSee('Impianto Idrico')
+            ->assertSee('Vincenzo Caruso')
+            ->assertDontSee('a Vincenzo Caruso')
+            ->assertSee('Alta')
+            ->assertDontSee('pa-priorita-2', false)
+            ->assertDontSee('fa-lock', false);
     }
 }

@@ -181,26 +181,13 @@
             @if($segnalazioni->isEmpty())
                 <p class="m-0 p-10 text-center text-sm text-[var(--slate-500)]">Nessuna segnalazione in questa vista.</p>
             @else
+                @php $colonne = ['sede', 'tipologia', 'seleziona', 'stato', 'priorita', 'scadenza', 'segnalazione', 'azioni']; @endphp
                 <table class="pa-elenco">
-                    <thead>
-                        <tr>
-                            <th scope="col" class="w-8">
-                                <input type="checkbox" aria-label="Seleziona tutte le righe della pagina"
-                                       :checked="pagina.length && pagina.every(id => scelte.includes(id))"
-                                       x-on:change="scelte = $event.target.checked ? [...new Set([...scelte, ...pagina])] : scelte.filter(id => !pagina.includes(id))">
-                            </th>
-                            <th scope="col">Priorità</th>
-                            <th scope="col">Segnalazione</th>
-                            <th scope="col">Stato</th>
-                            <th scope="col">Assegnata a</th>
-                            <th scope="col">Scadenza</th>
-                            <th scope="col"><span class="sr-only">Azioni</span></th>
-                        </tr>
-                    </thead>
+                    @include('segnalazioni._intestazione', ['colonne' => $colonne])
                     <tbody>
                         @foreach($segnalazioni as $s)
                             @include('segnalazioni._riga', [
-                                'colonne' => ['seleziona', 'priorita', 'segnalazione', 'stato', 'assegnata', 'scadenza', 'azioni'],
+                                'colonne' => $colonne,
                                 'rapide' => $azioniRapidePerSegnalazione[$s->id_segnalazione] ?? collect(),
                             ])
                         @endforeach

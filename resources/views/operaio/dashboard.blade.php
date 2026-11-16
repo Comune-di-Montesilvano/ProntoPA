@@ -11,8 +11,8 @@
             ? auth()->user()->squadreGuidate()->where('attiva', true)->with('membri')->get()->flatMap->membri->unique('id')
             : collect();
         $colonne = $tab === 'squadra'
-            ? ['priorita', 'segnalazione', 'scadenza', 'affida']
-            : ['priorita', 'segnalazione', 'scadenza', 'stato'];
+            ? ['sede', 'tipologia', 'priorita', 'scadenza', 'segnalazione', 'affida']
+            : ['sede', 'tipologia', 'stato', 'priorita', 'scadenza', 'segnalazione'];
     @endphp
 
     <div class="flex flex-col gap-4">
@@ -47,14 +47,7 @@
                 </p>
             @else
                 <table class="pa-elenco">
-                    <thead>
-                        <tr>
-                            <th scope="col">Priorità</th>
-                            <th scope="col">Segnalazione</th>
-                            <th scope="col">Entro</th>
-                            <th scope="col">{{ $tab === 'squadra' ? 'Affidata a' : 'Stato' }}</th>
-                        </tr>
-                    </thead>
+                    @include('segnalazioni._intestazione', ['colonne' => $colonne])
                     <tbody>
                         @foreach($segnalazioni as $s)
                             @include('segnalazioni._riga', ['colonne' => $colonne, 'lettura' => 'lavoro', 'membri' => $membri])
