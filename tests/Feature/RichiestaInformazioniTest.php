@@ -404,4 +404,84 @@ class RichiestaInformazioniTest extends TestCase
         $this->assertSame(SegnalazioneStato::IN_CARICO, $s->fresh()->statoEnum());
         $this->assertNull($s->fresh()->richiestaAperta);
     }
+
+    // ── Revisione finale 1.0.2 ───────────────────────────────────────────────
+
+    public function test_accorpata_in_attesa_la_richiesta_si_chiude_e_non_la_riapre(): void
+    {
+        $s = $this->segnalazione(2);
+        $madre = $this->segnalazione(2);
+        $this->chiedi($s);
+
+        app(\App\Services\Segnalazioni\AccorpamentoService::class)->accorpa($s, $madre, $this->gestore);
+
+        $this->assertNull(RichiestaInformazioni::aperte()->first());
+        $this->vaAlGiorno(11);
+        $this->artisan('segnalazioni:richieste')->assertSuccessful();
+        $this->assertSame(SegnalazioneStato::DUPLICATA, $s->fresh()->statoEnum());
+    }
+
+    public function test_richiesta_aperta_su_segnalazione_non_piu_in_attesa_non_cambia_stato(): void
+    {
+        $s = $this->segnalazione(2);
+        $r = $this->chiedi($s);
+        $s->update(['id_stato_segnalazione' => SegnalazioneStato::DUPLICATA->value, 'data_chiusura' => now()]);
+
+        $s->note()->create(['testo' => 'Aula 12', 'id_utente' => $this->autore->id, 'visibile_web' => true]);
+
+        $this->assertSame(SegnalazioneStato::DUPLICATA, $s->fresh()->statoEnum());
+        $this->assertNotNull($r->fresh()->conclusa_at);
+    }
+
+    public function test_doppio_invio_crea_una_sola_richiesta(): void
+    {
+        $s = $this->segnalazione(3);
+        $this->chiedi($s);
+        $this->chiedi($s);
+
+        $this->assertSame(1, RichiestaInformazioni::count());
+        $this->assertSame(SegnalazioneStato::ASSEGNATA_OPERATORE, (SegnalazioneStato::tryFrom(RichiestaInformazioni::first()->stato_precedente)));
+    }
+
+    public function test_risposta_vuota_non_conta_e_risposta_non_e_una_ripetizione(): void
+    {
+        Notification::fake();
+        $s = $this->segnalazione(2);
+        $this->chiedi($s);
+
+        $this->actingAs($this->autore)->post(route('segnalazioni.aggiornamento', $s), ['testo' => ''])
+            ->assertSessionHasErrors('testo');
+        $this->assertSame(SegnalazioneStato::ATTESA_RISPOSTA, $s->fresh()->statoEnum());
+
+        $this->actingAs($this->autore)->post(route('segnalazioni.aggiornamento', $s), ['testo' => 'Aula 12'])->assertRedirect();
+        $s->refresh();
+        $this->assertSame(SegnalazioneStato::IN_CARICO, $s->statoEnum());
+        $this->assertSame(1, $s->volteSegnalata());
+        $this->assertSame('Aula 12', RichiestaInformazioni::first()->notaRisposta?->testo ?? NotaSegnalazione::find(RichiestaInformazioni::first()->id_nota_risposta)?->testo);
+        Notification::assertNotSentTo($this->gestore,\App\Notifications\SollecitoNotification::class);
+        Notification::assertSentTo($this->gestore, RispostaInformazioniNotification::class);
+    }
+
+    public function test_autore_che_lavora_in_comune_non_riceve_richieste(): void
+    {
+        $gestoreAutore = User::factory()->create(['auth_source' => 'ldap']);
+        $gestoreAutore->assignRole('gestore');
+        $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 2, 'id_utente_segnalazione' => $gestoreAutore->id, 'data_segnalazione' => now()]);
+
+        $this->assertFalse($this->gestore->can('chiediInformazioni', $s));
+    }
+
+    public function test_in_attesa_esclusa_da_scadute_e_in_fondo_agli_urgenti(): void
+    {
+        $s = $this->segnalazione(2, ['data_scadenza_sla' => now()->subDay(), 'titolo' => 'Ferma in attesa']);
+        $altra = $this->segnalazione(2, ['data_scadenza_sla' => now()->addDays(3)]);
+        $this->segnalazione(2, ['data_scadenza_sla' => now()->subDay(), 'titolo' => 'Davvero scaduta']);
+        $this->chiedi($s);
+        Segnalazione::whereKey($s->id_segnalazione)->update(['data_scadenza_sla' => now()->subDay()]);
+
+        $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['filtro' => 'scadute']))
+            ->assertOk()->assertSee('Davvero scaduta')->assertDontSee('Ferma in attesa');
+        $this->assertSame([$altra->id_segnalazione, $s->id_segnalazione],
+            Segnalazione::whereIn('id_segnalazione', [$s->id_segnalazione, $altra->id_segnalazione])->ordinaUrgenti()->pluck('id_segnalazione')->all());
+    }
 }

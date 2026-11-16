@@ -115,8 +115,10 @@ class SegnalazionePolicy
     {
         $autore = User::find((int) $segnalazione->id_utente_segnalazione);
 
+        // Solo chi legge come segnalante può rispondere (un gestore che ha aperto da telefono no).
         return $autore !== null && in_array($autore->auth_source, ['spid', 'ldap'], true)
-            && $autore->attivo !== false && trim((string) $autore->email) !== '';
+            && $autore->attivo !== false && trim((string) $autore->email) !== ''
+            && \App\Support\Segnalazioni\LetturaScheda::per($autore) === 'segnalante';
     }
 
     public function ritiraInformazioni(User $user, Segnalazione $segnalazione): bool

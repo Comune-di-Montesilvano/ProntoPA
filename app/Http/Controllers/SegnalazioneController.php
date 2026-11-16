@@ -493,6 +493,10 @@ class SegnalazioneController extends Controller
         $testo = trim((string) ($data['testo'] ?? ''));
         $foto = $request->file('allegati', []);
 
+        if ($segnalazione->richiestaAperta()->exists() && LetturaScheda::per($utente) === 'segnalante') {
+            return $this->rispostaInformazioni($segnalazione, $utente, $testo, $foto);
+        }
+
         $sollecito = $testo === '' && $foto === [];
         $nota = DB::transaction(function () use ($segnalazione, $utente, $testo, $foto, $sollecito) {
             if ((int) $segnalazione->id_utente_segnalazione !== $utente->id) {
@@ -515,6 +519,37 @@ class SegnalazioneController extends Controller
 
         return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
             ->with('success', "Inviato alla #{$segnalazione->id_segnalazione}.");
+    }
+
+    /**
+     * Risposta alla richiesta di informazioni dal riquadro: messaggio normale (non conta come
+     * ripetizione né avvisa come sollecito), scritto prima delle foto così la richiesta lo aggancia.
+     *
+     * @param  array<int, \Illuminate\Http\UploadedFile>  $foto
+     */
+    private function rispostaInformazioni(Segnalazione $segnalazione, User $utente, string $testo, array $foto): RedirectResponse
+    {
+        if ($testo === '' && $foto === []) {
+            return back()->withErrors(['testo' => 'Scrivi la risposta o aggiungi una foto.'])->withInput();
+        }
+
+        DB::transaction(function () use ($segnalazione, $utente, $testo, $foto) {
+            if ((int) $segnalazione->id_utente_segnalazione !== $utente->id) {
+                AdesioneSegnalazione::firstOrCreate(['id_segnalazione' => $segnalazione->id_segnalazione, 'id_utente' => $utente->id]);
+            }
+            $segnalazione->note()->create([
+                'testo'            => $testo !== '' ? $testo : 'Ha aggiunto delle foto.',
+                'id_utente'        => $utente->id,
+                'visibile_web'     => true,
+                'visibile_impresa' => (bool) $segnalazione->id_appalto,
+            ]);
+            if ($foto !== []) {
+                CaricaAllegati::salva($segnalazione, $foto, $utente);
+            }
+        });
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Risposta inviata al comune.');
     }
 
     /** Chi ha il lavoro (delegati ditta, operaio, caposquadra) o, se nessuno, il comune. */

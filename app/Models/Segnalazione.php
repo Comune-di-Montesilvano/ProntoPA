@@ -474,7 +474,8 @@ class Segnalazione extends Model
     /** Più urgenti prima: scadute (scadenza più vecchia) prima, poi scadenza crescente, poi priorità. */
     public function scopeOrdinaUrgenti($query)
     {
-        return $query->orderByRaw('data_scadenza_sla IS NULL')
+        return $query->orderByRaw('id_stato_segnalazione = ? ', [SegnalazioneStato::ATTESA_RISPOSTA->value])
+            ->orderByRaw('data_scadenza_sla IS NULL')
             ->orderBy('data_scadenza_sla')
             ->orderByDesc('livello_priorita')
             ->orderBy('data_segnalazione');

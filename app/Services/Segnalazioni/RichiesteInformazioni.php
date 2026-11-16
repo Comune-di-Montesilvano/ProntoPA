@@ -30,8 +30,15 @@ class RichiesteInformazioni
 
     public function chiedi(Segnalazione $s, User $gestore, string $testo, int $giorni, bool $chiudiSenzaRisposta): RichiestaInformazioni
     {
-        $richiesta = DB::transaction(function () use ($s, $gestore, $testo, $giorni, $chiudiSenzaRisposta) {
+        $nuova = false;
+        $richiesta = DB::transaction(function () use ($s, $gestore, $testo, $giorni, $chiudiSenzaRisposta, &$nuova) {
             $s = Segnalazione::whereKey($s->id_segnalazione)->lockForUpdate()->firstOrFail();
+            // Doppio invio o due schede: la policy è stata controllata fuori dal lock.
+            $aperta = RichiestaInformazioni::aperte()->where('id_segnalazione', $s->id_segnalazione)->first();
+            if ($aperta || ! in_array($s->statoEnum()->value, [1, 2, 3, 4], true)) {
+                return $aperta;
+            }
+            $nuova = true;
             $calendario = CalendarioUfficio::daImpostazioni();
             $termine = $calendario->aggiungiGiorniLavorativi(now(), max(1, min(30, $giorni))) ?? now()->addDays($giorni);
 
@@ -56,6 +63,13 @@ class RichiesteInformazioni
 
             return $richiesta;
         });
+        if (! $nuova) {
+            if (! $richiesta) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['testo' => 'La segnalazione non è più in uno stato in cui chiedere informazioni.']);
+            }
+
+            return $richiesta;
+        }
 
         $fresca = $s->fresh();
         $autore = User::find((int) $fresca->id_utente_segnalazione);
@@ -82,9 +96,8 @@ class RichiesteInformazioni
             if (! $richiesta) {
                 return null;
             }
-            $this->riprendi($richiesta, RichiestaInformazioni::ESITO_RISPOSTA, $autore->id, $nota?->id_nota);
 
-            return $richiesta;
+            return $this->riprendi($richiesta, RichiestaInformazioni::ESITO_RISPOSTA, $autore->id, $nota?->id_nota) ? $richiesta : null;
         });
         if (! $richiesta) {
             return false;
@@ -116,7 +129,9 @@ class RichiesteInformazioni
             if (! $richiesta) {
                 return;
             }
-            $this->riprendi($richiesta, RichiestaInformazioni::ESITO_RITIRATA, $gestore->id);
+            if (! $this->riprendi($richiesta, RichiestaInformazioni::ESITO_RITIRATA, $gestore->id)) {
+                return;
+            }
             $s->note()->create([
                 'testo' => 'Richiesta di informazioni ritirata.',
                 'id_utente' => $gestore->id,
@@ -189,13 +204,14 @@ class RichiesteInformazioni
                 return false;
             }
             if (! $r->chiudi_senza_risposta) {
-                $this->riprendi($r, RichiestaInformazioni::ESITO_CHIUSA, 0);
-
-                return true;
+                return $this->riprendi($r, RichiestaInformazioni::ESITO_CHIUSA, 0);
             }
 
             $r->update(['conclusa_at' => now(), 'esito' => RichiestaInformazioni::ESITO_CHIUSA]);
-            $s = Segnalazione::whereKey($r->id_segnalazione)->lockForUpdate()->firstOrFail();
+            $s = Segnalazione::whereKey($r->id_segnalazione)->lockForUpdate()->first();
+            if (! $s || $s->statoEnum() !== SegnalazioneStato::ATTESA_RISPOSTA) {
+                return false;
+            }
             $s->update(['id_stato_segnalazione' => SegnalazioneStato::ANNULLATA->value, 'data_chiusura' => now()]);
             $this->storico($s, SegnalazioneStato::ANNULLATA, 0);
             $s->note()->create([
@@ -233,13 +249,17 @@ class RichiesteInformazioni
 
     /**
      * Conclude la richiesta, riporta la segnalazione allo stato di prima e sposta la scadenza
-     * delle ore lavorative passate in attesa. Da chiamare dentro una transazione.
+     * delle ore lavorative passate in attesa. Da chiamare dentro una transazione. Se la segnalazione
+     * nel frattempo non è più in attesa (accorpata, eliminata…) chiude solo la richiesta: false.
      */
-    public function riprendi(RichiestaInformazioni $r, string $esito, int $idAutore, ?int $idNota = null): void
+    public function riprendi(RichiestaInformazioni $r, string $esito, int $idAutore, ?int $idNota = null): bool
     {
         $r->update(['conclusa_at' => now(), 'esito' => $esito, 'id_nota_risposta' => $idNota]);
 
-        $s = Segnalazione::whereKey($r->id_segnalazione)->lockForUpdate()->firstOrFail();
+        $s = Segnalazione::whereKey($r->id_segnalazione)->lockForUpdate()->first();
+        if (! $s || $s->statoEnum() !== SegnalazioneStato::ATTESA_RISPOSTA) {
+            return false;
+        }
         $stato = SegnalazioneStato::tryFrom($r->stato_precedente) ?? SegnalazioneStato::IN_CARICO;
         $s->id_stato_segnalazione = $stato->value;
 
@@ -268,6 +288,8 @@ class RichiesteInformazioni
         $s->save();
 
         $this->storico($s, $stato, $idAutore);
+
+        return true;
     }
 
     private function storico(Segnalazione $s, SegnalazioneStato $stato, int $idAutore): void
