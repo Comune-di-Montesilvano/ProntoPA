@@ -326,6 +326,24 @@ class SegnalazioneWorkflowService
             $update['id_squadra_assegnata'] = null;
         }
 
+        if ($this->aVuoto($segnalazione, $nuovoStato, $previousStateId, $update)) {
+            // Niente da cambiare (es. "Assegna a me" su una già propria): né storico né avvisi.
+            if (! empty($params['data_scadenza']) && ! $nuovoStato->isTerminale()) {
+                $this->scadenzaManuale->imposta($segnalazione, Carbon::parse($params['data_scadenza']), $user);
+            }
+            $notaTesto = trim((string) ($params['nota'] ?? ''));
+            if ($notaTesto !== '') {
+                $segnalazione->note()->create([
+                    'testo'            => $notaTesto,
+                    'id_utente'        => $user->id,
+                    'visibile_web'     => false,
+                    'visibile_impresa' => (bool) $azione->flag_notifica,
+                ]);
+            }
+
+            return;
+        }
+
         if ($nuovoStato->isTerminale() && $azione->codice !== 'riapri') {
             $update['data_chiusura'] = now();
             $update['sla_violato']   = false;
@@ -380,6 +398,31 @@ class SegnalazioneWorkflowService
         $this->automaticallyPublish($fresca, $previousStateId, $nuovoStato->value);
 
         InviaWebhookOutbound::dispatch($fresca);
+    }
+
+    /**
+     * Stesso stato e stesso assegnatario (operatore, squadra, appalto) dopo l'azione.
+     *
+     * @param  array<string, mixed>  $update
+     */
+    private function aVuoto(Segnalazione $segnalazione, SegnalazioneStato $nuovoStato, int $statoAttuale, array $update): bool
+    {
+        if ($nuovoStato->value !== $statoAttuale || $nuovoStato->isTerminale() || array_key_exists('importo_preventivo', $update)) {
+            return false;
+        }
+
+        // Riassegnare dopo una fine lavori la rimette in corso: non è a vuoto.
+        if (array_key_exists('fine_lavori_at', $update) && $segnalazione->fine_lavori_at !== null) {
+            return false;
+        }
+
+        foreach (['id_operatore_assegnato', 'id_squadra_assegnata', 'id_appalto'] as $campo) {
+            if (array_key_exists($campo, $update) && (int) $update[$campo] !== (int) $segnalazione->getAttribute($campo)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // ── Filtro applicabilità ─────────────────────────────────────────────────
