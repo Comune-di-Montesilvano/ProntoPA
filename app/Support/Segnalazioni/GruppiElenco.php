@@ -10,7 +10,7 @@ use Illuminate\Support\Collection;
  * Il primo livello porta il conteggio sull'intero filtro; la paginazione non spezza mai un gruppo
  * di primo livello (PaginaPerGruppi), quindi ogni gruppo comincia e finisce nella sua pagina.
  *
- * @phpstan-type Cella array{livello: int, tipo: string, chiave: int, nome: string, tono: ?string, icona: ?string,
+ * @phpstan-type Cella array{livello: int, tipo: string, chiave: int, nome: string, dettagli: ?string, tono: ?string, icona: ?string,
  *     rowspan: int, totale: ?int, in_ritardo: ?int, ids: list<int>}
  */
 final class GruppiElenco
@@ -64,6 +64,7 @@ final class GruppiElenco
                     'nome' => $tipo === 'sede'
                         ? ($s->plesso?->nomeLeggibile() ?: 'Senza sede')
                         : ($s->tipologia?->nomeLeggibile() ?: 'Senza tipologia'),
+                    'dettagli' => $tipo === 'sede' ? $s->plesso?->dettagli() : null,
                     'tono' => $tipo === 'tipologia' ? ($s->tipologia?->tono() ?? 'grigio') : null,
                     'icona' => $tipo === 'tipologia' ? ($s->tipologia?->icona ?: 'fas fa-tag') : 'fas fa-school',
                     'rowspan' => $j - $i + 1,

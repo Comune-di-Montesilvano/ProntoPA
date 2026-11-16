@@ -9,7 +9,7 @@
                    x-on:change="scelte = $event.target.checked ? [...new Set([...scelte, ...ids])] : scelte.filter(id => !ids.includes(id))"
                    aria-label="Seleziona le segnalazioni di {{ $cella['nome'] }} ">
         @endif
-        <span class="pa-cella-gruppo-nome">
+        <span class="pa-cella-gruppo-nome" @if(! empty($cella['dettagli'])) title="{{ $cella['dettagli'] }}" @endif>
             <i class="{{ $cella['icona'] }}" aria-hidden="true"></i>{{ $cella['nome'] }}
         </span>
         @if($cella['totale'] !== null)

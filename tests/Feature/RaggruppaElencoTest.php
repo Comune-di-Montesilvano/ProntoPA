@@ -108,4 +108,26 @@ class RaggruppaElencoTest extends TestCase
         $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['tab' => 'chiuse', 'gruppo' => 'sede']))
             ->assertOk()->assertSee('Chiusa ieri')->assertSee('pa-cella-gruppo', false);
     }
+
+    /** Committente: di default sede poi tipologia; la scelta resta all'utente (anche su un altro dispositivo). */
+    public function test_predefinito_sede_tipologia_e_scelta_ricordata(): void
+    {
+        Segnalazione::factory()->create(['id_stato_segnalazione' => 1, 'id_plesso' => $this->sede('ALFA')->id_plesso]);
+
+        $this->actingAs($this->gestore)->get(route('gestione.dashboard'))
+            ->assertOk()->assertSee('<option value="sede_tipologia" selected', false)->assertSee('pa-cella-gruppo', false);
+
+        $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => 'tipologia']))->assertOk();
+        $this->assertSame('tipologia', $this->gestore->fresh()->gruppo_elenco);
+        $this->actingAs($this->gestore->fresh())->get(route('gestione.dashboard'))
+            ->assertOk()->assertSee('<option value="tipologia" selected', false);
+
+        $this->actingAs($this->gestore->fresh())->get(route('gestione.dashboard', ['gruppo' => '']))->assertOk();
+        $this->assertSame('', $this->gestore->fresh()->gruppo_elenco);
+        $this->actingAs($this->gestore->fresh())->get(route('gestione.dashboard'))
+            ->assertOk()->assertSee('<option value="" selected', false)->assertDontSee('pa-cella-gruppo', false);
+
+        $this->actingAs($this->gestore->fresh())->get(route('gestione.dashboard', ['gruppo' => 'fucsia']))->assertOk();
+        $this->assertSame('', $this->gestore->fresh()->gruppo_elenco, 'valore sconosciuto non salvato');
+    }
 }
