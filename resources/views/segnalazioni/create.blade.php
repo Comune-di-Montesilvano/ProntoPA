@@ -152,8 +152,7 @@
                 </div>
                 <div>
                     <label for="aggiornamento-foto" class="pa-field-label">Foto (facoltative)</label>
-                    <input id="aggiornamento-foto" type="file" name="allegati[]" multiple accept="{{ $allegatiMime }}" :disabled="!esistente || diversa"
-                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <x-pa.foto id="aggiornamento-foto" :mime="$allegatiMime" ::disabled="!esistente || diversa" />
                 </div>
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <button type="submit" formnovalidate class="pa-btn pa-btn-primary"
@@ -262,9 +261,7 @@
                 <p class="text-xs text-gray-500 mb-2">
                     Fino a {{ $allegatiMaxPerRequest }} file, {{ $allegatiMaxSizeMb }}&nbsp;MB ciascuno.
                 </p>
-                <input id="allegati_create" type="file" name="allegati[]" multiple :disabled="esistente && !diversa"
-                       accept="{{ $allegatiMime }}"
-                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                <x-pa.foto id="allegati_create" :mime="$allegatiMime" ::disabled="esistente && !diversa" />
                 <x-input-error :messages="$errors->get('allegati')" class="mt-1" />
                 <x-input-error :messages="$errors->get('allegati.*')" class="mt-1" />
             </div>

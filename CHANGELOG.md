@@ -11,6 +11,8 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
   sotto la barra, con un pallino bianco su ogni passaggio; date ed etichette più grandi. Le fasce
   dei giorni chiusi si disegnano solo su segnalazioni aperte da al massimo 4 settimane: oltre
   diventavano righe ovunque (il conteggio resta nel riepilogo).
+- Nuova segnalazione: "Scatta foto" apre direttamente la fotocamera del telefono, accanto a
+  "Scegli dalla galleria"; le foto si sommano, si vedono in anteprima e si possono togliere.
 - Scheda segnalazione: freccia "torna indietro" nella barra in alto, verso l'elenco da cui si
   arriva (filtri e pagina compresi) o la dashboard.
 
