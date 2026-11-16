@@ -45,7 +45,7 @@ class Attivita
     private function voci(): Collection
     {
         /** @var Collection<int, StoricoStatoSegnalazione> $storico */
-        $storico = $this->segnalazione->storicoStati()->orderBy('data_registrazione')->get();
+        $storico = StoricoOrdinato::di($this->segnalazione);
         $dal = $this->inizioLavoro($storico);
 
         $voci = collect();

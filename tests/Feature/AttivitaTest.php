@@ -81,6 +81,57 @@ class AttivitaTest extends TestCase
             ->all();
     }
 
+    /** Storico inserito con id decrescenti: l'ordine deve venire dalla data. */
+    private function segnalazioneConStorico(array $righe): Segnalazione
+    {
+        $s = Segnalazione::factory()->create([
+            'id_utente_segnalazione' => $this->segnalatore->id,
+            'id_stato_segnalazione' => 2,
+            'id_operatore_assegnato' => $this->gestore->id,
+        ]);
+        foreach (array_reverse($righe) as [$stato, $collegato, $quando]) {
+            StoricoStatoSegnalazione::create([
+                'id_segnalazione' => $s->id_segnalazione, 'id_stato_segnalazione' => $stato,
+                'id_utente' => $this->gestore->id, 'id_utente_collegato' => $collegato, 'id_appalto' => 0,
+            ])->forceFill(['data_registrazione' => $quando])->save();
+        }
+
+        return $s->fresh();
+    }
+
+    /** @return \Illuminate\Support\Collection<int, array<string, mixed>> */
+    private function passaggiDalPiuVecchio(Segnalazione $s): \Illuminate\Support\Collection
+    {
+        return Attivita::per($s, $this->gestore)->where('tipo', 'stato')->reverse()->values();
+    }
+
+    public function test_storico_3579_racconta_una_presa_in_carico_e_la_ripresa(): void
+    {
+        $g = $this->gestore->id;
+        $s = $this->segnalazioneConStorico([
+            [2, $g, '2026-11-13 08:16:08'],
+            [6, 0, '2026-11-13 14:00:34'],
+            [2, 0, '2026-11-13 14:01:02'],
+            [2, $g, '2026-11-13 14:01:23'],
+        ]);
+
+        $stati = $this->passaggiDalPiuVecchio($s);
+
+        $this->assertSame(['ha preso in carico', 'ha sospeso', 'ha ripreso'], $stati->pluck('frase')->all());
+        $this->assertSame('08:16', $stati->first()['quando']->format('H:i'));
+    }
+
+    public function test_righe_identiche_consecutive_mostrate_una_volta(): void
+    {
+        $o = $this->operaio->id;
+        $s = $this->segnalazioneConStorico([
+            [3, $o, '2026-11-13 09:00:00'],
+            [3, $o, '2026-11-13 09:01:00'],
+        ]);
+
+        $this->assertCount(1, $this->passaggiDalPiuVecchio($s));
+    }
+
     public function test_segnalante_vede_ufficio_non_nomi(): void
     {
         $tutto = implode("\n", $this->testi($this->segnalatore));
