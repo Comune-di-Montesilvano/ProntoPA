@@ -159,16 +159,14 @@
     @endpush
     @push('scripts')
         <script src="{{ asset('build/vendor/leaflet/leaflet.js') }}?v={{ config('app.version') }}"></script>
+        @include('partials.strati-mappa')
         <script>
             (function () {
                 const fLat = document.getElementById('latitudine');
                 const fLng = document.getElementById('longitudine');
                 const esito = document.getElementById('trova-esito');
                 const mappa = L.map('mappa-sede', { scrollWheelZoom: false }).setView([{{ $cLat }}, {{ $cLng }}], {{ $haPos ? 17 : 13 }});
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-                    maxZoom: 19,
-                }).addTo(mappa);
+                paStratiMappa(mappa);
                 let marker = null;
                 const metti = (lat, lng) => {
                     if (!marker) {

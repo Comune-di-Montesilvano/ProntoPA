@@ -21,6 +21,8 @@ Aggiornamento senza interventi: migration solo additive.
 - Scheda: **"Com'è andata finora"**, il cronogramma degli stati con fine settimana e festivi,
   messaggi, solleciti e scadenza, per comune, scuole e ditte (ognuno vede la sua parte).
 - Scheda del comune: quattro fatti in testa (stato, scadenza, priorità, da quanto è aperta).
+- Mappe (scheda, sede, operaio, Aspetto): selettore **Strade / Satellite** in alto a destra
+  (satellite: immagini Esri World Imagery); la scelta resta nel browser.
 - Sedi senza posizione sulla mappa: segnalate in Enti e sedi e in Stato del sistema; le
   coordinate si cercano da sole ogni mattina (06:10) e si azzerano quando cambia l'indirizzo.
 
