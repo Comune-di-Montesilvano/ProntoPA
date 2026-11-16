@@ -46,17 +46,17 @@ class TabelleRiferimentoSeeder extends Seeder
         // Le tipologie le gestisce l'admin (1.0.0): solo su un'installazione nuova.
         if (! DB::table('tipologie_segnalazioni')->exists()) {
         DB::table('tipologie_segnalazioni')->insertOrIgnore([
-            ['id_tipologia_segnalazione' => 1,  'descrizione' => 'IMPIANTO ELETTRICO',    'icona' => 'fas fa-bolt'],
-            ['id_tipologia_segnalazione' => 2,  'descrizione' => 'INFISSI E PORTE',       'icona' => 'fas fa-door-open'],
-            ['id_tipologia_segnalazione' => 3,  'descrizione' => 'IMPIANTO IDRICO',       'icona' => 'fas fa-faucet'],
-            ['id_tipologia_segnalazione' => 4,  'descrizione' => 'SFALCI E POTATURE',     'icona' => 'fab fa-pagelines'],
-            ['id_tipologia_segnalazione' => 5,  'descrizione' => 'MANUTENZIONE EDILE',    'icona' => 'fas fa-building'],
-            ['id_tipologia_segnalazione' => 6,  'descrizione' => 'IMPIANTO TERMICO',      'icona' => 'fas fa-fire-alt'],
-            ['id_tipologia_segnalazione' => 7,  'descrizione' => 'RETE TELEFONICA / DATI','icona' => 'fas fa-globe'],
-            ['id_tipologia_segnalazione' => 8,  'descrizione' => 'VERDE E GIARDINI',      'icona' => 'fas fa-seedling'],
-            ['id_tipologia_segnalazione' => 9,  'descrizione' => 'ARREDI',                'icona' => 'fas fa-chair'],
-            ['id_tipologia_segnalazione' => 10, 'descrizione' => 'GIOCHI',                'icona' => 'fas fa-running'],
-            ['id_tipologia_segnalazione' => 12, 'descrizione' => 'FONTANE PUBBLICHE',     'icona' => 'fas fa-faucet'],
+            ['id_tipologia_segnalazione' => 1,  'descrizione' => 'IMPIANTO ELETTRICO',    'icona' => 'fas fa-bolt', 'colore' => 'giallo'],
+            ['id_tipologia_segnalazione' => 2,  'descrizione' => 'INFISSI E PORTE',       'icona' => 'fas fa-door-open', 'colore' => 'marrone'],
+            ['id_tipologia_segnalazione' => 3,  'descrizione' => 'IMPIANTO IDRICO',       'icona' => 'fas fa-faucet', 'colore' => 'blu'],
+            ['id_tipologia_segnalazione' => 4,  'descrizione' => 'SFALCI E POTATURE',     'icona' => 'fab fa-pagelines', 'colore' => 'salvia'],
+            ['id_tipologia_segnalazione' => 5,  'descrizione' => 'MANUTENZIONE EDILE',    'icona' => 'fas fa-building', 'colore' => 'pietra'],
+            ['id_tipologia_segnalazione' => 6,  'descrizione' => 'IMPIANTO TERMICO',      'icona' => 'fas fa-fire-alt', 'colore' => 'rosso'],
+            ['id_tipologia_segnalazione' => 7,  'descrizione' => 'RETE TELEFONICA / DATI','icona' => 'fas fa-globe', 'colore' => 'viola'],
+            ['id_tipologia_segnalazione' => 8,  'descrizione' => 'VERDE E GIARDINI',      'icona' => 'fas fa-seedling', 'colore' => 'verde'],
+            ['id_tipologia_segnalazione' => 9,  'descrizione' => 'ARREDI',                'icona' => 'fas fa-chair', 'colore' => 'arancio'],
+            ['id_tipologia_segnalazione' => 10, 'descrizione' => 'GIOCHI',                'icona' => 'fas fa-running', 'colore' => 'rosa'],
+            ['id_tipologia_segnalazione' => 12, 'descrizione' => 'FONTANE PUBBLICHE',     'icona' => 'fas fa-faucet', 'colore' => 'azzurro'],
         ]);
         }
 

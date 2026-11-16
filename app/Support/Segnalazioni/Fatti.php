@@ -19,12 +19,6 @@ use Illuminate\Support\Carbon;
  */
 class Fatti
 {
-    private const COLORI_STATO = [
-        'primary' => 'var(--ente-primary)', 'violet' => 'var(--violet)', 'amber' => 'var(--amber)',
-        'emerald' => 'var(--emerald)', 'slate' => 'var(--slate-500)',
-    ];
-
-    private const COLORI_PRIORITA = [1 => 'var(--slate-400, #9AA3B5)', 2 => 'var(--ente-primary)', 3 => 'var(--amber)', 4 => 'var(--rose)'];
 
     private function __construct(
         private readonly Segnalazione $s,
@@ -68,7 +62,7 @@ class Fatti
             $dettaglio = $parti ? implode(', ', $parti) : null;
         }
 
-        return $this->fatto($stato->etichetta(), $dettaglio, 'slate', self::COLORI_STATO[$stato->tono()] ?? self::COLORI_STATO['slate']);
+        return $this->fatto($stato->etichetta(), $dettaglio, 'slate', \App\Support\Colori::tono($stato->colore())['punto']);
     }
 
     private function assegnatario(SegnalazioneStato $stato): ?string
@@ -185,7 +179,7 @@ class Fatti
                 : ($n === 1 ? 'ora lavorativa' : 'ore lavorative'));
         }
 
-        return $this->fatto($this->s->label_priorita, $dettaglio, 'slate', self::COLORI_PRIORITA[$livello] ?? self::COLORI_PRIORITA[2]);
+        return $this->fatto($this->s->label_priorita, $dettaglio, 'slate', \App\Support\Colori::tono(\App\Support\Colori::priorita($livello))['punto']);
     }
 
     /** @return Fatto */

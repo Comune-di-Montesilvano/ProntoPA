@@ -12,7 +12,7 @@ class TipologiaSegnalazione extends Model
     protected $primaryKey = 'id_tipologia_segnalazione';
     public    $timestamps = false;
 
-    protected $fillable = ['descrizione', 'icona', 'attiva'];
+    protected $fillable = ['descrizione', 'icona', 'attiva', 'colore'];
 
     protected function casts(): array
     {
@@ -25,6 +25,17 @@ class TipologiaSegnalazione extends Model
         return $query->where('attiva', true);
     }
 
+
+    /** Tono della tavolozza unica (App\Support\Colori); senza colore = grigio. */
+    public function tono(): string
+    {
+        return isset(\App\Support\Colori::TONI[(string) $this->colore]) ? (string) $this->colore : 'grigio';
+    }
+
+    public function nomeLeggibile(): string
+    {
+        return \App\Support\NomeLeggibile::di($this->descrizione);
+    }
 
     public function segnalazioni(): HasMany
     {

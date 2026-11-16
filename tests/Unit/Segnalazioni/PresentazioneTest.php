@@ -57,13 +57,14 @@ class PresentazioneTest extends TestCase
         $s = new Segnalazione;
 
         $s->data_scadenza_sla = $ora->copy()->subHours(50);
-        $this->assertSame(['testo' => 'Superata da 2 g', 'tono' => 'rose'], Scadenza::per($s, $ora));
+        // 1.0.4: in ritardo da tempo = testo normale (132 su 142 lo erano: il rosso non diceva più niente).
+        $this->assertSame(['testo' => 'In ritardo di 2 g', 'tono' => 'slate'], Scadenza::per($s, $ora));
 
         $s->data_scadenza_sla = $ora->copy()->subHours(5);
-        $this->assertSame(['testo' => 'Superata da 5 h', 'tono' => 'rose'], Scadenza::per($s, $ora));
+        $this->assertSame(['testo' => 'In ritardo di 5 h', 'tono' => 'rose'], Scadenza::per($s, $ora));
 
         $s->data_scadenza_sla = $ora->copy()->addHours(6);
-        $this->assertSame(['testo' => 'Entro 6 h', 'tono' => 'amber'], Scadenza::per($s, $ora));
+        $this->assertSame(['testo' => 'Entro 6 h', 'tono' => 'rose'], Scadenza::per($s, $ora));
 
         $s->data_scadenza_sla = $ora->copy()->addDays(4);
         $this->assertSame(['testo' => 'Entro 4 g', 'tono' => 'slate'], Scadenza::per($s, $ora));

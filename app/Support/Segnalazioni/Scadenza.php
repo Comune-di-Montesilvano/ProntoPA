@@ -26,14 +26,16 @@ class Scadenza
         }
 
         $ore = intdiv(abs($secondi), 3600);
+        // 1.0.4: rosso solo per ciò che è appena scaduto o scade entro 24 h; il ritardo vecchio
+        // è testo normale (in prod 132 aperte su 142 erano in ritardo: il rosso non distingueva più).
         if ($secondi < 0) {
-            $testo = $ore >= 24 ? 'Superata da '.intdiv($ore, 24).' g' : 'Superata da '.max(1, $ore).' h';
-
-            return ['testo' => $testo, 'tono' => 'rose'];
+            return $ore >= 24
+                ? ['testo' => 'In ritardo di '.intdiv($ore, 24).' g', 'tono' => 'slate']
+                : ['testo' => 'In ritardo di '.max(1, $ore).' h', 'tono' => 'rose'];
         }
 
         if ($ore < 24) {
-            return ['testo' => 'Entro '.max(1, $ore).' h', 'tono' => 'amber'];
+            return ['testo' => 'Entro '.max(1, $ore).' h', 'tono' => 'rose'];
         }
 
         return ['testo' => 'Entro '.intdiv($ore, 24).' g', 'tono' => 'slate'];

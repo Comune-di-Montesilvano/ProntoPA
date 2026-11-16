@@ -109,12 +109,11 @@
                     @foreach($tipologie as $t)
                         <button type="button"
                                 @click="tipologiaId = {{ $t->id_tipologia_segnalazione }}"
-                                :class="tipologiaId == {{ $t->id_tipologia_segnalazione }}
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                    : 'border-gray-200 bg-white text-gray-500 hover:border-blue-300 hover:text-blue-600'"
-                                class="flex flex-col items-center gap-1.5 px-2 py-3 border-2 rounded-lg transition cursor-pointer select-none">
-                            <span><i class="{{ $t->icona ?? 'fas fa-circle' }} text-lg"></i></span>
-                            <span class="text-xs font-semibold uppercase text-center leading-tight">{{ $t->descrizione }}</span>
+                                :class="tipologiaId == {{ $t->id_tipologia_segnalazione }} ? 'pa-riquadro-scelto' : ''"
+                                :aria-pressed="tipologiaId == {{ $t->id_tipologia_segnalazione }}"
+                                class="pa-riquadro-tipologia pa-tono-{{ $t->tono() }}">
+                            <span><i class="{{ $t->icona ?: 'fas fa-tag' }} text-lg" aria-hidden="true"></i></span>
+                            <span class="text-xs font-semibold text-center leading-tight">{{ $t->nomeLeggibile() }}</span>
                         </button>
                     @endforeach
                 </div>
@@ -203,10 +202,9 @@
                     @foreach([1 => 'Bassa', 2 => 'Media', 3 => 'Alta', 4 => 'Critica'] as $val => $label)
                         <button type="button"
                                 @click="priorita = {{ $val }}"
-                                :class="priorita == {{ $val }}
-                                    ? '{{ match($val) { 1 => 'bg-gray-200 text-gray-700 border-gray-400', 2 => 'bg-blue-100 text-blue-700 border-blue-400', 3 => 'bg-orange-100 text-orange-700 border-orange-400', 4 => 'bg-red-100 text-red-700 border-red-500' } }}'
-                                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'"
-                                class="px-4 py-2 border-2 rounded-lg text-sm font-semibold transition select-none">
+                                :class="priorita == {{ $val }} ? 'pa-priorita-{{ $val }} {{ \App\Support\Colori::priorita($val) ? 'pa-tono-'.\App\Support\Colori::priorita($val) : '' }} pa-riquadro-scelto' : ''"
+                                :aria-pressed="priorita == {{ $val }}"
+                                class="pa-scelta-priorita">
                             {{ $label }}
                         </button>
                     @endforeach

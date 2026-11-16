@@ -1,17 +1,35 @@
 {{-- Riga di un elenco di segnalazioni (tabella .pa-elenco, a scheda sotto 768px).
-     Parametri: s, colonne (seleziona|priorita|segnalazione|stato|assegnata|scadenza|aggiornata|affida|azioni),
+     Parametri: s, colonne (sede|tipologia|seleziona|stato|priorita|scadenza|segnalazione|aggiornata|affida|azioni),
      lettura ('gestore'|'lavoro'|'segnalante', default gestore), rapide (azioni rapide, opzionale),
-     segui (true = visibile solo per adesione, lettura segnalante), membri (caposquadra, colonna affida). --}}
+     segui (true = visibile solo per adesione, lettura segnalante), membri (caposquadra, colonna affida),
+     celle (celle di gruppo con rowspan da GruppiElenco, solo elenco gestione raggruppato).
+     Colori (1.0.4): stato = pallino, tipologia = sfondo pieno, priorità = etichetta (Media non si mostra). --}}
 @php
     $lettura = $lettura ?? 'gestore';
     $stato = $s->statoEnum();
     $url = route('segnalazioni.show', $s->id_segnalazione);
-    $titolo = $s->titoloLeggibile(80);
-    $sede = $s->plesso?->nome;
 @endphp
 <tr>
+    @foreach(($celle ?? []) as $cella)
+        @include('segnalazioni._cella-gruppo', ['cella' => $cella])
+    @endforeach
     @foreach($colonne as $colonna)
         @switch($colonna)
+            @case('sede')
+                <td class="pa-col-sede">
+                    <span class="pa-sede" @if($s->plesso) title="{{ $s->plesso->dettagli() }}" @endif>
+                        <i class="fas fa-school" aria-hidden="true"></i>{{ $s->plesso?->nomeLeggibile() ?? 'Senza sede' }}
+                    </span>
+                </td>
+                @break
+
+            @case('tipologia')
+                <td class="pa-col-tipologia pa-cella-tipologia pa-tono-{{ $s->tipologia?->tono() ?? 'grigio' }}">
+                    <i class="{{ $s->tipologia?->icona ?: 'fas fa-tag' }}" aria-hidden="true"></i>
+                    <span>{{ $s->tipologia?->nomeLeggibile() ?? 'Senza tipologia' }}</span>
+                </td>
+                @break
+
             @case('seleziona')
                 <td class="pa-col-seleziona">
                     <input type="checkbox" value="{{ $s->id_segnalazione }}" x-model="scelte"
@@ -20,24 +38,18 @@
                 @break
 
             @case('priorita')
-                <td class="pa-col-priorita whitespace-nowrap">
-                    <x-pa.prio :livello="$s->livello_priorita" />
+                <td class="pa-col-priorita">
+                    <x-pa.priorita :livello="$s->livello_priorita" />
                 </td>
                 @break
 
             @case('segnalazione')
-                <td class="pa-col-segnalazione min-w-0">
-                    <a href="{{ $url }}" class="pa-elenco-titolo"
-                       title="Segnalata il {{ $s->data_segnalazione?->format('d/m/Y') }}">{{ $titolo }}</a>
-                    @if($lettura === 'gestore')
-                        @if($s->flag_evidenza)<i class="fas fa-star ml-1 text-[var(--amber)]" title="In evidenza" aria-label="In evidenza"></i>@endif
-                        @if($s->flag_riservata)<i class="fas fa-lock ml-1 text-[var(--slate-500)]" title="Riservata" aria-label="Riservata"></i>@endif
-                    @endif
-                    <div class="pa-elenco-meta">
-                        <span class="pa-mono">#{{ $s->id_segnalazione }}</span>
-                        · <i class="{{ $s->tipologia?->icona ?? 'fas fa-circle' }}" aria-hidden="true"></i> {{ $s->tipologia?->descrizione ?? '—' }}
-                        @if($sede) · <span @if($s->plesso) title="{{ $s->plesso->dettagli() }}" @endif>{{ $sede }}</span>@endif
-                    </div>
+                <td class="pa-col-segnalazione">
+                    <a href="{{ $url }}" class="pa-elenco-testo" title="Segnalata il {{ $s->data_segnalazione?->format('d/m/Y') }}">
+                        <span class="pa-mono pa-elenco-id">#{{ $s->id_segnalazione }}</span>
+                        @if($lettura === 'gestore' && $s->flag_evidenza)<i class="fas fa-star text-[var(--amber)]" title="In evidenza" aria-label="In evidenza"></i>@endif
+                        {{ $s->titoloLeggibile(260) }}
+                    </a>
                     @if(! empty($segui) || ($lettura !== 'segnalante' && ($s->isSollecitata() || $s->isRicorrente())))
                         <div class="mt-1 flex flex-wrap gap-1">
                             @if(! empty($segui))<x-pa.pill tono="primary">Segui</x-pa.pill>@endif
@@ -49,29 +61,20 @@
                 @break
 
             @case('stato')
-                <td class="pa-col-stato whitespace-nowrap">
+                <td class="pa-col-stato">
                     @if($lettura === 'segnalante')
-                        @php $frase = $stato->fraseSegnalante(); @endphp
-                        <x-pa.pill :tono="$stato->tono()" title="{{ $frase['dettaglio'] }}">{{ $frase['titolo'] }}</x-pa.pill>
+                        <x-pa.stato :stato="$stato" segnalante />
+                    @elseif($lettura === 'gestore')
+                        <x-pa.stato :stato="$stato"
+                            :chi="$s->isChiusa() ? null : ($s->nomeAssegnatario() ?? ($stato === \App\Enums\SegnalazioneStato::NUOVA ? 'da assegnare' : null))" />
                     @else
-                        <x-pa.pill :tono="$stato->tono()">{{ $stato->etichetta() }}</x-pa.pill>
-                    @endif
-                </td>
-                @break
-
-            @case('assegnata')
-                <td class="pa-col-assegnata">
-                    @php $assegnatario = $s->nomeAssegnatario(); @endphp
-                    @if($assegnatario)
-                        <span class="text-[var(--slate-700)]">{{ $assegnatario }}</span>
-                    @else
-                        <span class="text-[var(--slate-400)]">Da assegnare</span>
+                        <x-pa.stato :stato="$stato" />
                     @endif
                 </td>
                 @break
 
             @case('scadenza')
-                <td class="pa-col-scadenza whitespace-nowrap">
+                <td class="pa-col-scadenza">
                     @if($s->isChiusa())
                         <span class="text-sm text-[var(--slate-500)]">Chiusa il {{ $s->data_chiusura?->format('d/m/Y') }}</span>
                     @else
@@ -88,7 +91,7 @@
                 @break
 
             @case('affida')
-                <td class="pa-col-assegnata">
+                <td class="pa-col-affida">
                     @if(! $s->id_operatore_assegnato && ($membri ?? collect())->isNotEmpty())
                         <form method="POST" action="{{ route('operaio.smista', $s->id_segnalazione) }}" class="flex gap-2">
                             @csrf

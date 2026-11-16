@@ -88,8 +88,10 @@ class PublicHomeController extends Controller
                 'mesiTotali' => $mesiTotali,
                 'tipologiaLabel' => $perTipologia->map(fn ($record) => $record->tipologia?->descrizione ?? 'N/D')->toArray(),
                 'tipologiaTotali' => $perTipologia->pluck('totale')->toArray(),
+                'tipologiaColori' => $perTipologia->map(fn ($r) => \App\Support\Colori::tono($r->tipologia?->tono())['punto'])->values()->all(),
                 'statoLabel' => $perStato->map(fn ($record) => $record->stato?->descrizione ?? 'N/D')->toArray(),
                 'statoTotali' => $perStato->pluck('totale')->toArray(),
+                'statoColori' => $perStato->map(fn ($r) => \App\Support\Colori::tono($r->statoEnum()->colore())['punto'])->values()->all(),
             ];
         });
 

@@ -346,7 +346,8 @@ class ProssimoPasso
     /** @return 'rose'|'amber'|'primary' */
     private function tonoScadenza(): string
     {
-        $tono = Scadenza::per($this->s)['tono'] ?? 'slate';
+        // Estesa: nella scheda il ritardo resta rosso anche se vecchio (l'elenco invece lo attenua).
+        $tono = Scadenza::estesa($this->s)['tono'] ?? 'slate';
 
         return $tono === 'slate' ? 'primary' : $tono;
     }

@@ -124,11 +124,6 @@
     @push('scripts')
     <script src="{{ asset('build/vendor/chart.umd.min.js') }}?v={{ config('app.version') }}"></script>
     <script>
-        const PALETTE = [
-            '#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6',
-            '#06B6D4','#84CC16','#F97316','#EC4899','#6B7280',
-        ];
-
         @if(count($mesiLabel) > 0)
         new Chart(document.getElementById('chartMesi'), {
             type: 'bar',
@@ -150,7 +145,7 @@
             type: 'doughnut',
             data: {
                 labels: @json($tipologiaLabel),
-                datasets: [{ data: @json($tipologiaTotali), backgroundColor: PALETTE }],
+                datasets: [{ data: @json($tipologiaTotali), backgroundColor: @json($tipologiaColori) }],
             },
             options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } },
         });
@@ -161,7 +156,7 @@
             type: 'doughnut',
             data: {
                 labels: @json($statoLabel),
-                datasets: [{ data: @json($statoTotali), backgroundColor: PALETTE }],
+                datasets: [{ data: @json($statoTotali), backgroundColor: @json($statoColori) }],
             },
             options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } },
         });

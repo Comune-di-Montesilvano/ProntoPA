@@ -195,7 +195,7 @@ class FormNuovaSegnalazioneTest extends TestCase
         TipologiaSegnalazione::create(['descrizione' => 'VECCHIA SPENTA', 'icona' => 'fas fa-star', 'attiva' => false]);
 
         $this->actingAs($this->urp)->get(route('segnalazioni.create'))
-            ->assertOk()->assertSee('IMPIANTO ELETTRICO')->assertDontSee('VECCHIA SPENTA');
+            ->assertOk()->assertSee('Impianto Elettrico')->assertDontSee('Vecchia Spenta');
 
         $id = TipologiaSegnalazione::where('descrizione', 'VECCHIA SPENTA')->value('id_tipologia_segnalazione');
         $this->actingAs($this->urp)->post(route('segnalazioni.store'), $this->dati(['id_tipologia_segnalazione' => $id]))

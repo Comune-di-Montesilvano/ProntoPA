@@ -13,6 +13,7 @@
         <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap" rel="stylesheet">
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('partials.toni')
 
         @php $brandPrimary = \App\Models\Impostazione::get('ente_colore_primario', '#0B3A8C'); @endphp
         <style>
