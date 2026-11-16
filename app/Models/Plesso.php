@@ -66,6 +66,12 @@ class Plesso extends Model
      * Testo per le select: nomi simili (doppioni legacy/MIUR, più plessi nella
      * stessa via) si distinguono solo con ordine, codice e indirizzo.
      */
+    /** Nome per elenchi e testate: a DB è spesso tutto maiuscolo. */
+    public function nomeLeggibile(): string
+    {
+        return \App\Support\NomeLeggibile::di($this->nome);
+    }
+
     public function etichetta(): string
     {
         return $this->nome.' — '.$this->dettagli();

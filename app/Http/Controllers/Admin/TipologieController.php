@@ -50,7 +50,7 @@ class TipologieController extends Controller
             ->with('success', "\"{$tipologia->descrizione}\" unita in \"{$destinazione->descrizione}\": le segnalazioni sono passate lì.");
     }
 
-    /** @return array{descrizione: string, icona: ?string} */
+    /** @return array{descrizione: string, icona: string, colore: ?string} */
     private function valida(Request $request, ?TipologiaSegnalazione $ignora = null): array
     {
         $unica = Rule::unique('tipologie_segnalazioni', 'descrizione');
@@ -58,12 +58,14 @@ class TipologieController extends Controller
             $unica->ignore($ignora->id_tipologia_segnalazione, 'id_tipologia_segnalazione');
         }
 
-        /** @var array{descrizione: string, icona: ?string} */
+        /** @var array{descrizione: string, icona: ?string, colore: ?string} */
         $dati = $request->validate([
             // La colonna è varchar(50) e icona NOT NULL default '' (MariaDB strict).
             'descrizione' => ['required', 'string', 'max:50', $unica],
             'icona' => ['nullable', 'string', 'max:50', 'regex:/^fa[bsr]? fa-[a-z0-9-]+$/'],
+            'colore' => ['nullable', Rule::in(array_keys(\App\Support\Colori::TONI))],
         ]);
+        $dati['colore'] = $dati['colore'] ?? null;
         $dati['icona'] = $dati['icona'] ?? '';
 
         return $dati;
