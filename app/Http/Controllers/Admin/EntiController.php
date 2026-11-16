@@ -23,12 +23,14 @@ class EntiController extends Controller
     {
         $q = trim((string) $request->query('q', ''));
         $filtroCategoria = $request->filled('categoria') ? (int) $request->query('categoria') : null;
+        $senzaPosizione = $request->boolean('senza_posizione');
 
         $enti = Istituto::query()
             ->select('istituti.*')
             ->join('categorie_enti', 'categorie_enti.id_categoria', '=', 'istituti.id_categoria')
             ->with(['categoria', 'plessi' => fn ($p) => $p->orderBy('nome')])
             ->when($filtroCategoria, fn ($qb) => $qb->where('istituti.id_categoria', $filtroCategoria))
+            ->when($senzaPosizione, fn ($qb) => $qb->whereHas('plessi', fn ($p) => $p->whereNull('latitudine')))
             ->when($q !== '', function ($qb) use ($q) {
                 $like = '%'.addcslashes($q, '%_\\').'%';
                 $qb->where(fn ($w) => $w->where('istituti.descrizione', 'like', $like)

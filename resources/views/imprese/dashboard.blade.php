@@ -54,23 +54,19 @@
             @if($segnalazioni->isEmpty())
                 <p class="m-0 p-10 text-center text-sm text-[var(--slate-500)]">Nessun lavoro in questa vista.</p>
             @else
+                @if($segnalazioni->hasPages())
+                    <div class="pa-paginazione border-b border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->withQueryString()->links() }}</div>
+                @endif
                 <table class="pa-elenco">
-                    <thead>
-                        <tr>
-                            <th scope="col">Priorità</th>
-                            <th scope="col">Segnalazione</th>
-                            <th scope="col">Entro</th>
-                            <th scope="col">Stato</th>
-                        </tr>
-                    </thead>
+                    @include('segnalazioni._intestazione', ['colonne' => ['sede', 'tipologia', 'stato', 'priorita', 'scadenza', 'segnalazione']])
                     <tbody>
                         @foreach($segnalazioni as $s)
-                            @include('segnalazioni._riga', ['colonne' => ['priorita', 'segnalazione', 'scadenza', 'stato'], 'lettura' => 'lavoro'])
+                            @include('segnalazioni._riga', ['colonne' => ['sede', 'tipologia', 'stato', 'priorita', 'scadenza', 'segnalazione'], 'lettura' => 'lavoro'])
                         @endforeach
                     </tbody>
                 </table>
                 @if($segnalazioni->hasPages())
-                    <div class="border-t border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->withQueryString()->links() }}</div>
+                    <div class="pa-paginazione border-t border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->withQueryString()->links() }}</div>
                 @endif
             @endif
         </div>

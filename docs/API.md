@@ -115,6 +115,11 @@ Restituisce lo stato corrente di una segnalazione.
 }
 ```
 
+Valori di `stato.id`: 1 Nuova · 2 In carico · 3 Assegnata · 4 Assegnata a ditta · 5 Preventivo
+in attesa · 6 Sospesa · 7 Completata · 8 Accorpata · 9 Chiusa senza intervento · 10 Archiviata ·
+11 In attesa di risposta (1.0.2: il comune ha chiesto informazioni a chi ha segnalato; non è
+chiusa, la scadenza è ferma).
+
 **Risposta 404 Not Found:** la segnalazione non esiste.
 
 **Esempio curl:**

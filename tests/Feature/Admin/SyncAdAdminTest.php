@@ -143,15 +143,17 @@ class SyncAdAdminTest extends TestCase
 
     public function test_modifica_utente_spid_cambia_ancora_il_ruolo(): void
     {
-        $spid = User::factory()->create(['attivo' => true, 'auth_source' => 'spid', 'username' => 'RSSMRA80A01G482X', 'email' => 's@x.it']);
+        $spid = User::factory()->create(['attivo' => true, 'auth_source' => 'spid', 'username' => 'RSSMRA80A01G482X', 'email' => 's@x.it', 'name' => 'Mario Rossi']);
         $spid->assignRole('segnalatore');
+        $this->actingAs($this->admin)->get(route('admin.utenti.edit', $spid))->assertOk()->assertDontSee('name="name"', false);
 
         $this->actingAs($this->admin)->put(route('admin.utenti.update', $spid), [
             'name' => 'Nuovo', 'username' => 'RSSMRA80A01G482X', 'email' => 's@x.it', 'ruolo' => 'gestore', 'attivo' => '1',
         ])->assertRedirect(route('admin.utenti.scuole'));
 
         $this->assertTrue($spid->fresh()->hasRole('gestore'));
-        $this->assertSame('Nuovo', $spid->fresh()->name);
+        // Nome e cognome arrivano da SPID/CIE: l'admin non li cambia.
+        $this->assertSame('Mario Rossi', $spid->fresh()->name);
     }
 
     public function test_non_admin_non_puo_sincronizzare(): void

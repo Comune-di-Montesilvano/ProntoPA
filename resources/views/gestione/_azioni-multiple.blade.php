@@ -8,8 +8,15 @@
         'tipologie' => $a->tutte_tipologie ? null : $a->tipologie->pluck('id_tipologia_segnalazione')->map(fn ($id) => (int) $id)->values(),
     ])->values();
     $tipologiaDi = $segnalazioni->mapWithKeys(fn ($s) => [(string) $s->id_segnalazione => (int) $s->id_tipologia_segnalazione]);
+    // Accorpa: sede, tipologia, data e apertura di ogni riga, per dire subito se si può e chi resta.
+    $perAccorpa = $segnalazioni->mapWithKeys(fn ($s) => [(string) $s->id_segnalazione => [
+        'chiave' => (int) $s->id_plesso && (int) $s->id_tipologia_segnalazione ? $s->id_plesso.'|'.$s->id_tipologia_segnalazione : null,
+        'quando' => $s->data_segnalazione?->getTimestamp() ?? PHP_INT_MAX,
+        'aperta' => ! $s->isChiusa(),
+        'titolo' => $s->titoloLeggibile(60),
+    ]]);
     $ritorno = request()->getQueryString();
-    $motivi = \App\Services\SegnalazioneWorkflowService::MOTIVI_SENZA_INTERVENTO;
+    $motivi = \App\Services\SegnalazioneWorkflowService::MOTIVI_MANUALI;
 @endphp
 
 <div x-show="scelte.length" x-cloak class="pa-barra-multipla" role="region" aria-label="Azioni sulle segnalazioni selezionate">
@@ -18,6 +25,7 @@
         <x-pa.btn size="sm" variant="primary" x-on:click="$dispatch('apri-pannello', 'multi-assegna')">Assegna…</x-pa.btn>
         <x-pa.btn size="sm" x-on:click="$dispatch('apri-pannello', 'multi-chiudi')">Chiudi</x-pa.btn>
         <x-pa.btn size="sm" x-on:click="$dispatch('apri-pannello', 'multi-senza-intervento')">Chiudi senza intervento</x-pa.btn>
+        <x-pa.btn size="sm" x-on:click="$dispatch('apri-pannello', 'multi-accorpa')">Accorpa…</x-pa.btn>
         <a class="pa-btn pa-btn-outline pa-btn-sm" target="_blank" rel="noopener"
            :href="@js(route('gestione.stampa-schede')) + '?' + scelte.map(id => 'ids[]=' + id).join('&')">Stampa schede</a>
         <x-pa.btn size="sm" x-on:click="scelte = []">Deseleziona</x-pa.btn>
@@ -159,6 +167,43 @@
         <footer class="flex justify-end gap-2 border-t border-[var(--slate-200)] px-6 py-4">
             <x-pa.btn x-on:click="$dispatch('apri-pannello', '')">Annulla</x-pa.btn>
             <x-pa.btn type="submit" variant="danger">Chiudi senza intervento</x-pa.btn>
+        </footer>
+    </form>
+</x-pa.drawer>
+
+<x-pa.drawer name="multi-accorpa" title="Accorpa le segnalazioni selezionate">
+    <form method="POST" action="{{ route('gestione.azioni-multiple') }}" class="flex flex-1 flex-col"
+          x-data="{ righe: @js($perAccorpa),
+                    get stessa() { const k = this.scelte.map(id => this.righe[id]?.chiave); return k.length > 1 && k[0] != null && k.every(x => x === k[0]); },
+                    get aperte() { return this.scelte.filter(id => this.righe[id]?.aperta).sort((a, b) => this.righe[a].quando - this.righe[b].quando || a - b); },
+                    get destinazione() { return this.aperte[0] ?? null; },
+                    get puo() { return this.stessa && this.aperte.length > 1; } }">
+        {!! $intestazione('accorpa') !!}
+        <template x-for="id in scelte" :key="id"><input type="hidden" name="ids[]" :value="id"></template>
+        <div class="flex flex-1 flex-col gap-4 px-6 py-5 text-sm">
+            <p class="m-0 text-[var(--slate-600)]">
+                Si accorpano solo segnalazioni della <strong>stessa sede</strong> e della <strong>stessa tipologia</strong>.
+                La più vecchia resta aperta e riceve le altre: foto, chi l'ha segnalata e il testo finiscono lì, e chi aveva segnalato viene avvisato.
+            </p>
+            <template x-if="! stessa">
+                <p class="m-0 rounded-md bg-[var(--rose-100)] px-3 py-2 text-[var(--rose)]" role="alert">
+                    Le segnalazioni scelte hanno sedi o tipologie diverse (o sono senza sede): non si possono accorpare.
+                </p>
+            </template>
+            <template x-if="stessa && aperte.length < 2">
+                <p class="m-0 rounded-md bg-[var(--rose-100)] px-3 py-2 text-[var(--rose)]" role="alert">Servono almeno due segnalazioni ancora aperte.</p>
+            </template>
+            <template x-if="puo">
+                <div class="flex flex-col gap-2">
+                    <p class="m-0">Resta aperta la <strong x-text="'#' + destinazione"></strong>, la più vecchia:</p>
+                    <p class="m-0 rounded-md bg-[var(--slate-50)] px-3 py-2" x-text="righe[destinazione].titolo"></p>
+                    <p class="m-0">Vengono accorpate in lei <strong x-text="aperte.length - 1"></strong> segnalazioni.</p>
+                </div>
+            </template>
+        </div>
+        <footer class="flex justify-end gap-2 border-t border-[var(--slate-200)] px-6 py-4">
+            <x-pa.btn x-on:click="$dispatch('apri-pannello', '')">Annulla</x-pa.btn>
+            <x-pa.btn type="submit" variant="primary" x-bind:disabled="! puo">Accorpa</x-pa.btn>
         </footer>
     </form>
 </x-pa.drawer>

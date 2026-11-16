@@ -199,7 +199,7 @@ class StatoSistema
     /** Sedi senza posizione: niente mappa né "Naviga" per chi va sul posto. Nessuna chiamata di rete. */
     private function sedi(): Riquadro
     {
-        $url = route('admin.enti.index');
+        $url = route('admin.enti.index', ['senza_posizione' => 1]);
         $titolo = 'Posizione delle sedi';
         $n = \App\Models\Plesso::whereHas('istituto', fn ($q) => $q->where('attivo', true))
             ->where(fn ($q) => $q->whereNull('latitudine')->orWhereNull('longitudine'))->count();

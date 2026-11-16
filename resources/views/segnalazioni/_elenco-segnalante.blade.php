@@ -6,18 +6,15 @@
             <x-pa.btn variant="primary" :href="route('segnalazioni.create')">Inserisci una segnalazione</x-pa.btn>
         </div>
     @else
+        @if($segnalazioni->hasPages())
+            <div class="pa-paginazione border-b border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->links() }}</div>
+        @endif
         <table class="pa-elenco">
-            <thead>
-                <tr>
-                    <th scope="col">Segnalazione</th>
-                    <th scope="col">Stato</th>
-                    <th scope="col">Aggiornata</th>
-                </tr>
-            </thead>
+            @include('segnalazioni._intestazione', ['colonne' => ['sede', 'tipologia', 'stato', 'segnalazione', 'aggiornata']])
             <tbody>
                 @foreach($segnalazioni as $s)
                     @include('segnalazioni._riga', [
-                        'colonne' => ['segnalazione', 'stato', 'aggiornata'],
+                        'colonne' => ['sede', 'tipologia', 'stato', 'segnalazione', 'aggiornata'],
                         'lettura' => 'segnalante',
                         'segui' => in_array((int) $s->id_segnalazione, $seguite, true),
                     ])
@@ -25,7 +22,7 @@
             </tbody>
         </table>
         @if($segnalazioni->hasPages())
-            <div class="border-t border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->links() }}</div>
+            <div class="pa-paginazione border-t border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->links() }}</div>
         @endif
     @endif
 </div>

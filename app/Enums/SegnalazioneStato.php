@@ -14,6 +14,7 @@ enum SegnalazioneStato: int
     case DUPLICATA            = 8;
     case ANNULLATA            = 9;
     case ARCHIVIATA           = 10;
+    case ATTESA_RISPOSTA      = 11;
 
     public function isTerminale(): bool
     {
@@ -36,6 +37,7 @@ enum SegnalazioneStato: int
             self::DUPLICATA            => 'Duplicata',
             self::ANNULLATA            => 'Chiusa senza intervento',
             self::ARCHIVIATA           => 'Archiviata',
+            self::ATTESA_RISPOSTA      => 'In attesa di risposta',
         };
     }
 
@@ -52,7 +54,14 @@ enum SegnalazioneStato: int
             self::DUPLICATA            => 'bg-orange-100 text-orange-700',
             self::ANNULLATA            => 'bg-red-100 text-red-700',
             self::ARCHIVIATA           => 'bg-gray-200 text-gray-600',
+            self::ATTESA_RISPOSTA      => 'bg-amber-100 text-amber-800',
         };
+    }
+
+    /** Colore dello stato nella tavolozza unica (App\Support\Colori). */
+    public function colore(): string
+    {
+        return \App\Support\Colori::stato($this);
     }
 
     /** Tono del linguaggio visivo ProntoPA (token in resources/css/app.css). */
@@ -61,7 +70,7 @@ enum SegnalazioneStato: int
         return match($this) {
             self::IN_CARICO                                   => 'primary',
             self::ASSEGNATA_OPERATORE, self::ASSEGNATA_IMPRESA => 'violet',
-            self::PREVENTIVO_IN_ATTESA, self::SOSPESA         => 'amber',
+            self::PREVENTIVO_IN_ATTESA, self::SOSPESA, self::ATTESA_RISPOSTA => 'amber',
             self::COMPLETATA                                  => 'emerald',
             default                                           => 'slate',
         };
@@ -90,6 +99,7 @@ enum SegnalazioneStato: int
             self::DUPLICATA  => ['titolo' => 'Già in lavorazione', 'dettaglio' => 'Era già stata segnalata: segui gli aggiornamenti nella segnalazione collegata.'],
             self::ANNULLATA  => ['titolo' => 'Chiusa senza intervento', 'dettaglio' => 'La segnalazione è stata chiusa senza intervento.'],
             self::ARCHIVIATA => ['titolo' => 'Archiviata', 'dettaglio' => 'La segnalazione è stata archiviata.'],
+            self::ATTESA_RISPOSTA => ['titolo' => 'Ti abbiamo chiesto informazioni', 'dettaglio' => 'Rispondi per farci andare avanti.'],
         };
     }
 
@@ -98,7 +108,7 @@ enum SegnalazioneStato: int
     {
         return match($this) {
             self::NUOVA     => 1,
-            self::IN_CARICO => 2,
+            self::IN_CARICO, self::ATTESA_RISPOSTA => 2,
             self::ASSEGNATA_OPERATORE, self::ASSEGNATA_IMPRESA, self::PREVENTIVO_IN_ATTESA, self::SOSPESA => 3,
             default         => 4,
         };

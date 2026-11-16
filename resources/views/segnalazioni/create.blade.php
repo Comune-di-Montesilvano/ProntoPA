@@ -36,11 +36,13 @@
                   tipologiaId: @js(old('id_tipologia_segnalazione') ? (int) old('id_tipologia_segnalazione') : null),
                   simili: [],
                   ignora: false,
+                  esistente: null,
+                  diversa: @js((bool) old('diversa_da')),
                   indirizzo() { return this.indirizzi[this.sede] ?? '' },
                   scegliIstituto() { this.sede = this.sediUniche[this.istituto] ?? '' },
               }"
-              x-init="$watch('tipologiaId', () => { ignora = false; controllaSimili($data) });
-                      $watch('sede', () => { ignora = false; controllaSimili($data) });
+              x-init="$watch('tipologiaId', () => { ignora = false; diversa = false; controllaSimili($data) });
+                      $watch('sede', () => { ignora = false; diversa = false; controllaSimili($data) });
                       controllaSimili($data)">
             @csrf
 
@@ -107,18 +109,64 @@
                     @foreach($tipologie as $t)
                         <button type="button"
                                 @click="tipologiaId = {{ $t->id_tipologia_segnalazione }}"
-                                :class="tipologiaId == {{ $t->id_tipologia_segnalazione }}
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                    : 'border-gray-200 bg-white text-gray-500 hover:border-blue-300 hover:text-blue-600'"
-                                class="flex flex-col items-center gap-1.5 px-2 py-3 border-2 rounded-lg transition cursor-pointer select-none">
-                            <span><i class="{{ $t->icona ?? 'fas fa-circle' }} text-lg"></i></span>
-                            <span class="text-xs font-semibold uppercase text-center leading-tight">{{ $t->descrizione }}</span>
+                                :class="tipologiaId == {{ $t->id_tipologia_segnalazione }} ? 'pa-riquadro-scelto' : ''"
+                                :aria-pressed="tipologiaId == {{ $t->id_tipologia_segnalazione }}"
+                                class="pa-riquadro-tipologia pa-tono-{{ $t->tono() }}">
+                            <span><i class="{{ $t->icona ?: 'fas fa-tag' }} text-lg" aria-hidden="true"></i></span>
+                            <span class="text-xs font-semibold text-center leading-tight">{{ $t->nomeLeggibile() }}</span>
                         </button>
                     @endforeach
                 </div>
                 <x-input-error :messages="$errors->get('id_tipologia_segnalazione')" class="mt-1" />
             </div>
 
+            {{-- 3a. Già aperta per stessa sede e tipologia (1.0.2): si scrive lì, salvo problema diverso. --}}
+            <input type="hidden" name="diversa_da" :value="diversa && esistente ? esistente.id : ''">
+            <div x-show="esistente && !diversa" style="display: none" class="pa-card pa-passo pa-passo-amber p-5 space-y-4" role="region" aria-labelledby="esistente-titolo">
+                <div>
+                    <p class="m-0 pa-sezione-titolo">Esiste già</p>
+                    <h2 id="esistente-titolo" class="m-0 text-lg font-semibold text-[var(--ink)]">C'è già una segnalazione aperta per questo</h2>
+                    <p class="m-0 mt-1 text-sm text-[var(--slate-700)]">Stessa sede e stessa tipologia. Scrivi lì: l'ufficio la sta già seguendo e riceve subito il tuo messaggio.</p>
+                    <x-input-error :messages="$errors->get('esistente')" class="mt-2" />
+                </div>
+                <template x-if="esistente">
+                    <div class="rounded-lg border border-[var(--slate-200)] bg-white p-4">
+                        <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-[var(--slate-500)]">
+                            <span><strong class="text-[var(--ink)]" x-text="'#' + esistente.id"></strong>
+                                <span x-text="' · aperta ' + esistente.aperta_da + (esistente.tua ? ' da te' : ' da un'altra persona della tua sede')"></span></span>
+                            <x-pa.pill tono="slate"><span x-text="esistente.stato"></span></x-pa.pill>
+                        </div>
+                        <p class="m-0 mt-1 font-medium text-[var(--ink)]" x-text="esistente.titolo"></p>
+                        <template x-if="esistente.ultima_risposta">
+                            <p class="m-0 mt-2 text-sm text-[var(--slate-700)]">
+                                Ultima risposta dell'ufficio, <span x-text="esistente.ultima_risposta.quando"></span>:
+                                «<span x-text="esistente.ultima_risposta.testo"></span>»
+                            </p>
+                        </template>
+                    </div>
+                </template>
+                <div>
+                    <label for="aggiornamento-testo" class="pa-field-label">Hai qualcosa da aggiungere? (facoltativo)</label>
+                    <textarea id="aggiornamento-testo" name="testo" rows="3" maxlength="2000" class="pa-textarea" :disabled="!esistente || diversa"></textarea>
+                </div>
+                <div>
+                    <label for="aggiornamento-foto" class="pa-field-label">Foto (facoltative)</label>
+                    <x-pa.foto id="aggiornamento-foto" :mime="$allegatiMime" ::disabled="!esistente || diversa" />
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <button type="submit" formnovalidate class="pa-btn pa-btn-primary"
+                            :formaction="esistente ? '{{ url('segnalazioni') }}/' + esistente.id + '/aggiornamento' : ''"
+                            x-text="esistente ? 'Invia alla #' + esistente.id : 'Invia'"></button>
+                    <button type="button" class="text-sm font-semibold text-[var(--ente-primary)] underline" @click="diversa = true">
+                        È un problema diverso, apro una nuova segnalazione →
+                    </button>
+                </div>
+            </div>
+            <p x-show="esistente && diversa" style="display: none" class="m-0 rounded-md border border-[var(--slate-200)] bg-[var(--slate-50)] px-3 py-2 text-sm text-[var(--slate-700)]" role="status">
+                Stai aprendo una segnalazione nuova: la <strong x-text="esistente ? '#' + esistente.id : ''"></strong> resta aperta.
+            </p>
+
+            <div x-show="!esistente || diversa" class="space-y-6">
             {{-- 3. Segnalazioni simili: stessa sede e tipologia --}}
             <template x-if="simili.length > 0 && !ignora">
                 <div class="rounded-lg border border-yellow-400 bg-yellow-50 p-4">
@@ -154,10 +202,9 @@
                     @foreach([1 => 'Bassa', 2 => 'Media', 3 => 'Alta', 4 => 'Critica'] as $val => $label)
                         <button type="button"
                                 @click="priorita = {{ $val }}"
-                                :class="priorita == {{ $val }}
-                                    ? '{{ match($val) { 1 => 'bg-gray-200 text-gray-700 border-gray-400', 2 => 'bg-blue-100 text-blue-700 border-blue-400', 3 => 'bg-orange-100 text-orange-700 border-orange-400', 4 => 'bg-red-100 text-red-700 border-red-500' } }}'
-                                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'"
-                                class="px-4 py-2 border-2 rounded-lg text-sm font-semibold transition select-none">
+                                :class="priorita == {{ $val }} ? 'pa-priorita-{{ $val }} {{ \App\Support\Colori::priorita($val) ? 'pa-tono-'.\App\Support\Colori::priorita($val) : '' }} pa-riquadro-scelto' : ''"
+                                :aria-pressed="priorita == {{ $val }}"
+                                class="pa-scelta-priorita">
                             {{ $label }}
                         </button>
                     @endforeach
@@ -212,9 +259,7 @@
                 <p class="text-xs text-gray-500 mb-2">
                     Fino a {{ $allegatiMaxPerRequest }} file, {{ $allegatiMaxSizeMb }}&nbsp;MB ciascuno.
                 </p>
-                <input id="allegati_create" type="file" name="allegati[]" multiple
-                       accept="{{ $allegatiMime }}"
-                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                <x-pa.foto id="allegati_create" :mime="$allegatiMime" ::disabled="esistente && !diversa" />
                 <x-input-error :messages="$errors->get('allegati')" class="mt-1" />
                 <x-input-error :messages="$errors->get('allegati.*')" class="mt-1" />
             </div>
@@ -231,14 +276,21 @@
                     Invia segnalazione
                 </button>
             </div>
+            </div>
         </form>
     </div>
 
     @push('scripts')
         <script>
         async function controllaSimili(data) {
-            if (!data.tipologiaId || !data.sede) { data.simili = []; return; }
+            if (!data.tipologiaId || !data.sede) { data.simili = []; data.esistente = null; return; }
             const params = new URLSearchParams({ id_tipologia_segnalazione: data.tipologiaId, id_plesso: data.sede });
+            try {
+                const es = await fetch('{{ route('segnalazioni.esistente') }}?' + params, { headers: { 'Accept': 'application/json' } });
+                data.esistente = es.ok ? (await es.json()).esistente : null;
+            } catch (e) {
+                data.esistente = null;
+            }
             try {
                 const res = await fetch('{{ route('segnalazioni.simili') }}?' + params, { headers: { 'Accept': 'application/json' } });
                 data.simili = res.ok ? await res.json() : [];

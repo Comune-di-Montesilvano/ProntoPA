@@ -145,7 +145,8 @@ class UtentiController extends Controller
         }
 
         $data = $request->validate([
-            'name'       => ['required', 'string', 'max:100'],
+            // SPID/CIE: nome e cognome dall'identità, riscritti a ogni accesso.
+            'name'       => $utente->auth_source === 'spid' ? ['exclude'] : ['required', 'string', 'max:100'],
             'username'   => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($utente->id)],
             'email'      => ['required', 'email', 'max:100', Rule::unique('users', 'email')
                 ->where(fn ($q) => $q->where('auth_source', 'locale')->where('attivo', true))
@@ -165,7 +166,7 @@ class UtentiController extends Controller
                 ->withInput();
         }
 
-        $utente->name              = $data['name'];
+        $utente->name              = $data['name'] ?? $utente->name;
         $utente->username          = $data['username'];
         $utente->email             = $data['email'];
         $utente->telefono          = $data['telefono'] ?? null;

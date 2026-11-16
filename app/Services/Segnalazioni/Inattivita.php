@@ -38,7 +38,7 @@ class Inattivita
         $archiviate = [];
 
         Segnalazione::aperte()
-            ->where('id_stato_segnalazione', '!=', SegnalazioneStato::SOSPESA->value)
+            ->whereNotIn('id_stato_segnalazione', [SegnalazioneStato::SOSPESA->value, SegnalazioneStato::ATTESA_RISPOSTA->value])
             ->chunkById(200, function ($segnalazioni) use (&$avvisate, &$archiviate) {
                 foreach ($segnalazioni as $s) {
                     match ($this->valuta($s)) {

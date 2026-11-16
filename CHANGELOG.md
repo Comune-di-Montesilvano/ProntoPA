@@ -4,6 +4,97 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.5] - 2026-11-16
+
+### Modificato
+- Elenco gestione: di default raggruppato per sede, poi tipologia. La scelta di "Raggruppa per"
+  resta a ciascun utente (salvata sul profilo, vale su ogni dispositivo), "Nessuno" compreso.
+- Raggruppando per sede, il nome della sede mostra codice e indirizzo al passaggio del mouse.
+
+## [1.0.4] - 2026-11-16
+
+### Added
+- Colori unici in tutto il programma (`App\Support\Colori`): ogni stato, tipologia e priorità
+  ha il suo colore, uguale in elenchi, scheda, nuova segnalazione e statistiche. Segni diversi
+  per non confonderli: lo stato è un pallino, la tipologia uno sfondo pieno, la priorità un'etichetta.
+- Admin → Tipologie: scelta del colore. Le tipologie esistenti ricevono un colore che si
+  spiega da sé (Verde e giardini verde, Idrico blu, Elettrico giallo, Termico rosso…); le nuove
+  restano grigie finché non se ne sceglie uno.
+- Elenco segnalazioni: "Raggruppa per" sede, tipologia o entrambe, con il gruppo in una cella a
+  sinistra che dice quante sono e quante in ritardo. Raggruppando, le pagine arrivano a circa 100 righe e non spezzano mai un gruppo.
+  La scelta resta nel browser.
+- Azioni multiple: "Accorpa" per i doppioni della stessa sede e tipologia; la più vecchia resta
+  aperta e riceve le altre.
+- Legenda dei colori accanto all'elenco (sugli schermi stretti, apribile sopra).
+- Scheda: la tipologia si cambia con la matita accanto (es. asciugamani elettrico segnalato come
+  idrico). La scadenza si ricalcola con la regola della nuova tipologia e resta una nota interna.
+
+### Changed
+- Elenco segnalazioni ridisegnato: colonne Sede, Tipologia, Stato (con chi ci lavora o
+  "da assegnare"), Priorità, Scadenza, Segnalazione con numero e testo su due righe.
+  La priorità Media non si mostra più; il lucchetto delle riservate è tolto dall'elenco.
+  Stesse colonne per operai, ditte e segnalanti.
+- Scadenza in elenco: "In ritardo di N g" in testo normale; in rosso solo ciò che è appena
+  scaduto o scade entro 24 ore.
+- Nomi di sedi e tipologie leggibili ("Verde e Giardini" invece di "VERDE E GIARDINI").
+- Paginazione anche in cima agli elenchi.
+
+## [1.0.3] - 2026-11-16
+
+### Changed
+- "Com'è andata finora": data di apertura e passaggi (presa in carico, assegnata a…, a ditta…)
+  sotto la barra, con un pallino bianco su ogni passaggio; date ed etichette più grandi. Le fasce
+  dei giorni chiusi si disegnano solo su segnalazioni aperte da al massimo 4 settimane: oltre
+  diventavano righe ovunque (il conteggio resta nel riepilogo).
+- Nuova segnalazione: "Scatta foto" apre direttamente la fotocamera del telefono, accanto a
+  "Scegli dalla galleria"; le foto si sommano, si vedono in anteprima e si possono togliere.
+- Scheda segnalazione: freccia "torna indietro" nella barra in alto, verso l'elenco da cui si
+  arriva (filtri e pagina compresi) o la dashboard.
+
+### Fixed
+- Paginazione in italiano ("Indietro", "Successivo", "Da 1 a 25 di 120 risultati").
+- La mappa della scheda passava sopra i pannelli laterali.
+
+## [1.0.2] - 2026-11-16
+
+Aggiornamento senza interventi: migration solo additive.
+
+### Added
+- **Chiedi informazioni a chi ha segnalato**: dal prossimo passo il comune scrive la domanda e
+  quanti giorni lavorativi dare per rispondere (proposti da Regole di lavoro → Segnalazioni).
+  La segnalazione va "In attesa di risposta" (stato nuovo, 11) con chi ci lavora invariato e
+  la scadenza ferma; chi ha segnalato riceve l'email e trova in cima alla scheda un riquadro
+  per rispondere. La prima risposta (messaggio o foto, anche di chi ha aderito) la riporta
+  dov'era e sposta la scadenza delle ore lavorative attese. Promemoria due giorni lavorativi
+  prima del termine; a termine scaduto si chiude senza intervento ("Nessuna risposta alla
+  richiesta di informazioni") oppure, se non spuntato, torna al gestore. "Non serve più" la
+  ritira. Comando `segnalazioni:richieste` ogni giorno alle 07:20.
+- Scheda: **"Com'è andata finora"**, il cronogramma degli stati con fine settimana e festivi,
+  messaggi, solleciti e scadenza, per comune, scuole e ditte (ognuno vede la sua parte).
+- Scheda del comune: quattro fatti in testa (stato, scadenza, priorità, da quanto è aperta).
+- Mappe (scheda, sede, operaio, Aspetto): selettore **Strade / Satellite** in alto a destra
+  (satellite: immagini Esri World Imagery); la scelta resta nel browser.
+- Sedi senza posizione sulla mappa: segnalate in Enti e sedi e in Stato del sistema; le
+  coordinate si cercano da sole ogni mattina (06:10) e si azzerano quando cambia l'indirizzo.
+
+### Changed
+- **Storia** al posto di "Attività": raggruppata per giorno con i giorni fermi in mezzo,
+  passaggi in parole ("l'ha presa in carico", "l'ha riassegnata a…", "ha spostato la scadenza
+  a…") e messaggi con chi li legge ("Solo il comune", "La scuola la legge"). Filtri Tutto /
+  Solo passaggi / Solo messaggi. Chi legge una nota si sceglie con un selettore.
+- "Cosa è stato segnalato" mostra in ambra ogni volta che è stata segnalata di nuovo
+  (accorpate e aggiunte); "Dove" ha la minimappa con "Correggi la posizione"; "Avvisi inviati"
+  riassume per destinatario; la card "Dettagli" lascia il posto a "Importi" (solo se ci sono).
+- Nuova segnalazione uguale a una già aperta (stessa sede e tipologia): invece di un doppione
+  si propone di scrivere in quella esistente.
+
+- Nome e cognome delle persone SPID/CIE e di dominio non si cambiano più dal profilo (né, per
+  SPID, da Admin → Persone): arrivano dall'identità e si aggiornano a ogni accesso, quindi chi
+  li aveva cambiati li ritrova giusti al prossimo login.
+
+### Fixed
+- La stessa presa in carico registrata due volte compariva come due passaggi.
+
 ## [1.0.1] - 2026-11-13
 
 ### Changed

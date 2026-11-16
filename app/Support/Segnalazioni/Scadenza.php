@@ -2,32 +2,40 @@
 
 namespace App\Support\Segnalazioni;
 
+use App\Enums\SegnalazioneStato;
 use App\Models\Segnalazione;
 use Illuminate\Support\Carbon;
 
 /**
  * Scadenza SLA di una segnalazione aperta, in parole: breve per gli elenchi, estesa per la scheda.
- * Rosa se superata, ambra entro 24 ore, neutra altrimenti.
+ * Rosa se superata, ambra entro 24 ore, neutra altrimenti; ferma mentre aspetta una risposta.
  */
 class Scadenza
 {
+    private const FERMA = ['testo' => 'Ferma: aspetta una risposta', 'tono' => 'slate'];
+
     /** @return array{testo: string, tono: 'rose'|'amber'|'slate'}|null */
     public static function per(Segnalazione $s, ?Carbon $ora = null): ?array
     {
+        if ($s->id_stato_segnalazione === SegnalazioneStato::ATTESA_RISPOSTA) {
+            return self::FERMA;
+        }
         $secondi = self::secondiRimasti($s, $ora);
         if ($secondi === null) {
             return null;
         }
 
         $ore = intdiv(abs($secondi), 3600);
+        // 1.0.4: rosso solo per ciò che è appena scaduto o scade entro 24 h; il ritardo vecchio
+        // è testo normale (in prod 132 aperte su 142 erano in ritardo: il rosso non distingueva più).
         if ($secondi < 0) {
-            $testo = $ore >= 24 ? 'Superata da '.intdiv($ore, 24).' g' : 'Superata da '.max(1, $ore).' h';
-
-            return ['testo' => $testo, 'tono' => 'rose'];
+            return $ore >= 24
+                ? ['testo' => 'In ritardo di '.intdiv($ore, 24).' g', 'tono' => 'slate']
+                : ['testo' => 'In ritardo di '.max(1, $ore).' h', 'tono' => 'rose'];
         }
 
         if ($ore < 24) {
-            return ['testo' => 'Entro '.max(1, $ore).' h', 'tono' => 'amber'];
+            return ['testo' => 'Entro '.max(1, $ore).' h', 'tono' => 'rose'];
         }
 
         return ['testo' => 'Entro '.intdiv($ore, 24).' g', 'tono' => 'slate'];
@@ -36,6 +44,9 @@ class Scadenza
     /** @return array{testo: string, tono: 'rose'|'amber'|'slate'}|null */
     public static function estesa(Segnalazione $s, ?Carbon $ora = null): ?array
     {
+        if ($s->id_stato_segnalazione === SegnalazioneStato::ATTESA_RISPOSTA) {
+            return self::FERMA;
+        }
         $secondi = self::secondiRimasti($s, $ora);
         if ($secondi === null) {
             return null;

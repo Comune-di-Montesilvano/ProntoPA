@@ -13,6 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700;900&family=Lora:ital,wght@0,400;0,500;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('partials.toni')
     @stack('head')
 
     @php
@@ -225,6 +226,16 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
             </button>
+
+            {{-- Torna indietro (pagine di dettaglio): sul telefono non c'è altro modo visibile --}}
+            @isset($indietro)
+                <a href="{{ $indietro }}" class="flex-shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-[var(--slate-100)]"
+                   style="color:var(--slate-600);" aria-label="Torna indietro" title="Torna indietro">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </a>
+            @endisset
 
             {{-- Page title --}}
             <div class="flex-1 min-w-0 flex items-center gap-3">

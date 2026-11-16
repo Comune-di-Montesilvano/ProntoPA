@@ -195,7 +195,7 @@ class ModificaPrioritaTest extends TestCase
         $s = $this->segnalazione(['id_stato_segnalazione' => 2]);
 
         $this->actingAs($this->gestore)->get(route('segnalazioni.show', $s))
-            ->assertOk()->assertSee('Priorità…')->assertSee('Cambiandola si ricalcola la scadenza.');
+            ->assertOk()->assertSee('aria-label="Cambia priorità"', false)->assertSee('Cambiandola si ricalcola la scadenza.');
     }
 
     public function test_scheda_mostra_modulo_solo_a_chi_puo(): void

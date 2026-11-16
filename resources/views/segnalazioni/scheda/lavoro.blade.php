@@ -11,7 +11,7 @@
     <header class="flex flex-col gap-2">
         <p class="m-0 text-sm text-[var(--slate-600)]">
             <span class="pa-mono font-semibold">#{{ $segnalazione->id_segnalazione }}</span>
-            · {{ $segnalazione->tipologia?->descrizione ?? '—' }}
+            · <x-pa.tipologia :tipologia="$segnalazione->tipologia" />
         </p>
         <h1 class="m-0 text-2xl font-bold text-[var(--ink)] break-words">{{ $titolo }}</h1>
         <div class="flex flex-wrap items-center gap-2">
@@ -21,6 +21,7 @@
     </header>
 
     @include('segnalazioni.scheda._prossimo-passo', ['grande' => true])
+    @include('segnalazioni.scheda._cronogramma')
     @include('segnalazioni.scheda._inattivita')
 
     @if(auth()->user()->hasRole('operaio') && ($segnalazione->squadraAssegnata || $segnalazione->id_operatore_assegnato))

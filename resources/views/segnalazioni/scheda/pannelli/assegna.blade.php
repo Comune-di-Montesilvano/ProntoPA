@@ -3,6 +3,11 @@
     $azOperatore = $azioniDisponibili->firstWhere('codice', 'assegna_operatore');
     $azImpresa = $azioniDisponibili->firstWhere('codice', 'assegna_impresa');
     $azMe = $azioniDisponibili->firstWhere('codice', 'prendi_in_carico');
+    // Già in carico a chi guarda: "A me" non cambierebbe nulla.
+    if ($segnalazione->statoEnum() === \App\Enums\SegnalazioneStato::IN_CARICO
+        && (int) $segnalazione->id_operatore_assegnato === (int) auth()->id()) {
+        $azMe = null;
+    }
     $iniziale = old('_tipo', $azImpresa && ! $azOperatore ? 'ditta' : 'operaio');
     $appalti = $appaltiValidi->map(fn ($a) => [
         'id' => $a->id_appalto,

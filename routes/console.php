@@ -10,11 +10,15 @@ Artisan::command('inspire', function () {
 
 Schedule::command('sla:check')->dailyAt('07:00')->runInBackground();
 Schedule::command('segnalazioni:inattivita')->dailyAt('07:15')->runInBackground();
+Schedule::command('segnalazioni:richieste')->dailyAt('07:20')->runInBackground();
 
 Schedule::command('backup:crea --tipo=notturno')->dailyAt('02:00')->withoutOverlapping()->runInBackground();
 
 // Prima di sla:check e digest: gli avvisi del mattino vanno a utenti già allineati ad AD.
 Schedule::command('ldap:sincronizza')->dailyAt('05:30')->withoutOverlapping()->runInBackground();
+
+// Sedi nuove o con indirizzo cambiato: posizione trovata senza che nessuno la chieda (1.0.2).
+Schedule::command('sedi:geocodifica')->dailyAt('06:10')->runInBackground();
 
 Schedule::command('deleghe:scadenze')->dailyAt('06:30')->runInBackground();
 Schedule::command('deleghe:rinnovi')->monthlyOn(1, '07:00')->runInBackground();

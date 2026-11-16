@@ -18,10 +18,15 @@
                 <label for="nuova-icona" class="pa-field-label">Icona (facoltativa)</label>
                 <input id="nuova-icona" name="icona" maxlength="50" class="pa-input" placeholder="fas fa-wrench" value="{{ old('icona') }}">
             </div>
+            <div class="pa-field">
+                <label for="nuova-colore" class="pa-field-label">Colore</label>
+                <x-pa.scelta-colore id="nuova-colore" :valore="old('colore')" />
+            </div>
             <x-pa.btn type="submit" variant="primary">Aggiungi</x-pa.btn>
             <div class="w-full">
                 <x-input-error :messages="$errors->get('descrizione')" />
                 <x-input-error :messages="$errors->get('icona')" />
+                <x-input-error :messages="$errors->get('colore')" />
                 <x-input-error :messages="$errors->get('id_destinazione')" />
             </div>
         </form>
@@ -31,7 +36,7 @@
                 <div class="flex flex-wrap items-end gap-3 p-4 {{ $t->attiva ? '' : 'opacity-60' }}">
                     <form method="POST" action="{{ route('admin.tipologie.update', $t) }}" class="flex flex-wrap items-end gap-3 grow">
                         @csrf @method('PATCH')
-                        <span class="w-6 text-center text-gray-500"><i class="{{ $t->icona ?: 'fas fa-tag' }}" aria-hidden="true"></i></span>
+                        <x-pa.tipologia :tipologia="$t" />
                         <div class="pa-field grow">
                             <label class="sr-only" for="descrizione-{{ $t->id_tipologia_segnalazione }}">Nome</label>
                             <input id="descrizione-{{ $t->id_tipologia_segnalazione }}" name="descrizione" required maxlength="50" class="pa-input" value="{{ $t->descrizione }}">
@@ -39,6 +44,10 @@
                         <div class="pa-field">
                             <label class="sr-only" for="icona-{{ $t->id_tipologia_segnalazione }}">Icona</label>
                             <input id="icona-{{ $t->id_tipologia_segnalazione }}" name="icona" maxlength="50" class="pa-input" value="{{ $t->icona }}">
+                        </div>
+                        <div class="pa-field">
+                            <label class="sr-only" for="colore-{{ $t->id_tipologia_segnalazione }}">Colore</label>
+                            <x-pa.scelta-colore id="colore-{{ $t->id_tipologia_segnalazione }}" :valore="$t->colore" />
                         </div>
                         <label class="flex items-center gap-2 text-sm">
                             <input type="hidden" name="attiva" value="0">

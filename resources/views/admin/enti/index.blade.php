@@ -95,7 +95,11 @@
                                 @if($ente->plessi->isNotEmpty())
                                     <ul class="mt-1 ml-4 text-sm text-gray-600 list-disc">
                                         @foreach($ente->plessi as $sede)
-                                            <li>{{ $sede->nome }}@if($sede->indirizzo) <span class="text-xs text-gray-400">· {{ $sede->indirizzo }}</span>@endif</li>
+                                            <li>{{ $sede->nome }}@if($sede->indirizzo) <span class="text-xs text-gray-400">· {{ $sede->indirizzo }}</span>@endif
+                                                @unless($sede->haCoordinate())
+                                                    <a href="{{ route('admin.sedi.edit', $sede->id_plesso) }}" class="ml-1 text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 hover:underline">senza posizione</a>
+                                                @endunless
+                                            </li>
                                         @endforeach
                                     </ul>
                                 @else

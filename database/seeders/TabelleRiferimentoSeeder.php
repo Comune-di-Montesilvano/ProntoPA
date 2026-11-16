@@ -20,6 +20,7 @@ class TabelleRiferimentoSeeder extends Seeder
             ['id_stato' => 8,  'descrizione' => 'Duplicata',             'iniziale' => 0, 'in_carico' => 0, 'id_gestione' => 0, 'sospesa' => 0, 'chiusura' => 1, 'colore_sfondo' => 'warning'],
             ['id_stato' => 9,  'descrizione' => 'Chiusa senza intervento', 'iniziale' => 0, 'in_carico' => 0, 'id_gestione' => 0, 'sospesa' => 0, 'chiusura' => 1, 'colore_sfondo' => 'danger'],
             ['id_stato' => 10, 'descrizione' => 'Archiviata',            'iniziale' => 0, 'in_carico' => 0, 'id_gestione' => 0, 'sospesa' => 0, 'chiusura' => 1, 'colore_sfondo' => 'secondary'],
+            ['id_stato' => 11, 'descrizione' => 'In attesa di risposta', 'iniziale' => 0, 'in_carico' => 1, 'id_gestione' => 0, 'sospesa' => 1, 'chiusura' => 0, 'colore_sfondo' => 'warning'],
         ]);
 
         DB::table('db_azioni')->insertOrIgnore([
@@ -38,22 +39,24 @@ class TabelleRiferimentoSeeder extends Seeder
             ['id_azione' => 13, 'codice' => 'archivia',           'descrizione' => 'Archivia',             'id_stato_segnalazione' => 10,   'competenza_azione' => 0, 'colore' => 'secondary', 'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 0, 'ordine' => 110, 'parametri_filtro' => '{"stati":[]}'],
             ['id_azione' => 14, 'codice' => 'riapri',             'descrizione' => 'Riapri',               'id_stato_segnalazione' => 2,    'competenza_azione' => 0, 'colore' => 'warning',   'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 1, 'ordine' => 120, 'parametri_filtro' => '{"stati":[7,8,9,10]}'],
             ['id_azione' => 15, 'codice' => 'rimanda',            'descrizione' => 'Rimanda al gestore',   'id_stato_segnalazione' => 2,    'competenza_azione' => 2, 'colore' => 'warning',   'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 1, 'ordine' => 85,  'parametri_filtro' => '{"stati":[3,4,5]}'],
+            // Come "rimanda": pannello e rotta suoi (1.0.2), qui solo per storico e descrizioni.
+            ['id_azione' => 16, 'codice' => 'chiedi_informazioni', 'descrizione' => 'Chiedi informazioni', 'id_stato_segnalazione' => 11, 'competenza_azione' => 0, 'colore' => 'warning', 'flag_appalto' => 0, 'flag_operatore' => 0, 'flag_notifica' => 1, 'ordine' => 87,  'parametri_filtro' => '{"stati":[1,2,3,4]}'],
         ]);
 
         // Le tipologie le gestisce l'admin (1.0.0): solo su un'installazione nuova.
         if (! DB::table('tipologie_segnalazioni')->exists()) {
         DB::table('tipologie_segnalazioni')->insertOrIgnore([
-            ['id_tipologia_segnalazione' => 1,  'descrizione' => 'IMPIANTO ELETTRICO',    'icona' => 'fas fa-bolt'],
-            ['id_tipologia_segnalazione' => 2,  'descrizione' => 'INFISSI E PORTE',       'icona' => 'fas fa-door-open'],
-            ['id_tipologia_segnalazione' => 3,  'descrizione' => 'IMPIANTO IDRICO',       'icona' => 'fas fa-faucet'],
-            ['id_tipologia_segnalazione' => 4,  'descrizione' => 'SFALCI E POTATURE',     'icona' => 'fab fa-pagelines'],
-            ['id_tipologia_segnalazione' => 5,  'descrizione' => 'MANUTENZIONE EDILE',    'icona' => 'fas fa-building'],
-            ['id_tipologia_segnalazione' => 6,  'descrizione' => 'IMPIANTO TERMICO',      'icona' => 'fas fa-fire-alt'],
-            ['id_tipologia_segnalazione' => 7,  'descrizione' => 'RETE TELEFONICA / DATI','icona' => 'fas fa-globe'],
-            ['id_tipologia_segnalazione' => 8,  'descrizione' => 'VERDE E GIARDINI',      'icona' => 'fas fa-seedling'],
-            ['id_tipologia_segnalazione' => 9,  'descrizione' => 'ARREDI',                'icona' => 'fas fa-chair'],
-            ['id_tipologia_segnalazione' => 10, 'descrizione' => 'GIOCHI',                'icona' => 'fas fa-running'],
-            ['id_tipologia_segnalazione' => 12, 'descrizione' => 'FONTANE PUBBLICHE',     'icona' => 'fas fa-faucet'],
+            ['id_tipologia_segnalazione' => 1,  'descrizione' => 'IMPIANTO ELETTRICO',    'icona' => 'fas fa-bolt', 'colore' => 'giallo'],
+            ['id_tipologia_segnalazione' => 2,  'descrizione' => 'INFISSI E PORTE',       'icona' => 'fas fa-door-open', 'colore' => 'marrone'],
+            ['id_tipologia_segnalazione' => 3,  'descrizione' => 'IMPIANTO IDRICO',       'icona' => 'fas fa-faucet', 'colore' => 'blu'],
+            ['id_tipologia_segnalazione' => 4,  'descrizione' => 'SFALCI E POTATURE',     'icona' => 'fab fa-pagelines', 'colore' => 'salvia'],
+            ['id_tipologia_segnalazione' => 5,  'descrizione' => 'MANUTENZIONE EDILE',    'icona' => 'fas fa-building', 'colore' => 'pietra'],
+            ['id_tipologia_segnalazione' => 6,  'descrizione' => 'IMPIANTO TERMICO',      'icona' => 'fas fa-fire-alt', 'colore' => 'rosso'],
+            ['id_tipologia_segnalazione' => 7,  'descrizione' => 'RETE TELEFONICA / DATI','icona' => 'fas fa-globe', 'colore' => 'viola'],
+            ['id_tipologia_segnalazione' => 8,  'descrizione' => 'VERDE E GIARDINI',      'icona' => 'fas fa-seedling', 'colore' => 'verde'],
+            ['id_tipologia_segnalazione' => 9,  'descrizione' => 'ARREDI',                'icona' => 'fas fa-chair', 'colore' => 'arancio'],
+            ['id_tipologia_segnalazione' => 10, 'descrizione' => 'GIOCHI',                'icona' => 'fas fa-running', 'colore' => 'rosa'],
+            ['id_tipologia_segnalazione' => 12, 'descrizione' => 'FONTANE PUBBLICHE',     'icona' => 'fas fa-faucet', 'colore' => 'azzurro'],
         ]);
         }
 

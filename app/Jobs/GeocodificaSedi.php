@@ -36,8 +36,7 @@ class GeocodificaSedi implements ShouldBeUnique, ShouldQueue
         $conteggi = ['trovate' => 0, 'non_trovate' => 0, 'errori' => 0];
         $prima = true;
 
-        Plesso::whereNull('latitudine')->whereNotNull('indirizzo')->where('indirizzo', '!=', '')
-            ->orderBy('id_plesso')->get()
+        Plesso::daGeocodificare()->orderBy('id_plesso')->get()
             ->each(function (Plesso $sede) use ($geocoding, &$conteggi, &$prima) {
                 if (! $prima) {
                     Sleep::for(1)->second();
@@ -50,8 +49,11 @@ class GeocodificaSedi implements ShouldBeUnique, ShouldQueue
                     Geocoding::NON_TROVATA => $conteggi['non_trovate']++,
                     default => $conteggi['errori']++,
                 };
+                // Errore di rete: nessun segno, si riprova al giro di domani.
                 if ($esito['stato'] === Geocoding::TROVATA) {
-                    $sede->update(['latitudine' => $esito['lat'], 'longitudine' => $esito['lng']]);
+                    $sede->update(['latitudine' => $esito['lat'], 'longitudine' => $esito['lng'], 'geocodifica_tentata_at' => now()]);
+                } elseif ($esito['stato'] === Geocoding::NON_TROVATA) {
+                    $sede->update(['geocodifica_tentata_at' => now()]);
                 }
             });
 

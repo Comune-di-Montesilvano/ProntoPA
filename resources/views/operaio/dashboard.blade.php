@@ -11,8 +11,8 @@
             ? auth()->user()->squadreGuidate()->where('attiva', true)->with('membri')->get()->flatMap->membri->unique('id')
             : collect();
         $colonne = $tab === 'squadra'
-            ? ['priorita', 'segnalazione', 'scadenza', 'affida']
-            : ['priorita', 'segnalazione', 'scadenza', 'stato'];
+            ? ['sede', 'tipologia', 'priorita', 'scadenza', 'segnalazione', 'affida']
+            : ['sede', 'tipologia', 'stato', 'priorita', 'scadenza', 'segnalazione'];
     @endphp
 
     <div class="flex flex-col gap-4">
@@ -46,15 +46,11 @@
                     {{ match ($tab) { 'chiuse' => "Nessun lavoro chiuso nell'ultimo mese.", 'squadra' => 'Nessun lavoro della squadra.', default => 'Nessun lavoro assegnato.' } }}
                 </p>
             @else
+                @if($segnalazioni->hasPages())
+                    <div class="pa-paginazione border-b border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->withQueryString()->links() }}</div>
+                @endif
                 <table class="pa-elenco">
-                    <thead>
-                        <tr>
-                            <th scope="col">Priorità</th>
-                            <th scope="col">Segnalazione</th>
-                            <th scope="col">Entro</th>
-                            <th scope="col">{{ $tab === 'squadra' ? 'Affidata a' : 'Stato' }}</th>
-                        </tr>
-                    </thead>
+                    @include('segnalazioni._intestazione', ['colonne' => $colonne])
                     <tbody>
                         @foreach($segnalazioni as $s)
                             @include('segnalazioni._riga', ['colonne' => $colonne, 'lettura' => 'lavoro', 'membri' => $membri])
@@ -62,7 +58,7 @@
                     </tbody>
                 </table>
                 @if($segnalazioni->hasPages())
-                    <div class="border-t border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->withQueryString()->links() }}</div>
+                    <div class="pa-paginazione border-t border-[var(--slate-100)] px-4 py-3">{{ $segnalazioni->withQueryString()->links() }}</div>
                 @endif
             @endif
         </div>
@@ -74,6 +70,7 @@
     @if($tab === 'assegnate')
     @push('scripts')
         <script src="{{ asset('build/vendor/leaflet/leaflet.js') }}?v={{ config('app.version') }}"></script>
+        @include('partials.strati-mappa')
         <script>
             const mapEl = document.getElementById('mappa-operaio');
             if (mapEl) {
@@ -82,9 +79,7 @@
                     {{ \App\Models\Impostazione::get('osm_lng', 14.1443) }}
                 ], {{ \App\Models\Impostazione::get('osm_zoom', 13) }});
 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap', maxZoom: 19
-                }).addTo(map);
+                paStratiMappa(map);
 
                 fetch('{{ route('operaio.mappa') }}')
                     .then(r => r.json())

@@ -193,7 +193,7 @@ class RimandaAlGestoreTest extends TestCase
         $this->actingAs($this->operaio)->post(route('segnalazioni.rimanda', $s), ['nota' => 'Serve un elettricista']);
 
         $frasi = Attivita::per($s->fresh(), $this->gestore)->pluck('frase')->all();
-        $this->assertContains('ha rimandato al comune', $frasi);
+        $this->assertContains("l'ha rimandata al comune", $frasi);
         $this->assertNotContains('rimanda', app(\App\Services\SegnalazioneWorkflowService::class)
             ->getAzioniDisponibili($s->fresh(), $this->gestore)->pluck('codice')->all());
     }

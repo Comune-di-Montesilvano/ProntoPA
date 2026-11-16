@@ -49,6 +49,8 @@ class ScadenzaSenzaSospensioneTest extends TestCase
 
     public function test_sposta_scadenza_con_motivo_visibile_alla_scuola(): void
     {
+        // Un mercoledì: un giorno chiuso sposterebbe la scadenza al primo giorno lavorativo.
+        $this->travelTo(now()->next('Friday')->setTime(10, 0));
         $s = $this->segnalazione();
         $giorno = now()->addDays(5)->format('Y-m-d');
 
@@ -102,7 +104,7 @@ class ScadenzaSenzaSospensioneTest extends TestCase
 
         $this->actingAs($this->gestore)->get(route('segnalazioni.show', $s))
             ->assertOk()
-            ->assertSee('Scadenza…')
+            ->assertSee('aria-label="Sposta la scadenza"', false)
             ->assertSee(route('segnalazioni.scadenza', $s), false)
             ->assertDontSee('Motivo della sospensione')
             ->assertDontSee('id="assegna-scadenza"', false);
@@ -134,8 +136,8 @@ class ScadenzaSenzaSospensioneTest extends TestCase
 
         $voci = \App\Support\Segnalazioni\Attivita::per($s, $this->gestore);
 
-        $this->assertTrue($voci->contains(fn ($v) => ($v['frase'] ?? null) === 'ha ripreso'));
-        $this->assertSame('Interna', $voci->first(fn ($v) => ($v['testo'] ?? null) === 'Nota interna vecchia')['tag']);
+        $this->assertTrue($voci->contains(fn ($v) => ($v['frase'] ?? null) === 'ha ripreso il lavoro'));
+        $this->assertSame('Solo il comune', $voci->first(fn ($v) => in_array('Nota interna vecchia', [$v['testo'], $v['nota']], true))['letta_da']);
     }
 
     public function test_chi_ci_lavora_in_carico_a_gestore(): void

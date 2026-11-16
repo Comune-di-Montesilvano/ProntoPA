@@ -9,6 +9,9 @@
 
     <div class="bg-white shadow-sm rounded-xl">
         <form method="POST" action="{{ route('admin.sedi.update', $sede->id_plesso) }}" class="p-6 space-y-5">
+            @if($ritorno)
+                <input type="hidden" name="ritorno" value="{{ $ritorno }}">
+            @endif
             @csrf @method('PATCH')
 
             @php $miur = $sede->isMiur(); @endphp
@@ -156,16 +159,14 @@
     @endpush
     @push('scripts')
         <script src="{{ asset('build/vendor/leaflet/leaflet.js') }}?v={{ config('app.version') }}"></script>
+        @include('partials.strati-mappa')
         <script>
             (function () {
                 const fLat = document.getElementById('latitudine');
                 const fLng = document.getElementById('longitudine');
                 const esito = document.getElementById('trova-esito');
                 const mappa = L.map('mappa-sede', { scrollWheelZoom: false }).setView([{{ $cLat }}, {{ $cLng }}], {{ $haPos ? 17 : 13 }});
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-                    maxZoom: 19,
-                }).addTo(mappa);
+                paStratiMappa(mappa);
                 let marker = null;
                 const metti = (lat, lng) => {
                     if (!marker) {

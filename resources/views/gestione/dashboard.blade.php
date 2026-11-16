@@ -101,6 +101,16 @@
                     <option value="recenti" @selected($ordine === 'recenti')>Più recenti</option>
                     <option value="vecchie" @selected($ordine === 'vecchie')>Più vecchie</option>
                 </select>
+                {{-- Raggruppa per: predefinito sede poi tipologia, l'ultima scelta resta all'utente (users.gruppo_elenco). --}}
+                <label for="filtro_gruppo" class="text-sm text-[var(--slate-600)]">Raggruppa per</label>
+                <select name="gruppo" id="filtro_gruppo" class="pa-input pa-input-auto"
+                        onchange="this.form.submit()">
+                    <option value="" @selected($gruppo === '')>Nessun gruppo</option>
+                    <option value="sede" @selected($gruppo === 'sede')>Sede</option>
+                    <option value="sede_tipologia" @selected($gruppo === 'sede_tipologia')>Sede, poi tipologia</option>
+                    <option value="tipologia" @selected($gruppo === 'tipologia')>Tipologia</option>
+                    <option value="tipologia_sede" @selected($gruppo === 'tipologia_sede')>Tipologia, poi sede</option>
+                </select>
                 <x-pa.btn type="submit" variant="primary">Cerca</x-pa.btn>
             </div>
 
@@ -177,42 +187,53 @@
             </div>
         @endif
 
+        <details class="pa-card px-4 py-3 2xl:hidden">
+            <summary class="cursor-pointer text-sm font-semibold text-[var(--slate-700)]">
+                <i class="fas fa-palette mr-1" aria-hidden="true"></i> Legenda dei colori
+            </summary>
+            <div class="mt-3">@include('segnalazioni._legenda')</div>
+        </details>
+
+        <div class="grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_230px]">
         <div class="pa-card overflow-hidden" x-data="{ scelte: [], pagina: @js($segnalazioni->pluck('id_segnalazione')->map(fn ($id) => (string) $id)->values()) }">
             @if($segnalazioni->isEmpty())
                 <p class="m-0 p-10 text-center text-sm text-[var(--slate-500)]">Nessuna segnalazione in questa vista.</p>
             @else
-                <table class="pa-elenco">
-                    <thead>
-                        <tr>
-                            <th scope="col" class="w-8">
-                                <input type="checkbox" aria-label="Seleziona tutte le righe della pagina"
-                                       :checked="pagina.length && pagina.every(id => scelte.includes(id))"
-                                       x-on:change="scelte = $event.target.checked ? [...new Set([...scelte, ...pagina])] : scelte.filter(id => !pagina.includes(id))">
-                            </th>
-                            <th scope="col">Priorità</th>
-                            <th scope="col">Segnalazione</th>
-                            <th scope="col">Stato</th>
-                            <th scope="col">Assegnata a</th>
-                            <th scope="col">Scadenza</th>
-                            <th scope="col"><span class="sr-only">Azioni</span></th>
-                        </tr>
-                    </thead>
+                @php
+                    $livelli = \App\Support\Segnalazioni\GruppiElenco::livelli($gruppo);
+                    $colonne = array_values(array_diff(['sede', 'tipologia', 'seleziona', 'stato', 'priorita', 'scadenza', 'segnalazione', 'azioni'], $livelli));
+                    $righe ??= $segnalazioni->getCollection()->map(fn ($s) => ['s' => $s, 'celle' => []])->all();
+                @endphp
+                @if($segnalazioni->hasPages())
+                    <div class="pa-paginazione border-b border-[var(--slate-100)] px-4 py-3">
+                        {{ $segnalazioni->withQueryString()->links() }}
+                    </div>
+                @endif
+                <table class="pa-elenco {{ $livelli ? 'pa-elenco-gruppi' : '' }}">
+                    @include('segnalazioni._intestazione', ['colonne' => $colonne, 'gruppo' => $livelli])
                     <tbody>
-                        @foreach($segnalazioni as $s)
+                        @foreach($righe as $riga)
                             @include('segnalazioni._riga', [
-                                'colonne' => ['seleziona', 'priorita', 'segnalazione', 'stato', 'assegnata', 'scadenza', 'azioni'],
-                                'rapide' => $azioniRapidePerSegnalazione[$s->id_segnalazione] ?? collect(),
+                                's' => $riga['s'],
+                                'celle' => $riga['celle'],
+                                'colonne' => $colonne,
+                                'rapide' => $azioniRapidePerSegnalazione[$riga['s']->id_segnalazione] ?? collect(),
                             ])
                         @endforeach
                     </tbody>
                 </table>
                 @if($segnalazioni->hasPages())
-                    <div class="border-t border-[var(--slate-100)] px-4 py-3">
+                    <div class="pa-paginazione border-t border-[var(--slate-100)] px-4 py-3">
                         {{ $segnalazioni->withQueryString()->links() }}
                     </div>
                 @endif
                 @include('gestione._azioni-multiple')
             @endif
+        </div>
+        <aside class="pa-card sticky top-4 hidden p-4 2xl:block" aria-label="Legenda dei colori">
+            <h2 class="m-0 mb-3 text-sm font-bold text-[var(--slate-800)]">Legenda dei colori</h2>
+            @include('segnalazioni._legenda')
+        </aside>
         </div>
     </div>
 </x-app-layout>

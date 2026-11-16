@@ -35,7 +35,7 @@ class ElenchiRuoliTest extends TestCase
         $this->actingAs($ditta)->get(route('imprese.dashboard'))
             ->assertOk()
             ->assertSee('Lavoro su appalto scaduto')
-            ->assertSee('>Entro<', false);
+            ->assertSee('>Scadenza<', false);
     }
 
     public function test_ditta_vista_preventivi_mostra_stato_5(): void
@@ -81,7 +81,7 @@ class ElenchiRuoliTest extends TestCase
             ->assertOk()
             ->assertSee('Cambiare la serratura')
             ->assertSee(route('segnalazioni.show', $s->id_segnalazione), false)
-            ->assertSee('>Entro<', false);
+            ->assertSee('>Scadenza<', false);
 
         $this->actingAs($operaio)->get(route('segnalazioni.show', $s->id_segnalazione))->assertOk();
     }

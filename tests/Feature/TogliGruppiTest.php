@@ -75,8 +75,11 @@ class TogliGruppiTest extends TestCase
         $aperta = Segnalazione::factory()->create(['id_tipologia_segnalazione' => 1, 'id_plesso' => 5]);
         Segnalazione::factory()->create(['id_tipologia_segnalazione' => 1, 'id_plesso' => 6]);
 
+        // 1.0.2: quella che si vede va nel riquadro "esistente", non tra le simili.
         $this->actingAs($this->admin)->getJson(route('segnalazioni.simili', ['id_tipologia_segnalazione' => 1, 'id_plesso' => 5]))
-            ->assertOk()->assertJsonCount(1)->assertJsonPath('0.id', $aperta->id_segnalazione);
+            ->assertOk()->assertJsonCount(0);
+        $this->actingAs($this->admin)->getJson(route('segnalazioni.esistente', ['id_tipologia_segnalazione' => 1, 'id_plesso' => 5]))
+            ->assertOk()->assertJsonPath('esistente.id', $aperta->id_segnalazione);
 
         // Coordinate inviate da client vecchi: ignorate, senza sede nessun simile.
         $this->actingAs($this->admin)->getJson(route('segnalazioni.simili', ['id_tipologia_segnalazione' => 1, 'latitudine' => 42.5, 'longitudine' => 14.1]))
