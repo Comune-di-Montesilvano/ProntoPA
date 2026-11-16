@@ -288,6 +288,8 @@ class Attivita
                 : "l'ha accorpata a una segnalazione precedente",
             SegnalazioneStato::ANNULLATA => "l'ha chiusa senza intervento",
             SegnalazioneStato::ARCHIVIATA => 'archiviata per inattività',
+            SegnalazioneStato::ATTESA_RISPOSTA => 'ha chiesto informazioni a '
+                .(User::whereKey((int) $this->segnalazione->id_utente_segnalazione)->first()?->isSpid() ? 'la scuola' : 'chi ha segnalato'),
             null => 'ha aggiornato lo stato',
         };
     }

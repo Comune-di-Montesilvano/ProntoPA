@@ -33,9 +33,14 @@ class SlaService
 
         $calendario = CalendarioUfficio::daImpostazioni();
 
-        return $regola->unita === 'giorni'
+        $base = $regola->unita === 'giorni'
             ? $calendario->aggiungiGiorniLavorativi($segnalazione->data_segnalazione, $regola->ore_target)
             : $calendario->aggiungiOreLavorative($segnalazione->data_segnalazione, $regola->ore_target);
+
+        // Il tempo passato ad aspettare la risposta di chi ha segnalato non conta (1.0.2).
+        $attesa = $base ? \App\Models\RichiestaInformazioni::oreDiAttesa($segnalazione, $calendario) : 0.0;
+
+        return $attesa > 0 ? $calendario->aggiungiOreLavorative($base, $attesa) : $base;
     }
 
     /**

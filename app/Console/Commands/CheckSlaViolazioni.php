@@ -19,6 +19,8 @@ class CheckSlaViolazioni extends Command
     {
         $segnalazioni = Segnalazione::aperte()
             ->whereNotNull('data_scadenza_sla')
+            // In attesa di risposta di chi ha segnalato: la scadenza è ferma.
+            ->where('id_stato_segnalazione', '!=', \App\Enums\SegnalazioneStato::ATTESA_RISPOSTA->value)
             ->get();
 
         $violate = 0;

@@ -45,6 +45,7 @@ final class Sezioni
         'publication_enabled'          => 'bool',
         'publication_auto_state_id'    => 'stato',
         'etichetta_ufficio_segnalante' => 'testo',
+        'giorni_risposta_informazioni' => 'intero',
     ];
 
     public const AVVISI = [

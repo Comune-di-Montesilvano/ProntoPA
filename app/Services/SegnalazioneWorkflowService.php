@@ -449,8 +449,8 @@ class SegnalazioneWorkflowService
         }
 
         // Sostituita da "Accorpa" (AccorpamentoService): la riga resta in db_azioni per lo storico.
-        // "Rimanda al gestore" ha pannello e rotta suoi (rimandaAlGestore), mai nel menu.
-        if (in_array($azione->codice, ['segna_duplicata', 'rimanda'], true)) {
+        // "Rimanda al gestore" e "Chiedi informazioni" hanno pannello e rotta suoi, mai nel menu.
+        if (in_array($azione->codice, ['segna_duplicata', 'rimanda', 'chiedi_informazioni'], true)) {
             return false;
         }
 
