@@ -37,7 +37,7 @@ class CreaSegnalazioneTest extends DuskTestCase
                 ->visit('/segnalazioni/create')
                 ->assertSee('Nuova segnalazione')
                 ->assertSee('Via Roma 1')
-                ->press('IMPIANTO ELETTRICO')
+                ->press('Impianto Elettrico')
                 ->type('titolo', 'Lampione spento via Roma')
                 ->type('testo_segnalazione', 'Lampione spento in via Roma, test E2E Dusk.')
                 ->waitFor('@submit-segnalazione')
