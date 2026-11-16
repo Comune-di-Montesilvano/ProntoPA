@@ -13,13 +13,16 @@
                     <strong class="text-[var(--ink)]">{{ $voce['autore'] }}</strong>
                     @if($voce['tipo'] !== 'nota' || $voce['testo'] === null) {{ $voce['frase'] }} @endif
                     <span class="text-[var(--slate-500)]">· {{ $voce['quando']->format('d/m/Y H:i') }}</span>
-                    @if($voce['tag'])
-                        <x-pa.pill :tono="$voce['tag'] === 'Interna' ? 'slate' : 'primary'" class="ml-1">{{ $voce['tag'] }}</x-pa.pill>
+                    @if($voce['letta_da'])
+                        <x-pa.pill :tono="$voce['letta_da'] === 'Solo il comune' ? 'slate' : 'primary'" class="ml-1">{{ $voce['letta_da'] }}</x-pa.pill>
                     @endif
                 </p>
 
                 @if($voce['testo'] !== null)
                     <p class="m-0 mt-1 text-[15px] text-[var(--ink)] whitespace-pre-wrap break-words">{{ $voce['testo'] }}</p>
+                @endif
+                @if($voce['nota'] !== null)
+                    <p class="m-0 mt-1 rounded-md bg-[var(--slate-100)] px-3 py-2 text-[15px] text-[var(--ink)] whitespace-pre-wrap break-words">{{ $voce['nota'] }}</p>
                 @endif
 
                 @if($allegato = $voce['allegato'])

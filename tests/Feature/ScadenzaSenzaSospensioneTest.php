@@ -136,8 +136,8 @@ class ScadenzaSenzaSospensioneTest extends TestCase
 
         $voci = \App\Support\Segnalazioni\Attivita::per($s, $this->gestore);
 
-        $this->assertTrue($voci->contains(fn ($v) => ($v['frase'] ?? null) === 'ha ripreso'));
-        $this->assertSame('Interna', $voci->first(fn ($v) => ($v['testo'] ?? null) === 'Nota interna vecchia')['tag']);
+        $this->assertTrue($voci->contains(fn ($v) => ($v['frase'] ?? null) === 'ha ripreso il lavoro'));
+        $this->assertSame('Solo il comune', $voci->first(fn ($v) => in_array('Nota interna vecchia', [$v['testo'], $v['nota']], true))['letta_da']);
     }
 
     public function test_chi_ci_lavora_in_carico_a_gestore(): void

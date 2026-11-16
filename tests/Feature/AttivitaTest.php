@@ -117,7 +117,7 @@ class AttivitaTest extends TestCase
 
         $stati = $this->passaggiDalPiuVecchio($s);
 
-        $this->assertSame(['ha preso in carico', 'ha sospeso', 'ha ripreso'], $stati->pluck('frase')->all());
+        $this->assertSame(["l'ha presa in carico", 'ha messo in pausa', 'ha ripreso il lavoro'], $stati->pluck('frase')->all());
         $this->assertSame('08:16', $stati->first()['quando']->format('H:i'));
     }
 
@@ -147,7 +147,7 @@ class AttivitaTest extends TestCase
     {
         $tutto = implode("\n", $this->testi($this->ditta));
 
-        $this->assertStringNotContainsString('ha preso in carico', $tutto);
+        $this->assertStringNotContainsString("l'ha presa in carico", $tutto);
         $this->assertStringContainsString('Edil Adriatica', $tutto);
     }
 
@@ -155,10 +155,83 @@ class AttivitaTest extends TestCase
     {
         $tutto = implode("\n", $this->testi($this->gestore));
 
-        $this->assertStringContainsString('ha assegnato a Paolo Neri', $tutto);
-        $this->assertStringContainsString('ha preso in carico', $tutto);
+        $this->assertStringContainsString("l'ha assegnata a Paolo Neri", $tutto);
+        $this->assertStringContainsString("l'ha riassegnata a Edil Adriatica", $tutto);
+        $this->assertStringContainsString("l'ha presa in carico", $tutto);
         $prima = Attivita::per($this->s->fresh(), $this->gestore)->first();
         $this->assertSame('Ricambio ordinato', $prima['testo']);
+    }
+
+    public function test_affidata_ad_altro(): void
+    {
+        $collega = User::factory()->create(['name' => 'Bruno Collega']);
+        $s = $this->segnalazioneConStorico([[2, $collega->id, '2026-11-13 08:16:08']]);
+
+        $this->assertSame(["l'ha affidata a Bruno Collega"], $this->passaggiDalPiuVecchio($s)->pluck('frase')->all());
+    }
+
+    public function test_riassegnata(): void
+    {
+        $altro = User::factory()->create(['name' => 'Luca Verdi']);
+        $s = $this->segnalazioneConStorico([
+            [3, $this->operaio->id, '2026-11-13 09:00:00'],
+            [3, $altro->id, '2026-11-13 11:00:00'],
+        ]);
+
+        $this->assertSame(["l'ha assegnata a Paolo Neri", "l'ha riassegnata a Luca Verdi"], $this->passaggiDalPiuVecchio($s)->pluck('frase')->all());
+    }
+
+    public function test_scadenza_spostata_frase_e_prefisso_tolto(): void
+    {
+        $s = $this->segnalazioneConStorico([]);
+        NotaSegnalazione::create([
+            'id_segnalazione' => $s->id_segnalazione, 'testo' => 'Scadenza spostata al 16/11/2026: manca il pezzo',
+            'id_utente' => $this->gestore->id, 'visibile_web' => true, 'visibile_impresa' => false, 'origine' => NotaSegnalazione::ORIGINE_SCADENZA,
+        ]);
+
+        $voce = Attivita::per($s->fresh(), $this->gestore)->firstWhere('tipo', 'nota');
+
+        $this->assertSame('ha spostato la scadenza a lunedì 16 novembre', $voce['frase']);
+        $this->assertSame('manca il pezzo', $voce['nota']);
+        $this->assertNull($voce['testo']);
+        $this->assertSame('passaggio', $voce['forma']);
+    }
+
+    public function test_passaggio_e_nota_stesso_minuto_fusi(): void
+    {
+        $s = $this->segnalazioneConStorico([[6, 0, '2026-11-13 10:00:00']]);
+        NotaSegnalazione::create([
+            'id_segnalazione' => $s->id_segnalazione, 'testo' => 'Aspettiamo il pezzo',
+            'id_utente' => $this->gestore->id, 'visibile_web' => false, 'visibile_impresa' => false,
+        ])->forceFill(['data' => '2026-11-13 10:00:30'])->save();
+
+        $voci = Attivita::per($s->fresh(), $this->gestore);
+
+        $this->assertCount(1, $voci);
+        $this->assertSame('ha messo in pausa', $voci[0]['frase']);
+        $this->assertSame('Aspettiamo il pezzo', $voci[0]['nota']);
+        $this->assertSame('Solo il comune', $voci[0]['letta_da']);
+    }
+
+    public function test_letta_da_nei_quattro_casi(): void
+    {
+        foreach ([[true, true, 'ditta e web'], [true, false, 'solo web'], [false, true, 'solo ditta'], [false, false, 'interna']] as [$web, $impresa, $testo]) {
+            NotaSegnalazione::create([
+                'id_segnalazione' => $this->s->id_segnalazione, 'testo' => $testo,
+                'id_utente' => $this->gestore->id, 'visibile_web' => $web, 'visibile_impresa' => $impresa,
+            ]);
+        }
+
+        $voci = Attivita::per($this->s->fresh(), $this->gestore)->keyBy('testo');
+
+        $this->assertSame('La leggono ditta e chi ha segnalato', $voci['ditta e web']['letta_da']);
+        $this->assertSame('La legge chi ha segnalato', $voci['solo web']['letta_da']);
+        $this->assertSame('La legge la ditta', $voci['solo ditta']['letta_da']);
+        $this->assertSame('Solo il comune', $voci['interna']['letta_da']);
+        $this->assertSame('ha risposto a chi ha segnalato', $voci['solo web']['frase']);
+        $this->assertSame('ha scritto una nota', $voci['interna']['frase']);
+        $this->assertSame('messaggio', $voci['interna']['forma']);
+        $this->assertNull(Attivita::per($this->s->fresh(), $this->ditta)->first()['letta_da']);
     }
 
     public function test_nota_ditta_forzata_visibile_impresa(): void
