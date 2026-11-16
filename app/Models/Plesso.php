@@ -14,12 +14,20 @@ class Plesso extends Model
 
     protected $fillable = [
         'id_istituto', 'nome', 'codice_meccanografico', 'indirizzo', 'referente', 'email', 'recapiti', 'fonte_dati',
-        'latitudine', 'longitudine',
+        'latitudine', 'longitudine', 'geocodifica_tentata_at',
     ];
 
     protected function casts(): array
     {
-        return ['latitudine' => 'float', 'longitudine' => 'float'];
+        return ['latitudine' => 'float', 'longitudine' => 'float', 'geocodifica_tentata_at' => 'datetime'];
+    }
+
+    /** Sedi con indirizzo, senza posizione e mai provate: il lavoro del giro automatico. */
+    public function scopeDaGeocodificare(Builder $query): Builder
+    {
+        return $query->whereNull('latitudine')
+            ->whereNotNull('indirizzo')->where('indirizzo', '!=', '')
+            ->whereNull('geocodifica_tentata_at');
     }
 
     /** Posizione della sede (1.0.0: le segnalazioni non hanno più coordinate proprie). */

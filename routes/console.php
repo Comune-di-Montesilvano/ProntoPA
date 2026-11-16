@@ -16,6 +16,9 @@ Schedule::command('backup:crea --tipo=notturno')->dailyAt('02:00')->withoutOverl
 // Prima di sla:check e digest: gli avvisi del mattino vanno a utenti già allineati ad AD.
 Schedule::command('ldap:sincronizza')->dailyAt('05:30')->withoutOverlapping()->runInBackground();
 
+// Sedi nuove o con indirizzo cambiato: posizione trovata senza che nessuno la chieda (1.0.2).
+Schedule::command('sedi:geocodifica')->dailyAt('06:10')->runInBackground();
+
 Schedule::command('deleghe:scadenze')->dailyAt('06:30')->runInBackground();
 Schedule::command('deleghe:rinnovi')->monthlyOn(1, '07:00')->runInBackground();
 
