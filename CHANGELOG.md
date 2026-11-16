@@ -14,7 +14,7 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
   spiega da sé (Verde e giardini verde, Idrico blu, Elettrico giallo, Termico rosso…); le nuove
   restano grigie finché non se ne sceglie uno.
 - Elenco segnalazioni: "Raggruppa per" sede, tipologia o entrambe, con il gruppo in una cella a
-  sinistra che dice quante sono e quante in ritardo. Una pagina non spezza mai un gruppo.
+  sinistra che dice quante sono e quante in ritardo. Raggruppando, le pagine arrivano a circa 100 righe e non spezzano mai un gruppo.
   La scelta resta nel browser.
 - Azioni multiple: "Accorpa" per i doppioni della stessa sede e tipologia; la più vecchia resta
   aperta e riceve le altre.

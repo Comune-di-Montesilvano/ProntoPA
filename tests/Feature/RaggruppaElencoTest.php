@@ -71,27 +71,30 @@ class RaggruppaElencoTest extends TestCase
             ->assertSee('1 · 0 in ritardo', false);
     }
 
-    /** Committente: la paginazione non spezza i gruppi di primo livello. */
+    /** Committente: la paginazione non spezza i gruppi di primo livello; pagine fino a ~100 righe. */
     public function test_pagine_con_gruppi_interi(): void
     {
         $alfa = $this->sede('ALFA');
         $beta = $this->sede('BETA');
         $gamma = $this->sede('GAMMA');
-        Segnalazione::factory()->count(20)->create(['id_stato_segnalazione' => 1, 'id_plesso' => $alfa->id_plesso, 'titolo' => 'Guasto alfa']);
-        Segnalazione::factory()->count(15)->create(['id_stato_segnalazione' => 1, 'id_plesso' => $beta->id_plesso, 'titolo' => 'Guasto beta']);
-        Segnalazione::factory()->count(40)->create(['id_stato_segnalazione' => 1, 'id_plesso' => $gamma->id_plesso, 'titolo' => 'Guasto gamma']);
+        Segnalazione::factory()->count(60)->create(['id_stato_segnalazione' => 1, 'id_plesso' => $alfa->id_plesso, 'titolo' => 'Guasto alfa']);
+        Segnalazione::factory()->count(30)->create(['id_stato_segnalazione' => 1, 'id_plesso' => $beta->id_plesso, 'titolo' => 'Guasto beta']);
+        Segnalazione::factory()->count(20)->create(['id_stato_segnalazione' => 1, 'id_plesso' => $gamma->id_plesso, 'titolo' => 'Guasto gamma']);
 
-        $pagina1 = $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => 'sede']))->assertOk();
-        $this->assertSame(20, substr_count($pagina1->getContent(), 'Guasto alfa'));
-        $this->assertSame(0, substr_count($pagina1->getContent(), 'Guasto beta'));
+        $righe = function (int $pagina, string $titolo): int {
+            $html = $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => 'sede', 'page' => $pagina]))->assertOk()->getContent();
+            $corpo = substr($html, strpos($html, '<tbody>'), strpos($html, '</tbody>') - strpos($html, '<tbody>'));
 
-        $pagina2 = $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => 'sede', 'page' => 2]))->assertOk();
-        $this->assertSame(15, substr_count($pagina2->getContent(), 'Guasto beta'));
-        $this->assertSame(0, substr_count($pagina2->getContent(), 'Guasto gamma'));
+            return substr_count($corpo, $titolo);
+        };
 
-        $pagina3 = $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => 'sede', 'page' => 3]))->assertOk();
-        $this->assertSame(40, substr_count($pagina3->getContent(), 'Guasto gamma'), 'gruppo grande intero anche oltre 30');
-        $pagina3->assertSee('40 · 0 in ritardo')->assertDontSee('(continua)');
+        $this->assertSame(60, $righe(1, 'Guasto alfa'));
+        $this->assertSame(30, $righe(1, 'Guasto beta'));
+        $this->assertSame(0, $righe(1, 'Guasto gamma'), '60+30+20 supera 100: gamma va intera nella pagina dopo');
+        $this->assertSame(20, $righe(2, 'Guasto gamma'));
+
+        $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => 'sede', 'page' => 2]))
+            ->assertSee('20 · 0 in ritardo')->assertDontSee('(continua)');
     }
 
     public function test_gruppo_sconosciuto_e_chiuse(): void

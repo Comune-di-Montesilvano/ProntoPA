@@ -26,6 +26,9 @@ class GestioneController extends Controller
 
     private const ORDINI = ['urgenti', 'recenti', 'vecchie'];
 
+    /** Raggruppato: pagine più lunghe, sennò un gruppo grande resta da solo (committente, 1.0.4). */
+    private const RIGHE_PER_PAGINA_GRUPPI = 100;
+
     private const FILTRI_RAPIDI = ['scadute', 'entro24h', 'sollecitate', 'ricorrenti'];
 
     private const STATI_IN_CARICO = [SegnalazioneStato::IN_CARICO, SegnalazioneStato::SOSPESA];
@@ -291,7 +294,7 @@ class GestioneController extends Controller
 
     /**
      * Una pagina dell'elenco raggruppato: gruppi di primo livello mai spezzati (committente, 1.0.4).
-     * Si riempie fino a ~30 righe; un gruppo più grande sta comunque intero nella sua pagina.
+     * Si riempie fino a ~100 righe; un gruppo più grande sta comunque intero nella sua pagina.
      *
      * @return array{0: PaginaPerGruppi, 1: list<array{s: Segnalazione, celle: list<array<string, mixed>>}>}
      */
@@ -325,7 +328,7 @@ class GestioneController extends Controller
         $corrente = [];
         $righeCorrenti = 0;
         foreach ($chiavi as $k) {
-            if ($corrente !== [] && $righeCorrenti + $conteggi[$k]['totale'] > 30) {
+            if ($corrente !== [] && $righeCorrenti + $conteggi[$k]['totale'] > self::RIGHE_PER_PAGINA_GRUPPI) {
                 $pagine[] = $corrente;
                 $corrente = [];
                 $righeCorrenti = 0;
