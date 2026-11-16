@@ -90,6 +90,7 @@ class AttivitaTest extends TestCase
             'id_operatore_assegnato' => $this->gestore->id,
         ]);
         foreach (array_reverse($righe) as [$stato, $collegato, $quando]) {
+            $collegato = $collegato === -1 ? $this->gestore->id : $collegato; // -1 = chi registra
             StoricoStatoSegnalazione::create([
                 'id_segnalazione' => $s->id_segnalazione, 'id_stato_segnalazione' => $stato,
                 'id_utente' => $this->gestore->id, 'id_utente_collegato' => $collegato, 'id_appalto' => 0,
@@ -168,6 +169,32 @@ class AttivitaTest extends TestCase
         $s = $this->segnalazioneConStorico([[2, $collega->id, '2026-11-13 08:16:08']]);
 
         $this->assertSame(["l'ha affidata a Bruno Collega"], $this->passaggiDalPiuVecchio($s)->pluck('frase')->all());
+    }
+
+    public function test_stesso_passaggio_ripetuto_compare_una_volta(): void
+    {
+        $s = $this->segnalazioneConStorico([
+            [2, 0, '2026-11-13 08:16:00'],
+            [6, 0, '2026-11-13 14:00:00'],
+            [2, 0, '2026-11-13 14:01:10'],
+            [2, -1, '2026-11-13 14:01:30'],
+        ]);
+
+        $this->assertSame(["l'ha presa in carico", 'ha messo in pausa', 'ha ripreso il lavoro'], $this->passaggiDalPiuVecchio($s)->pluck('frase')->all());
+    }
+
+    public function test_risposta_a_scuola_la_chiama_scuola(): void
+    {
+        $this->segnalatore->forceFill(['auth_source' => 'spid'])->save();
+        NotaSegnalazione::create([
+            'id_segnalazione' => $this->s->id_segnalazione, 'testo' => 'Arriviamo',
+            'id_utente' => $this->gestore->id, 'visibile_web' => true, 'visibile_impresa' => false,
+        ]);
+
+        $voce = Attivita::per($this->s->fresh(), $this->gestore)->firstWhere('testo', 'Arriviamo');
+
+        $this->assertSame('ha risposto alla scuola', $voce['frase']);
+        $this->assertSame('La scuola la legge', $voce['letta_da']);
     }
 
     public function test_riassegnata(): void

@@ -14,15 +14,17 @@
 
     <div class="flex flex-wrap items-center gap-3">
         @if($comune)
-            <span class="text-sm text-[var(--slate-600)]">Chi la vede: <strong>comune</strong></span>
-            @if($segnalazione->id_appalto)
-                <label class="inline-flex items-center gap-1.5 text-sm text-[var(--slate-700)]">
-                    <input type="checkbox" name="visibile_impresa" value="1" class="rounded border-[var(--slate-300)]"> + ditta
-                </label>
-            @endif
-            <label class="inline-flex items-center gap-1.5 text-sm text-[var(--slate-700)]">
-                <input type="checkbox" name="visibile_web" value="1" class="rounded border-[var(--slate-300)]"> + segnalante
-            </label>
+            {{-- Selettore: scrive i due campi di sempre (visibile_web, visibile_impresa). --}}
+            <fieldset class="pa-vis" x-data="{ chi: 'comune' }">
+                <legend class="sr-only">Chi legge questa nota</legend>
+                <label :class="chi === 'comune' && 'is-on'"><input type="radio" class="sr-only" value="comune" x-model="chi" checked><span aria-hidden="true"><i class="fas fa-lock"></i></span>Solo il comune</label>
+                <label :class="chi === 'web' && 'is-on is-pub'"><input type="radio" class="sr-only" value="web" x-model="chi"><span aria-hidden="true"><i class="fas fa-eye"></i></span>La legge anche {{ $segnalazione->utente?->isSpid() ? 'la scuola' : 'chi ha segnalato' }}</label>
+                @if($segnalazione->id_appalto)
+                    <label :class="chi === 'ditta' && 'is-on is-pub'"><input type="radio" class="sr-only" value="ditta" x-model="chi"><span aria-hidden="true"><i class="fas fa-eye"></i></span>La legge anche la ditta</label>
+                    <input type="hidden" name="visibile_impresa" :value="chi === 'ditta' ? 1 : 0" value="0">
+                @endif
+                <input type="hidden" name="visibile_web" :value="chi === 'web' ? 1 : 0" value="0">
+            </fieldset>
         @endif
 
         <label class="pa-btn pa-btn-outline pa-btn-sm cursor-pointer">

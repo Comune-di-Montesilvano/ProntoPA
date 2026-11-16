@@ -60,10 +60,26 @@
                     @include('segnalazioni.scheda._foto', ['foto' => $fotoDopo])
                 @endif
                 <p class="m-0 text-sm text-[var(--slate-500)]">
-                    Inviata il {{ $segnalazione->data_segnalazione?->format('d/m/Y H:i') }}
-                    @if($segnalazione->utente) da {{ $segnalazione->utente->name }} @endif
+                    @if($segnalazione->utente){{ $segnalazione->utente->name }} · @endif{{ $segnalazione->data_segnalazione?->locale('it')->isoFormat('dddd D MMMM YYYY, HH:mm') }}
                     @if($segnalazione->adesioni->isNotEmpty()) · e da altre {{ $segnalazione->adesioni->count() }} persone @endif
                 </p>
+                @php
+                    // Una fascia per ogni volta che è stata segnalata di nuovo, dalla più recente.
+                    $fasce = $segnalazione->duplicati()->get()->map(fn ($d) => [
+                        'quando' => $d->data_segnalazione, 'id' => $d->id_segnalazione, 'testo' => $d->testo_segnalazione,
+                    ])->concat($segnalazione->note()->where('origine', \App\Models\NotaSegnalazione::ORIGINE_INTEGRAZIONE)->get()->map(fn ($n) => [
+                        'quando' => \Illuminate\Support\Carbon::parse($n->data), 'id' => null, 'testo' => $n->testoSenzaPrefisso(),
+                    ]))->sortByDesc(fn ($f) => $f['quando']?->getTimestamp())->values();
+                @endphp
+                @foreach($fasce as $f)
+                    <div class="pa-ripetuta">
+                        <p class="pa-ripetuta-h">
+                            Segnalata di nuovo {{ $f['quando']?->locale('it')->isoFormat('dddd D MMMM, HH:mm') }}
+                            @if($f['id']) · <a href="{{ route('segnalazioni.show', $f['id']) }}">#{{ $f['id'] }}</a> accorpata qui @endif
+                        </p>
+                        <p class="m-0 whitespace-pre-wrap break-words">{{ $f['testo'] }}</p>
+                    </div>
+                @endforeach
             </x-pa.card>
 
             @if($segnalazione->triage_suggerito && auth()->user()->can('update', $segnalazione))
@@ -83,7 +99,7 @@
                 </x-pa.card>
             @endif
 
-            <x-pa.card titolo="Attività">
+            <x-pa.card titolo="Storia">
                 @include('segnalazioni.scheda._composer')
                 @include('segnalazioni.scheda._attivita')
             </x-pa.card>
@@ -94,28 +110,18 @@
                 @include('segnalazioni.scheda._dove', ['conMappa' => true])
             </x-pa.card>
 
-            <x-pa.card titolo="Dettagli">
-                <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
-                    <dt class="text-[var(--slate-500)]">Tipologia</dt>
-                    <dd class="m-0">{{ $segnalazione->tipologia?->descrizione ?? '—' }}</dd>
-                    @if($segnalazione->utente)
-                        <dt class="text-[var(--slate-500)]">Registrata da</dt><dd class="m-0">{{ $segnalazione->utente->name }}</dd>
-                    @endif
-                    <dt class="text-[var(--slate-500)]">Aperta il</dt><dd class="m-0">{{ $segnalazione->data_segnalazione?->format('d/m/Y H:i') }}</dd>
-                    @if($segnalazione->data_scadenza_sla)
-                        <dt class="text-[var(--slate-500)]">Scadenza</dt><dd class="m-0">{{ \Illuminate\Support\Carbon::parse($segnalazione->data_scadenza_sla)->format('d/m/Y H:i') }}</dd>
-                    @endif
-                    @if($segnalazione->data_chiusura)
-                        <dt class="text-[var(--slate-500)]">Chiusa il</dt><dd class="m-0">{{ \Illuminate\Support\Carbon::parse($segnalazione->data_chiusura)->format('d/m/Y H:i') }}</dd>
-                    @endif
-                    @if($segnalazione->importo_preventivo > 0)
-                        <dt class="text-[var(--slate-500)]">Preventivo</dt><dd class="m-0">€ {{ number_format((float) $segnalazione->importo_preventivo, 2, ',', '.') }}</dd>
-                    @endif
-                    @if($segnalazione->importo_liquidato > 0)
-                        <dt class="text-[var(--slate-500)]">Liquidato</dt><dd class="m-0">€ {{ number_format((float) $segnalazione->importo_liquidato, 2, ',', '.') }}</dd>
-                    @endif
-                </dl>
-            </x-pa.card>
+            @if($segnalazione->importo_preventivo > 0 || $segnalazione->importo_liquidato > 0)
+                <x-pa.card titolo="Importi">
+                    <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                        @if($segnalazione->importo_preventivo > 0)
+                            <dt class="text-[var(--slate-500)]">Preventivo</dt><dd class="m-0">€ {{ number_format((float) $segnalazione->importo_preventivo, 2, ',', '.') }}</dd>
+                        @endif
+                        @if($segnalazione->importo_liquidato > 0)
+                            <dt class="text-[var(--slate-500)]">Liquidato</dt><dd class="m-0">€ {{ number_format((float) $segnalazione->importo_liquidato, 2, ',', '.') }}</dd>
+                        @endif
+                    </dl>
+                </x-pa.card>
+            @endif
 
             @include('segnalazioni.scheda._collegate')
             @include('segnalazioni.scheda._notifiche')

@@ -17,7 +17,9 @@
                     if (!el) return;
                     const lat = {{ $posizione['lat'] }};
                     const lng = {{ $posizione['lng'] }};
-                    const map = L.map(el, { scrollWheelZoom: false }).setView([lat, lng], 16);
+                    const map = L.map(el, { scrollWheelZoom: false, dragging: false, touchZoom: false, doubleClickZoom: false }).setView([lat, lng], 16);
+                    // Ferma finché non ci si clicca: la pagina scorre senza trascinare la mappa.
+                    el.addEventListener('click', () => { map.dragging.enable(); map.touchZoom.enable(); map.scrollWheelZoom.enable(); }, { once: true });
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
                         maxZoom: 19,

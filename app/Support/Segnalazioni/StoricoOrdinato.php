@@ -2,6 +2,7 @@
 
 namespace App\Support\Segnalazioni;
 
+use App\Enums\SegnalazioneStato;
 use App\Models\Segnalazione;
 use App\Models\StoricoStatoSegnalazione;
 use Illuminate\Support\Collection;
@@ -27,6 +28,11 @@ class StoricoOrdinato
         foreach ($righe as $riga) {
             $collegato = (int) $riga->id_utente_collegato;
             $appalto = (int) $riga->id_appalto;
+            // "Assegna a me" registrava 0: in carico senza nessuno prima = chi l'ha fatto.
+            if ($collegato === 0 && $appalto === 0 && $assegnatario === '0:0'
+                && (int) $riga->id_stato_segnalazione === SegnalazioneStato::IN_CARICO->value) {
+                $collegato = (int) $riga->id_utente;
+            }
             if ($collegato > 0 || $appalto > 0) {
                 $assegnatario = $collegato.':'.$appalto;
             }

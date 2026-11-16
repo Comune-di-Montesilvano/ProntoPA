@@ -85,7 +85,7 @@ class TracciaNotificheTest extends TestCase
 
         $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
             ->assertOk()
-            ->assertSee('Notifiche inviate')
+            ->assertSee('Avvisi inviati')
             ->assertSee('Sollecito')
             ->assertSee('Marco Ditta')
             ->assertSee('ufficio@ediladriatica.it');
@@ -93,7 +93,7 @@ class TracciaNotificheTest extends TestCase
         foreach ([$this->segnalatore, $this->ditta] as $utente) {
             $this->actingAs($utente)->get(route('segnalazioni.show', $this->s))
                 ->assertOk()
-                ->assertDontSee('Notifiche inviate')
+                ->assertDontSee('Avvisi inviati')
                 ->assertDontSee('ufficio@ediladriatica.it');
         }
     }
@@ -105,6 +105,6 @@ class TracciaNotificheTest extends TestCase
 
         $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
             ->assertOk()
-            ->assertSee('Nessuna notifica inviata');
+            ->assertSee('Nessun avviso inviato');
     }
 }

@@ -179,7 +179,13 @@ class Attivita
             return 'ha scritto';
         }
 
-        return $nota->visibile_web ? 'ha risposto a chi ha segnalato' : 'ha scritto una nota';
+        if (! $nota->visibile_web) {
+            return 'ha scritto una nota';
+        }
+
+        return User::whereKey((int) $this->segnalazione->id_utente_segnalazione)->first()?->isSpid()
+            ? 'ha risposto alla scuola'
+            : 'ha risposto a chi ha segnalato';
     }
 
     /** "Scadenza spostata al 16/11/2026: motivo" → "ha spostato la scadenza a lunedì 16 novembre" + motivo. */

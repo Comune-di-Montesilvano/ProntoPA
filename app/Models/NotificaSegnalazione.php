@@ -54,6 +54,36 @@ class NotificaSegnalazione extends Model
         };
     }
 
+    /**
+     * Avvisi raggruppati per chi li ha ricevuti: chi ha segnalato, gestori, ditta, operai.
+     *
+     * @return list<array{a: string, quante: int, ultima: \Illuminate\Support\Carbon, solo_email: bool}>
+     */
+    public static function riepilogoPer(Segnalazione $segnalazione): array
+    {
+        $autore = (int) $segnalazione->id_utente_segnalazione;
+        $scuola = (bool) User::whereKey($autore)->first()?->isSpid();
+        $gruppi = [];
+        foreach (self::where('id_segnalazione', $segnalazione->id_segnalazione)->with('utente')->orderBy('id')->get() as $n) {
+            $utente = $n->utente;
+            $lettura = $utente ? \App\Support\Segnalazioni\LetturaScheda::per($utente) : null;
+            $a = match (true) {
+                $utente === null => 'Alla ditta',
+                (int) $n->id_utente === $autore, $lettura === 'segnalante' => $scuola ? 'Alla scuola' : 'A chi ha segnalato',
+                $lettura === 'gestore' => 'Ai gestori',
+                $utente->hasRole('impresa') => 'Alla ditta',
+                default => 'Agli operai',
+            };
+            $g = $gruppi[$a] ?? ['a' => $a, 'quante' => 0, 'ultima' => $n->created_at, 'solo_email' => true];
+            $g['quante']++;
+            $g['ultima'] = $n->created_at;
+            $g['solo_email'] = $g['solo_email'] && $n->canale === 'mail';
+            $gruppi[$a] = $g;
+        }
+
+        return array_values($gruppi);
+    }
+
     public function utente(): BelongsTo
     {
         return $this->belongsTo(User::class, 'id_utente');

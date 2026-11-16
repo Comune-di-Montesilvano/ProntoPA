@@ -220,6 +220,7 @@ class SegnalazioneController extends Controller
         $attivita = Attivita::per($segnalazione, $utente);
         $fatti = $lettura === 'gestore' ? \App\Support\Segnalazioni\Fatti::per($segnalazione) : null;
         $cronogramma = \App\Support\Segnalazioni\Cronogramma::per($segnalazione, $utente);
+        $storia = \App\Support\Segnalazioni\Storia::giorni($attivita);
 
         $fotoPrima = $segnalazione->allegati->where('fase', 'prima');
         $fotoDopo = $segnalazione->allegati->where('fase', 'dopo');
@@ -243,7 +244,7 @@ class SegnalazioneController extends Controller
         }
 
         return view('segnalazioni.show', compact(
-            'segnalazione', 'lettura', 'prossimoPasso', 'attivita', 'cronogramma', 'fatti', 'azioniDisponibili',
+            'segnalazione', 'lettura', 'prossimoPasso', 'attivita', 'storia', 'cronogramma', 'fatti', 'azioniDisponibili',
             'operatori', 'squadre', 'appaltiValidi', 'fotoPrima', 'fotoDopo',
         ));
     }

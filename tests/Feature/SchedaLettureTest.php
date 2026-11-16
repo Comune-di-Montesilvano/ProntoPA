@@ -110,6 +110,80 @@ class SchedaLettureTest extends TestCase
             ->assertSee('Assegnata a te da');
     }
 
+    public function test_storia_ha_gruppi_e_chi_la_legge(): void
+    {
+        \App\Models\NotaSegnalazione::create([
+            'id_segnalazione' => $this->s->id_segnalazione, 'testo' => 'Nota per noi',
+            'id_utente' => $this->gestore->id, 'visibile_web' => false, 'visibile_impresa' => false,
+        ]);
+
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee('>Storia<', false)
+            ->assertSee('Oggi · ')
+            ->assertSee('Solo il comune')
+            ->assertSee('Solo passaggi');
+    }
+
+    public function test_cosa_segnalato_mostra_fascia_risegnalata(): void
+    {
+        $doppia = Segnalazione::factory()->create([
+            'id_stato_segnalazione' => 8, 'id_segnalazione_madre' => $this->s->id_segnalazione,
+            'testo_segnalazione' => 'Ancora rotta la finestra',
+        ]);
+
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee('Segnalata di nuovo')
+            ->assertSee('#'.$doppia->id_segnalazione)
+            ->assertSee('accorpata qui')
+            ->assertSee('Ancora rotta la finestra');
+    }
+
+    public function test_dove_senza_coordinate_mostra_riquadro_e_link_per_admin(): void
+    {
+        $istituto = Istituto::create(['descrizione' => 'IC Senza', 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => true]);
+        $sede = Plesso::create(['id_istituto' => $istituto->id_istituto, 'nome' => 'Sede senza', 'indirizzo' => 'Via Nessuna 1']);
+        $this->s->update(['id_plesso' => $sede->id_plesso]);
+        $admin = User::factory()->create(['amministratore' => true]);
+        $admin->assignRole('admin');
+        $link = route('admin.sedi.edit', [$sede->id_plesso, 'ritorno' => '/segnalazioni/'.$this->s->id_segnalazione]);
+
+        $this->actingAs($admin)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()->assertSee('Posizione sulla mappa non trovata per Via Nessuna 1')->assertSee($link, false);
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()->assertSee('Posizione sulla mappa non trovata')->assertDontSee($link, false);
+    }
+
+    public function test_card_dettagli_assente_importi_presenti_solo_con_preventivo(): void
+    {
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()->assertDontSee('>Dettagli<', false)->assertDontSee('>Importi<', false);
+
+        $this->s->update(['importo_preventivo' => 120]);
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()->assertSee('>Importi<', false)->assertSee('120,00');
+    }
+
+    public function test_avvisi_inviati_riepilogo(): void
+    {
+        foreach ([[$this->segnalatore, 2], [$this->gestore, 1]] as [$chi, $quante]) {
+            for ($i = 0; $i < $quante; $i++) {
+                \App\Models\NotificaSegnalazione::create([
+                    'id_segnalazione' => $this->s->id_segnalazione, 'tipo' => 'NuovaNotaSegnalazione',
+                    'canale' => 'mail', 'id_utente' => $chi->id, 'destinatario' => $chi->email,
+                ]);
+            }
+        }
+
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee('Avvisi inviati')
+            ->assertSeeInOrder(['A chi ha segnalato', '2 email'])
+            ->assertSeeInOrder(['Ai gestori', 'email'])
+            ->assertSee('Vedi tutti');
+    }
+
     public function test_ditta_non_vede_evidenza_riservata_priorita(): void
     {
         $this->actingAs($this->ditta)->get(route('segnalazioni.show', $this->s))
