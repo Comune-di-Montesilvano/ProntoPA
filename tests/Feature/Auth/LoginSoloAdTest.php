@@ -102,7 +102,7 @@ class LoginSoloAdTest extends TestCase
         $admin = User::factory()->create(['auth_source' => 'ldap']);
         $admin->assignRole('admin');
         $impresa = Impresa::create(['ragione_sociale' => 'Edil Test']);
-        $ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa]);
+        $ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'name' => 'Luca Demo']);
         $ditta->assignRole('impresa');
 
         $this->actingAs($admin)->put(route('admin.utenti.update', $ditta), [
@@ -113,6 +113,6 @@ class LoginSoloAdTest extends TestCase
         $ditta->refresh();
         $this->assertTrue($ditta->hasRole('impresa'));
         $this->assertSame($impresa->id_impresa, $ditta->id_impresa);
-        $this->assertSame('Nuovo nome', $ditta->name);
+        $this->assertSame('Luca Demo', $ditta->name); // da SPID, non dal form
     }
 }
