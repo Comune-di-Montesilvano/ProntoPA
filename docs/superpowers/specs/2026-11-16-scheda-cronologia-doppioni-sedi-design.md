@@ -1,4 +1,4 @@
-# Scheda segnalazione leggibile, doppioni fermati, sedi sulla mappa
+# Scheda segnalazione leggibile, doppioni fermati, sedi sulla mappa, richiesta di informazioni
 
 Data: 2026-11-16 · Versione prevista: 1.0.2 (patch) · Mockup approvato: `.superpowers/brainstorm/1165-1794819166/content/scheda-v2.html` (non versionato; i contenuti che contano sono riportati qui sotto).
 
@@ -22,11 +22,12 @@ Verificato sui dati di produzione:
 2. La storia racconta i fatti veri, una volta sola, con parole che non richiedono di conoscere il sistema.
 3. Con una segnalazione già aperta per la stessa sede e tipologia, la persona viene portata a sollecitare o integrare quella (salvo preventivo già fatto).
 4. Le sedi hanno la posizione senza che nessuno debba ricordarsi di lanciare qualcosa.
+5. Il gestore può chiedere informazioni a chi ha segnalato con un'azione chiara; mentre aspetta la scadenza è ferma, e senza risposta la segnalazione si chiude da sola.
 
 ## Non obiettivi
 
 - Letture **segnalante** e **lavoro** (operaio/ditta): il layout generale resta; cambiano solo cronogramma (A3, al posto della barra a 4 tappe per il segnalante) e resa della storia (partial condiviso). Niente "quattro fatti" per loro.
-- Elenchi, stampa, fascicolo PDF, API, webhook: invariati.
+- Elenchi, stampa, fascicolo PDF, API, webhook: invariati, salvo il nuovo stato 11 (E) che compare dove compaiono gli stati (filtro elenchi, `GET /api/segnalazioni/{id}/stato`, payload webhook).
 - Nessuna riscrittura dello storico già a DB: le righe doppie vecchie si nascondono in lettura.
 - Nessuna coordinata per singola segnalazione (tolte in 1.0.0): la posizione resta quella della sede.
 
@@ -198,7 +199,7 @@ Un passaggio con nota scritta nello stesso momento dallo stesso autore (stesso m
 
 **B2. Passaggi a vuoto** — `SegnalazioneWorkflowService::eseguiTransizione`: se l'azione non cambia né lo stato né l'assegnatario (operatore, squadra, appalto), **non** scrive lo storico, non manda notifiche né webhook; nota e scadenza dell'eventuale pannello si salvano comunque. Il pannello Assegna non propone "a me" quando è già in carico a chi guarda. In lettura (`Attivita`, `Cronogramma`) righe consecutive con stesso stato e stesso assegnatario si mostrano una volta sola: copre i doppioni già a DB senza toccarli.
 
-**B3. Origine delle note** — migration additiva: `note_segnalazioni.origine` `varchar(20)` nullable (null = scritta da una persona). Valori: `scadenza` `risegnalata` (nota di accorpamento) `sollecito` `integrazione` `rimando` `priorita` `senza_intervento`. Costanti su `NotaSegnalazione`. Ogni punto che oggi crea una nota automatica imposta l'origine (`ScadenzaManuale::imposta`, `AccorpamentoService::accorpa` — solo la nota sulla destinazione —, `sollecitoSegnalante` e sollecito del gestore, `rimandaAlGestore`, `AdesioniSegnalazioniController::escalaPriorita`, azione `annulla`). La stessa migration valorizza le note esistenti dal prefisso del testo ("Scadenza spostata al ", "Segnalata di nuovo da ", "Sollecito: ", "Rimandata al comune: ", "Priorità aumentata a livello ", "Chiusa senza intervento: "). Il testo resta com'è (lo leggono stampa, PDF, email): il feed toglie il prefisso solo in visualizzazione. `down()` toglie la colonna.
+**B3. Origine delle note** — migration additiva: `note_segnalazioni.origine` `varchar(20)` nullable (null = scritta da una persona). Valori: `scadenza` `risegnalata` (nota di accorpamento) `sollecito` `integrazione` `rimando` `priorita` `senza_intervento` `richiesta` (E). Costanti su `NotaSegnalazione`. Ogni punto che oggi crea una nota automatica imposta l'origine (`ScadenzaManuale::imposta`, `AccorpamentoService::accorpa` — solo la nota sulla destinazione —, `sollecitoSegnalante` e sollecito del gestore, `rimandaAlGestore`, `AdesioniSegnalazioniController::escalaPriorita`, azione `annulla`). La stessa migration valorizza le note esistenti dal prefisso del testo ("Scadenza spostata al ", "Segnalata di nuovo da ", "Sollecito: ", "Rimandata al comune: ", "Priorità aumentata a livello ", "Chiusa senza intervento: "). Il testo resta com'è (lo leggono stampa, PDF, email): il feed toglie il prefisso solo in visualizzazione. `down()` toglie la colonna.
 
 **B4. "Segnalata N volte"** — `Segnalazione::volteSegnalata()` = 1 + adesioni + solleciti e integrazioni arrivati dal form di nuova segnalazione (note `origine` `sollecito`/`integrazione` scritte dall'autore; quelle di altre persone portano già un'adesione, vedi C) + segnalazioni accorpate qui aperte dallo stesso autore di questa (`id_segnalazione_madre` = questa e stesso `id_utente_segnalazione`: per loro `AccorpamentoService::aggiungiAderente` non crea adesione). Da coprire con test sul caso #3579/#3588 (stesso autore → 2).
 
@@ -247,10 +248,50 @@ e riceve subito il tuo messaggio.
 
 Nessuna nuova impostazione. `geocoding_comune` è vuoto in produzione: gli indirizzi contengono già il comune; se molti risultano non trovati il riquadro di Stato del sistema lo dice.
 
+## E. Richiesta di informazioni a chi ha segnalato
+
+**Perché (committente)**: "serve una call to action. Gestore deve poter chiedere integrazioni al segnalatore, con possibilità di chiusura automatica se non risposta". Decisioni sue: la **scadenza si ferma** mentre si aspetta; tempi e comportamento come proposti sotto ("va bene così").
+
+**Stato nuovo** — `SegnalazioneStato::ATTESA_RISPOSTA = 11`, non terminale. `etichetta()` "In attesa di risposta", `tono()` ambra, `fraseSegnalante()` titolo "Ti abbiamo chiesto informazioni" + testo "Rispondi per farci andare avanti", `tappa()` quella di In carico. Riga in `TabelleRiferimentoSeeder` (stati) e azione `chiedi_informazioni` (come `rimanda`: in `db_azioni` per storico e descrizioni, mai nel menu generico, rotta propria). `aperte()` la include (non terminale).
+
+**Tabella `richieste_informazioni`** (nuova, model `RichiestaInformazioni`): `id`, `id_segnalazione`, `id_utente` (gestore che chiede), `testo` (text), `stato_precedente` (tinyint), `termine_at` (datetime), `chiudi_senza_risposta` (bool), `promemoria_at` (datetime nullable), `conclusa_at` (datetime nullable), `esito` (varchar 20 nullable: `risposta` `ritirata` `chiusa`), `id_nota_risposta` (nullable), `created_at`. Al massimo una richiesta aperta (`conclusa_at` null) per segnalazione.
+
+**Chiedere** — pulsante **"Chiedi informazioni…"** nel prossimo passo del gestore (pannello `informazioni`) da stati 1–4. Policy `chiediInformazioni`: come `update` della lettura gestore, stato 1–4, nessuna richiesta aperta, e l'autore può rispondere (utente attivo `spid` o `ldap` con email; non l'utente tecnico dell'API: per quelle il pulsante non c'è e un suggerimento dice "chi ha segnalato non può rispondere da qui"). Campi:
+- **Cosa ti serve sapere** (obbligatorio, max 2000);
+- **Tempo per rispondere**: giorni lavorativi 1–30, default impostazione `giorni_risposta_informazioni` (10, sezione Regole di lavoro → Segnalazioni, tipo `intero`);
+- spunta **"Chiudi la segnalazione se non risponde entro il termine"**, attiva di default.
+
+Effetti: richiesta creata con `termine_at` = chiusura d'ufficio dell'N-esimo giorno lavorativo (`CalendarioUfficio::aggiungiGiorniLavorativi`); nota visibile al segnalante col testo (`origine = richiesta`, nuovo valore di B3); stato 11 con storico (assegnatario invariato: operatore/squadra/ditta restano); email `RichiestaInformazioniNotification` all'autore (oggetto "Ti chiediamo informazioni — #id …", testo, termine, pulsante "Rispondi" alla scheda). Ditta e operaio la vedono nella storia come oggi le note interne ditta; non possono agire sulla segnalazione mentre è in 11 (nessuna azione ammessa in 11 oltre a quelle di questa sezione).
+
+**Scadenza ferma** — `SlaService::calcolaScadenza` aggiunge alla scadenza calcolata le ore lavorative passate in attesa (`RichiestaInformazioni` concluse: `oreLavorativeTra(created_at, conclusa_at)`, sommate) con `aggiungiOreLavorative`; così anche `RicalcolaScadenzeSla` resta giusto. Con `scadenza_manuale` la data viene spostata una volta, alla ripresa, delle stesse ore (nota interna, niente email). Durante l'attesa: `sla:check` e `segnalazioni:inattivita` ignorano lo stato 11; `Scadenza::per/estesa` restituiscono `{testo: 'Ferma: aspetta una risposta', tono: 'slate'}`.
+
+**Risposta** — vale come risposta qualunque nota o allegato aggiunto da una persona con lettura `segnalante` che vede la segnalazione (autore o aderente), da qualsiasi canale: un solo punto, `RichiesteInformazioni::registraRisposta(Segnalazione, User, ?NotaSegnalazione)`, chiamato dagli observer `created` di `NotaSegnalazione` e `AllegatoSegnalazione`. Effetti: richiesta conclusa (`esito = risposta`), stato torna a `stato_precedente` con storico (autore = chi risponde), scadenza ricalcolata come sopra, email `RispostaInformazioniNotification` al gestore che ha chiesto (se non attivo: `DestinatariComune`), più chi ha il lavoro se diverso.
+
+**Scheda del segnalante** — con richiesta aperta, in cima al posto del prossimo passo, un riquadro ambra:
+
+```
+L'UFFICIO TI CHIEDE
+«Puoi dirci in quale aula e mandare una foto del quadro elettrico?»
+Rispondi entro venerdì 28 novembre: senza risposta la segnalazione verrà chiusa.
+[ La tua risposta                                                   ]
+[📎 Aggiungi foto]                                          [Rispondi]
+```
+
+(la frase sulla chiusura solo se `chiudi_senza_risposta`). Invio → `segnalazioni.aggiornamento` (C), che scrive l'integrazione e attiva la risposta tramite l'observer.
+
+**Scheda del gestore** — stato 11: il prossimo passo dice "Aspetti la risposta di {la scuola|chi ha segnalato}" con sottotitolo "entro venerdì 28 · poi si chiude da sola" (o "poi torna a te") e un'unica azione **"Non serve più"** (`DELETE segnalazioni/{id}/richiesta-informazioni`, esito `ritirata`, stato precedente, scadenza ricalcolata, nota interna). Fatti: Stato "In attesa di risposta · da 3 giorni", Scadenza "Ferma". Cronogramma: tratto `attesa` (tratteggio ambra, l'ex Sospesa), fumetto "Chiesto da {gestore} · {giorno}: «testo…» · termine {giorno}". Storia: passaggio "**{gestore}** ha chiesto informazioni a {la scuola}" con il testo nel riquadro, poi "**{segnalante}** ha risposto" / "richiesta ritirata" / "chiusa: nessuna risposta".
+
+**Promemoria e chiusura** — comando `segnalazioni:richieste` alle 07:20 (dopo `segnalazioni:inattivita`):
+- richiesta aperta, `promemoria_at` null, mancano ≤ 2 giorni lavorativi a `termine_at` → stessa email con oggetto "Promemoria: …", `promemoria_at = now()`;
+- `termine_at` passato: con `chiudi_senza_risposta` → stato 9 Chiusa senza intervento, motivo nuovo `nessuna_risposta` ("Nessuna risposta alla richiesta di informazioni") in `MOTIVI_SENZA_INTERVENTO`, nota visibile al segnalante (`origine = senza_intervento`), storico con `id_utente` 0 (Sistema), `SegnalazioneChiusaNotification` all'autore, esito `chiusa`; senza → torna a `stato_precedente`, esito `chiusa`, email al gestore "Nessuna risposta: torna a te". Riapribile come ogni chiusa. Il motivo `nessuna_risposta` non compare nella scelta manuale di "Chiudi senza intervento".
+
+**Notifiche tracciate**: tre etichette nuove in `NotificaSegnalazione::ETICHETTE` (richiesta, promemoria, risposta).
+
 ## Migrations (tutte additive, nessun backup straordinario richiesto)
 
 1. `note_segnalazioni.origine` + backfill per prefisso.
 2. `plessi.geocodifica_tentata_at`.
+3. Tabella `richieste_informazioni`. Stato 11 e azione `chiedi_informazioni` arrivano dal seeder (righe nuove, idempotente).
 
 ## Test
 
@@ -264,6 +305,7 @@ Nessuna nuova impostazione. `geocoding_comune` è vuoto in produzione: gli indir
 - Cronogramma per lettore: segnalante senza nomi interni e con titoli di `fraseSegnalante()`; lavoro dall'assegnazione; ditta che ha perso il lavoro non vede più di ciò che già vede nella storia.
 - Sedi: comando accoda solo con sedi mai tentate; job segna il tentativo su trovata e non trovata ma non su errore; cambio indirizzo azzera; coordinate a mano nello stesso salvataggio restano; `ritorno` esterno ignorato.
 - `AggiornamentoDa0920Test`/prova su copia dei dati di produzione: migrate + `AllineamentoSeeder` ×2, poi apertura di #3579, #3588 e di una decina di segnalazioni a campione in ogni stato (comprese legacy senza storico) senza errori.
+- Richiesta di informazioni: policy (stati 1–4, autore API escluso, una sola aperta); termine nel giorno lavorativo giusto; stato 11 con assegnatario invariato; risposta da nota, da allegato, da `aggiornamento`, da aderente → stato precedente e scadenza spostata delle ore lavorative attese; risposta di chi non ha lettura segnalante non conta; ritiro; promemoria una volta sola a 2 giorni lavorativi; chiusura automatica con motivo e Sistema, oppure ritorno al gestore senza spunta; `sla:check` e inattività ignorano 11; `RicalcolaScadenzeSla` mantiene lo spostamento; scadenza manuale spostata una volta.
 - Suite intera prima del push.
 
 ## Lasciato a chi costruisce
@@ -277,6 +319,7 @@ Nessuna nuova impostazione. `geocoding_comune` è vuoto in produzione: gli indir
 
 - Cronogramma anche per scuole e ditte, con il "chi" al passaggio del mouse.
 - Nuova segnalazione mai esclusa a priori; con una già aperta per stessa sede e tipologia si propone sollecito o integrazione; se quella ha già un preventivo, nuova segnalazione.
+- Richiesta di informazioni al segnalante con scadenza ferma (stato nuovo), termine 10 giorni lavorativi modificabile, promemoria 2 giorni prima, chiusura automatica attiva di default ma disattivabile per richiesta, ogni messaggio della scuola vale come risposta, "Non serve più" per ritirarla.
 - Confermati: scala del cronogramma in tempo reale con giorni chiusi velati, "Correggi la posizione" verso la pagina della sede, card Dettagli eliminata, versione 1.0.2.
 
 ## Scelte di chi ha scritto la spec

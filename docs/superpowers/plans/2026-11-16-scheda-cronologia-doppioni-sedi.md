@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Scheda segnalazione che si capisce in cinque secondi (fatti, cronogramma, storia vera), doppioni portati su sollecito/integrazione, sedi geocodificate da sole.
+**Goal:** Scheda segnalazione che si capisce in cinque secondi (fatti, cronogramma, storia vera), doppioni portati su sollecito/integrazione, sedi geocodificate da sole, richiesta di informazioni al segnalante con scadenza ferma e chiusura automatica.
 
 **Architecture:** Logica di presentazione in classi `App\Support\Segnalazioni\*` che restituiscono array pronti per Blade (testabili in PHP, nessuna libreria JS nuova); correzioni dati con una colonna `note_segnalazioni.origine` e un controllo "a vuoto" nel workflow; doppioni con un metodo nuovo di `DedupService` usato da form, endpoint `simili` e `store`; geocodifica con comando schedulato + observer su `Plesso`.
 
@@ -85,7 +85,7 @@ Secondo test `test_righe_identiche_consecutive_mostrate_una_volta`: due righe st
 - Test: `tests/Feature/OrigineNoteTest.php`
 
 **Interfaces:**
-- Produces: `NotaSegnalazione::ORIGINE_SCADENZA='scadenza'`, `ORIGINE_RISEGNALATA='risegnalata'`, `ORIGINE_SOLLECITO='sollecito'`, `ORIGINE_INTEGRAZIONE='integrazione'`, `ORIGINE_RIMANDO='rimando'`, `ORIGINE_PRIORITA='priorita'`, `ORIGINE_SENZA_INTERVENTO='senza_intervento'`; `NotaSegnalazione::PREFISSI: array<string,string>` (origine → prefisso: `Scadenza spostata al `, `Segnalata di nuovo da `, `Sollecito: `, `Rimandata al comune: `, `Priorità aumentata a livello `, `Chiusa senza intervento: `); `NotaSegnalazione::testoSenzaPrefisso(): string`.
+- Produces: `NotaSegnalazione::ORIGINE_SCADENZA='scadenza'`, `ORIGINE_RISEGNALATA='risegnalata'`, `ORIGINE_SOLLECITO='sollecito'`, `ORIGINE_INTEGRAZIONE='integrazione'`, `ORIGINE_RIMANDO='rimando'`, `ORIGINE_PRIORITA='priorita'`, `ORIGINE_SENZA_INTERVENTO='senza_intervento'`, `ORIGINE_RICHIESTA='richiesta'` (usata in Task 20); `NotaSegnalazione::PREFISSI: array<string,string>` (origine → prefisso: `Scadenza spostata al `, `Segnalata di nuovo da `, `Sollecito: `, `Rimandata al comune: `, `Priorità aumentata a livello `, `Chiusa senza intervento: `); `NotaSegnalazione::testoSenzaPrefisso(): string`.
 
 - [ ] **Step 1: Test** — `test_backfill_riconosce_ogni_prefisso`: inserisci note con ciascun prefisso via `DB::table` con colonna già presente a `null`, invoca la `up()` della migration su quelle righe (estrai il backfill in un metodo statico pubblico della migration o in `NotaSegnalazione::origineDaTesto(string): ?string` usato dalla migration — scelta del piano: **`origineDaTesto`**) → origine attesa per ognuna. `test_sollecito_senza_due_punti_resta_null`: `"Sollecito urgente per la palestra"` → `null`. `test_note_automatiche_nascono_con_origine`: `ScadenzaManuale::imposta`, `sollecitoSegnalante`, `accorpa`, `annulla`, `rimandaAlGestore` → `origine` corretta; la nota "Era già stata segnalata…" sull'accorpata resta `null`. `test_testo_senza_prefisso`: `"Sollecito: arrivate?"` → `"arrivate?"`.
 - [ ] **Step 2: Run** `--filter=OrigineNoteTest` → FAIL.
@@ -377,10 +377,86 @@ array{
 - [ ] **Step 4: Run** `--filter=SchedaLettureTest` + `--filter=VisibilitaSchedaTest` + `--filter=TracciaNotificheTest`; `npm run build`; controllo visivo #3579 confrontato col mockup v2 (`.superpowers/brainstorm/1165-1794819166/content/scheda-v2.html`).
 - [ ] **Step 5: Commit** `feat(scheda): storia, dove e avvisi ridisegnati`
 
-### Task 19: Rilascio 1.0.2
+## Parte E — Richiesta di informazioni a chi ha segnalato
+
+### Task 19: Stato 11, tabella richieste, scadenza ferma
 
 **Files:**
-- Modify: `CHANGELOG.md`, `publiccode.yml` (`softwareVersion: 1.0.2`, `releaseDate`), `CLAUDE.md` (origine delle note, regola doppioni, geocodifica automatica `sedi:geocodifica` 06:10, `Cronogramma`/`Fatti`/`Storia` nell'albero `Support/Segnalazioni`)
+- Modify: `app/Enums/SegnalazioneStato.php` (`ATTESA_RISPOSTA = 11` + tutti i `match`: `label`, `badgeClass`, `tono`, `etichetta`, `fraseSegnalante`, `tappa`), `database/seeders/TabelleRiferimentoSeeder.php` (stato 11, azione `chiedi_informazioni` con `parametri_filtro` `{"stati":[1,2,3,4]}`, mai nel menu come `rimanda`), `app/Services/SlaService.php` (`calcolaScadenza`), `app/Support/Segnalazioni/Scadenza.php`, `app/Console/Commands/CheckSlaViolazioni.php`, `app/Services/Segnalazioni/Inattivita.php`, `app/Services/SegnalazioneWorkflowService.php` (nessuna azione del menu applicabile in 11), `app/Support/Impostazioni/Sezioni.php` + `database/seeders/ImpostazioniSeeder.php` (`giorni_risposta_informazioni`, `intero`, default 10, sezione `SEGNALAZIONI`), `resources/views/admin/regole/segnalazioni.blade.php` (`<x-pa.impostazione>`)
+- Create: `database/migrations/2026_11_16_000003_richieste_informazioni.php`, `app/Models/RichiestaInformazioni.php`
+- Test: `tests/Feature/RichiestaInformazioniTest.php`, `tests/Feature/SchemaStatiAzioniTest.php`, `tests/Feature/AllineamentoSeederTest.php`
+
+**Interfaces:**
+- Produces: `RichiestaInformazioni` (tabella `richieste_informazioni`, colonne della spec E, cast datetime/bool, `scopeAperte()` = `conclusa_at` null, relazioni `segnalazione()`, `richiedente()`); `Segnalazione::richiestaAperta(): HasOne` (`ofMany` sulla più recente aperta); `RichiestaInformazioni::oreDiAttesa(Segnalazione $s, CalendarioUfficio $c): float` (somma `oreLavorativeTra(created_at, conclusa_at)` delle concluse). `calcolaScadenza` = base + `aggiungiOreLavorative(base, oreDiAttesa)` quando > 0. `Scadenza::per/estesa` con stato 11 → `['testo' => 'Ferma: aspetta una risposta', 'tono' => 'slate']`.
+
+- [ ] **Step 1: Test** `test_seeder_crea_stato_11_e_azione_idempotente` (due giri, stesse righe); `test_scadenza_spostata_delle_ore_lavorative_attese` (regola 2 giorni, richiesta conclusa dopo 6 ore lavorative → scadenza +6 ore lavorative); `test_ricalcolo_sla_mantiene_lo_spostamento` (`RicalcolaScadenzeSla` sincrono); `test_sla_check_e_inattivita_ignorano_stato_11`; `test_scadenza_in_parole_ferma`; `test_nessuna_azione_menu_in_stato_11`.
+- [ ] **Step 2: Run** → FAIL.
+- [ ] **Step 3: Implementa.**
+- [ ] **Step 4: Run** + `--filter=SchemaStatiAzioniTest` + `--filter=SlaOrarioUfficioTest` + `--filter=RicalcoloSlaTest` + `--filter=InattivitaTest` + `--filter=KpiTransizioniTest` → PASS.
+- [ ] **Step 5: Commit** `feat(segnalazioni): stato in attesa di risposta`
+
+### Task 20: Chiedere, rispondere, ritirare
+
+**Files:**
+- Create: `app/Services/Segnalazioni/RichiesteInformazioni.php`, `app/Notifications/RichiestaInformazioniNotification.php`, `app/Notifications/RispostaInformazioniNotification.php`, `app/Observers/NotaSegnalazioneObserver.php`, `app/Observers/AllegatoSegnalazioneObserver.php` (o hook `created` accanto a quello antivirus in `AllegatoSegnalazione::booted()`)
+- Modify: `app/Policies/SegnalazionePolicy.php`, `app/Http/Controllers/SegnalazioneController.php`, `routes/web.php`, `app/Models/NotificaSegnalazione.php` (`ETICHETTE`)
+- Test: `tests/Feature/RichiestaInformazioniTest.php`
+
+**Interfaces:**
+- Consumes: Task 19, `CalendarioUfficio::aggiungiGiorniLavorativi`, `ScadenzaManuale` (spostamento una volta), `NotaSegnalazione::ORIGINE_RICHIESTA`.
+- Produces:
+  - `RichiesteInformazioni::chiedi(Segnalazione $s, User $gestore, string $testo, int $giorni, bool $chiudiSenzaRisposta): RichiestaInformazioni`
+  - `RichiesteInformazioni::registraRisposta(Segnalazione $s, User $autore, ?NotaSegnalazione $nota = null): bool` — no-op (false) se nessuna richiesta aperta o `LetturaScheda::per($autore) !== 'segnalante'` o `! $autore->can('view', $s)`.
+  - `RichiesteInformazioni::ritira(Segnalazione $s, User $gestore): void`
+  - `RichiesteInformazioni::riprendi(RichiestaInformazioni $r, string $esito, int $idAutore): void` (privato/condiviso: stato precedente + storico + ricalcolo scadenza; usato anche dal Task 21)
+  - Policy `chiediInformazioni(User, Segnalazione): bool` (regole spec E; autore `auth_source` in `spid|ldap`, attivo, email non vuota) e `ritiraInformazioni` (= `update` lettura gestore e richiesta aperta).
+  - Rotte `POST segnalazioni/{segnalazione}/richiesta-informazioni` → `segnalazioni.richiesta-informazioni` (validazione `testo` required max 2000, `giorni` integer 1–30, `chiudi_senza_risposta` boolean) e `DELETE` stesso percorso → `segnalazioni.richiesta-informazioni.ritira`.
+  - Ogni operazione in `DB::transaction`; email dopo il commit (`afterCommit()` sulle notifiche).
+
+- [ ] **Step 1: Test** `test_chiedi_porta_a_11_con_assegnatario_invariato_e_avvisa_autore` (stato 4 con ditta → 11, `id_appalto` invariato, nota `origine=richiesta` visibile al segnalante, `RichiestaInformazioniNotification` all'autore, `termine_at` = chiusura del 10° giorno lavorativo); `test_policy_esclude_stati_5_e_chiusi_autore_api_e_seconda_richiesta`; `test_risposta_da_nota_riporta_allo_stato_precedente_e_avvisa_gestore`; `test_risposta_da_allegato`; `test_risposta_da_aggiornamento_form` (rotta Task 6); `test_risposta_di_aderente_conta`; `test_nota_del_gestore_non_conta_come_risposta`; `test_ritira`; `test_scadenza_manuale_spostata_una_volta`.
+- [ ] **Step 2: Run** → FAIL.
+- [ ] **Step 3: Implementa.**
+- [ ] **Step 4: Run** + `--filter=AttivitaTest` + `--filter=AllegatiSegnalazioniTest` + `--filter=TracciaNotificheTest` → PASS.
+- [ ] **Step 5: Commit** `feat(segnalazioni): chiedi informazioni a chi ha segnalato`
+
+### Task 21: Promemoria e chiusura automatica
+
+**Files:**
+- Create: `app/Console/Commands/ControllaRichiesteInformazioni.php` (firma `segnalazioni:richieste`)
+- Modify: `routes/console.php` (`dailyAt('07:20')->runInBackground()`), `app/Services/SegnalazioneWorkflowService.php` (`MOTIVI_SENZA_INTERVENTO['nessuna_risposta'] = 'Nessuna risposta alla richiesta di informazioni'`, escluso dalla select manuale del pannello `annulla`), `app/Services/Segnalazioni/RichiesteInformazioni.php` (`controlla(?CarbonInterface $ora = null): array{promemoria: int, chiuse: int, tornate: int}`)
+- Test: `tests/Feature/RichiestaInformazioniTest.php`
+
+**Interfaces:**
+- Consumes: `riprendi()` (Task 20), `SegnalazioneChiusaNotification`, `CalendarioUfficio`.
+- Produces: promemoria se mancano ≤ 2 giorni lavorativi e `promemoria_at` null; termine passato con spunta → stato 9 (storico `id_utente` 0, `data_chiusura`, nota visibile `origine=senza_intervento` testo `"Chiusa senza intervento: Nessuna risposta alla richiesta di informazioni."`, esito `chiusa`); senza spunta → `riprendi(…, 'chiusa', 0)` + email al gestore. Una segnalazione per transazione, errore su una non ferma le altre (stesso schema di `Inattivita`).
+
+- [ ] **Step 1: Test** `test_promemoria_una_volta_sola_a_due_giorni_lavorativi` (comando due volte → una email); `test_nessun_promemoria_prima`; `test_chiusura_automatica_con_motivo_e_sistema`; `test_senza_spunta_torna_al_gestore`; `test_risposta_arrivata_non_chiude`; `test_motivo_nessuna_risposta_non_selezionabile_a_mano`; `test_comando_schedulato_alle_0720`; `test_riapri_dopo_chiusura_automatica`.
+- [ ] **Step 2: Run** → FAIL.
+- [ ] **Step 3: Implementa.**
+- [ ] **Step 4: Run** + `--filter=ChiusuraSempliceTest` → PASS.
+- [ ] **Step 5: Commit** `feat(segnalazioni): promemoria e chiusura senza risposta`
+
+### Task 22: Richiesta nelle schede
+
+**Files:**
+- Create: `resources/views/segnalazioni/scheda/pannelli/informazioni.blade.php`, `resources/views/segnalazioni/scheda/_richiesta-segnalante.blade.php`
+- Modify: `app/Support/Segnalazioni/ProssimoPasso.php` (gestore: azione "Chiedi informazioni…" quando `can('chiediInformazioni')`; stato 11: titolo/sottotitolo/azione "Non serve più" della spec E), `Cronogramma.php` (classe `attesa`, fumetto con richiedente, testo e termine; per il segnalante "L'ufficio ti ha chiesto informazioni"), `Fatti.php` (Stato "In attesa di risposta · da N giorni", Scadenza "Ferma"), `Attivita.php` (frasi: "ha chiesto informazioni a {la scuola|chi ha segnalato}", "ha risposto", "richiesta ritirata", "chiusa: nessuna risposta"), `scheda/segnalante.blade.php` (riquadro in cima al posto del prossimo passo), `resources/css/app.css` (`.pa-crono-attesa`)
+- Test: `tests/Unit/Segnalazioni/ProssimoPassoTest.php`, `tests/Unit/Segnalazioni/CronogrammaTest.php`, `tests/Unit/Segnalazioni/FattiTest.php`, `tests/Feature/SchedaLettureTest.php`
+
+**Interfaces:**
+- Consumes: Task 12-18 (classi di presentazione), Task 19-20 (`richiestaAperta`, rotte).
+- Produces: riquadro segnalante con form `multipart` verso `segnalazioni.aggiornamento` (copy della spec E; frase sulla chiusura solo se `chiudi_senza_risposta`); pannello gestore con textarea, `giorni` (default `Impostazione::get('giorni_risposta_informazioni', 10)`), spunta attiva.
+
+- [ ] **Step 1: Test** `test_prossimo_passo_offre_chiedi_informazioni`, `test_prossimo_passo_in_attesa_offre_non_serve_piu`, `test_cronogramma_tratto_attesa_con_chi_ha_chiesto`, `test_fatti_scadenza_ferma`, `test_scheda_segnalante_mostra_domanda_termine_e_avviso_chiusura`, `test_scheda_segnalante_senza_spunta_non_parla_di_chiusura`, `test_storia_frasi_richiesta_e_risposta`.
+- [ ] **Step 2: Run** → FAIL.
+- [ ] **Step 3: Implementa.**
+- [ ] **Step 4: Run** test toccati + `npm run build`; prova a mano: gestore chiede su una segnalazione di `mock.segnalatore`, risposta dal riquadro, stato e scadenza tornano.
+- [ ] **Step 5: Commit** `feat(scheda): richiesta di informazioni in vista`
+
+### Task 23: Rilascio 1.0.2
+
+**Files:**
+- Modify: `CHANGELOG.md`, `publiccode.yml` (`softwareVersion: 1.0.2`, `releaseDate`), `CLAUDE.md` (origine delle note, regola doppioni, geocodifica automatica `sedi:geocodifica` 06:10, `Cronogramma`/`Fatti`/`Storia` nell'albero `Support/Segnalazioni`, stato 11 nella sezione Workflow Stati, richieste di informazioni e `segnalazioni:richieste` 07:20 nell'elenco dei comandi schedulati), `docs/API.md` + `docs/openapi.yaml` (stato 11 nell'enum degli stati)
 - Test: `tests/Feature/AggiornamentoDa0920Test.php` (aggiungi asserzioni su colonne nuove se il test controlla lo schema)
 
 - [ ] **Step 1: Prova su copia prod** — `mariadb-dump --single-transaction` nello scratchpad → `migrate` + `AllineamentoSeeder` ×2 → conta `note_segnalazioni` per `origine` (atteso: nessuna nota con prefisso noto rimasta `null`) → smoke curl con `mock.admin` di `/segnalazioni/3579`, `/segnalazioni/3588` e 10 schede a campione per stato (incluse legacy senza storico): tutte 200, nessun errore in `storage/logs/laravel.log`.
