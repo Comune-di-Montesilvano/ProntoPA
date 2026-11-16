@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Segnalazioni;
 
+use App\Models\Appalto;
+use App\Models\Impresa;
 use App\Models\NotaSegnalazione;
 use App\Models\Segnalazione;
 use App\Models\StoricoStatoSegnalazione;
@@ -222,6 +224,111 @@ class CronogrammaTest extends TestCase
         $this->assertSame(['in-carico'], array_column($c['tratti'], 'classe'));
         $this->assertGreaterThanOrEqual(0.0, $c['tratti'][0]['sinistra']);
         $this->assertEqualsWithDelta(100.0, $this->somma($c), 0.0001);
+    }
+
+    private function nota(Segnalazione $s, User $autore, string $quando, bool $web, bool $impresa = false, ?string $origine = null): void
+    {
+        NotaSegnalazione::create([
+            'id_segnalazione' => $s->id_segnalazione, 'testo' => 'x', 'id_utente' => $autore->id,
+            'visibile_web' => $web, 'visibile_impresa' => $impresa, 'origine' => $origine,
+        ])->forceFill(['data' => $quando])->save();
+    }
+
+    private function cronoPer(Segnalazione $s, User $lettore, string $ora): array
+    {
+        $c = Cronogramma::per($s->fresh(), $lettore, Carbon::parse($ora));
+        $this->assertNotNull($c);
+
+        return $c;
+    }
+
+    /** @return array{0: User, 1: User, 2: Segnalazione} segnalante, operaio, segnalazione assegnata all'operaio */
+    private function scenaScuola(): array
+    {
+        $scuola = User::factory()->create(['name' => 'Sara Scuola']);
+        $scuola->assignRole('segnalatore');
+        $operaio = User::factory()->create(['name' => 'Oscar Operaio']);
+        $operaio->assignRole('operaio');
+        $s = $this->segnalazione('2026-11-10 09:00:00', ['id_stato_segnalazione' => 4, 'id_utente_segnalazione' => $scuola->id]);
+        $this->storico($s, 2, '2026-11-11 09:00:00', $this->gestore->id);
+        $this->storico($s, 3, '2026-11-12 09:00:00', $operaio->id);
+        $this->storico($s, 4, '2026-11-12 15:00:00', $operaio->id);
+
+        return [$scuola, $operaio, $s];
+    }
+
+    public function test_segnalante_non_vede_nomi(): void
+    {
+        [$scuola, , $s] = $this->scenaScuola();
+        $this->nota($s, $this->gestore, '2026-11-12 10:00:00', true);
+
+        $c = $this->cronoPer($s, $scuola, '2026-11-13 09:00:00');
+        $testi = implode("\n", array_merge(array_column($c['tratti'], 'fumetto'), array_column($c['marcatori'], 'fumetto')));
+
+        $this->assertStringNotContainsString('Anna Gestore', $testi);
+        $this->assertStringNotContainsString('Oscar Operaio', $testi);
+        $this->assertStringContainsString('Ufficio manutenzioni', $testi);
+    }
+
+    public function test_segnalante_vede_titoli_semplici_e_assegnate_fuse(): void
+    {
+        [$scuola, , $s] = $this->scenaScuola();
+
+        $c = $this->cronoPer($s, $scuola, '2026-11-13 09:00:00');
+
+        $this->assertSame(['Ricevuta', 'Presa in carico', 'Ci stiamo lavorando'], array_column($c['tratti'], 'nome'));
+        $this->assertStringStartsWith('Aperta da 3 giorni · presa in carico mercoledì', $c['riassunto']);
+    }
+
+    public function test_segnalante_marcatori_solo_note_visibili(): void
+    {
+        [$scuola, , $s] = $this->scenaScuola();
+        $altra = User::factory()->create();
+        $altra->assignRole('segnalatore');
+        $this->nota($s, $this->gestore, '2026-11-11 10:00:00', true);
+        $this->nota($s, $this->gestore, '2026-11-11 16:00:00', false);
+        $this->nota($s, $scuola, '2026-11-12 10:00:00', true, false, NotaSegnalazione::ORIGINE_SOLLECITO);
+        $this->nota($s, $altra, '2026-11-12 16:00:00', true);
+
+        $c = $this->cronoPer($s, $scuola, '2026-11-13 09:00:00');
+
+        $this->assertSame(['risposta', 'risegnalata'], array_column($c['marcatori'], 'tipo'));
+        $this->assertStringContainsString('Tu', $c['marcatori'][1]['fumetto']);
+    }
+
+    public function test_lavoro_parte_dall_assegnazione(): void
+    {
+        [, $operaio, $s] = $this->scenaScuola();
+
+        $c = $this->cronoPer($s, $operaio, '2026-11-14 09:00:00');
+
+        $this->assertSame('2026-11-12 09:00', $c['da']->format('Y-m-d H:i'));
+        $this->assertStringStartsWith('Assegnata a te da 2 giorni', $c['riassunto']);
+        $this->assertEqualsWithDelta($c['ora'], $this->somma($c), 0.0001);
+    }
+
+    public function test_ditta_che_ha_perso_il_lavoro_non_vede_oltre_la_storia(): void
+    {
+        $impresa = Impresa::create(['ragione_sociale' => 'Edil Adriatica']);
+        $appalto = Appalto::create(['descrizione' => 'A', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
+        $ditta = User::factory()->create(['auth_source' => 'spid', 'id_impresa' => $impresa->id_impresa, 'email_verified_at' => now()]);
+        $ditta->assignRole('impresa');
+        $operaio = User::factory()->create();
+        $s = $this->segnalazione('2026-11-10 09:00:00', ['id_stato_segnalazione' => 3]);
+        StoricoStatoSegnalazione::create([
+            'id_segnalazione' => $s->id_segnalazione, 'id_stato_segnalazione' => 4, 'id_utente' => $this->gestore->id,
+            'id_utente_collegato' => 0, 'id_appalto' => $appalto->id_appalto,
+        ])->forceFill(['data_registrazione' => '2026-11-11 09:00:00'])->save();
+        $this->storico($s, 3, '2026-11-12 09:00:00', $operaio->id);
+        $this->nota($s, $this->gestore, '2026-11-10 12:00:00', false, true);
+        $this->nota($s, $this->gestore, '2026-11-11 12:00:00', false, true);
+        $this->nota($s, $this->gestore, '2026-11-12 12:00:00', false, false);
+
+        $c = $this->cronoPer($s, $ditta, '2026-11-13 09:00:00');
+
+        $this->assertSame('2026-11-11 09:00', $c['da']->format('Y-m-d H:i'));
+        $this->assertCount(1, $c['marcatori']);
+        $this->assertStringStartsWith('Assegnata alla tua ditta da 2 giorni', $c['riassunto']);
     }
 
     public function test_cambio_ora_somma_100(): void

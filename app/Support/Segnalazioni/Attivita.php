@@ -75,11 +75,17 @@ class Attivita
      */
     private function inizioLavoro(Collection $storico): ?Carbon
     {
-        if ($this->lettura !== 'lavoro') {
-            return null;
-        }
+        return $this->lettura === 'lavoro' ? self::inizioLavoroPer($this->lettore, $storico) : null;
+    }
 
-        $stati = $this->lettore->hasRole('impresa')
+    /**
+     * Quando il lavoro è arrivato a chi lo fa (usato anche dal cronogramma).
+     *
+     * @param  Collection<int, StoricoStatoSegnalazione>  $storico  ordinato crescente
+     */
+    public static function inizioLavoroPer(User $lettore, Collection $storico): ?Carbon
+    {
+        $stati = $lettore->hasRole('impresa')
             ? [SegnalazioneStato::ASSEGNATA_IMPRESA->value]
             : [SegnalazioneStato::ASSEGNATA_OPERATORE->value, SegnalazioneStato::ASSEGNATA_IMPRESA->value];
 

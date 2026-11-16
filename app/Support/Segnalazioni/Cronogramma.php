@@ -4,6 +4,7 @@ namespace App\Support\Segnalazioni;
 
 use App\Enums\SegnalazioneStato;
 use App\Models\Appalto;
+use App\Models\Impostazione;
 use App\Models\Impresa;
 use App\Models\NotaSegnalazione;
 use App\Models\Segnalazione;
@@ -45,6 +46,7 @@ class Cronogramma
         'finale' => 'Chiusa',
         'non-noto' => 'Storia non registrata',
         'risposta' => 'Risposta a chi ha segnalato',
+        'nota' => 'Messaggio',
         'risegnalata' => 'Segnalata di nuovo',
         'pausa' => 'Pausa breve',
         'chiuso' => 'Ufficio chiuso',
@@ -61,12 +63,17 @@ class Cronogramma
     /** @var array<int, string> */
     private array $nomi = [];
 
+    /** gestore | lavoro | segnalante (LetturaScheda) */
+    private string $lettura;
+
     private function __construct(
         private readonly Segnalazione $s,
         private readonly User $lettore,
         private readonly Carbon $ora,
         private readonly CalendarioUfficio $calendario,
-    ) {}
+    ) {
+        $this->lettura = LetturaScheda::per($lettore);
+    }
 
     /** @return array<string, mixed>|null */
     public static function per(Segnalazione $s, User $lettore, ?CarbonInterface $ora = null): ?array
@@ -81,7 +88,12 @@ class Cronogramma
     /** @return array<string, mixed> */
     private function calcola(): array
     {
+        $storico = StoricoOrdinato::di($this->s);
         $this->da = Carbon::parse($this->s->data_segnalazione);
+        // Chi lavora vede la storia da quando il lavoro è arrivato a lui (come in Attivita).
+        if ($this->lettura === 'lavoro' && ($inizio = Attivita::inizioLavoroPer($this->lettore, $storico)) && $inizio->gt($this->da)) {
+            $this->da = $inizio;
+        }
         $chiusura = $this->s->data_chiusura ? Carbon::parse($this->s->data_chiusura) : null;
         $this->fineReale = $chiusura ?? $this->ora->copy();
         if ($this->fineReale->lt($this->da)) {
@@ -91,7 +103,6 @@ class Cronogramma
         $this->a = $scadenza && $scadenza->gt($this->fineReale) ? $scadenza->copy() : $this->fineReale->copy();
         $this->durata = (float) max(1, $this->a->getTimestamp() - $this->da->getTimestamp());
 
-        $storico = StoricoOrdinato::di($this->s);
         [$tratti, $pause] = $this->tratti($storico);
         $marcatori = $this->raggruppa(array_merge($pause, $this->marcatori()));
         $presenti = array_unique(array_merge(array_column($tratti, 'classe'), array_column($marcatori, 'tipo')));
@@ -114,8 +125,16 @@ class Cronogramma
             'superata_da' => $superata ? $this->posizione($scadenza) : null,
             'fine_reale' => $this->posizione($this->fineReale),
             'riassunto' => $this->riassunto($tratti, $chiusura),
-            'legenda' => array_values(array_intersect_key(self::LEGENDA, array_flip($presenti))),
+            'legenda' => array_values(array_intersect_key($this->legenda(), array_flip($presenti))),
         ];
+    }
+
+    /** @return array<string, string> */
+    private function legenda(): array
+    {
+        return $this->lettura === 'segnalante'
+            ? ['risposta' => "Messaggio dell'ufficio", 'risegnalata' => 'Tuo sollecito o aggiunta'] + self::LEGENDA
+            : self::LEGENDA;
     }
 
     private function posizione(CarbonInterface $t): float
@@ -185,7 +204,7 @@ class Cronogramma
                 continue;
             }
             $ultimo = $tenuti === [] ? null : $tenuti[count($tenuti) - 1];
-            if ($ultimo !== null && $ultimo['stato'] === $g['stato'] && $ultimo['chi'] === $g['chi']) {
+            if ($ultimo !== null && $this->stessoTratto($ultimo, $g)) {
                 $tenuti[count($tenuti) - 1]['fine'] = $g['fine'];
 
                 continue;
@@ -199,18 +218,49 @@ class Cronogramma
     }
 
     /**
+     * Il segnalante non vede chi lavora: "Assegnata" e "Assegnata a ditta" sono lo stesso "Ci stiamo lavorando".
+     *
+     * @param  array<string, mixed>  $a
+     * @param  array<string, mixed>  $b
+     */
+    private function stessoTratto(array $a, array $b): bool
+    {
+        if ($this->lettura === 'segnalante') {
+            return $this->titoloSemplice($a['stato']) === $this->titoloSemplice($b['stato']);
+        }
+
+        return $a['stato'] === $b['stato'] && $a['chi'] === $b['chi'];
+    }
+
+    private function titoloSemplice(?SegnalazioneStato $stato): string
+    {
+        return $stato?->fraseSegnalante()['titolo'] ?? 'Storia non registrata';
+    }
+
+    private function ufficio(): string
+    {
+        return (string) (Impostazione::get('etichetta_ufficio_segnalante') ?: 'Ufficio manutenzioni');
+    }
+
+    /**
      * @param  list<array<string, mixed>>  $pause
      * @return Tratto
      */
     private function tratto(?SegnalazioneStato $stato, ?string $chi, ?int $deciso, Carbon $da, Carbon $a, array $pause = []): array
     {
-        $nome = $stato?->etichetta() ?? 'Storia non registrata';
+        $segnalante = $this->lettura === 'segnalante';
+        $nome = $segnalante ? $this->titoloSemplice($stato) : ($stato?->etichetta() ?? 'Storia non registrata');
+        if ($segnalante) {
+            $chi = $stato === null || $stato === SegnalazioneStato::NUOVA ? null : $this->ufficio();
+            $deciso = null;
+        }
         $decisoDa = $deciso ? $this->nome($deciso) : null;
         $inCorso = $a->getTimestamp() >= $this->fineReale->getTimestamp() && $this->s->data_chiusura === null;
         $durata = $this->durata($da, $a);
         $lavorativi = $this->lavorativi($da, $a);
 
         $righe = match (true) {
+            $segnalante && $stato !== null => array_filter([$nome, $chi, ($stato === SegnalazioneStato::NUOVA ? 'dal ' : '').$this->momento($da)]),
             $stato === null => ['Storia non registrata', 'dal '.$this->momento($da).' al '.$this->momento($a)],
             $stato === SegnalazioneStato::NUOVA => array_filter([
                 "Nuova · nessuno l'ha presa",
@@ -225,6 +275,9 @@ class Cronogramma
             ],
         };
         $righe[] = ($inCorso ? 'da ' : 'per ').$durata.' ('.$lavorativi.' '.($lavorativi === 1 ? 'lavorativo' : 'lavorativi').')';
+        if ($segnalante && $inCorso && $this->s->data_scadenza_sla) {
+            $righe[] = 'prevista entro '.Carbon::parse($this->s->data_scadenza_sla)->locale('it')->isoFormat('dddd D');
+        }
         foreach ($pause as $p) {
             $righe[] = 'pausa di '.$this->durataBreve($p['inizio'], $p['fine']).' '.$this->momento($p['inizio']);
         }
@@ -262,6 +315,9 @@ class Cronogramma
 
     private function avvisati(): ?string
     {
+        if ($this->lettura !== 'gestore') {
+            return null;
+        }
         $n = \App\Models\NotificaSegnalazione::where('id_segnalazione', $this->s->id_segnalazione)
             ->where('tipo', 'NuovaSegnalazioneNotification')->distinct()->count('id_utente');
 
@@ -278,25 +334,35 @@ class Cronogramma
 
         $note = $this->s->note()->visibiliA($this->lettore)->reorder('data')->get();
         foreach ($note as $nota) {
-            $tipo = $this->tipoMarcatore($nota, $autore);
+            $quando = Carbon::parse($nota->data);
+            $tipo = match ($this->lettura) {
+                'gestore' => $this->tipoMarcatore($nota, $autore),
+                'segnalante' => $this->tipoPerSegnalante($nota),
+                default => $quando->gte($this->da) ? ['nota', 'nota'] : null,
+            };
             if ($tipo === null) {
                 continue;
             }
             $marcatori[] = [
                 'tipo' => $tipo[0],
-                'posizione' => $this->posizione(Carbon::parse($nota->data)),
+                'posizione' => $this->posizione($quando),
                 'quanti' => 1,
-                'fumetto' => $this->nome((int) $nota->id_utente).' · '.$this->momento(Carbon::parse($nota->data)).' · '.$tipo[1],
+                'fumetto' => $this->autore((int) $nota->id_utente).' · '.$this->momento($quando).' · '.$tipo[1],
             ];
         }
 
-        foreach ($this->s->duplicati()->get() as $accorpata) {
+        if ($this->lettura === 'lavoro') {
+            return $marcatori;
+        }
+        $accorpate = $this->s->duplicati()
+            ->when($this->lettura === 'segnalante', fn ($q) => $q->where('id_utente_segnalazione', $this->lettore->id))->get();
+        foreach ($accorpate as $accorpata) {
             $quando = Carbon::parse($accorpata->data_segnalazione);
             $marcatori[] = [
                 'tipo' => 'risegnalata',
                 'posizione' => $this->posizione($quando),
                 'quanti' => 1,
-                'fumetto' => $this->nome((int) $accorpata->id_utente_segnalazione).' · '.$this->momento($quando)
+                'fumetto' => $this->autore((int) $accorpata->id_utente_segnalazione).' · '.$this->momento($quando)
                     .' · segnalata di nuovo (#'.$accorpata->id_segnalazione.')',
             ];
         }
@@ -314,6 +380,34 @@ class Cronogramma
                 && ! $this->scrittaDaSegnalante($nota) ? ['risposta', 'risposta a chi ha segnalato'] : null,
             default => null,
         };
+    }
+
+    /**
+     * Scuola: messaggi dell'ufficio e i propri; mai quelli di altri segnalanti.
+     *
+     * @return array{0: string, 1: string}|null
+     */
+    private function tipoPerSegnalante(NotaSegnalazione $nota): ?array
+    {
+        if ((int) $nota->id_utente === $this->lettore->id) {
+            return match ($nota->origine) {
+                NotaSegnalazione::ORIGINE_SOLLECITO => ['risegnalata', 'hai sollecitato'],
+                NotaSegnalazione::ORIGINE_INTEGRAZIONE => ['risegnalata', 'hai aggiunto informazioni'],
+                default => ['nota', 'hai scritto'],
+            };
+        }
+
+        return (int) $nota->id_utente > 0 && ! $this->scrittaDaSegnalante($nota) ? ['risposta', "messaggio dell'ufficio"] : null;
+    }
+
+    /** Nome dell'autore come lo vede chi legge: il segnalante vede "Tu" o l'ufficio. */
+    private function autore(int $id): string
+    {
+        if ($this->lettura !== 'segnalante') {
+            return $this->nome($id);
+        }
+
+        return $id === $this->lettore->id ? 'Tu' : $this->ufficio();
     }
 
     private function scrittaDaSegnalante(NotaSegnalazione $nota): bool
@@ -432,6 +526,16 @@ class Cronogramma
     {
         if ($chiusura !== null) {
             return 'Chiusa in '.$this->giorni($this->da, $chiusura);
+        }
+        if ($this->lettura === 'lavoro') {
+            return ($this->lettore->hasRole('impresa') ? 'Assegnata alla tua ditta da ' : 'Assegnata a te da ').$this->giorni($this->da, $this->ora);
+        }
+        if ($this->lettura === 'segnalante') {
+            // Frase neutra: nessun giudizio sui tempi dell'ufficio.
+            $presa = collect($tratti)->first(fn ($t) => $t['stato'] !== null && $t['stato'] !== SegnalazioneStato::NUOVA);
+
+            return 'Aperta da '.$this->giorni($this->da, $this->ora)
+                .($presa ? ' · presa in carico '.$presa['da']->copy()->locale('it')->dayName : '');
         }
 
         $parti = [];
