@@ -46,7 +46,7 @@ class OrigineNoteTest extends TestCase
 
     private function segnalazione(array $attr = []): Segnalazione
     {
-        return Segnalazione::factory()->create(['id_utente_segnalazione' => $this->segnalatore->id, 'id_stato_segnalazione' => 2] + $attr);
+        return Segnalazione::factory()->create($attr + ['id_utente_segnalazione' => $this->segnalatore->id, 'id_stato_segnalazione' => 2]);
     }
 
     private function notaGrezza(Segnalazione $s, string $testo): int

@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\SegnalazioneStato;
 use App\Models\Impostazione;
+use App\Models\User;
 use App\Models\Segnalazione;
 use App\Services\OllamaService;
 use App\Support\CosineSimilarity;
@@ -58,5 +60,29 @@ class DedupService
         }
 
         return $candidati->take($limite);
+    }
+
+    /**
+     * La segnalazione aperta per la stessa sede e tipologia su cui l'utente dovrebbe scrivere
+     * invece di aprirne un'altra: tra quelle che vede, prima la sua, poi la più recente.
+     * Sempre attiva (anche con adesioni spente) e senza limite di giorni. Quelle con un
+     * preventivo sono escluse (lavoro già quotato), salvo `$ancheConPreventivo`.
+     */
+    public function apertaPerSedeETipologia(User $u, int $idPlesso, int $idTipologia, bool $ancheConPreventivo = false): ?Segnalazione
+    {
+        if ($idPlesso <= 0 || $idTipologia <= 0) {
+            return null;
+        }
+
+        return Segnalazione::aperte()
+            ->visibileA($u)
+            ->where('id_plesso', $idPlesso)
+            ->where('id_tipologia_segnalazione', $idTipologia)
+            ->when(! $ancheConPreventivo, fn ($q) => $q->whereDoesntHave('storicoStati',
+                fn ($s) => $s->where('id_stato_segnalazione', SegnalazioneStato::PREVENTIVO_IN_ATTESA->value)))
+            ->orderByRaw('CASE WHEN id_utente_segnalazione = ? THEN 0 ELSE 1 END', [$u->id])
+            ->orderByDesc('data_segnalazione')
+            ->orderByDesc('id_segnalazione')
+            ->first();
     }
 }
