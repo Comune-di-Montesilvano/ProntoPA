@@ -17,7 +17,7 @@ class Scadenza
     /** @return array{testo: string, tono: 'rose'|'amber'|'slate'}|null */
     public static function per(Segnalazione $s, ?Carbon $ora = null): ?array
     {
-        if ($s->statoEnum() === SegnalazioneStato::ATTESA_RISPOSTA) {
+        if ($s->id_stato_segnalazione === SegnalazioneStato::ATTESA_RISPOSTA) {
             return self::FERMA;
         }
         $secondi = self::secondiRimasti($s, $ora);
@@ -42,7 +42,7 @@ class Scadenza
     /** @return array{testo: string, tono: 'rose'|'amber'|'slate'}|null */
     public static function estesa(Segnalazione $s, ?Carbon $ora = null): ?array
     {
-        if ($s->statoEnum() === SegnalazioneStato::ATTESA_RISPOSTA) {
+        if ($s->id_stato_segnalazione === SegnalazioneStato::ATTESA_RISPOSTA) {
             return self::FERMA;
         }
         $secondi = self::secondiRimasti($s, $ora);

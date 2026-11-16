@@ -7,7 +7,22 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** Domanda del comune a chi ha segnalato: mentre è aperta la segnalazione è in stato 11 e la scadenza è ferma. */
+/**
+ * Domanda del comune a chi ha segnalato: mentre è aperta la segnalazione è in stato 11 e la scadenza è ferma.
+ *
+ * @property int $id
+ * @property int $id_segnalazione
+ * @property int $id_utente
+ * @property string $testo
+ * @property int $stato_precedente
+ * @property \Illuminate\Support\Carbon $termine_at
+ * @property bool $chiudi_senza_risposta
+ * @property \Illuminate\Support\Carbon|null $promemoria_at
+ * @property \Illuminate\Support\Carbon|null $conclusa_at
+ * @property string|null $esito
+ * @property int|null $id_nota_risposta
+ * @property \Illuminate\Support\Carbon|null $created_at
+ */
 class RichiestaInformazioni extends Model
 {
     protected $table = 'richieste_informazioni';

@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
  * raccontata secondo chi la legge: il segnalante vede "l'ufficio" e non i nomi,
  * ditta e operaio vedono solo da quando il lavoro è arrivato a loro.
  *
- * @phpstan-type Voce array{quando: Carbon, autore: string, iniziali: string, tipo: 'nota'|'stato'|'allegato', forma: 'passaggio'|'messaggio', stato: ?SegnalazioneStato, testo: ?string, nota: ?string, frase: string, letta_da: ?string, allegato: ?AllegatoSegnalazione}
+ * @phpstan-type Voce array{quando: Carbon, autore: string, iniziali: string, tipo: string, forma: string, stato: ?SegnalazioneStato, testo: ?string, nota: ?string, frase: string, letta_da: ?string, allegato: ?AllegatoSegnalazione}
  */
 class Attivita
 {
@@ -48,6 +48,7 @@ class Attivita
         $storico = StoricoOrdinato::di($this->segnalazione);
         $dal = $this->inizioLavoro($storico);
 
+        /** @var list<Voce> $passaggi */
         $passaggi = [];
         $meta = [];
         $precedente = null;
@@ -59,6 +60,7 @@ class Attivita
             $precedente = (int) $evento->id_stato_segnalazione;
         }
 
+        /** @var list<Voce> $altre */
         $altre = [];
         foreach ($this->segnalazione->note()->visibiliA($this->lettore)->get() as $nota) {
             $i = $this->lettura === 'segnalante' ? null : $this->passaggioDellaNota($nota, $passaggi, $meta);
@@ -75,7 +77,10 @@ class Attivita
             $altre[] = $this->daAllegato($allegato);
         }
 
-        return collect($passaggi)->concat($altre)->sortByDesc(fn (array $v) => $v['quando']->getTimestamp())->values();
+        $tutte = [...$passaggi, ...$altre];
+        usort($tutte, fn (array $a, array $b) => $b['quando']->getTimestamp() <=> $a['quando']->getTimestamp());
+
+        return collect($tutte);
     }
 
     /**
@@ -196,7 +201,11 @@ class Attivita
             : 'ha risposto a chi ha segnalato';
     }
 
-    /** "Scadenza spostata al 16/11/2026: motivo" → "ha spostato la scadenza a lunedì 16 novembre" + motivo. */
+    /**
+     * "Scadenza spostata al 16/11/2026: motivo" → "ha spostato la scadenza a lunedì 16 novembre" + motivo.
+     *
+     * @return Voce
+     */
     private function scadenzaSpostata(NotaSegnalazione $nota, string $senza, ?string $lettaDa): array
     {
         $frase = 'ha spostato la scadenza';
@@ -209,7 +218,11 @@ class Attivita
         return $this->voce($nota->data, (int) $nota->id_utente, 'nota', null, $frase, forma: 'passaggio', nota: $motivo, lettaDa: $lettaDa);
     }
 
-    /** Accorpamento: la voce sta all'ora della seconda segnalazione, a nome di chi l'ha fatta. */
+    /**
+     * Accorpamento: la voce sta all'ora della seconda segnalazione, a nome di chi l'ha fatta.
+     *
+     * @return Voce
+     */
     private function risegnalata(NotaSegnalazione $nota, string $senza, ?string $lettaDa): array
     {
         [$intestazione, $testo] = array_pad(explode("\n", $senza, 2), 2, null);
@@ -223,7 +236,7 @@ class Attivita
         $frase = "l'ha segnalata di nuovo".($accorpata ? ' (#'.$accorpata->id_segnalazione.')' : '')
             .' · accorpata qui da '.$this->nomeAutore((int) $nota->id_utente).' alle '.Carbon::parse($nota->data)->format('H:i');
 
-        return $this->voce($accorpata?->data_segnalazione ?? $nota->data, 0, 'nota', null, $frase,
+        return $this->voce($accorpata ? $accorpata->data_segnalazione : $nota->data, 0, 'nota', null, $frase,
             forma: 'passaggio', nota: $testo, lettaDa: $lettaDa, nomeAutore: $chi);
     }
 
@@ -341,7 +354,11 @@ class Attivita
         };
     }
 
-    /** @return Voce */
+    /**
+     * @param  'nota'|'stato'|'allegato'  $tipo
+     * @param  'passaggio'|'messaggio'  $forma
+     * @return Voce
+     */
     private function voce(
         mixed $quando, int $idAutore, string $tipo, ?string $testo, string $frase,
         string $forma = 'messaggio', ?SegnalazioneStato $stato = null, ?string $nota = null,

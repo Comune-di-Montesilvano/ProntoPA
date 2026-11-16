@@ -86,6 +86,7 @@ class NotificaSegnalazione extends Model
         return array_values($gruppi);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function utente(): BelongsTo
     {
         return $this->belongsTo(User::class, 'id_utente');

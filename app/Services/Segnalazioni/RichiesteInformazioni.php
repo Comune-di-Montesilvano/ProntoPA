@@ -261,7 +261,7 @@ class RichiesteInformazioni
         } elseif ($scadenza = $this->sla->calcolaScadenza($s)) {
             $s->data_scadenza_sla = $scadenza;
         }
-        if ($s->data_scadenza_sla && $s->data_scadenza_sla->isFuture()) {
+        if ($s->data_scadenza_sla && Carbon::parse($s->data_scadenza_sla)->isFuture()) {
             $s->sla_violato = false;
             $s->sla_warning_inviato = false;
         }

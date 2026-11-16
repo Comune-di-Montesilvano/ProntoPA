@@ -147,6 +147,7 @@ class Segnalazione extends Model
                     ->orderByDesc('data');
     }
 
+    /** @return HasMany<StoricoStatoSegnalazione, $this> */
     public function storicoStati(): HasMany
     {
         return $this->hasMany(StoricoStatoSegnalazione::class, 'id_segnalazione', 'id_segnalazione')
@@ -181,13 +182,18 @@ class Segnalazione extends Model
         return $this->belongsTo(self::class, 'id_segnalazione_madre', 'id_segnalazione');
     }
 
-    /** La richiesta di informazioni ancora senza esito (al massimo una). */
+    /**
+     * La richiesta di informazioni ancora senza esito (al massimo una).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<RichiestaInformazioni, $this>
+     */
     public function richiestaAperta(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(RichiestaInformazioni::class, 'id_segnalazione', 'id_segnalazione')
             ->ofMany(['id' => 'max'], fn ($q) => $q->whereNull('conclusa_at'));
     }
 
+    /** @return HasMany<Segnalazione, $this> */
     public function duplicati(): HasMany
     {
         return $this->hasMany(self::class, 'id_segnalazione_madre', 'id_segnalazione');

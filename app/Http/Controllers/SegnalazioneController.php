@@ -737,7 +737,7 @@ class SegnalazioneController extends Controller
         // Ultima risposta dell'ufficio a chi ha segnalato (mai il nome di chi l'ha scritta).
         $risposta = $s->note()
             ->where('visibile_web', true)
-            ->whereHas('autore', fn ($q) => $q->role(['admin', 'gestore', 'operaio', 'impresa']))
+            ->whereIn('id_utente', User::role(['admin', 'gestore', 'operaio', 'impresa'])->select('users.id'))
             ->reorder('data', 'desc')->first();
 
         return response()->json(['esistente' => [
