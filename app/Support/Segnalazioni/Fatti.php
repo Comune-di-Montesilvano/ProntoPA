@@ -151,7 +151,11 @@ class Fatti
         if ($scadenza->isSameDay($this->ora) || $ore < 8) {
             $n = (int) floor($ore);
 
-            return $n < 1 ? "manca meno di un'ora" : 'mancano '.$n.' '.($n === 1 ? 'ora' : 'ore');
+            return match (true) {
+                $n < 1 => "manca meno di un'ora",
+                $n === 1 => 'manca 1 ora',
+                default => 'mancano '.$n.' ore',
+            };
         }
 
         $giorni = 0;

@@ -5,10 +5,12 @@ namespace App\Support\Segnalazioni;
 use App\Enums\SegnalazioneStato;
 use App\Models\Azione;
 use App\Models\Impresa;
+use App\Models\NotaSegnalazione;
 use App\Models\Segnalazione;
 use App\Models\Squadra;
 use App\Models\User;
 use App\Services\SegnalazioneWorkflowService;
+use App\Services\Sla\CalendarioUfficio;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -19,7 +21,7 @@ use Illuminate\Support\Str;
  * con le sole azioni che può eseguire davvero. Calcolato a lettura, nessuno stato salvato.
  *
  * @phpstan-type AzionePasso array{tipo: 'azione'|'pannello'|'post'|'link', etichetta: string, id_azione?: int, pannello?: string, route?: string, primaria: bool}
- * @phpstan-type Passo array{tono: 'rose'|'amber'|'primary'|'slate', titolo: string, sottotitolo: ?string, azioni: list<AzionePasso>}
+ * @phpstan-type Passo array{tono: 'rose'|'amber'|'primary'|'slate', titolo: string, sottotitolo: ?string, azioni: list<AzionePasso>, etichetta?: string}
  */
 class ProssimoPasso
 {
@@ -44,7 +46,7 @@ class ProssimoPasso
             'gestore' => $passo->gestore(),
             'lavoro' => $passo->lavoro(),
             default => $passo->segnalante(),
-        };
+        } + ['etichetta' => 'Prossimo passo'];
     }
 
     /** @return Passo */
@@ -76,7 +78,6 @@ class ProssimoPasso
                     $this->pannelloAssegna($azioni, 'Assegna…', primaria: true);
                     // Da Nuova si chiude solo senza intervento (errata, non pertinente, già risolta).
                     $this->pannello($azioni, 'annulla', 'Chiudi', 12);
-                    $this->pannelloPriorita($azioni);
                     if (Gate::forUser($this->u)->allows('accorpa', $this->s)) {
                         $azioni[] = ['tipo' => 'pannello', 'etichetta' => 'Accorpa a…', 'pannello' => 'accorpa', 'primaria' => false];
                     }
@@ -86,8 +87,6 @@ class ProssimoPasso
                     $titolo = $nome ? "In carico a {$nome}" : 'In carico';
                     $this->pannelloAssegna($azioni, 'Assegna…', primaria: true);
                     $this->pannello($azioni, 'chiudi', 'Chiudi', 9);
-                    $this->pannelloPriorita($azioni);
-                    $this->pannelloScadenza($azioni);
                     break;
                 case SegnalazioneStato::ASSEGNATA_OPERATORE:
                 case SegnalazioneStato::ASSEGNATA_IMPRESA:
@@ -97,7 +96,6 @@ class ProssimoPasso
                     }
                     $this->pannello($azioni, 'chiudi', 'Chiudi', 9);
                     $this->pannelloAssegna($azioni, 'Riassegna');
-                    $this->pannelloScadenza($azioni);
                     break;
                 case SegnalazioneStato::PREVENTIVO_IN_ATTESA:
                     $titolo = 'Preventivo di € '.number_format((float) $this->s->importo_preventivo, 2, ',', '.').' da valutare';
@@ -119,7 +117,70 @@ class ProssimoPasso
             $this->pannelloPriorita($azioni);
         }
 
-        return ['tono' => $this->tonoScadenza(), 'titolo' => $titolo, 'sottotitolo' => $sottotitolo, 'azioni' => $azioni];
+        return [
+            'tono' => $this->tonoScadenza(), 'titolo' => $titolo, 'sottotitolo' => $this->sottotitoloGestore($sottotitolo),
+            'azioni' => $azioni, 'etichetta' => $this->etichettaGestore($stato),
+        ];
+    }
+
+    /** "Adesso tocca a te" / "Adesso tocca a {nome}" quando è in carico a un gestore (spec A4). */
+    private function etichettaGestore(SegnalazioneStato $stato): string
+    {
+        $id = (int) $this->s->id_operatore_assegnato;
+        if ($stato !== SegnalazioneStato::IN_CARICO || $id <= 0) {
+            return 'Prossimo passo';
+        }
+        if ($id === $this->u->id) {
+            return 'Adesso tocca a te';
+        }
+        $nome = User::whereKey($id)->value('name');
+
+        return $nome ? 'Adesso tocca a '.$nome : 'Prossimo passo';
+    }
+
+    /** Al massimo due frasi: quella dello stato, scadenza vicina, risegnalata da poco (spec A4). */
+    private function sottotitoloGestore(?string $base): ?string
+    {
+        $scadenza = Scadenza::estesa($this->s);
+        $frasi = array_values(array_filter([
+            $base,
+            $scadenza && $scadenza['tono'] === 'amber' ? $scadenza['testo'] : null,
+            $this->risegnalataDaPoco(),
+        ]));
+
+        return $frasi === [] ? null : implode("\n", array_slice($frasi, 0, 2));
+    }
+
+    /** "Chi ha segnalato l'ha segnalata di nuovo stamattina": sollecito, integrazione, adesione o accorpata negli ultimi 3 giorni lavorativi. */
+    private function risegnalataDaPoco(): ?string
+    {
+        $quando = collect([
+            $this->s->note()->whereIn('origine', [NotaSegnalazione::ORIGINE_SOLLECITO, NotaSegnalazione::ORIGINE_INTEGRAZIONE])->max('data'),
+            $this->s->adesioni()->max('created_at'),
+            $this->s->duplicati()->max('data_segnalazione'),
+        ])->filter()->map(fn ($d) => Carbon::parse($d))->sortByDesc(fn (Carbon $d) => $d->getTimestamp())->first();
+        if ($quando === null || $quando->gt(now())) {
+            return null;
+        }
+
+        $calendario = CalendarioUfficio::daImpostazioni();
+        $lavorativi = 0;
+        for ($g = $quando->copy()->startOfDay()->addDay(); $g->lte(now()); $g = $g->copy()->addDay()) {
+            if ($calendario->fascia($g) !== null) {
+                $lavorativi++;
+            }
+        }
+        if ($lavorativi > 3) {
+            return null;
+        }
+
+        $giorno = match (true) {
+            $quando->isToday() => $quando->hour < 13 ? 'stamattina' : 'oggi',
+            $quando->isYesterday() => 'ieri',
+            default => $quando->copy()->locale('it')->dayName,
+        };
+
+        return "Chi ha segnalato l'ha segnalata di nuovo ".$giorno;
     }
 
     /** @return Passo */
@@ -208,18 +269,6 @@ class ProssimoPasso
     {
         if ($this->disponibile(2) || $this->disponibile(3)) {
             $azioni[] = ['tipo' => 'pannello', 'etichetta' => $etichetta, 'pannello' => 'assegna', 'primaria' => $primaria];
-        }
-    }
-
-    /**
-     * Rimandare la scadenza con un motivo (al posto di Sospendi, 0.9.20).
-     *
-     * @param  list<AzionePasso>  $azioni
-     */
-    private function pannelloScadenza(array &$azioni): void
-    {
-        if (! $this->s->isChiusa() && Gate::forUser($this->u)->allows('modificaPriorita', $this->s)) {
-            $azioni[] = ['tipo' => 'pannello', 'etichetta' => 'Scadenza…', 'pannello' => 'scadenza', 'primaria' => false];
         }
     }
 

@@ -107,6 +107,13 @@ class FattiTest extends TestCase
         $this->assertSame('amber', $f['scadenza']['tono']);
     }
 
+    public function test_manca_una_ora_al_singolare(): void
+    {
+        $f = $this->fatti($this->segnalazione(['data_scadenza_sla' => '2026-11-16 11:30:00']));
+
+        $this->assertSame('manca 1 ora', $f['scadenza']['dettaglio']);
+    }
+
     public function test_scadenza_manuale(): void
     {
         $f = $this->fatti($this->segnalazione(['data_scadenza_sla' => '2026-11-20 14:00:00', 'scadenza_manuale' => true]));

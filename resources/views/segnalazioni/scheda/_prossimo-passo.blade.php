@@ -1,9 +1,9 @@
 {{-- Riquadro "prossimo passo": cosa serve adesso, con le sole azioni eseguibili (ProssimoPasso). --}}
 @php $grande = $grande ?? false; @endphp
-<section dusk="prossimo-passo" aria-label="Prossimo passo"
+<section dusk="prossimo-passo" aria-label="{{ $prossimoPasso['etichetta'] ?? 'Prossimo passo' }}"
          class="pa-card pa-passo pa-passo-{{ $prossimoPasso['tono'] }} p-5 flex flex-col gap-4 {{ $grande ? '' : 'md:flex-row md:items-center md:justify-between' }}">
     <div class="min-w-0">
-        <p class="pa-sezione-titolo pa-testo-{{ $prossimoPasso['tono'] === 'slate' ? 'slate' : $prossimoPasso['tono'] }} m-0">Prossimo passo</p>
+        <p class="pa-sezione-titolo pa-testo-{{ $prossimoPasso['tono'] === 'slate' ? 'slate' : $prossimoPasso['tono'] }} m-0">{{ $prossimoPasso['etichetta'] ?? 'Prossimo passo' }}</p>
         <h2 class="m-0 mt-1 text-lg font-bold text-[var(--ink)]">{{ $prossimoPasso['titolo'] }}</h2>
         @if($prossimoPasso['sottotitolo'])
             <p class="m-0 mt-1 text-sm text-[var(--slate-600)] whitespace-pre-line">{{ $prossimoPasso['sottotitolo'] }}</p>

@@ -104,7 +104,7 @@ class ScadenzaSenzaSospensioneTest extends TestCase
 
         $this->actingAs($this->gestore)->get(route('segnalazioni.show', $s))
             ->assertOk()
-            ->assertSee('Scadenza…')
+            ->assertSee('aria-label="Sposta la scadenza"', false)
             ->assertSee(route('segnalazioni.scadenza', $s), false)
             ->assertDontSee('Motivo della sospensione')
             ->assertDontSee('id="assegna-scadenza"', false);
