@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 
+#[\Illuminate\Database\Eloquent\Attributes\ObservedBy(\App\Observers\NotaSegnalazioneObserver::class)]
 class NotaSegnalazione extends Model
 {
     protected $table      = 'note_segnalazioni';

@@ -20,6 +20,8 @@ class NotificaSegnalazione extends Model
         'AccorpataNotification'            => 'Accorpata',
         'FineLavoriNotification'           => 'Fine lavori',
         'RimandataAlGestoreNotification'   => 'Rimandata al comune',
+        'RichiestaInformazioniNotification' => 'Richiesta di informazioni',
+        'RispostaInformazioniNotification' => 'Risposta alla richiesta',
         'ImpresaAssegnataNotification'     => 'Affidata alla ditta',
         'InattivitaNotification'           => 'Avviso di inattività',
         'NotaDaEsternoNotification'        => 'Nuovo messaggio',

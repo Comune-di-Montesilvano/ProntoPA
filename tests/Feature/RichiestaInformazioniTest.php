@@ -4,11 +4,18 @@ namespace Tests\Feature;
 
 use App\Enums\SegnalazioneStato;
 use App\Jobs\RicalcolaScadenzeSla;
+use App\Models\AllegatoSegnalazione;
+use App\Models\Appalto;
+use App\Models\Impresa;
+use App\Models\NotaSegnalazione;
 use App\Models\RichiestaInformazioni;
 use App\Models\Segnalazione;
 use App\Models\SlaConfigurazione;
 use App\Models\User;
+use App\Notifications\RichiestaInformazioniNotification;
+use App\Notifications\RispostaInformazioniNotification;
 use App\Services\SegnalazioneWorkflowService;
+use App\Services\Segnalazioni\RichiesteInformazioni;
 use App\Services\Sla\CalendarioUfficio;
 use App\Services\SlaService;
 use App\Support\Segnalazioni\Scadenza;
@@ -18,6 +25,7 @@ use Database\Seeders\TabelleRiferimentoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 /** Richiesta di informazioni a chi ha segnalato: stato 11 e scadenza ferma durante l'attesa. */
@@ -27,6 +35,8 @@ class RichiestaInformazioniTest extends TestCase
 
     private User $gestore;
 
+    private User $autore;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -34,6 +44,21 @@ class RichiestaInformazioniTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-10-26 10:00', 'Europe/Rome'));
         $this->gestore = User::factory()->create(['supervisore_segnalazioni' => true]);
         $this->gestore->assignRole('gestore');
+        $this->autore = User::factory()->create(['auth_source' => 'ldap', 'name' => 'Giulia Ferri']);
+        $this->autore->assignRole('segnalatore');
+        $this->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class, \Illuminate\Routing\Middleware\ThrottleRequests::class]);
+    }
+
+    private function segnalazione(int $stato = 2, array $altro = []): Segnalazione
+    {
+        return Segnalazione::factory()->create($altro + [
+            'id_stato_segnalazione' => $stato, 'id_utente_segnalazione' => $this->autore->id, 'data_segnalazione' => now(),
+        ]);
+    }
+
+    private function chiedi(Segnalazione $s): RichiestaInformazioni
+    {
+        return app(RichiesteInformazioni::class)->chiedi($s, $this->gestore, 'Quale aula?', 10, true);
     }
 
     protected function tearDown(): void
@@ -132,5 +157,138 @@ class RichiestaInformazioniTest extends TestCase
         $codici = app(SegnalazioneWorkflowService::class)->getAzioniDisponibili($s, $this->gestore)->pluck('codice');
 
         $this->assertNotContains('chiedi_informazioni', $codici->all());
+    }
+
+    public function test_chiedi_porta_a_11_con_assegnatario_invariato_e_avvisa_autore(): void
+    {
+        Notification::fake();
+        $appalto = Appalto::create(['descrizione' => 'Manutenzione', 'id_impresa' => Impresa::create(['ragione_sociale' => 'Edil'])->id_impresa, 'valido' => true]);
+        $s = $this->segnalazione(4, ['id_appalto' => $appalto->id_appalto]);
+
+        $this->actingAs($this->gestore)->post(route('segnalazioni.richiesta-informazioni', $s), [
+            'testo' => 'Quale aula?', 'giorni' => 10, 'chiudi_senza_risposta' => '1',
+        ])->assertRedirect();
+
+        $s->refresh();
+        $this->assertSame(SegnalazioneStato::ATTESA_RISPOSTA, $s->statoEnum());
+        $this->assertSame($appalto->id_appalto, (int) $s->id_appalto);
+        $r = $s->richiestaAperta;
+        $this->assertSame(4, $r->stato_precedente);
+        $this->assertTrue($r->chiudi_senza_risposta);
+        $termine = CalendarioUfficio::daImpostazioni()->aggiungiGiorniLavorativi(now(), 10);
+        $this->assertSame($termine->format('Y-m-d H:i'), $r->termine_at->format('Y-m-d H:i'));
+        $nota = $s->note()->where('origine', NotaSegnalazione::ORIGINE_RICHIESTA)->first();
+        $this->assertTrue((bool) $nota->visibile_web);
+        $this->assertStringContainsString('Quale aula?', $nota->testo);
+        Notification::assertSentTo($this->autore, RichiestaInformazioniNotification::class);
+    }
+
+    public function test_policy_esclude_stati_5_e_chiusi_autore_api_e_seconda_richiesta(): void
+    {
+        $this->assertTrue($this->gestore->can('chiediInformazioni', $this->segnalazione(2)));
+        $this->assertFalse($this->gestore->can('chiediInformazioni', $this->segnalazione(5)));
+        $this->assertFalse($this->gestore->can('chiediInformazioni', $this->segnalazione(7, ['data_chiusura' => now()])));
+
+        $api = User::factory()->create(['auth_source' => 'locale']);
+        $this->assertFalse($this->gestore->can('chiediInformazioni', $this->segnalazione(2, ['id_utente_segnalazione' => $api->id])));
+
+        $s = $this->segnalazione(2);
+        $this->chiedi($s);
+        $this->assertFalse($this->gestore->can('chiediInformazioni', $s->fresh()));
+    }
+
+    public function test_risposta_da_nota_riporta_allo_stato_precedente_e_avvisa_gestore(): void
+    {
+        Notification::fake();
+        $s = $this->segnalazione(3);
+        $this->chiedi($s);
+        $this->travel(2)->hours();
+
+        $this->actingAs($this->autore)->post(route('segnalazioni.nota', $s), ['testo' => 'Aula 12'])->assertRedirect();
+
+        $s->refresh();
+        $this->assertSame(SegnalazioneStato::ASSEGNATA_OPERATORE, $s->statoEnum());
+        $r = RichiestaInformazioni::where('id_segnalazione', $s->id_segnalazione)->first();
+        $this->assertSame(RichiestaInformazioni::ESITO_RISPOSTA, $r->esito);
+        $this->assertNotNull($r->id_nota_risposta);
+        $this->assertSame($this->autore->id, (int) $s->storicoStati()->first()->id_utente);
+        Notification::assertSentTo($this->gestore, RispostaInformazioniNotification::class);
+    }
+
+    public function test_risposta_da_allegato(): void
+    {
+        $s = $this->segnalazione(2);
+        $this->chiedi($s);
+
+        AllegatoSegnalazione::create([
+            'id_segnalazione' => $s->id_segnalazione, 'percorso' => 'x.jpg', 'tipo' => 'image/jpeg',
+            'nome_originale' => 'x.jpg', 'dimensione' => 1, 'id_utente_creazione' => $this->autore->id,
+        ]);
+
+        $this->assertSame(SegnalazioneStato::IN_CARICO, $s->fresh()->statoEnum());
+    }
+
+    public function test_risposta_da_aggiornamento_form(): void
+    {
+        $s = $this->segnalazione(2);
+        $this->chiedi($s);
+
+        $this->actingAs($this->autore)->post(route('segnalazioni.aggiornamento', $s), ['testo' => 'È nell\'aula 12'])->assertRedirect();
+
+        $this->assertSame(SegnalazioneStato::IN_CARICO, $s->fresh()->statoEnum());
+    }
+
+    public function test_risposta_di_aderente_conta(): void
+    {
+        $s = $this->segnalazione(2);
+        $aderente = User::factory()->create(['auth_source' => 'ldap']);
+        $aderente->assignRole('segnalatore');
+        $s->adesioni()->create(['id_utente' => $aderente->id]);
+        $this->chiedi($s);
+
+        $fatta = app(RichiesteInformazioni::class)->registraRisposta($s->fresh(), $aderente);
+
+        $this->assertTrue($fatta);
+        $this->assertSame(SegnalazioneStato::IN_CARICO, $s->fresh()->statoEnum());
+    }
+
+    public function test_nota_del_gestore_non_conta_come_risposta(): void
+    {
+        $s = $this->segnalazione(2);
+        $this->chiedi($s);
+
+        $this->actingAs($this->gestore)->post(route('segnalazioni.nota', $s), ['testo' => 'Promemoria interno'])->assertRedirect();
+
+        $this->assertSame(SegnalazioneStato::ATTESA_RISPOSTA, $s->fresh()->statoEnum());
+        $this->assertNotNull($s->fresh()->richiestaAperta);
+    }
+
+    public function test_ritira(): void
+    {
+        $s = $this->segnalazione(3);
+        $this->chiedi($s);
+
+        $this->actingAs($this->gestore)->delete(route('segnalazioni.richiesta-informazioni.ritira', $s))->assertRedirect();
+
+        $s->refresh();
+        $this->assertSame(SegnalazioneStato::ASSEGNATA_OPERATORE, $s->statoEnum());
+        $this->assertSame(RichiestaInformazioni::ESITO_RITIRATA, RichiestaInformazioni::first()->esito);
+        $this->assertNull($s->richiestaAperta);
+    }
+
+    public function test_scadenza_manuale_spostata_una_volta(): void
+    {
+        $calendario = CalendarioUfficio::daImpostazioni();
+        $fissata = $calendario->aggiungiGiorniLavorativi(now(), 5);
+        $s = $this->segnalazione(2, ['scadenza_manuale' => true, 'data_scadenza_sla' => $fissata]);
+        $this->chiedi($s);
+        $this->travelTo($calendario->aggiungiOreLavorative(now(), 6));
+
+        app(RichiesteInformazioni::class)->registraRisposta($s->fresh(), $this->autore);
+        app(RichiesteInformazioni::class)->registraRisposta($s->fresh(), $this->autore);
+
+        $attesa = $calendario->aggiungiOreLavorative($fissata, 6);
+        $this->assertSame($attesa->format('Y-m-d H:i'), $s->fresh()->data_scadenza_sla->format('Y-m-d H:i'));
+        $this->assertTrue((bool) $s->fresh()->scadenza_manuale);
     }
 }

@@ -118,6 +118,10 @@ Route::middleware('auth')->group(function () {
         ->name('segnalazioni.fine-lavori');
     Route::post('segnalazioni/{segnalazione}/rimanda', [SegnalazioneController::class, 'rimanda'])
         ->name('segnalazioni.rimanda');
+    Route::post('segnalazioni/{segnalazione}/richiesta-informazioni', [SegnalazioneController::class, 'chiediInformazioni'])
+        ->name('segnalazioni.richiesta-informazioni');
+    Route::delete('segnalazioni/{segnalazione}/richiesta-informazioni', [SegnalazioneController::class, 'ritiraInformazioni'])
+        ->name('segnalazioni.richiesta-informazioni.ritira');
 
     Route::post('segnalazioni/{segnalazione}/evidenza', [SegnalazioneController::class, 'toggleEvidenza'])
         ->name('segnalazioni.evidenza');

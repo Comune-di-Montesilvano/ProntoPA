@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Notifications;
+
+use App\Models\Segnalazione;
+use App\Notifications\Concerns\BuildsNotificationMailMessage;
+use App\Notifications\Concerns\DescriveSegnalazione;
+use Carbon\CarbonInterface;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
+use Illuminate\Support\Str;
+
+/** Il comune chiede informazioni a chi ha segnalato: rispondere fa ripartire il lavoro. */
+class RichiestaInformazioniNotification extends Notification implements ShouldQueue
+{
+    use BuildsNotificationMailMessage;
+    use DescriveSegnalazione;
+    use Queueable;
+
+    public function __construct(
+        public readonly Segnalazione $segnalazione,
+        public readonly string $testo,
+        public readonly CarbonInterface $termine,
+    ) {
+        $this->afterCommit();
+    }
+
+    /** @return list<string> */
+    public function via(object $notifiable): array
+    {
+        return ['mail'];
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        $id = $this->segnalazione->id_segnalazione;
+
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Ti chiediamo informazioni'))
+            ->line("Per andare avanti con la segnalazione #{$id} ci serve sapere:")
+            ->line(Str::limit($this->testo, 2000))
+            ->line('Rispondi entro '.$this->termine->copy()->locale('it')->isoFormat('dddd D MMMM').'.');
+
+        return $this->riepilogoSegnalazione($mail, $this->segnalazione)
+            ->action('Rispondi', route('segnalazioni.show', $id))
+            ->salutation('ProntoPA');
+    }
+}

@@ -356,6 +356,35 @@ class SegnalazioneController extends Controller
             ->with('success', "Segnalazione #{$segnalazione->id_segnalazione} rimandata al comune.");
     }
 
+    public function chiediInformazioni(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('chiediInformazioni', $segnalazione);
+
+        $data = $request->validate([
+            'testo' => ['required', 'string', 'max:2000'],
+            'giorni' => ['required', 'integer', 'min:1', 'max:30'],
+            'chiudi_senza_risposta' => ['nullable', 'boolean'],
+        ], [
+            'testo.required' => 'Scrivi cosa ti serve sapere.',
+            'giorni.*' => 'Indica da 1 a 30 giorni lavorativi.',
+        ]);
+
+        app(\App\Services\Segnalazioni\RichiesteInformazioni::class)->chiedi(
+            $segnalazione, $request->user(), trim($data['testo']), (int) $data['giorni'], (bool) ($data['chiudi_senza_risposta'] ?? false),
+        );
+
+        return redirect()->route('segnalazioni.show', $segnalazione)->with('success', 'Richiesta inviata a chi ha segnalato.');
+    }
+
+    public function ritiraInformazioni(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('ritiraInformazioni', $segnalazione);
+
+        app(\App\Services\Segnalazioni\RichiesteInformazioni::class)->ritira($segnalazione, $request->user());
+
+        return redirect()->route('segnalazioni.show', $segnalazione)->with('success', 'Richiesta ritirata: la segnalazione è tornata dov\'era.');
+    }
+
     // ── Aggiungi nota ─────────────────────────────────────────────────────────
 
     public function aggiungiNota(Request $request, Segnalazione $segnalazione): RedirectResponse
