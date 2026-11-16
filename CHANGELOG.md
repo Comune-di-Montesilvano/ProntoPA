@@ -4,6 +4,20 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.3] - 2026-11-16
+
+### Changed
+- "Com'è andata finora": data di apertura e passaggi (presa in carico, assegnata a…, a ditta…)
+  sotto la barra, con un pallino bianco su ogni passaggio; date ed etichette più grandi. Le fasce
+  dei giorni chiusi si disegnano solo su segnalazioni aperte da al massimo 4 settimane: oltre
+  diventavano righe ovunque (il conteggio resta nel riepilogo).
+- Scheda segnalazione: freccia "torna indietro" nella barra in alto, verso l'elenco da cui si
+  arriva (filtri e pagina compresi) o la dashboard.
+
+### Fixed
+- Paginazione in italiano ("Indietro", "Successivo", "Da 1 a 25 di 120 risultati").
+- La mappa della scheda passava sopra i pannelli laterali.
+
 ## [1.0.2] - 2026-11-16
 
 Aggiornamento senza interventi: migration solo additive.

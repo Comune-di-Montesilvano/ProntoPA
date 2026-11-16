@@ -289,6 +289,13 @@
 .pa-crono-m-nota, .pa-crono-c-nota { background: var(--ente-primary); }
 .pa-crono-m-pausa, .pa-crono-c-pausa { background: #fff; border-color: var(--amber); }
 .pa-crono-c-chiuso { background: rgb(148 163 184 / .3); }
+/* Passaggio di mano (presa in carico, assegnata…): pallino bianco sulla barra, all'inizio del tratto. */
+.pa-crono-m-passaggio { top: 7px; width: 14px; height: 14px; margin-left: -7px; background: #fff; border: 3px solid var(--ink); z-index: 3; }
+.pa-crono-c-passaggio { width: 10px; border-radius: 50%; background: #fff; border: 2px solid var(--ink); }
+.pa-crono-eventi { position: relative; height: 20px; margin-top: 8px; }
+.pa-crono-eventi span { position: absolute; transform: translateX(-50%); font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.pa-crono-eventi span.pa-crono-evento-destra { transform: translateX(-100%); }
+.pa-crono-eventi span.pa-crono-evento-sinistra { transform: none; }
 .pa-crono-riga-2 { top: -23px; }
 .pa-crono-quanti { position: absolute; top: -12px; left: 8px; font-size: 10px; font-weight: 600; color: var(--slate-700); }
 .pa-crono-fumetto { display: none; position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
@@ -301,8 +308,8 @@
 .pa-crono-marcatore:focus > .pa-crono-fumetto { display: flex; }
 .pa-crono-fumetto.pa-crono-fumetto-destra { left: auto; right: 0; transform: none; }
 .pa-crono-fumetto.pa-crono-fumetto-sinistra { left: 0; transform: none; }
-.pa-crono-tacche { position: relative; height: 18px; margin-top: 6px; }
-.pa-crono-tacche span { position: absolute; transform: translateX(-50%); font-size: 11px; color: var(--slate-500); white-space: nowrap; }
+.pa-crono-tacche { position: relative; height: 20px; margin-top: 6px; }
+.pa-crono-tacche span { position: absolute; transform: translateX(-50%); font-size: 13px; color: var(--slate-500); white-space: nowrap; }
 .pa-crono-tacche span:first-child { transform: none; }
 .pa-crono-legenda { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--slate-600); }
 .pa-crono-legenda li { display: inline-flex; align-items: center; gap: 6px; }
@@ -310,7 +317,10 @@
 .pa-crono-c-risposta, .pa-crono-c-risegnalata, .pa-crono-c-nota, .pa-crono-c-pausa { width: 10px; border-radius: 50%; border: 2px solid transparent; }
 .pa-crono-c-pausa { border-color: var(--amber); }
 @media (max-width: 767px) {
-  .pa-crono-tacche span:nth-child(even) { display: none; }
+  .pa-crono-tacche span { font-size: 11px; }
+  .pa-crono-tacche span:not(:nth-child(3n+1)) { display: none; }
+  .pa-crono-eventi span { font-size: 12px; }
+  .pa-crono-eventi span:not(:first-child):not(:last-child) { display: none; }
   .pa-crono-chiuso span { display: none; }
 }
 
@@ -363,5 +373,7 @@
 .pa-vis label.is-on.is-pub { background: var(--emerald); }
 .pa-ripetuta { border-left: 4px solid var(--amber); background: var(--amber-100); border-radius: 6px; padding: 10px 12px; font-size: 15px; color: var(--ink); }
 .pa-ripetuta-h { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--amber-600); }
+/* Leaflet usa z-index 400–1000 dentro la mappa: senza isolarla passa sopra pannelli e menu. */
+.leaflet-container { isolation: isolate; z-index: 0; }
 .pa-minimappa { height: 170px; width: 100%; overflow: hidden; border-radius: 8px; border: 1px solid var(--slate-200); }
 .pa-minimappa-vuota { border: 1px dashed var(--slate-300); border-radius: 8px; padding: 14px; text-align: center; font-size: 14px; color: var(--slate-600); background: var(--slate-50, #f8fafc); }

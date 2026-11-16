@@ -74,7 +74,7 @@ class CronogrammaTest extends TestCase
 
         $this->assertSame(['nuova', 'in-carico'], array_column($c['tratti'], 'classe'));
         $this->assertStringStartsWith('In carico a Anna Gestore · presa in carico ven 13, 08:16', $c['tratti'][1]['fumetto']);
-        $this->assertSame(['pausa'], array_column($c['marcatori'], 'tipo'));
+        $this->assertSame(['passaggio', 'pausa'], array_column($c['marcatori'], 'tipo'));
         $this->assertEqualsWithDelta($c['ora'], $this->somma($c), 0.0001);
         $this->assertEqualsWithDelta(0.0, $c['tratti'][0]['sinistra'], 0.0001);
         $this->assertSame('3 giorni senza che nessuno la aprisse · 3 giorni in carico (di cui 2 di fine settimana)', $c['riassunto']);
@@ -308,8 +308,9 @@ class CronogrammaTest extends TestCase
 
         $c = $this->cronoPer($s, $scuola, '2026-11-13 09:00:00');
 
-        $this->assertSame(['risposta', 'risegnalata'], array_column($c['marcatori'], 'tipo'));
-        $this->assertStringContainsString('Tu', $c['marcatori'][1]['fumetto']);
+        $note = array_values(array_filter($c['marcatori'], fn ($m) => $m['tipo'] !== 'passaggio'));
+        $this->assertSame(['risposta', 'risegnalata'], array_column($note, 'tipo'));
+        $this->assertStringContainsString('Tu', $note[1]['fumetto']);
     }
 
     public function test_lavoro_parte_dall_assegnazione(): void
@@ -380,5 +381,46 @@ class CronogrammaTest extends TestCase
         $this->assertStringContainsString('Chiesto da Anna Gestore', $tratto['fumetto']);
         $this->assertStringContainsString('«Quale aula?»', $tratto['fumetto']);
         $this->assertStringContainsString('termine ven 27', $tratto['fumetto']);
+    }
+
+    // ── 1.0.3: segnalazioni lunghe ───────────────────────────────────────────
+
+    /** Come lo screenshot: 41 giorni nuova, un mese in carico, assegnata da 3 giorni. */
+    private function lunga(): Segnalazione
+    {
+        $operaio = User::factory()->create(['name' => 'Fabrizio Conte']);
+        $s = $this->segnalazione('2026-09-02 09:00:00', ['id_stato_segnalazione' => 3, 'data_scadenza_sla' => '2026-09-16 14:00:00']);
+        $this->storico($s, 2, '2026-10-13 09:00:00');
+        $this->storico($s, 3, '2026-11-13 10:00:00', $operaio->id);
+
+        return $s;
+    }
+
+    public function test_arco_lungo_senza_fasce_dei_giorni_chiusi(): void
+    {
+        $c = $this->crono($this->lunga(), '2026-11-16 12:00:00');
+
+        $this->assertSame([], $c['chiusi']);
+        $this->assertNotContains('chiuso', array_keys($c['legenda']));
+        $this->assertStringContainsString('di fine settimana', $c['riassunto']);
+    }
+
+    public function test_scala_reale_anche_con_attesa_lunga(): void
+    {
+        $c = $this->crono($this->lunga(), '2026-11-16 12:00:00');
+
+        // 41 giorni su 75: la scala resta uniforme, niente compressione.
+        $this->assertEqualsWithDelta(41 / 75.125 * 100, $c['tratti'][0]['larghezza'], 0.5);
+        $this->assertArrayNotHasKey('compresso', $c['tratti'][0]);
+    }
+
+    public function test_passaggi_sulla_barra_con_etichette_degli_ultimi(): void
+    {
+        $c = $this->crono($this->lunga(), '2026-11-16 12:00:00');
+
+        $this->assertSame(['2/9 aperta', '13/10 presa in carico', '13/11 assegnata a F. Conte'], array_column($c['eventi'], 'testo'));
+        $this->assertEqualsWithDelta(0.0, $c['eventi'][0]['posizione'], 0.0001);
+        $this->assertContains('passaggio', array_column($c['marcatori'], 'tipo'));
+        $this->assertEqualsWithDelta($c['tratti'][2]['sinistra'], $c['eventi'][2]['posizione'], 0.0001);
     }
 }
