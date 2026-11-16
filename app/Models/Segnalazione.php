@@ -107,6 +107,7 @@ class Segnalazione extends Model
         return $this->belongsTo(StatoSegnalazione::class, 'id_stato_segnalazione', 'id_stato');
     }
 
+    /** @return BelongsTo<TipologiaSegnalazione, $this> */
     public function tipologia(): BelongsTo
     {
         return $this->belongsTo(TipologiaSegnalazione::class, 'id_tipologia_segnalazione', 'id_tipologia_segnalazione');

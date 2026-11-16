@@ -9,6 +9,13 @@
         <p class="m-0 text-sm text-[var(--slate-600)]">
             <span class="pa-mono font-semibold">#{{ $segnalazione->id_segnalazione }}</span>
             · <x-pa.tipologia :tipologia="$segnalazione->tipologia" />
+            @can('modificaPriorita', $segnalazione)
+                <button type="button" x-data x-on:click="$dispatch('apri-pannello', 'tipologia')"
+                        class="rounded-md px-1 text-[var(--slate-500)] hover:bg-[var(--slate-100)]"
+                        title="Cambia tipologia" aria-label="Cambia tipologia">
+                    <span class="text-xs"><i class="fas fa-pen" aria-hidden="true"></i></span>
+                </button>
+            @endcan
             @if($segnalazione->plesso) · {{ $segnalazione->plesso->nomeLeggibile() }} @endif
         </p>
         <div class="flex items-start gap-2">

@@ -614,6 +614,48 @@ class SegnalazioneController extends Controller
             ->with('success', 'Titolo aggiornato.');
     }
 
+    /**
+     * Tipologia sbagliata (1.0.4): la corregge il comune. Scadenza ricalcolata con la regola della
+     * nuova tipologia (salvo scadenza a mano); l'observer avvisa i gestori della nuova tipologia.
+     */
+    public function aggiornaTipologia(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('modificaPriorita', $segnalazione);
+
+        $data = $request->validate([
+            'id_tipologia_segnalazione' => ['required', 'integer', \Illuminate\Validation\Rule::exists('tipologie_segnalazioni', 'id_tipologia_segnalazione')->where('attiva', true)],
+        ], [
+            'id_tipologia_segnalazione.exists' => 'Scegli una delle tipologie attive.',
+        ]);
+
+        $prima = $segnalazione->tipologia?->nomeLeggibile() ?? '—';
+        $segnalazione->id_tipologia_segnalazione = (int) $data['id_tipologia_segnalazione'];
+        if (! $segnalazione->isDirty('id_tipologia_segnalazione')) {
+            return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione);
+        }
+
+        if (! $segnalazione->isChiusa() && ! $segnalazione->scadenza_manuale) {
+            $scadenza = $this->sla->calcolaScadenza($segnalazione);
+            if ($scadenza) {
+                $segnalazione->data_scadenza_sla = $scadenza;
+                $segnalazione->sla_violato = $scadenza->isPast();
+            }
+        }
+        $segnalazione->save();
+        $dopo = $segnalazione->load('tipologia')->tipologia?->nomeLeggibile() ?? '—';
+
+        // Traccia interna, come per la priorità.
+        $segnalazione->note()->create([
+            'testo'            => "Tipologia cambiata: {$prima} → {$dopo}.",
+            'id_utente'        => auth()->id(),
+            'visibile_web'     => false,
+            'visibile_impresa' => false,
+        ]);
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', "Tipologia cambiata in {$dopo}.");
+    }
+
     /** Toglie la scadenza fissata a mano: torna quella calcolata dalla regola (spec §3). */
     /** "Scadenza…": si rimanda con un motivo, che la scuola vede sempre (e riceve per email). */
     public function aggiornaScadenza(Request $request, Segnalazione $segnalazione, \App\Services\Segnalazioni\ScadenzaManuale $scadenze): RedirectResponse

@@ -4,6 +4,34 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.4] - 2026-11-16
+
+### Added
+- Colori unici in tutto il programma (`App\Support\Colori`): ogni stato, tipologia e priorità
+  ha il suo colore, uguale in elenchi, scheda, nuova segnalazione e statistiche. Segni diversi
+  per non confonderli: lo stato è un pallino, la tipologia uno sfondo pieno, la priorità un'etichetta.
+- Admin → Tipologie: scelta del colore. Le tipologie esistenti ricevono un colore che si
+  spiega da sé (Verde e giardini verde, Idrico blu, Elettrico giallo, Termico rosso…); le nuove
+  restano grigie finché non se ne sceglie uno.
+- Elenco segnalazioni: "Raggruppa per" sede, tipologia o entrambe, con il gruppo in una cella a
+  sinistra che dice quante sono e quante in ritardo. Una pagina non spezza mai un gruppo.
+  La scelta resta nel browser.
+- Azioni multiple: "Accorpa" per i doppioni della stessa sede e tipologia; la più vecchia resta
+  aperta e riceve le altre.
+- Legenda dei colori accanto all'elenco (sugli schermi stretti, apribile sopra).
+- Scheda: la tipologia si cambia con la matita accanto (es. asciugamani elettrico segnalato come
+  idrico). La scadenza si ricalcola con la regola della nuova tipologia e resta una nota interna.
+
+### Changed
+- Elenco segnalazioni ridisegnato: colonne Sede, Tipologia, Stato (con chi ci lavora o
+  "da assegnare"), Priorità, Scadenza, Segnalazione con numero e testo su due righe.
+  La priorità Media non si mostra più; il lucchetto delle riservate è tolto dall'elenco.
+  Stesse colonne per operai, ditte e segnalanti.
+- Scadenza in elenco: "In ritardo di N g" in testo normale; in rosso solo ciò che è appena
+  scaduto o scade entro 24 ore.
+- Nomi di sedi e tipologie leggibili ("Verde e Giardini" invece di "VERDE E GIARDINI").
+- Paginazione anche in cima agli elenchi.
+
 ## [1.0.3] - 2026-11-16
 
 ### Changed
