@@ -101,6 +101,24 @@
                     <option value="recenti" @selected($ordine === 'recenti')>Più recenti</option>
                     <option value="vecchie" @selected($ordine === 'vecchie')>Più vecchie</option>
                 </select>
+                {{-- Raggruppa per (1.0.4): la scelta resta nel browser e torna alla prossima apertura dell'elenco. --}}
+                <label for="filtro_gruppo" class="text-sm text-[var(--slate-600)]">Raggruppa per</label>
+                <select name="gruppo" id="filtro_gruppo" class="pa-input pa-input-auto"
+                        x-data x-init="
+                            try {
+                                const u = new URL(location.href);
+                                const salvato = localStorage.getItem('pa-elenco-gruppo') || '';
+                                if (! u.searchParams.has('gruppo') && salvato && $el.querySelector(`option[value='${salvato}']`)) {
+                                    u.searchParams.set('gruppo', salvato); u.searchParams.delete('page'); location.replace(u);
+                                }
+                            } catch (e) {}"
+                        onchange="try { localStorage.setItem('pa-elenco-gruppo', this.value) } catch (e) {} this.form.submit()">
+                    <option value="" @selected($gruppo === '')>Nessun gruppo</option>
+                    <option value="sede" @selected($gruppo === 'sede')>Sede</option>
+                    <option value="sede_tipologia" @selected($gruppo === 'sede_tipologia')>Sede, poi tipologia</option>
+                    <option value="tipologia" @selected($gruppo === 'tipologia')>Tipologia</option>
+                    <option value="tipologia_sede" @selected($gruppo === 'tipologia_sede')>Tipologia, poi sede</option>
+                </select>
                 <x-pa.btn type="submit" variant="primary">Cerca</x-pa.btn>
             </div>
 
@@ -181,14 +199,20 @@
             @if($segnalazioni->isEmpty())
                 <p class="m-0 p-10 text-center text-sm text-[var(--slate-500)]">Nessuna segnalazione in questa vista.</p>
             @else
-                @php $colonne = ['sede', 'tipologia', 'seleziona', 'stato', 'priorita', 'scadenza', 'segnalazione', 'azioni']; @endphp
-                <table class="pa-elenco">
-                    @include('segnalazioni._intestazione', ['colonne' => $colonne])
+                @php
+                    $livelli = \App\Support\Segnalazioni\GruppiElenco::livelli($gruppo);
+                    $colonne = array_values(array_diff(['sede', 'tipologia', 'seleziona', 'stato', 'priorita', 'scadenza', 'segnalazione', 'azioni'], $livelli));
+                    $righe ??= $segnalazioni->getCollection()->map(fn ($s) => ['s' => $s, 'celle' => []])->all();
+                @endphp
+                <table class="pa-elenco {{ $livelli ? 'pa-elenco-gruppi' : '' }}">
+                    @include('segnalazioni._intestazione', ['colonne' => $colonne, 'gruppo' => $livelli])
                     <tbody>
-                        @foreach($segnalazioni as $s)
+                        @foreach($righe as $riga)
                             @include('segnalazioni._riga', [
+                                's' => $riga['s'],
+                                'celle' => $riga['celle'],
                                 'colonne' => $colonne,
-                                'rapide' => $azioniRapidePerSegnalazione[$s->id_segnalazione] ?? collect(),
+                                'rapide' => $azioniRapidePerSegnalazione[$riga['s']->id_segnalazione] ?? collect(),
                             ])
                         @endforeach
                     </tbody>

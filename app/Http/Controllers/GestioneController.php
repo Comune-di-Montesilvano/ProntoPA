@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Enums\SegnalazioneStato;
 use App\Models\Appalto;
 use App\Models\Impostazione;
+use App\Models\Plesso;
 use App\Models\Segnalazione;
 use App\Models\Squadra;
 use App\Models\TipologiaSegnalazione;
 use App\Models\User;
+use App\Support\Segnalazioni\GruppiElenco;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -52,6 +54,10 @@ class GestioneController extends Controller
             ->conVolteSegnalata()
             ->paginate(30);
 
+        // Raggruppa per (1.0.4): celle di gruppo con conteggi sull'intero filtro, non sulla pagina.
+        $gruppo = array_key_exists((string) $request->get('gruppo'), GruppiElenco::GRUPPI) ? (string) $request->get('gruppo') : '';
+        $righe = $gruppo === '' ? null : $this->righeRaggruppate($request, $gruppo, $segnalazioni);
+
         // Conteggi (senza filtro ricerca per non distorcere i badge)
         $baseCount = Segnalazione::visibileA($user);
         $conteggi  = [
@@ -91,7 +97,7 @@ class GestioneController extends Controller
             'segnalazioni', 'tab', 'conteggi',
             'q', 'idTipologia',
             'idOperatore', 'dataDa', 'dataA', 'livelloPriorita',
-            'ordine', 'filtro', 'tipologie', 'operatori',
+            'ordine', 'filtro', 'tipologie', 'operatori', 'gruppo', 'righe',
             'azioniRapidePerSegnalazione', 'filtri', 'operatoriAssegnabili', 'squadre', 'appaltiValidi'
         ));
     }
@@ -255,6 +261,17 @@ class GestioneController extends Controller
             default       => $base->aperte(),
         };
 
+        foreach (GruppiElenco::livelli($request->get('gruppo')) as $tipo) {
+            if ($tipo === 'sede') {
+                $base->orderBy(Plesso::select('nome')->whereColumn('plessi.id_plesso', 'segnalazioni.id_plesso')->limit(1))
+                    ->orderBy('segnalazioni.id_plesso');
+            } else {
+                $base->orderBy(TipologiaSegnalazione::select('descrizione')
+                    ->whereColumn('tipologie_segnalazioni.id_tipologia_segnalazione', 'segnalazioni.id_tipologia_segnalazione')->limit(1))
+                    ->orderBy('segnalazioni.id_tipologia_segnalazione');
+            }
+        }
+
         if ($tab === 'chiuse') {
             return $base->orderByDesc('data_chiusura');
         }
@@ -264,6 +281,31 @@ class GestioneController extends Controller
             'vecchie' => $base->orderBy('data_segnalazione'),
             default   => $base->ordinaUrgenti(),
         };
+    }
+
+    /**
+     * @param  \Illuminate\Pagination\LengthAwarePaginator<int, Segnalazione>  $pagina
+     * @return list<array{s: Segnalazione, celle: list<array<string, mixed>>}>
+     */
+    private function righeRaggruppate(Request $request, string $gruppo, $pagina): array
+    {
+        $colonna = GruppiElenco::livelli($gruppo)[0] === 'sede' ? 'segnalazioni.id_plesso' : 'segnalazioni.id_tipologia_segnalazione';
+        $conteggi = $this->elencoFiltrato($request)->reorder()->toBase()
+            ->selectRaw(
+                "{$colonna} as chiave, count(*) as totale, sum(case when data_chiusura is null and id_stato_segnalazione <> ? and data_scadenza_sla < ? then 1 else 0 end) as in_ritardo",
+                [SegnalazioneStato::ATTESA_RISPOSTA->value, now()]
+            )
+            ->groupBy($colonna)
+            ->get()
+            ->mapWithKeys(fn ($r) => [(int) $r->chiave => ['totale' => (int) $r->totale, 'in_ritardo' => (int) $r->in_ritardo]])
+            ->all();
+
+        // Ultima riga della pagina prima: se è dello stesso gruppo, la cella dice "(continua)".
+        $precedente = $pagina->currentPage() > 1 && $pagina->firstItem()
+            ? $this->elencoFiltrato($request)->with(['plesso', 'tipologia'])->skip($pagina->firstItem() - 2)->take(1)->first()
+            : null;
+
+        return GruppiElenco::costruisci($pagina->getCollection(), $gruppo, $conteggi, $precedente);
     }
 
     /**
@@ -287,7 +329,7 @@ class GestioneController extends Controller
     {
         return array_filter($request->only([
             'tab', 'q', 'id_tipologia', 'id_operatore',
-            'data_da', 'data_a', 'livello_priorita', 'ordine', 'filtro',
+            'data_da', 'data_a', 'livello_priorita', 'ordine', 'filtro', 'gruppo',
         ]), fn ($v) => $v !== null && $v !== '');
     }
 

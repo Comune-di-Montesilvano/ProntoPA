@@ -240,6 +240,17 @@
 .pa-elenco-testo:hover { color: var(--ente-primary); text-decoration: underline; }
 .pa-elenco-id { color: var(--slate-400); font-size: 12px; margin-right: 4px; }
 .pa-elenco-titolo { font-weight: 600; color: var(--slate-900); text-decoration: none; }
+/* Raggruppa per: celle di gruppo a sinistra (rowspan), contenuto che resta in vista scorrendo */
+.pa-elenco td.pa-cella-gruppo { border-right: 1px solid var(--slate-200); border-bottom: 1px solid var(--slate-300); width: 15%; }
+.pa-elenco td.pa-cella-gruppo-sede { background: var(--slate-50); }
+.pa-elenco td.pa-cella-gruppo-tipologia { background: var(--tono-sfondo); color: var(--tono-testo); }
+.pa-cella-gruppo-dentro { position: sticky; top: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.pa-cella-gruppo-nome { display: inline-flex; gap: 6px; font-weight: 700; line-height: 1.3; color: var(--slate-800); }
+.pa-cella-gruppo-tipologia .pa-cella-gruppo-nome { color: var(--tono-testo); }
+.pa-cella-gruppo-nome i { margin-top: 2px; color: var(--slate-400); }
+.pa-cella-gruppo-tipologia .pa-cella-gruppo-nome i { color: var(--tono-punto); }
+.pa-cella-gruppo-continua { font-weight: 400; color: var(--slate-500); }
+.pa-cella-gruppo-conto { font-size: 12px; color: var(--slate-600); }
 .pa-elenco-titolo:hover { color: var(--ente-primary); text-decoration: underline; }
 .pa-elenco-meta { margin-top: 2px; font-size: 13px; color: var(--slate-500); }
 .pa-vista { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: var(--radius-md);
@@ -265,6 +276,13 @@
   .pa-elenco td.pa-col-priorita { grid-area: prio; }
   .pa-elenco td.pa-col-scadenza, .pa-elenco td.pa-col-aggiornata { grid-area: scad; justify-self: end; font-size: 13px; }
   .pa-elenco td.pa-col-affida { grid-area: affida; }
+  /* Raggruppato: le celle di gruppo diventano fasce sopra la prima scheda del gruppo */
+  .pa-elenco td.pa-cella-gruppo { width: auto; margin: 0 -4px; padding: 8px 12px; border: 0; }
+  .pa-elenco td.pa-cella-gruppo-1 { grid-area: g1; border-top: 2px solid var(--slate-300); }
+  .pa-elenco td.pa-cella-gruppo-2 { grid-area: g2; }
+  .pa-elenco td.pa-cella-gruppo-sede { background: var(--slate-100); }
+  .pa-elenco td.pa-cella-gruppo-tipologia { background: var(--tono-sfondo); }
+  .pa-cella-gruppo-dentro { position: static; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
 }
 /* Azioni multiple: barra fissa in basso, a tutta larghezza su telefono */
 .pa-barra-multipla { position: fixed; z-index: 40; left: 50%; bottom: 16px; transform: translateX(-50%);
