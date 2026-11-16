@@ -9,6 +9,9 @@
 
     <div class="bg-white shadow-sm rounded-xl">
         <form method="POST" action="{{ route('admin.sedi.update', $sede->id_plesso) }}" class="p-6 space-y-5">
+            @if($ritorno)
+                <input type="hidden" name="ritorno" value="{{ $ritorno }}">
+            @endif
             @csrf @method('PATCH')
 
             @php $miur = $sede->isMiur(); @endphp

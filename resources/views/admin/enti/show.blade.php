@@ -44,6 +44,9 @@
                                 <tr>
                                     <td class="py-2 font-medium text-gray-800">{{ $sede->nome }}
                                         @if($sede->isMiur())<span class="ml-1 text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-normal">MIUR</span>@endif
+                                        @unless($sede->haCoordinate())
+                                            <a href="{{ route('admin.sedi.edit', $sede->id_plesso) }}" class="ml-1 text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 font-normal hover:underline">senza posizione</a>
+                                        @endunless
                                     </td>
                                     <td class="py-2 text-gray-500">{{ $sede->indirizzo ?? '—' }}</td>
                                     <td class="py-2 text-gray-500">{{ $sede->referente ?? '—' }}</td>

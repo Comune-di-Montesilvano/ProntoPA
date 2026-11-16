@@ -30,7 +30,23 @@ class SediController extends Controller
             ->whereKeyNot($sede->id_plesso)->orderBy('nome')->get();
         $storico = $this->storico($sede);
 
-        return view('admin.sedi.edit', compact('sede', 'organizzazioni', 'altreSedi', 'storico'));
+        $ritorno = self::ritornoSicuro(request()->query('ritorno'));
+
+        return view('admin.sedi.edit', compact('sede', 'organizzazioni', 'altreSedi', 'storico', 'ritorno'));
+    }
+
+    /** Solo percorsi interni ("/segnalazioni/12"): mai un altro sito, né "//host" o "/\host". */
+    private static function ritornoSicuro(mixed $ritorno): ?string
+    {
+        if (! is_string($ritorno) || strlen($ritorno) > 255 || ! str_starts_with($ritorno, '/')) {
+            return null;
+        }
+        // Niente "//host", backslash (i browser li leggono come "/"), spazi o caratteri di controllo.
+        if (str_starts_with($ritorno, '//') || str_contains($ritorno, '\\') || preg_match('/[\s\x00-\x1F\x7F]/', $ritorno) === 1) {
+            return null;
+        }
+
+        return $ritorno;
     }
 
     /**
@@ -89,6 +105,10 @@ class SediController extends Controller
         $data = $request->validate($regole);
 
         $sede->update($data);
+
+        if ($ritorno = self::ritornoSicuro($request->input('ritorno'))) {
+            return redirect($ritorno)->with('success', "Sede \"{$sede->nome}\" aggiornata.");
+        }
 
         return redirect()->route('admin.enti.show', $sede->id_istituto)
             ->with('success', "Sede \"{$sede->nome}\" aggiornata.");
