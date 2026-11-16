@@ -64,7 +64,8 @@ class CronogrammaTest extends TestCase
     {
         $g = $this->gestore->id;
         $s = $this->segnalazione('2026-11-10 09:13:10', ['id_stato_segnalazione' => 2, 'id_operatore_assegnato' => $g, 'data_scadenza_sla' => '2026-11-16 14:00:00']);
-        $this->storico($s, 2, '2026-11-13 08:16:08', $g);
+        // Come a DB in produzione: "Assegna a me" registra id_utente_collegato = 0.
+        $this->storico($s, 2, '2026-11-13 08:16:08');
         $this->storico($s, 6, '2026-11-13 14:00:34');
         $this->storico($s, 2, '2026-11-13 14:01:02');
         $this->storico($s, 2, '2026-11-13 14:01:23', $g);
@@ -72,6 +73,7 @@ class CronogrammaTest extends TestCase
         $c = $this->crono($s, '2026-11-16 10:00:00');
 
         $this->assertSame(['nuova', 'in-carico'], array_column($c['tratti'], 'classe'));
+        $this->assertStringStartsWith('In carico a Anna Gestore · presa in carico ven 13, 08:16', $c['tratti'][1]['fumetto']);
         $this->assertSame(['pausa'], array_column($c['marcatori'], 'tipo'));
         $this->assertEqualsWithDelta($c['ora'], $this->somma($c), 0.0001);
         $this->assertEqualsWithDelta(0.0, $c['tratti'][0]['sinistra'], 0.0001);
@@ -202,6 +204,20 @@ class CronogrammaTest extends TestCase
         $this->assertCount(1, $c['marcatori']);
         $this->assertSame('risposta', $c['marcatori'][0]['tipo']);
         $this->assertSame(2, $c['marcatori'][0]['quanti']);
+    }
+
+    public function test_marcatori_vicini_di_tipo_diverso_su_righe_diverse(): void
+    {
+        $scuola = User::factory()->create();
+        $scuola->assignRole('segnalatore');
+        $s = $this->segnalazione('2026-11-10 09:00:00', ['id_utente_segnalazione' => $scuola->id]);
+        $this->nota($s, $scuola, '2026-11-12 09:00:00', true, false, NotaSegnalazione::ORIGINE_SOLLECITO);
+        $this->nota($s, $this->gestore, '2026-11-12 09:10:00', true);
+
+        $c = $this->crono($s, '2026-11-16 09:00:00');
+
+        $this->assertSame(['risegnalata', 'risposta'], array_column($c['marcatori'], 'tipo'));
+        $this->assertSame([0, 1], array_column($c['marcatori'], 'riga'));
     }
 
     public function test_intervallo_nullo_un_tratto_pieno(): void

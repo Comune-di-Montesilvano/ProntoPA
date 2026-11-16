@@ -29,7 +29,7 @@
 
     @include('segnalazioni.scheda._inattivita')
 
-    @include('segnalazioni.scheda._avanzamento')
+    @include('segnalazioni.scheda._cronogramma')
 
     <x-pa.card titolo="Messaggi con il comune">
         @if($puoScrivere)

@@ -125,7 +125,7 @@ class Cronogramma
             'superata_da' => $superata ? $this->posizione($scadenza) : null,
             'fine_reale' => $this->posizione($this->fineReale),
             'riassunto' => $this->riassunto($tratti, $chiusura),
-            'legenda' => array_values(array_intersect_key($this->legenda(), array_flip($presenti))),
+            'legenda' => array_intersect_key($this->legenda(), array_flip($presenti)),
         ];
     }
 
@@ -167,10 +167,14 @@ class Cronogramma
             $quando = $quando->lt($this->da) ? $this->da->copy() : $quando;
             $collegato = (int) $evento->id_utente_collegato;
             $appalto = (int) $evento->id_appalto;
+            $stato = SegnalazioneStato::tryFrom((int) $evento->id_stato_segnalazione);
             if ($collegato > 0 || $appalto > 0) {
                 $assegnatario = $appalto > 0 ? $this->ditta($appalto) : $this->nome($collegato);
+            } elseif ($stato === SegnalazioneStato::IN_CARICO && $assegnatario === null && (int) $evento->id_utente > 0) {
+                // "Assegna a me" registra collegato 0: è di chi l'ha presa.
+                $assegnatario = $this->nome((int) $evento->id_utente);
             }
-            $permanenze[] = [SegnalazioneStato::tryFrom((int) $evento->id_stato_segnalazione), $assegnatario, (int) $evento->id_utente, $quando];
+            $permanenze[] = [$stato, $assegnatario, (int) $evento->id_utente, $quando];
         }
 
         // Ultima permanenza fino alla fine reale; quelle a durata zero spariscono.
@@ -434,6 +438,16 @@ class Cronogramma
                 continue;
             }
             $gruppi[] = $m;
+        }
+
+        // Tipi diversi troppo vicini si coprirebbero: il secondo sale di una riga.
+        $ultimoInBasso = null;
+        foreach ($gruppi as $i => $g) {
+            $sopra = $ultimoInBasso !== null && $g['posizione'] - $ultimoInBasso < self::RAGGRUPPA_ENTRO;
+            $gruppi[$i]['riga'] = $sopra ? 1 : 0;
+            if (! $sopra) {
+                $ultimoInBasso = $g['posizione'];
+            }
         }
 
         return $gruppi;

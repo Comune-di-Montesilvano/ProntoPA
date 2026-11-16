@@ -68,6 +68,48 @@ class SchedaLettureTest extends TestCase
             ->assertSee('Finestra rotta in aula 3');
     }
 
+    private function conStorico(): void
+    {
+        \App\Models\StoricoStatoSegnalazione::create([
+            'id_segnalazione' => $this->s->id_segnalazione, 'id_stato_segnalazione' => 3, 'id_utente' => $this->gestore->id,
+            'id_utente_collegato' => $this->operaio->id, 'id_appalto' => 0,
+        ])->forceFill(['data_registrazione' => now()->subDay()])->save();
+        $this->s->update(['data_segnalazione' => now()->subDays(3)]);
+    }
+
+    public function test_scheda_gestore_ha_cronogramma(): void
+    {
+        $this->conStorico();
+
+        $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee("Com'è andata finora", false)
+            ->assertSee('aria-label="Assegnata a Paolo Neri', false);
+    }
+
+    public function test_scheda_segnalante_ha_cronogramma_senza_nomi_e_senza_avanzamento(): void
+    {
+        $this->conStorico();
+
+        $this->actingAs($this->segnalatore)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee("Com'è andata finora", false)
+            ->assertSee('Ci stiamo lavorando')
+            ->assertDontSee('Paolo Neri')
+            ->assertDontSee('Anna Gestore')
+            ->assertDontSee('aria-label="Avanzamento"', false);
+    }
+
+    public function test_scheda_lavoro_ha_cronogramma(): void
+    {
+        $this->conStorico();
+
+        $this->actingAs($this->operaio)->get(route('segnalazioni.show', $this->s))
+            ->assertOk()
+            ->assertSee("Com'è andata finora", false)
+            ->assertSee('Assegnata a te da');
+    }
+
     public function test_ditta_non_vede_evidenza_riservata_priorita(): void
     {
         $this->actingAs($this->ditta)->get(route('segnalazioni.show', $this->s))

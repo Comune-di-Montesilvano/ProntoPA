@@ -209,8 +209,6 @@
 .pa-passo-amber   { border-color: var(--amber); }
 .pa-passo-slate   { border-color: var(--slate-300); }
 
-.pa-tappa-bar { display: block; height: 5px; border-radius: 3px; background: var(--slate-200); }
-.pa-tappa-bar.fatta { background: var(--ente-primary); }
 
 .pa-drawer-overlay { position: fixed; inset: 0; background: rgba(20, 23, 31, .42); z-index: 40; }
 .pa-drawer {
@@ -219,7 +217,6 @@
   display: flex; flex-direction: column;
 }
 
-.pa-tappa-bar.sospesa { background: var(--amber); }
 .pa-btn:disabled { opacity: .5; cursor: not-allowed; }
 
 /* Elenco segnalazioni: tabella su desktop, righe a scheda sotto 768px (niente scroll orizzontale) */
@@ -259,4 +256,60 @@
   background: var(--white, #fff); box-shadow: 0 8px 24px rgb(15 23 42 / .18); }
 @media (max-width: 767px) {
   .pa-barra-multipla { left: 0; right: 0; bottom: 0; transform: none; max-width: none; border-radius: 0; border-width: 1px 0 0; }
+}
+
+/* ── Cronogramma della segnalazione (scheda/_cronogramma) ───────────────── */
+.pa-crono { position: relative; padding: 30px 0 16px; }
+.pa-crono-barra { position: relative; height: 28px; border-radius: 6px; background: var(--slate-100, #F1F3F7); }
+.pa-crono-chiuso { position: absolute; top: -14px; bottom: 0; background: rgb(241 243 247 / .55); border-radius: 4px;
+  display: flex; justify-content: center; pointer-events: none; z-index: 1; }
+.pa-crono-chiuso span { font-size: 10px; letter-spacing: .06em; color: var(--slate-500); line-height: 12px; white-space: nowrap; }
+.pa-crono-tratto { position: absolute; top: 4px; bottom: 4px; min-width: 3px; border-radius: 4px; cursor: default; outline: none; }
+.pa-crono-tratto:focus-visible, .pa-crono-marcatore:focus-visible { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ente-primary); }
+.pa-crono-nuova, .pa-crono-c-nuova { background: repeating-linear-gradient(135deg, var(--slate-300) 0 4px, var(--slate-200) 4px 8px); }
+.pa-crono-in-carico, .pa-crono-c-in-carico { background: var(--ente-primary); }
+.pa-crono-assegnata, .pa-crono-c-assegnata { background: var(--violet); }
+.pa-crono-preventivo, .pa-crono-c-preventivo { background: var(--amber); }
+.pa-crono-sospesa, .pa-crono-c-sospesa { background: repeating-linear-gradient(135deg, var(--amber) 0 4px, var(--amber-100) 4px 8px); }
+.pa-crono-attesa, .pa-crono-c-attesa { background: repeating-linear-gradient(135deg, var(--amber-600) 0 3px, var(--amber-100) 3px 6px); }
+.pa-crono-completata, .pa-crono-c-completata { background: var(--emerald); }
+.pa-crono-finale, .pa-crono-c-finale { background: var(--slate-500); }
+.pa-crono-non-noto, .pa-crono-c-non-noto { background: var(--slate-200); }
+.pa-crono-superata { position: absolute; bottom: -5px; height: 3px; background: var(--rose); border-radius: 2px; }
+.pa-crono-linea { position: absolute; top: -6px; bottom: -6px; width: 0; border-left: 2px solid var(--ink); pointer-events: none; z-index: 1; }
+.pa-crono-linea.pa-crono-etichetta-sotto span { top: auto; bottom: -38px; }
+.pa-crono-linea.pa-crono-etichetta-sinistra span { transform: translateX(calc(-100% - 4px)); }
+.pa-crono-linea span { position: absolute; top: -14px; transform: translateX(-50%); font-size: 10px; color: var(--slate-600); white-space: nowrap; }
+.pa-crono-linea-scadenza { border-left: 2px dashed var(--rose); }
+.pa-crono-linea-scadenza span { color: var(--rose); }
+.pa-crono-marcatore { position: absolute; top: -9px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%;
+  border: 2px solid #fff; outline: none; z-index: 2; }
+.pa-crono-m-risposta, .pa-crono-c-risposta { background: var(--emerald); }
+.pa-crono-m-risegnalata, .pa-crono-c-risegnalata { background: var(--amber); }
+.pa-crono-m-nota, .pa-crono-c-nota { background: var(--ente-primary); }
+.pa-crono-m-pausa, .pa-crono-c-pausa { background: #fff; border-color: var(--amber); }
+.pa-crono-c-chiuso { background: rgb(148 163 184 / .3); }
+.pa-crono-riga-2 { top: -23px; }
+.pa-crono-quanti { position: absolute; top: -12px; left: 8px; font-size: 10px; font-weight: 600; color: var(--slate-700); }
+.pa-crono-fumetto { display: none; position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+  z-index: 10; min-width: 200px; max-width: 280px; padding: 8px 10px; border-radius: 8px; background: #fff;
+  border: 1px solid var(--slate-200); box-shadow: 0 8px 24px rgb(15 23 42 / .18);
+  font-size: 12px; line-height: 1.4; color: var(--slate-700); flex-direction: column; gap: 2px; }
+.pa-crono-tratto:hover > .pa-crono-fumetto, .pa-crono-tratto:focus-visible > .pa-crono-fumetto,
+.pa-crono-tratto:focus > .pa-crono-fumetto,
+.pa-crono-marcatore:hover > .pa-crono-fumetto, .pa-crono-marcatore:focus-visible > .pa-crono-fumetto,
+.pa-crono-marcatore:focus > .pa-crono-fumetto { display: flex; }
+.pa-crono-fumetto.pa-crono-fumetto-destra { left: auto; right: 0; transform: none; }
+.pa-crono-fumetto.pa-crono-fumetto-sinistra { left: 0; transform: none; }
+.pa-crono-tacche { position: relative; height: 18px; margin-top: 6px; }
+.pa-crono-tacche span { position: absolute; transform: translateX(-50%); font-size: 11px; color: var(--slate-500); white-space: nowrap; }
+.pa-crono-tacche span:first-child { transform: none; }
+.pa-crono-legenda { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--slate-600); }
+.pa-crono-legenda li { display: inline-flex; align-items: center; gap: 6px; }
+.pa-crono-campione { display: inline-block; width: 14px; height: 10px; border-radius: 3px; }
+.pa-crono-c-risposta, .pa-crono-c-risegnalata, .pa-crono-c-nota, .pa-crono-c-pausa { width: 10px; border-radius: 50%; border: 2px solid transparent; }
+.pa-crono-c-pausa { border-color: var(--amber); }
+@media (max-width: 767px) {
+  .pa-crono-tacche span:nth-child(even) { display: none; }
+  .pa-crono-chiuso span { display: none; }
 }
