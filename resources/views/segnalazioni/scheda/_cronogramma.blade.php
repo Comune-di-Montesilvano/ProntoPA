@@ -60,6 +60,15 @@
                 @endforeach
             </div>
 
+            @if($c['eventi'] ?? [])
+                <div class="pa-crono-eventi" aria-hidden="true">
+                    @foreach($c['eventi'] as $evento)
+                        <span class="{{ $evento['posizione'] > 80 ? 'pa-crono-evento-destra' : ($evento['posizione'] < 10 ? 'pa-crono-evento-sinistra' : '') }}"
+                              style="left: {{ $pct($evento['posizione']) }}">{{ $evento['testo'] }}</span>
+                    @endforeach
+                </div>
+            @endif
+
             <div class="pa-crono-tacche" aria-hidden="true">
                 @foreach($c['tacche'] as $tacca)
                     <span style="left: {{ $pct($tacca['posizione']) }}">{{ $tacca['testo'] }}</span>

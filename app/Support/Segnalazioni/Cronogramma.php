@@ -19,9 +19,10 @@ use Illuminate\Support\Collection;
  * "Com'è andata finora": la vita della segnalazione su una barra in tempo reale, già pronta
  * per la vista (posizioni in percentuale, fumetti in parole). Nessun HTML qui.
  *
- * Scala reale, non in ore lavorative: i giorni chiusi restano visibili, velati.
+ * Scala reale, non in ore lavorative: i giorni chiusi restano visibili, velati (solo su archi brevi).
  *
  * @phpstan-type Tratto array{stato: ?SegnalazioneStato, nome: string, classe: string, chi: ?string, deciso_da: ?string, da: Carbon, a: Carbon, sinistra: float, larghezza: float, durata: string, lavorativi: int, fumetto: string}
+ * @phpstan-type Evento array{posizione: float, testo: string}
  * @phpstan-type Marcatore array{tipo: string, posizione: float, quanti: int, fumetto: string}
  */
 class Cronogramma
@@ -34,6 +35,14 @@ class Cronogramma
 
     /** Etichetta di una fascia chiusa solo se è larga almeno così. */
     private const LARGHEZZA_ETICHETTA = 8.0;
+
+    /** Oltre questo arco (giorni) le fasce dei giorni chiusi diventano righe ovunque: non si disegnano. */
+    private const GIORNI_FASCE_CHIUSE = 28;
+
+    /** Etichette dei passaggi sotto la barra: al massimo tante, e distanti almeno così (%). */
+    private const ETICHETTE_EVENTI = 3;
+
+    private const DISTANZA_ETICHETTE = 15.0;
 
     private const LEGENDA = [
         'nuova' => "Nuova, nessuno l'ha presa",
@@ -50,6 +59,7 @@ class Cronogramma
         'risegnalata' => 'Segnalata di nuovo',
         'pausa' => 'Pausa breve',
         'chiuso' => 'Ufficio chiuso',
+        'passaggio' => 'Passaggio',
     ];
 
     private Carbon $da;
@@ -104,7 +114,8 @@ class Cronogramma
         $this->durata = (float) max(1, $this->a->getTimestamp() - $this->da->getTimestamp());
 
         [$tratti, $pause] = $this->tratti($storico);
-        $marcatori = $this->raggruppa(array_merge($pause, $this->marcatori()));
+        [$eventi, $passaggi] = $this->eventi($tratti);
+        $marcatori = $this->raggruppa(array_merge($pause, $passaggi, $this->marcatori()));
         $presenti = array_unique(array_merge(array_column($tratti, 'classe'), array_column($marcatori, 'tipo')));
         $chiusi = $this->chiusi();
         if ($chiusi !== []) {
@@ -118,6 +129,7 @@ class Cronogramma
             'a' => $this->a,
             'tratti' => $tratti,
             'marcatori' => $marcatori,
+            'eventi' => $eventi,
             'chiusi' => $chiusi,
             'tacche' => $this->tacche(),
             'ora' => $chiusura === null ? $this->posizione($this->ora) : null,
@@ -337,6 +349,83 @@ class Cronogramma
         };
     }
 
+    // ── Passaggi ─────────────────────────────────────────────────────────────
+
+    /**
+     * Ogni cambio di tratto è un passaggio: pallino sulla barra (fumetto) e, per gli ultimi,
+     * un'etichetta sotto ("13/11 assegnata a F. Conte").
+     *
+     * @param  list<Tratto>  $tratti
+     * @return array{0: list<Evento>, 1: list<Marcatore>}
+     */
+    private function eventi(array $tratti): array
+    {
+        // Chi lavora non vede chi altro ha avuto il lavoro (come in Attivita): solo da quando è suo.
+        if ($this->lettura === 'lavoro') {
+            return [[['posizione' => 0.0, 'testo' => $this->da->format('j/n').' a te']], []];
+        }
+        $tutti = [];
+        $marcatori = [];
+        foreach (array_slice($tratti, 1) as $t) {
+            if ($t['stato'] === null) {
+                continue;
+            }
+            $testo = $t['da']->format('j/n').' '.$this->fraseEvento($t);
+            $tutti[] = ['posizione' => $t['sinistra'], 'testo' => $testo];
+            $marcatori[] = [
+                'tipo' => 'passaggio', 'posizione' => $t['sinistra'], 'quanti' => 1,
+                'fumetto' => implode(' · ', array_slice(preg_split('/ · /', $t['fumetto']) ?: [], 0, 2)),
+            ];
+        }
+
+        // Dagli ultimi indietro, solo se non si sovrappongono (né tra loro né con l'apertura).
+        $etichette = [];
+        foreach (array_reverse($tutti) as $e) {
+            if (count($etichette) >= self::ETICHETTE_EVENTI) {
+                break;
+            }
+            $vicina = ($etichette !== [] && end($etichette)['posizione'] - $e['posizione'] < self::DISTANZA_ETICHETTE)
+                || $e['posizione'] < self::DISTANZA_ETICHETTE;
+            if (! $vicina) {
+                $etichette[] = $e;
+            }
+        }
+        $apertura = ['posizione' => 0.0, 'testo' => $tratti[0]['da']->format('j/n').' '.($this->lettura === 'lavoro' ? 'a te' : 'aperta')];
+
+        return [[$apertura, ...array_reverse($etichette)], $marcatori];
+    }
+
+    /** @param  Tratto  $t */
+    private function fraseEvento(array $t): string
+    {
+        if ($this->lettura === 'segnalante') {
+            return mb_strtolower($t['nome']);
+        }
+        $chi = $t['chi'] !== null ? self::abbrevia($t['chi']) : null;
+
+        return match ($t['stato']) {
+            SegnalazioneStato::IN_CARICO => 'presa in carico',
+            SegnalazioneStato::ASSEGNATA_OPERATORE => 'assegnata'.($chi ? ' a '.$chi : ''),
+            SegnalazioneStato::ASSEGNATA_IMPRESA => 'a ditta'.($t['chi'] ? ' '.\Illuminate\Support\Str::limit($t['chi'], 24) : ''),
+            SegnalazioneStato::PREVENTIVO_IN_ATTESA => 'preventivo',
+            SegnalazioneStato::SOSPESA => 'in pausa',
+            SegnalazioneStato::ATTESA_RISPOSTA => 'chieste informazioni',
+            SegnalazioneStato::NUOVA => 'tornata nuova',
+            default => mb_strtolower($t['nome']),
+        };
+    }
+
+    /** "Fabrizio Conte" → "F. Conte" */
+    private static function abbrevia(string $nome): string
+    {
+        $parti = preg_split('/\s+/u', trim($nome)) ?: [];
+        if (count($parti) < 2) {
+            return $nome;
+        }
+
+        return mb_substr($parti[0], 0, 1).'. '.implode(' ', array_slice($parti, 1));
+    }
+
     private function avvisati(): ?string
     {
         if ($this->lettura !== 'gestore') {
@@ -478,15 +567,19 @@ class Cronogramma
     /** @return list<array{sinistra: float, larghezza: float, etichetta: ?string}> */
     private function chiusi(): array
     {
+        if (Giorni::giorniDiCalendario($this->da, $this->a) > self::GIORNI_FASCE_CHIUSE) {
+            return [];
+        }
+        $da = $this->da;
         $fasce = [];
         $corrente = null;
-        for ($g = $this->da->copy()->startOfDay(); $g->lt($this->a); $g = $g->copy()->addDay()) {
+        for ($g = $da->copy()->startOfDay(); $g->lt($this->a); $g = $g->copy()->addDay()) {
             if ($this->calendario->fascia($g) !== null) {
                 $corrente = null;
 
                 continue;
             }
-            $inizio = $g->lt($this->da) ? $this->da->copy() : $g->copy();
+            $inizio = $g->lt($da) ? $da->copy() : $g->copy();
             $fine = $g->copy()->addDay()->gt($this->a) ? $this->a->copy() : $g->copy()->addDay();
             if ($corrente !== null) {
                 $fasce[$corrente]['fine'] = $fine;
@@ -528,11 +621,12 @@ class Cronogramma
     /** @return list<array{posizione: float, testo: string}> */
     private function tacche(): array
     {
-        $giorni = $this->da->copy()->startOfDay()->diffInDays($this->a->copy()->startOfDay());
+        $da = $this->da;
+        $giorni = $da->copy()->startOfDay()->diffInDays($this->a->copy()->startOfDay());
         $tacche = [];
 
         if ($giorni <= 14) {
-            for ($g = $this->da->copy()->startOfDay(); $g->lte($this->a); $g = $g->copy()->addDay()) {
+            for ($g = $da->copy()->startOfDay(); $g->lte($this->a); $g = $g->copy()->addDay()) {
                 $tacche[] = ['posizione' => $this->posizione($g), 'testo' => $g->copy()->locale('it')->isoFormat('ddd D')];
             }
 
@@ -541,8 +635,8 @@ class Cronogramma
 
         $settimanali = $giorni <= 90;
         $g = $settimanali
-            ? $this->da->copy()->startOfDay()->next(CarbonInterface::MONDAY)
-            : $this->da->copy()->startOfMonth()->addMonth();
+            ? $da->copy()->startOfDay()->next(CarbonInterface::MONDAY)
+            : $da->copy()->startOfMonth()->addMonth();
         for (; $g->lte($this->a); $g = $settimanali ? $g->copy()->addWeek() : $g->copy()->addMonth()) {
             $tacche[] = [
                 'posizione' => $this->posizione($g),

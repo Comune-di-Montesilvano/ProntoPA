@@ -226,6 +226,16 @@
                 </svg>
             </button>
 
+            {{-- Torna indietro (pagine di dettaglio): sul telefono non c'è altro modo visibile --}}
+            @isset($indietro)
+                <a href="{{ $indietro }}" class="flex-shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-[var(--slate-100)]"
+                   style="color:var(--slate-600);" aria-label="Torna indietro" title="Torna indietro">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </a>
+            @endisset
+
             {{-- Page title --}}
             <div class="flex-1 min-w-0 flex items-center gap-3">
                 @isset($header)

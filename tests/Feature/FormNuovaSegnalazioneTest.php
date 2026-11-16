@@ -63,6 +63,16 @@ class FormNuovaSegnalazioneTest extends TestCase
             ->assertDontSee('name="latitudine"', false);
     }
 
+    public function test_foto_scattate_dal_telefono_o_scelte_dalla_galleria(): void
+    {
+        $this->actingAs($this->urp)->get(route('segnalazioni.create'))
+            ->assertOk()
+            ->assertSee('Scatta foto')
+            ->assertSee('Scegli dalla galleria')
+            ->assertSee('capture="environment"', false)
+            ->assertSee('id="allegati_create" type="file" name="allegati[]"', false);
+    }
+
     public function test_prima_istituto_poi_sede_senza_categoria_ne_codice(): void
     {
         $altro = $this->istitutoConPlessi('PEIC777777', 'peic777777@istruzione.it');
