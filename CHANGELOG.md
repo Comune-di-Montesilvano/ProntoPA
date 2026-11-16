@@ -4,6 +4,13 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.5] - 2026-11-16
+
+### Modificato
+- Elenco gestione: di default raggruppato per sede, poi tipologia. La scelta di "Raggruppa per"
+  resta a ciascun utente (salvata sul profilo, vale su ogni dispositivo), "Nessuno" compreso.
+- Raggruppando per sede, il nome della sede mostra codice e indirizzo al passaggio del mouse.
+
 ## [1.0.4] - 2026-11-16
 
 ### Added

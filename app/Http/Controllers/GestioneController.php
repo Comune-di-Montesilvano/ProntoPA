@@ -54,7 +54,9 @@ class GestioneController extends Controller
         $filtro = in_array($request->get('filtro'), self::FILTRI_RAPIDI, true) ? $request->get('filtro') : null;
 
         // Raggruppa per (1.0.4): pagine fatte di gruppi di primo livello interi, conteggi sull'intero filtro.
-        $gruppo = array_key_exists((string) $request->get('gruppo'), GruppiElenco::GRUPPI) ? (string) $request->get('gruppo') : '';
+        // 1.0.5: predefinito sede poi tipologia; la scelta resta all'utente (users.gruppo_elenco).
+        $gruppo = $this->gruppoScelto($request, $user);
+        $request->merge(['gruppo' => $gruppo]);
         $righe = null;
         if ($gruppo === '') {
             $segnalazioni = $this->elencoFiltrato($request)
@@ -290,6 +292,26 @@ class GestioneController extends Controller
             'vecchie' => $base->orderBy('data_segnalazione'),
             default   => $base->ordinaUrgenti(),
         };
+    }
+
+    /** Gruppo dell'elenco: quello chiesto (e ricordato) o l'ultimo scelto dall'utente, se no sede poi tipologia. */
+    private function gruppoScelto(Request $request, User $user): string
+    {
+        if ($request->has('gruppo')) {
+            $scelto = (string) $request->get('gruppo');
+            if ($scelto !== '' && ! array_key_exists($scelto, GruppiElenco::GRUPPI)) {
+                return '';
+            }
+            if ($user->gruppo_elenco !== $scelto) {
+                $user->forceFill(['gruppo_elenco' => $scelto])->save();
+            }
+
+            return $scelto;
+        }
+
+        $salvato = $user->gruppo_elenco ?? 'sede_tipologia';
+
+        return array_key_exists($salvato, GruppiElenco::GRUPPI) ? $salvato : '';
     }
 
     /**

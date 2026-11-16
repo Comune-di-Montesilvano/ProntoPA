@@ -145,7 +145,7 @@ class ElencoGestioneTest extends TestCase
     {
         Segnalazione::factory()->count(31)->create(['id_stato_segnalazione' => 1]);
 
-        $html = $this->actingAs($this->gestore)->get(route('gestione.dashboard'))
+        $html = $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => '']))
             ->assertOk()
             ->assertSee('Legenda dei colori')
             ->assertSee('pa-legenda', false)
