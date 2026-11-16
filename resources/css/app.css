@@ -377,3 +377,18 @@
 .leaflet-container { isolation: isolate; z-index: 0; }
 .pa-minimappa { height: 170px; width: 100%; overflow: hidden; border-radius: 8px; border: 1px solid var(--slate-200); }
 .pa-minimappa-vuota { border: 1px dashed var(--slate-300); border-radius: 8px; padding: 14px; text-align: center; font-size: 14px; color: var(--slate-600); background: var(--slate-50, #f8fafc); }
+
+/* ── Colori unici (1.0.4): stato = pallino, tipologia = sfondo pieno, priorità = etichetta.
+   I valori arrivano da App\Support\Colori (partials/toni). ─────────────────────────── */
+.pa-stato { display: inline-flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pa-stato-nome { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; font-size: 13px; color: var(--tono-testo); }
+.pa-stato-nome::before { content: ''; flex: none; width: 9px; height: 9px; border-radius: 9999px; background: var(--tono-punto); }
+.pa-stato-chi { font-size: 13px; color: var(--slate-600); padding-left: 16px; white-space: normal; }
+.pa-tipologia { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; line-height: 1.25;
+  padding: 3px 10px; border-radius: 6px; background: var(--tono-sfondo); color: var(--tono-testo); }
+.pa-tipologia i { color: var(--tono-punto); }
+.pa-priorita { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 6px; white-space: nowrap; }
+.pa-priorita-4 { background: #dc2626; color: #fff; }
+.pa-priorita-3 { background: var(--tono-sfondo); color: var(--tono-testo); border: 1px solid #fca5a5; }
+.pa-priorita-2 { background: var(--slate-100); color: var(--slate-700); }
+.pa-priorita-1 { background: var(--slate-100); color: var(--slate-500); }

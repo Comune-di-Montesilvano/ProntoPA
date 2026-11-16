@@ -58,6 +58,12 @@ enum SegnalazioneStato: int
         };
     }
 
+    /** Colore dello stato nella tavolozza unica (App\Support\Colori). */
+    public function colore(): string
+    {
+        return \App\Support\Colori::stato($this);
+    }
+
     /** Tono del linguaggio visivo ProntoPA (token in resources/css/app.css). */
     public function tono(): string
     {
