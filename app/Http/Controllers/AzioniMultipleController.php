@@ -46,7 +46,7 @@ class AzioniMultipleController extends Controller
 
         $esito = $servizio->esegui($segnalazioni, $request->user(), $dati['operazione'], $dati);
 
-        $messaggio = $esito['fatte'].' fatte';
+        $messaggio = $esito['fatte'].' fatte'.(isset($esito['destinazione']) ? " (accorpate nella #{$esito['destinazione']}, la più vecchia)" : '');
         if ($esito['saltate']) {
             $messaggio .= ', '.count($esito['saltate']).' saltate: '.collect($esito['saltate'])
                 ->take(10)->map(fn (string $motivo, int $id) => "#{$id}: {$motivo}")->implode('; ');
