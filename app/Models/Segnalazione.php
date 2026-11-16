@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Squadra;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 #[ObservedBy(SegnalazioneObserver::class)]
 class Segnalazione extends Model
@@ -224,10 +225,42 @@ class Segnalazione extends Model
         return collect($momenti)->map(fn ($m) => Carbon::parse($m))->max();
     }
 
-    /** Quante persone hanno segnalato lo stesso guasto: chi l'ha aperta più le adesioni (anche da accorpamento). */
+    /**
+     * Quante volte è stato segnalato lo stesso guasto: l'apertura, le adesioni (anche da
+     * accorpamento), i solleciti/integrazioni dell'autore dal form e le sue segnalazioni
+     * accorpate qui (per lui l'accorpamento non crea adesione). Gli altri contano con l'adesione.
+     */
     public function volteSegnalata(): int
     {
-        return 1 + (int) ($this->adesioni_count ?? $this->adesioni()->count());
+        $adesioni = $this->adesioni_count ?? $this->adesioni()->count();
+        $ripetizioni = $this->ripetizioni_autore_count ?? $this->note()
+            ->where('id_utente', $this->id_utente_segnalazione)
+            ->whereIn('origine', [NotaSegnalazione::ORIGINE_SOLLECITO, NotaSegnalazione::ORIGINE_INTEGRAZIONE])
+            ->count();
+        $accorpate = $this->accorpate_autore_count ?? $this->duplicati()
+            ->where('id_utente_segnalazione', $this->id_utente_segnalazione)
+            ->count();
+
+        return 1 + (int) $adesioni + (int) $ripetizioni + (int) $accorpate;
+    }
+
+    /** Conteggi di volteSegnalata() in una query sola, per gli elenchi. */
+    public function scopeConVolteSegnalata($query)
+    {
+        $query->withCount('adesioni')
+            ->selectSub(
+                DB::table('note_segnalazioni')->selectRaw('count(*)')
+                    ->whereColumn('note_segnalazioni.id_segnalazione', 'segnalazioni.id_segnalazione')
+                    ->whereColumn('note_segnalazioni.id_utente', 'segnalazioni.id_utente_segnalazione')
+                    ->whereIn('note_segnalazioni.origine', [NotaSegnalazione::ORIGINE_SOLLECITO, NotaSegnalazione::ORIGINE_INTEGRAZIONE]),
+                'ripetizioni_autore_count',
+            )
+            ->selectSub(
+                DB::table('segnalazioni as accorpata')->selectRaw('count(*)')
+                    ->whereColumn('accorpata.id_segnalazione_madre', 'segnalazioni.id_segnalazione')
+                    ->whereColumn('accorpata.id_utente_segnalazione', 'segnalazioni.id_utente_segnalazione'),
+                'accorpate_autore_count',
+            );
     }
 
     /** Ancora aperta e segnalata da più persone: va trattata con più urgenza. */

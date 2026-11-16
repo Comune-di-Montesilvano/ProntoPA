@@ -49,7 +49,7 @@ class GestioneController extends Controller
 
         $segnalazioni = $this->elencoFiltrato($request)
             ->with(['tipologia', 'operatore', 'plesso', 'squadraAssegnata', 'appalto.impresa'])
-            ->withCount('adesioni')
+            ->conVolteSegnalata()
             ->paginate(30);
 
         // Conteggi (senza filtro ricerca per non distorcere i badge)
