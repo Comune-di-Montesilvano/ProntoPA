@@ -50,6 +50,16 @@ class SpidLoginServiceTest extends TestCase
         $this->assertTrue($user->hasRole('segnalatore'));
     }
 
+    public function test_accesso_rimette_nome_e_cognome_di_spid(): void
+    {
+        $user = $this->service()->creaDaProfilo($this->identita(), 'a@b.it');
+        $user->forceFill(['name' => 'ISTITUTO COMPRENSIVO'])->save();
+
+        $this->service()->accedi($this->identita());
+
+        $this->assertSame('Mario Rossi', $user->fresh()->name);
+    }
+
     public function test_username_e_il_codice_fiscale_anche_con_omonimi(): void
     {
         User::factory()->create(['username' => 'mario.rossi']);

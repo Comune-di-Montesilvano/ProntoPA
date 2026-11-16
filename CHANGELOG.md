@@ -35,6 +35,10 @@ Aggiornamento senza interventi: migration solo additive.
 - Nuova segnalazione uguale a una già aperta (stessa sede e tipologia): invece di un doppione
   si propone di scrivere in quella esistente.
 
+- Nome e cognome delle persone SPID/CIE e di dominio non si cambiano più dal profilo (né, per
+  SPID, da Admin → Persone): arrivano dall'identità e si aggiornano a ogni accesso, quindi chi
+  li aveva cambiati li ritrova giusti al prossimo login.
+
 ### Fixed
 - La stessa presa in carico registrata due volte compariva come due passaggi.
 
