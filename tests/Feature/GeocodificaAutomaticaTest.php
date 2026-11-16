@@ -87,6 +87,52 @@ class GeocodificaAutomaticaTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_cambio_indirizzo_azzera_coordinate_e_tentativo(): void
+    {
+        $sede = $this->sede(['latitudine' => 42.5, 'longitudine' => 14.1]);
+        $sede->forceFill(['geocodifica_tentata_at' => now()])->save();
+
+        $sede->update(['indirizzo' => 'Via Napoli 7']);
+
+        $sede->refresh();
+        $this->assertNull($sede->latitudine);
+        $this->assertNull($sede->longitudine);
+        $this->assertNull($sede->geocodifica_tentata_at);
+    }
+
+    public function test_coordinate_a_mano_nello_stesso_salvataggio_restano(): void
+    {
+        $sede = $this->sede(['latitudine' => 42.5, 'longitudine' => 14.1]);
+
+        $sede->update(['indirizzo' => 'Via Napoli 7', 'latitudine' => 42.6, 'longitudine' => 14.2]);
+
+        $this->assertEqualsWithDelta(42.6, (float) $sede->fresh()->latitudine, 0.0001);
+    }
+
+    public function test_indirizzo_diverso_solo_per_spazi_e_maiuscole_non_azzera(): void
+    {
+        $sede = $this->sede(['indirizzo' => 'Via Roma 1', 'latitudine' => 42.5, 'longitudine' => 14.1]);
+
+        $sede->update(['indirizzo' => '  VIA ROMA 1 ']);
+
+        $this->assertEqualsWithDelta(42.5, (float) $sede->fresh()->latitudine, 0.0001);
+    }
+
+    public function test_trova_mancanti_azzera_tentativi_e_accoda(): void
+    {
+        Queue::fake();
+        $admin = \App\Models\User::factory()->create(['amministratore' => true]);
+        $admin->assignRole('admin');
+        $tentata = $this->sede();
+        $tentata->forceFill(['geocodifica_tentata_at' => now()->subDay()])->save();
+
+        $this->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])
+            ->actingAs($admin)->post(route('admin.sedi.geocodifica-mancanti'))->assertRedirect();
+
+        $this->assertNull($tentata->fresh()->geocodifica_tentata_at);
+        Queue::assertPushed(GeocodificaSedi::class);
+    }
+
     public function test_comando_schedulato_alle_0610(): void
     {
         $evento = collect(app(Schedule::class)->events())

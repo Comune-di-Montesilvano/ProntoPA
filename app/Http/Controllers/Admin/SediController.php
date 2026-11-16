@@ -109,6 +109,8 @@ class SediController extends Controller
 
     public function geocodificaMancanti(): RedirectResponse
     {
+        // "Riprova": anche le sedi già provate senza esito tornano in lista.
+        Plesso::whereNull('latitudine')->whereNotNull('geocodifica_tentata_at')->update(['geocodifica_tentata_at' => null]);
         GeocodificaSedi::dispatch();
 
         return back()->with('success', "Ricerca delle posizioni avviata: una sede al secondo, l'esito è in Stato del sistema.");

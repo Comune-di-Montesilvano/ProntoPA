@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Observers\PlessoObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[ObservedBy(PlessoObserver::class)]
 class Plesso extends Model
 {
     protected $table      = 'plessi';
