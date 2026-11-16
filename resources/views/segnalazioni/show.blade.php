@@ -1,6 +1,15 @@
 {{-- Scheda segnalazione: una pagina, tre letture scelte dal ruolo (LetturaScheda). --}}
 <x-app-layout>
     <x-slot name="header">Segnalazione #{{ $segnalazione->id_segnalazione }}</x-slot>
+    @php
+        // Indietro: la pagina da cui si arriva (elenco con filtri e pagina), se è di questa app e non è
+        // questa stessa scheda (dopo un'azione); altrimenti la dashboard del ruolo.
+        $prec = url()->previous();
+        $base = rtrim(url('/'), '/');
+        $indietroUrl = str_starts_with($prec, $base.'/') && ! str_starts_with($prec, url()->current())
+            ? $prec : route('dashboard');
+    @endphp
+    <x-slot name="indietro">{{ $indietroUrl }}</x-slot>
 
     @include('segnalazioni.scheda.'.$lettura)
 
