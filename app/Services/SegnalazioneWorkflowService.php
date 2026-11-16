@@ -29,11 +29,17 @@ use Illuminate\Validation\ValidationException;
 class SegnalazioneWorkflowService
 {
     /** Motivi di "Chiudi senza intervento" (azione annulla, stato 9). */
-    public const MOTIVI_SENZA_INTERVENTO = [
+    /** Motivi che il gestore può scegliere a mano. */
+    public const MOTIVI_MANUALI = [
         'non_pertinente' => 'Non pertinente',
         'errata' => 'Segnalazione errata',
         'gia_risolta' => 'Già risolta',
         'altro' => 'Altro',
+    ];
+
+    /** Tutti i motivi, compreso quello della chiusura automatica (1.0.2: richiesta di informazioni senza risposta). */
+    public const MOTIVI_SENZA_INTERVENTO = self::MOTIVI_MANUALI + [
+        'nessuna_risposta' => 'Nessuna risposta alla richiesta di informazioni',
     ];
 
     public function __construct(

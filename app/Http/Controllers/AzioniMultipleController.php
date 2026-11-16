@@ -25,7 +25,7 @@ class AzioniMultipleController extends Controller
             'id_squadra' => ['required_if:tipo,squadra', 'nullable', ...\App\Support\Segnalazioni\RegoleAssegnazione::squadra()],
             'id_appalto' => ['required_if:tipo,ditta', 'nullable', 'integer', 'exists:appalti,id_appalto'],
             'data_scadenza' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
-            'motivo' => ['required_if:operazione,chiudi_senza_intervento', 'nullable', Rule::in(array_keys(SegnalazioneWorkflowService::MOTIVI_SENZA_INTERVENTO))],
+            'motivo' => ['required_if:operazione,chiudi_senza_intervento', 'nullable', Rule::in(array_keys(SegnalazioneWorkflowService::MOTIVI_MANUALI))],
             'nota' => [
                 Rule::requiredIf(fn () => $request->input('operazione') === 'chiudi_senza_intervento' && $request->input('motivo') === 'altro'),
                 'nullable', 'string', 'max:2000',

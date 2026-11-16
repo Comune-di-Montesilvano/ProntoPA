@@ -2,7 +2,7 @@
 @php
     $azione = $azioniDisponibili->firstWhere('codice', 'annulla');
     $mio = old('_pannello') === 'annulla';
-    $motivi = \App\Services\SegnalazioneWorkflowService::MOTIVI_SENZA_INTERVENTO;
+    $motivi = \App\Services\SegnalazioneWorkflowService::MOTIVI_MANUALI;
 @endphp
 <x-pa.drawer name="annulla" title="Chiudi senza intervento" :sottotitolo="'#'.$segnalazione->id_segnalazione" :aperto="$mio">
     <form method="POST" action="{{ route('segnalazioni.azione', $segnalazione->id_segnalazione) }}" class="flex flex-1 flex-col"

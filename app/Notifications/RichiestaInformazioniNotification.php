@@ -23,6 +23,7 @@ class RichiestaInformazioniNotification extends Notification implements ShouldQu
         public readonly Segnalazione $segnalazione,
         public readonly string $testo,
         public readonly CarbonInterface $termine,
+        public readonly bool $promemoria = false,
     ) {
         $this->afterCommit();
     }
@@ -37,10 +38,11 @@ class RichiestaInformazioniNotification extends Notification implements ShouldQu
     {
         $id = $this->segnalazione->id_segnalazione;
 
-        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Ti chiediamo informazioni'))
+        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, $this->promemoria ? 'Promemoria: ti chiediamo informazioni' : 'Ti chiediamo informazioni'))
             ->line("Per andare avanti con la segnalazione #{$id} ci serve sapere:")
             ->line(Str::limit($this->testo, 2000))
-            ->line('Rispondi entro '.$this->termine->copy()->locale('it')->isoFormat('dddd D MMMM').'.');
+            ->line('Rispondi entro '.$this->termine->copy()->locale('it')->isoFormat('dddd D MMMM').'.'
+                .($this->promemoria ? ' Senza risposta la segnalazione potrebbe essere chiusa.' : ''));
 
         return $this->riepilogoSegnalazione($mail, $this->segnalazione)
             ->action('Rispondi', route('segnalazioni.show', $id))

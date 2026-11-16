@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\SegnalazioneStato;
 use App\Jobs\RicalcolaScadenzeSla;
 use App\Models\AllegatoSegnalazione;
+use App\Models\Azione;
 use App\Models\Appalto;
 use App\Models\Impresa;
 use App\Models\NotaSegnalazione;
@@ -14,6 +15,7 @@ use App\Models\SlaConfigurazione;
 use App\Models\User;
 use App\Notifications\RichiestaInformazioniNotification;
 use App\Notifications\RispostaInformazioniNotification;
+use App\Notifications\SegnalazioneChiusaNotification;
 use App\Services\SegnalazioneWorkflowService;
 use App\Services\Segnalazioni\RichiesteInformazioni;
 use App\Services\Sla\CalendarioUfficio;
@@ -22,6 +24,7 @@ use App\Support\Segnalazioni\Scadenza;
 use Database\Seeders\ImpostazioniSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\TabelleRiferimentoSeeder;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -290,5 +293,115 @@ class RichiestaInformazioniTest extends TestCase
         $attesa = $calendario->aggiungiOreLavorative($fissata, 6);
         $this->assertSame($attesa->format('Y-m-d H:i'), $s->fresh()->data_scadenza_sla->format('Y-m-d H:i'));
         $this->assertTrue((bool) $s->fresh()->scadenza_manuale);
+    }
+
+    /** Va al momento (chiusura d'ufficio) dell'N-esimo giorno lavorativo dalla richiesta. */
+    private function vaAlGiorno(int $n): void
+    {
+        $this->travelTo(CalendarioUfficio::daImpostazioni()->aggiungiGiorniLavorativi(now(), $n));
+    }
+
+    public function test_promemoria_una_volta_sola_a_due_giorni_lavorativi(): void
+    {
+        $s = $this->segnalazione(2);
+        $this->chiedi($s);
+        Notification::fake();
+        $this->vaAlGiorno(8);
+
+        $this->artisan('segnalazioni:richieste')->assertSuccessful();
+        $this->artisan('segnalazioni:richieste')->assertSuccessful();
+
+        Notification::assertSentToTimes($this->autore, RichiestaInformazioniNotification::class, 1);
+        $this->assertNotNull(RichiestaInformazioni::first()->promemoria_at);
+    }
+
+    public function test_nessun_promemoria_prima(): void
+    {
+        $s = $this->segnalazione(2);
+        $this->chiedi($s);
+        Notification::fake();
+        $this->vaAlGiorno(7);
+
+        $this->artisan('segnalazioni:richieste')->assertSuccessful();
+
+        Notification::assertNothingSentTo($this->autore);
+    }
+
+    public function test_chiusura_automatica_con_motivo_e_sistema(): void
+    {
+        $s = $this->segnalazione(3);
+        $this->chiedi($s);
+        Notification::fake();
+        $this->vaAlGiorno(11);
+
+        $this->artisan('segnalazioni:richieste')->assertSuccessful();
+
+        $s->refresh();
+        $this->assertSame(SegnalazioneStato::ANNULLATA, $s->statoEnum());
+        $this->assertNotNull($s->data_chiusura);
+        $this->assertSame(0, (int) $s->storicoStati()->first()->id_utente);
+        $nota = $s->note()->where('origine', NotaSegnalazione::ORIGINE_SENZA_INTERVENTO)->first();
+        $this->assertSame('Chiusa senza intervento: Nessuna risposta alla richiesta di informazioni.', $nota->testo);
+        $this->assertTrue((bool) $nota->visibile_web);
+        $this->assertSame(RichiestaInformazioni::ESITO_CHIUSA, RichiestaInformazioni::first()->esito);
+        Notification::assertSentTo($this->autore, SegnalazioneChiusaNotification::class);
+    }
+
+    public function test_senza_spunta_torna_al_gestore(): void
+    {
+        $s = $this->segnalazione(3);
+        app(RichiesteInformazioni::class)->chiedi($s, $this->gestore, 'Quale aula?', 10, false);
+        Notification::fake();
+        $this->vaAlGiorno(11);
+
+        $this->artisan('segnalazioni:richieste')->assertSuccessful();
+
+        $this->assertSame(SegnalazioneStato::ASSEGNATA_OPERATORE, $s->fresh()->statoEnum());
+        $this->assertSame(RichiestaInformazioni::ESITO_CHIUSA, RichiestaInformazioni::first()->esito);
+        Notification::assertSentTo($this->gestore, RispostaInformazioniNotification::class);
+    }
+
+    public function test_risposta_arrivata_non_chiude(): void
+    {
+        $s = $this->segnalazione(2);
+        $this->chiedi($s);
+        app(RichiesteInformazioni::class)->registraRisposta($s->fresh(), $this->autore);
+        $this->vaAlGiorno(11);
+
+        $this->artisan('segnalazioni:richieste')->assertSuccessful();
+
+        $this->assertSame(SegnalazioneStato::IN_CARICO, $s->fresh()->statoEnum());
+    }
+
+    public function test_motivo_nessuna_risposta_non_selezionabile_a_mano(): void
+    {
+        $s = $this->segnalazione(2);
+
+        $this->actingAs($this->gestore)->post(route('segnalazioni.azione', $s), [
+            'id_azione' => Azione::where('codice', 'annulla')->value('id_azione'), 'motivo' => 'nessuna_risposta',
+        ])->assertSessionHasErrors('motivo');
+        $this->assertArrayNotHasKey('nessuna_risposta', SegnalazioneWorkflowService::MOTIVI_MANUALI);
+    }
+
+    public function test_comando_schedulato_alle_0720(): void
+    {
+        $evento = collect(app(Schedule::class)->events())
+            ->first(fn ($e) => str_contains((string) $e->command, 'segnalazioni:richieste'));
+
+        $this->assertNotNull($evento);
+        $this->assertSame('20 7 * * *', $evento->expression);
+    }
+
+    public function test_riapri_dopo_chiusura_automatica(): void
+    {
+        $s = $this->segnalazione(2);
+        $this->chiedi($s);
+        $this->vaAlGiorno(11);
+        $this->artisan('segnalazioni:richieste')->assertSuccessful();
+
+        app(SegnalazioneWorkflowService::class)->eseguiAzione($s->fresh(), Azione::where('codice', 'riapri')->value('id_azione'), $this->gestore);
+
+        $this->assertSame(SegnalazioneStato::IN_CARICO, $s->fresh()->statoEnum());
+        $this->assertNull($s->fresh()->richiestaAperta);
     }
 }

@@ -9,7 +9,7 @@
     ])->values();
     $tipologiaDi = $segnalazioni->mapWithKeys(fn ($s) => [(string) $s->id_segnalazione => (int) $s->id_tipologia_segnalazione]);
     $ritorno = request()->getQueryString();
-    $motivi = \App\Services\SegnalazioneWorkflowService::MOTIVI_SENZA_INTERVENTO;
+    $motivi = \App\Services\SegnalazioneWorkflowService::MOTIVI_MANUALI;
 @endphp
 
 <div x-show="scelte.length" x-cloak class="pa-barra-multipla" role="region" aria-label="Azioni sulle segnalazioni selezionate">

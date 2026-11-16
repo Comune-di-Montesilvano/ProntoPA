@@ -290,7 +290,7 @@ class SegnalazioneController extends Controller
         }
 
         if ($azione->codice === 'annulla') {
-            $rules['motivo'] = ['required', Rule::in(array_keys(SegnalazioneWorkflowService::MOTIVI_SENZA_INTERVENTO))];
+            $rules['motivo'] = ['required', Rule::in(array_keys(SegnalazioneWorkflowService::MOTIVI_MANUALI))];
             $rules['nota'] = ['required_if:motivo,altro', 'nullable', 'string', 'max:2000'];
         }
 

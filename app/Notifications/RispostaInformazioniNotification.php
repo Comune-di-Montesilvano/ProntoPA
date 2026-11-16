@@ -22,6 +22,7 @@ class RispostaInformazioniNotification extends Notification implements ShouldQue
         public readonly Segnalazione $segnalazione,
         public readonly string $chi,
         public readonly ?string $testo = null,
+        public readonly bool $senzaRisposta = false,
     ) {
         $this->afterCommit();
     }
@@ -36,8 +37,11 @@ class RispostaInformazioniNotification extends Notification implements ShouldQue
     {
         $id = $this->segnalazione->id_segnalazione;
 
-        $mail = $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Hanno risposto'))
-            ->line("{$this->chi} ha risposto alla richiesta di informazioni sulla segnalazione #{$id}.");
+        $mail = $this->senzaRisposta
+            ? $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Nessuna risposta'))
+                ->line("Nessuna risposta entro il termine alla richiesta di informazioni sulla segnalazione #{$id}: torna a te.")
+            : $this->baseMailMessage($this->oggettoSegnalazione($this->segnalazione, 'Hanno risposto'))
+                ->line("{$this->chi} ha risposto alla richiesta di informazioni sulla segnalazione #{$id}.");
         if ($this->testo !== null && trim($this->testo) !== '') {
             $mail->line(Str::limit($this->testo, 1000));
         }

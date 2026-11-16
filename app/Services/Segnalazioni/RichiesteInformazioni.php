@@ -14,6 +14,8 @@ use App\Notifications\RispostaInformazioniNotification;
 use App\Services\Sla\CalendarioUfficio;
 use App\Services\SlaService;
 use App\Support\Segnalazioni\LetturaScheda;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
@@ -124,6 +126,109 @@ class RichiesteInformazioni
         });
 
         InviaWebhookOutbound::dispatch($s->fresh());
+    }
+
+    /**
+     * Giro giornaliero: promemoria a 2 giorni lavorativi dal termine (una volta), poi a termine passato
+     * chiusura senza intervento (con la spunta) o ritorno al gestore. Una richiesta per transazione:
+     * un errore su una non ferma le altre.
+     *
+     * @return array{promemoria: int, chiuse: int, tornate: int}
+     */
+    public function controlla(?CarbonInterface $ora = null): array
+    {
+        $ora = Carbon::instance($ora ?? now());
+        $calendario = CalendarioUfficio::daImpostazioni();
+        $esito = ['promemoria' => 0, 'chiuse' => 0, 'tornate' => 0];
+
+        foreach (RichiestaInformazioni::aperte()->orderBy('id')->get() as $r) {
+            try {
+                if ($r->termine_at->lte($ora)) {
+                    if ($this->scaduta($r)) {
+                        $esito[$r->chiudi_senza_risposta ? 'chiuse' : 'tornate']++;
+                    }
+                } elseif ($r->promemoria_at === null && $this->giorniLavorativiRimasti($calendario, $ora, $r->termine_at) <= 2) {
+                    $this->promemoria($r);
+                    $esito['promemoria']++;
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        return $esito;
+    }
+
+    /** Giorni lavorativi dopo oggi fino al giorno del termine compreso. */
+    private function giorniLavorativiRimasti(CalendarioUfficio $calendario, Carbon $ora, CarbonInterface $termine): int
+    {
+        $n = 0;
+        for ($g = $ora->copy()->startOfDay()->addDay(); $g->lte($termine); $g->addDay()) {
+            $n += $calendario->fascia($g->copy()) !== null ? 1 : 0;
+        }
+
+        return $n;
+    }
+
+    private function promemoria(RichiestaInformazioni $r): void
+    {
+        $r->update(['promemoria_at' => now()]);
+        $s = $r->segnalazione;
+        $autore = $s ? User::find((int) $s->id_utente_segnalazione) : null;
+        if ($autore && $autore->email && $autore->attivo !== false) {
+            $autore->notify(new RichiestaInformazioniNotification($s, $r->testo, $r->termine_at, promemoria: true));
+        }
+    }
+
+    /** Termine passato senza risposta. Restituisce false se nel frattempo era già conclusa. */
+    private function scaduta(RichiestaInformazioni $r): bool
+    {
+        $fatto = DB::transaction(function () use ($r) {
+            $r = RichiestaInformazioni::aperte()->whereKey($r->id)->lockForUpdate()->first();
+            if (! $r) {
+                return false;
+            }
+            if (! $r->chiudi_senza_risposta) {
+                $this->riprendi($r, RichiestaInformazioni::ESITO_CHIUSA, 0);
+
+                return true;
+            }
+
+            $r->update(['conclusa_at' => now(), 'esito' => RichiestaInformazioni::ESITO_CHIUSA]);
+            $s = Segnalazione::whereKey($r->id_segnalazione)->lockForUpdate()->firstOrFail();
+            $s->update(['id_stato_segnalazione' => SegnalazioneStato::ANNULLATA->value, 'data_chiusura' => now()]);
+            $this->storico($s, SegnalazioneStato::ANNULLATA, 0);
+            $s->note()->create([
+                'testo' => 'Chiusa senza intervento: '.\App\Services\SegnalazioneWorkflowService::MOTIVI_SENZA_INTERVENTO['nessuna_risposta'].'.',
+                'id_utente' => 0,
+                'visibile_web' => true,
+                'visibile_impresa' => (bool) $s->id_appalto,
+                'origine' => NotaSegnalazione::ORIGINE_SENZA_INTERVENTO,
+            ]);
+
+            return true;
+        });
+        if (! $fatto) {
+            return false;
+        }
+
+        $s = Segnalazione::find($r->id_segnalazione);
+        if ($r->chiudi_senza_risposta) {
+            $autore = User::find((int) $s->id_utente_segnalazione);
+            $azione = \App\Models\Azione::where('codice', 'annulla')->first();
+            if ($autore && $autore->attivo !== false && $azione) {
+                $autore->notify(new \App\Notifications\SegnalazioneChiusaNotification($s, $azione, new User(['name' => 'Sistema'])));
+            }
+        } else {
+            $gestore = User::find($r->id_utente);
+            $destinatari = $gestore && $gestore->attivo !== false && $gestore->email ? collect([$gestore]) : DestinatariComune::per($s);
+            if ($destinatari->isNotEmpty()) {
+                Notification::send($destinatari, new RispostaInformazioniNotification($s, 'Sistema', null, senzaRisposta: true));
+            }
+        }
+        InviaWebhookOutbound::dispatch($s);
+
+        return true;
     }
 
     /**
