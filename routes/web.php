@@ -109,6 +109,9 @@ Route::middleware('auth')->group(function () {
         ->name('segnalazioni.sollecita');
     Route::post('segnalazioni/{segnalazione}/sollecito-segnalante', [SegnalazioneController::class, 'sollecitoSegnalante'])
         ->name('segnalazioni.sollecito-segnalante');
+    Route::post('segnalazioni/{segnalazione}/aggiornamento', [SegnalazioneController::class, 'aggiornamento'])
+        ->middleware('throttle:6,1')
+        ->name('segnalazioni.aggiornamento');
     Route::post('segnalazioni/{segnalazione}/fine-lavori', [SegnalazioneController::class, 'fineLavori'])
         ->name('segnalazioni.fine-lavori');
     Route::post('segnalazioni/{segnalazione}/rimanda', [SegnalazioneController::class, 'rimanda'])

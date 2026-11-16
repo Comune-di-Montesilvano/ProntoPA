@@ -128,6 +128,16 @@ class SegnalazionePolicy
     }
 
     /**
+     * Dal form di nuova segnalazione: chi la vede ed è ancora aperta può sollecitarla o
+     * aggiungere informazioni invece di aprirne un'altra (nessun limite di tempo: stava
+     * per aprirne una nuova, fermarlo sarebbe peggio).
+     */
+    public function aggiornaDalForm(User $user, Segnalazione $segnalazione): bool
+    {
+        return ! $segnalazione->isChiusa() && $this->view($user, $segnalazione);
+    }
+
+    /**
      * Chi ha aperto la segnalazione sollecita se è in ritardo o ferma (avviso di inattività),
      * al massimo una volta ogni 3 giorni lavorativi. Le sospese le ha fermate il comune.
      */

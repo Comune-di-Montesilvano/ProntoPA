@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SegnalazioneStato;
+use App\Models\AdesioneSegnalazione;
 use App\Models\AllegatoSegnalazione;
 use App\Models\Azione;
 use App\Models\Impostazione;
@@ -424,10 +425,56 @@ class SegnalazioneController extends Controller
             'origine'          => \App\Models\NotaSegnalazione::ORIGINE_SOLLECITO,
         ]);
 
-        $notifica = new SollecitoNotification($segnalazione, $testo, dalSegnalante: true);
-        $destinatari = DestinatariAssegnatario::per($segnalazione, $utente);
+        $this->avvisaChiLaSegue($segnalazione, $utente, new SollecitoNotification($segnalazione, $testo, dalSegnalante: true));
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', 'Sollecito inviato.');
+    }
+
+    /**
+     * Dal form di nuova segnalazione, sulla già aperta per la stessa sede e tipologia:
+     * senza testo né foto è un sollecito, altrimenti un'integrazione. Chi non l'ha aperta
+     * ne diventa aderente (la segue e conta in "segnalata N volte").
+     */
+    public function aggiornamento(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('aggiornaDalForm', $segnalazione);
+
+        $data = $request->validate(['testo' => ['nullable', 'string', 'max:2000']] + CaricaAllegati::regole(), CaricaAllegati::messaggi());
+        $utente = $request->user();
+        $testo = trim((string) ($data['testo'] ?? ''));
+        $foto = $request->file('allegati', []);
+
+        $sollecito = $testo === '' && $foto === [];
+        $nota = DB::transaction(function () use ($segnalazione, $utente, $testo, $foto, $sollecito) {
+            if ((int) $segnalazione->id_utente_segnalazione !== $utente->id) {
+                AdesioneSegnalazione::firstOrCreate(['id_segnalazione' => $segnalazione->id_segnalazione, 'id_utente' => $utente->id]);
+            }
+            if ($foto !== []) {
+                CaricaAllegati::salva($segnalazione, $foto, $utente);
+            }
+
+            return $segnalazione->note()->create([
+                'testo'            => $sollecito ? "Sollecito: il problema c'è ancora, chiedo un aggiornamento." : ($testo !== '' ? $testo : 'Ha aggiunto delle foto.'),
+                'id_utente'        => $utente->id,
+                'visibile_web'     => true,
+                'visibile_impresa' => (bool) $segnalazione->id_appalto,
+                'origine'          => $sollecito ? NotaSegnalazione::ORIGINE_SOLLECITO : NotaSegnalazione::ORIGINE_INTEGRAZIONE,
+            ]);
+        });
+
+        $this->avvisaChiLaSegue($segnalazione, $utente, new SollecitoNotification($segnalazione, $nota->testo, dalSegnalante: true));
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', "Inviato alla #{$segnalazione->id_segnalazione}.");
+    }
+
+    /** Chi ha il lavoro (delegati ditta, operaio, caposquadra) o, se nessuno, il comune. */
+    private function avvisaChiLaSegue(Segnalazione $segnalazione, User $mittente, SollecitoNotification $notifica): void
+    {
+        $destinatari = DestinatariAssegnatario::per($segnalazione, $mittente);
         if ($destinatari['utenti']->isEmpty() && $destinatari['email'] === []) {
-            $destinatari['utenti'] = DestinatariComune::per($segnalazione, $utente);
+            $destinatari['utenti'] = DestinatariComune::per($segnalazione, $mittente);
         }
         if ($destinatari['utenti']->isNotEmpty()) {
             Notification::send($destinatari['utenti'], $notifica);
@@ -435,9 +482,6 @@ class SegnalazioneController extends Controller
         foreach ($destinatari['email'] as $email) {
             Notification::route('mail', $email)->notify($notifica);
         }
-
-        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
-            ->with('success', 'Sollecito inviato.');
     }
 
     // ── Stampa scheda ────────────────────────────────────────────────────────
