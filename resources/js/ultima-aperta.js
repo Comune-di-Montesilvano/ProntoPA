@@ -12,10 +12,23 @@ function scrivi(id) {
     try { sessionStorage.setItem(CHIAVE, id); } catch { /* storage non disponibile */ }
 }
 
-function evidenzia() {
+// Solo al ritorno dalla scheda: tasto Indietro del browser, o link della scheda verso l'elenco.
+// Dopo un'azione (accorpa, assegna…) o un ricaricamento la pagina non deve tornare sulla riga (1.0.8).
+function tornoDallaScheda(id, daCache) {
+    if (daCache) return true;
+    const nav = performance.getEntriesByType?.('navigation')?.[0]?.type;
+    if (nav === 'back_forward') return true;
+    if (nav !== 'navigate' || !document.referrer) return false;
+    try {
+        const da = new URL(document.referrer);
+        return da.origin === location.origin && da.pathname === `/segnalazioni/${id}`;
+    } catch { return false; }
+}
+
+function evidenzia(daCache = false) {
     document.querySelectorAll('tr.pa-riga-ultima').forEach((r) => r.classList.remove('pa-riga-ultima'));
     const id = leggi();
-    if (!id) return;
+    if (!id || !tornoDallaScheda(id, daCache)) return;
     const riga = document.querySelector(`tr[data-segnalazione="${CSS.escape(id)}"]`);
     if (!riga) return;
     riga.classList.add('pa-riga-ultima');
@@ -37,5 +50,5 @@ export function avviaUltimaAperta() {
     });
     evidenzia();
     // "Indietro" dalla cache del browser (bfcache) non ricarica la pagina
-    window.addEventListener('pageshow', (e) => { if (e.persisted) evidenzia(); });
+    window.addEventListener('pageshow', (e) => { if (e.persisted) evidenzia(true); });
 }
