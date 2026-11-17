@@ -4,6 +4,15 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.6] - 2026-11-17
+
+### Aggiunto
+- Elenchi: fermando il mouse su una segnalazione compare un'anteprima in sola lettura (testo intero,
+  sede, chi ha segnalato, foto, ultimo passaggio, scadenza) senza aprirla. Mostra solo ciò che la
+  scheda mostra a chi guarda; anche col focus da tastiera, non sul telefono.
+- Scheda: la sede si cambia con la matita accanto, solo tra le sedi dello stesso istituto (chi
+  segnala sceglie un plesso e scrive di un altro). Resta una nota interna.
+
 ## [1.0.5] - 2026-11-16
 
 ### Modificato

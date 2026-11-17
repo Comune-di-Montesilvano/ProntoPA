@@ -146,6 +146,8 @@ Route::middleware('auth')->group(function () {
         ->name('segnalazioni.titolo');
     Route::patch('segnalazioni/{segnalazione}/tipologia', [SegnalazioneController::class, 'aggiornaTipologia'])
         ->name('segnalazioni.tipologia');
+    Route::patch('segnalazioni/{segnalazione}/sede', [SegnalazioneController::class, 'aggiornaSede'])
+        ->name('segnalazioni.sede');
 
     Route::patch('segnalazioni/{segnalazione}/toggle-riservata', [SegnalazioneController::class, 'toggleRiservata'])
         ->name('segnalazioni.toggle-riservata');

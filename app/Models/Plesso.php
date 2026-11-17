@@ -88,6 +88,16 @@ class Plesso extends Model
     }
 
     /** Abbinamento per codice meccanografico, indipendente da maiuscole e spazi. */
+    /**
+     * Le sedi dello stesso istituto, questa compresa, per nome (cambio sede di una segnalazione, 1.0.6).
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Plesso>
+     */
+    public function stessoIstituto(): \Illuminate\Database\Eloquent\Collection
+    {
+        return self::where('id_istituto', $this->id_istituto)->orderBy('nome')->get();
+    }
+
     public function scopeConCodice(Builder $query, string $codice): Builder
     {
         return $query->whereRaw('UPPER(TRIM(codice_meccanografico)) = ?', [strtoupper(trim($codice))]);

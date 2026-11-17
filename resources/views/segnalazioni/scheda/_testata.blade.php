@@ -16,7 +16,17 @@
                     <span class="text-xs"><i class="fas fa-pen" aria-hidden="true"></i></span>
                 </button>
             @endcan
-            @if($segnalazione->plesso) · {{ $segnalazione->plesso->nomeLeggibile() }} @endif
+            @if($segnalazione->plesso) · {{ $segnalazione->plesso->nomeLeggibile() }}
+                @can('modificaPriorita', $segnalazione)
+                    @if($segnalazione->plesso->stessoIstituto()->count() > 1)
+                        <button type="button" x-data x-on:click="$dispatch('apri-pannello', 'sede')"
+                                class="rounded-md px-1 text-[var(--slate-500)] hover:bg-[var(--slate-100)]"
+                                title="Cambia sede" aria-label="Cambia sede">
+                            <span class="text-xs"><i class="fas fa-pen" aria-hidden="true"></i></span>
+                        </button>
+                    @endif
+                @endcan
+            @endif
         </p>
         <div class="flex items-start gap-2">
             <h1 class="m-0 text-2xl font-bold text-[var(--ink)] break-words">{{ $titolo }}</h1>

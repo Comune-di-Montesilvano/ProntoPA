@@ -137,7 +137,7 @@
 @if($disponibile('annulla')) @include('segnalazioni.scheda.pannelli.annulla') @endif
 @if($disponibile('collega')) @include('segnalazioni.scheda.pannelli.collega') @endif
 @if($disponibile('presenta_preventivo')) @include('segnalazioni.scheda.pannelli.preventivo') @endif
-@can('modificaPriorita', $segnalazione) @include('segnalazioni.scheda.pannelli.priorita') @include('segnalazioni.scheda.pannelli.titolo') @include('segnalazioni.scheda.pannelli.tipologia')
+@can('modificaPriorita', $segnalazione) @include('segnalazioni.scheda.pannelli.priorita') @include('segnalazioni.scheda.pannelli.titolo') @include('segnalazioni.scheda.pannelli.tipologia') @include('segnalazioni.scheda.pannelli.sede')
     @unless($segnalazione->isChiusa()) @include('segnalazioni.scheda.pannelli.scadenza') @endunless
 @endcan
 @can('sollecita', $segnalazione) @include('segnalazioni.scheda.pannelli.sollecita') @endcan

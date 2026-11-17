@@ -674,6 +674,40 @@ class SegnalazioneController extends Controller
             ->with('success', "Tipologia cambiata in {$dopo}.");
     }
 
+    /**
+     * Sede sbagliata (1.0.6): il comune la corregge, ma solo tra le sedi dello stesso istituto
+     * (chi segnala sceglie un plesso e scrive di un altro). Nota interna come per la tipologia.
+     */
+    public function aggiornaSede(Request $request, Segnalazione $segnalazione): RedirectResponse
+    {
+        $this->authorize('modificaPriorita', $segnalazione);
+
+        $istituto = $segnalazione->plesso->id_istituto ?? -1;
+        $data = $request->validate([
+            'id_plesso' => ['required', 'integer', \Illuminate\Validation\Rule::exists('plessi', 'id_plesso')->where('id_istituto', $istituto)],
+        ], [
+            'id_plesso.exists' => 'Scegli una delle sedi dello stesso istituto.',
+        ]);
+
+        $prima = $segnalazione->plesso?->nomeLeggibile() ?? '—';
+        $segnalazione->id_plesso = (int) $data['id_plesso'];
+        if (! $segnalazione->isDirty('id_plesso')) {
+            return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione);
+        }
+        $segnalazione->save();
+        $dopo = $segnalazione->load('plesso')->plesso?->nomeLeggibile() ?? '—';
+
+        $segnalazione->note()->create([
+            'testo'            => "Sede cambiata: {$prima} → {$dopo}.",
+            'id_utente'        => auth()->id(),
+            'visibile_web'     => false,
+            'visibile_impresa' => false,
+        ]);
+
+        return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
+            ->with('success', "Sede cambiata in {$dopo}.");
+    }
+
     /** Toglie la scadenza fissata a mano: torna quella calcolata dalla regola (spec §3). */
     /** "Scadenza…": si rimanda con un motivo, che la scuola vede sempre (e riceve per email). */
     public function aggiornaScadenza(Request $request, Segnalazione $segnalazione, \App\Services\Segnalazioni\ScadenzaManuale $scadenze): RedirectResponse
