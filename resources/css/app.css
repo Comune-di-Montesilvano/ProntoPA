@@ -229,6 +229,13 @@
 .pa-elenco td { padding: 12px; border-bottom: 1px solid var(--slate-100); vertical-align: top; }
 .pa-elenco tbody tr:hover td:not(.pa-cella-gruppo):not(.pa-cella-tipologia):not(.pa-col-sede) { background: var(--slate-50); }
 .pa-elenco td.pa-col-sede { background: var(--slate-50); width: 15%; }
+/* 1.0.7: ultima segnalazione aperta, ritrovata tornando dalla scheda */
+.pa-elenco tbody tr.pa-riga-ultima td:not([rowspan]:not([rowspan="1"])) { box-shadow: inset 0 2px 0 var(--ente-primary), inset 0 -2px 0 var(--ente-primary); }
+.pa-elenco tbody tr.pa-riga-ultima td:last-child { box-shadow: inset 0 2px 0 var(--ente-primary), inset 0 -2px 0 var(--ente-primary), inset -2px 0 0 var(--ente-primary); }
+.pa-elenco tbody tr.pa-riga-ultima td:not([rowspan]:not([rowspan="1"])):first-child, .pa-elenco tbody tr.pa-riga-ultima td[rowspan]:not([rowspan="1"]) + td:not([rowspan]:not([rowspan="1"])) { box-shadow: inset 0 2px 0 var(--ente-primary), inset 0 -2px 0 var(--ente-primary), inset 2px 0 0 var(--ente-primary); }
+.pa-elenco tbody tr.pa-riga-ultima td:not(.pa-cella-gruppo):not(.pa-cella-tipologia) { background: color-mix(in srgb, var(--ente-primary) 9%, transparent); animation: pa-ultima-lampo 1.6s ease-out 1; }
+@keyframes pa-ultima-lampo { 0%, 30% { background: color-mix(in srgb, var(--ente-primary) 25%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .pa-elenco tbody tr.pa-riga-ultima td { animation: none; } }
 .pa-sede { display: inline-flex; gap: 6px; font-weight: 700; color: var(--slate-800); line-height: 1.3; }
 .pa-sede i { color: var(--slate-400); margin-top: 2px; }
 .pa-elenco td.pa-cella-tipologia { background: var(--tono-sfondo); color: var(--tono-testo); font-weight: 700; width: 13%; line-height: 1.3; }
@@ -277,6 +284,10 @@
 .pa-vista.attiva { background: var(--ente-primary-100); color: var(--ente-primary); }
 .pa-vista-conteggio { font-size: 12px; font-weight: 700; color: inherit; opacity: .75; }
 @media (max-width: 767px) {
+  .pa-elenco tbody tr.pa-riga-ultima { outline: 2px solid var(--ente-primary); outline-offset: -2px; }
+  .pa-elenco tbody tr.pa-riga-ultima td { box-shadow: none !important; }
+  .pa-elenco tbody tr.pa-riga-ultima { background: color-mix(in srgb, var(--ente-primary) 9%, transparent); }
+  .pa-elenco tbody tr.pa-riga-ultima td:not(.pa-cella-gruppo):not(.pa-cella-tipologia) { background: transparent; animation: none; }
   .pa-elenco thead { display: none; }
   .pa-elenco tbody, .pa-elenco tr { display: block; }
   .pa-elenco tr { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 12px;

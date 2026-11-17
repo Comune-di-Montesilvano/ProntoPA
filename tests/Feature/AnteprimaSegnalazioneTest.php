@@ -86,4 +86,10 @@ class AnteprimaSegnalazioneTest extends TestCase
         $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => '']))->assertOk()
             ->assertSee('data-anteprima="'.route('segnalazioni.anteprima', $this->segnalazione->id_segnalazione).'"', false);
     }
+
+    public function test_riga_porta_id_per_evidenziare_l_ultima_aperta(): void
+    {
+        $this->actingAs($this->gestore)->get(route('gestione.dashboard', ['gruppo' => '']))->assertOk()
+            ->assertSee('<tr data-segnalazione="'.$this->segnalazione->id_segnalazione.'"', false);
+    }
 }

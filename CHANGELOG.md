@@ -4,6 +4,12 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.7] - 2026-11-17
+
+### Aggiunto
+- Elenchi: tornando indietro dalla scheda, la segnalazione appena aperta resta evidenziata (bordo e
+  sfondo leggero) e, se fuori vista, la pagina ci scorre sopra. Vale per la scheda del browser in uso.
+
 ## [1.0.6] - 2026-11-17
 
 ### Aggiunto

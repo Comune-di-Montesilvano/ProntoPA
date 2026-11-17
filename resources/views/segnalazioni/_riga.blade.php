@@ -9,7 +9,7 @@
     $stato = $s->statoEnum();
     $url = route('segnalazioni.show', $s->id_segnalazione);
 @endphp
-<tr>
+<tr data-segnalazione="{{ $s->id_segnalazione }}">
     @foreach(($celle ?? []) as $cella)
         @include('segnalazioni._cella-gruppo', ['cella' => $cella])
     @endforeach
