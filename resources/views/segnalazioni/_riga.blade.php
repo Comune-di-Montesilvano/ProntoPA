@@ -45,7 +45,7 @@
 
             @case('segnalazione')
                 <td class="pa-col-segnalazione">
-                    <a href="{{ $url }}" class="pa-elenco-testo" title="Segnalata il {{ $s->data_segnalazione?->format('d/m/Y') }}">
+                    <a href="{{ $url }}" class="pa-elenco-testo" data-anteprima="{{ route('segnalazioni.anteprima', $s->id_segnalazione) }}">
                         <span class="pa-mono pa-elenco-id">#{{ $s->id_segnalazione }}</span>
                         @if($lettura === 'gestore' && $s->flag_evidenza)<i class="fas fa-star text-[var(--amber)]" title="In evidenza" aria-label="In evidenza"></i>@endif
                         {{ $s->titoloLeggibile(260) }}
