@@ -4,6 +4,13 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.8] - 2026-11-17
+
+### Corretto
+- Elenchi: l'evidenza dell'ultima segnalazione aperta compare solo tornando dalla scheda (Indietro o
+  link della scheda), non più dopo un'azione dall'elenco (es. accorpa) o un ricaricamento, che
+  riportavano la pagina su quella riga.
+
 ## [1.0.7] - 2026-11-17
 
 ### Aggiunto
