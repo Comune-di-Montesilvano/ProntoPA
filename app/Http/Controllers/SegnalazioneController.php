@@ -195,6 +195,24 @@ class SegnalazioneController extends Controller
 
     // ── Dettaglio ─────────────────────────────────────────────────────────────
 
+    /**
+     * Anteprima in sola lettura per gli elenchi (1.0.6): frammento HTML senza layout, stessi filtri
+     * della scheda (note e storia da Attivita, nome di chi ha segnalato solo al comune).
+     */
+    public function anteprima(Segnalazione $segnalazione): View
+    {
+        $this->authorize('view', $segnalazione);
+
+        $segnalazione->load(['tipologia', 'plesso', 'utente', 'operatore', 'squadraAssegnata', 'appalto.impresa', 'allegati']);
+        $utente = auth()->user();
+
+        return view('segnalazioni._anteprima', [
+            'segnalazione' => $segnalazione,
+            'lettura' => LetturaScheda::per($utente),
+            'ultima' => Attivita::per($segnalazione, $utente)->first(),
+        ]);
+    }
+
     public function show(Segnalazione $segnalazione): View
     {
         $this->authorize('view', $segnalazione);

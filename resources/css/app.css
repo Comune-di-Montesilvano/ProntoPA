@@ -238,6 +238,25 @@
 .pa-elenco-testo { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
   color: var(--slate-900); text-decoration: none; line-height: 1.4; }
 .pa-elenco-testo:hover { color: var(--ente-primary); text-decoration: underline; }
+
+/* Anteprima al passaggio del mouse (1.0.6, resources/js/anteprima.js) */
+.pa-anteprima { position: fixed; z-index: 60; width: min(28rem, calc(100vw - 16px)); max-height: min(30rem, calc(100vh - 16px));
+    overflow: auto; background: #fff; border: 1px solid var(--slate-200); border-radius: .5rem;
+    box-shadow: 0 10px 30px rgb(15 23 42 / .18); padding: .875rem 1rem; font-size: .875rem; color: var(--slate-700); }
+.pa-anteprima[hidden] { display: none; }
+.pa-anteprima-corpo { display: flex; flex-direction: column; gap: .4rem; }
+.pa-anteprima-corpo p { margin: 0; }
+.pa-anteprima-testata { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; color: var(--slate-600); }
+.pa-anteprima-titolo { font-weight: 600; color: var(--ink); }
+.pa-anteprima-riga { color: var(--slate-600); font-size: .8125rem; }
+.pa-anteprima-testo { white-space: pre-line; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 8; overflow: hidden;
+    border-left: 3px solid var(--slate-200); padding-left: .6rem; }
+.pa-anteprima-foto { display: flex; gap: .4rem; align-items: center; }
+.pa-anteprima-foto img { width: 5.5rem; height: 4rem; object-fit: cover; border-radius: .375rem; border: 1px solid var(--slate-200); }
+.pa-anteprima-foto span { font-size: .8125rem; color: var(--slate-500); }
+.pa-anteprima-ultima { font-size: .8125rem; background: var(--slate-50); border-radius: .375rem; padding: .4rem .6rem; }
+.pa-anteprima-nota { display: block; margin-top: .15rem; color: var(--slate-600); }
+.pa-anteprima-etichetta { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--slate-500); margin-right: .25rem; }
 .pa-elenco-id { color: var(--slate-400); font-size: 12px; margin-right: 4px; }
 .pa-elenco-titolo { font-weight: 600; color: var(--slate-900); text-decoration: none; }
 /* Raggruppa per: celle di gruppo a sinistra (rowspan), contenuto che resta in vista scorrendo */

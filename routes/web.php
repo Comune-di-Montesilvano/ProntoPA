@@ -83,6 +83,10 @@ Route::middleware('auth')->group(function () {
         ->only(['index', 'create', 'store', 'show'])
         ->parameters(['segnalazioni' => 'segnalazione']);
 
+    // Anteprima in sola lettura al passaggio del mouse sugli elenchi (1.0.6).
+    Route::get('segnalazioni/{segnalazione}/anteprima', [SegnalazioneController::class, 'anteprima'])
+        ->name('segnalazioni.anteprima');
+
     Route::post('segnalazioni/{segnalazione}/allegati', [AllegatiSegnalazioniController::class, 'store'])
         ->name('segnalazioni.allegati.store');
 
