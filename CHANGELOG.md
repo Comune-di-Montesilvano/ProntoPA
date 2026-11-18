@@ -4,6 +4,21 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.15] - 2026-11-18
+
+### Aggiunto
+- Bot Telegram, iter di ditte e operai: ogni avviso (assegnazione, sollecito, nota…) ha il pulsante
+  «📂 Apri #ID»; 📷 Aggiungi foto (le foto mandate dopo vanno a quella segnalazione, senza didascalia);
+  ✅ Chiudi con nota finale e foto (o «Chiudi ora»); 💶 Presenta preventivo per la ditta (importo e
+  descrizione in un messaggio); 👥 Smista per il caposquadra; 🖼️ Vedi foto (N) su richiesta.
+- Dettaglio nel bot: scadenza, sede e indirizzo, ubicazione, referente e recapiti della sede, 🗺️ Naviga;
+  al comune anche chi ha aperto la segnalazione con telefono ed email (come nella scheda).
+- Elenchi del bot su due righe: titolo, poi sede · stato · priorità o scadenza.
+
+### Modificato
+- Nuova segnalazione: le scuole devono allegare almeno una foto del guasto (il comune no).
+- Smistamento del caposquadra in `SmistaSquadra`, condiviso tra scheda e bot.
+
 ## [1.0.14] - 2026-11-18
 
 ### Aggiunto

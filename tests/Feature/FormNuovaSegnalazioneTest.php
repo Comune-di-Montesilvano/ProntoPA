@@ -147,10 +147,25 @@ class FormNuovaSegnalazioneTest extends TestCase
         $scuola = $this->utenteSpid();
         $this->delega($scuola, $this->ente, null);
 
-        $this->actingAs($scuola)->post(route('segnalazioni.store'), $this->dati())
-            ->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('success');
+        Storage::fake('local');
+        $this->actingAs($scuola)->post(route('segnalazioni.store'), $this->dati([
+            'allegati' => [UploadedFile::fake()->image('guasto.jpg')],
+        ]))->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('success');
 
         $this->assertSame(0, (int) Segnalazione::firstOrFail()->ubicazione_tipo);
+    }
+
+    /** 1.0.15: la scuola deve allegare almeno una foto del guasto; il personale del comune no. */
+    public function test_scuola_deve_allegare_una_foto(): void
+    {
+        $scuola = $this->utenteSpid();
+        $this->delega($scuola, $this->ente, null);
+
+        $this->actingAs($scuola)->post(route('segnalazioni.store'), $this->dati())
+            ->assertSessionHasErrors('allegati');
+        $this->assertSame(0, Segnalazione::count());
+
+        $this->actingAs($scuola)->get(route('segnalazioni.create'))->assertSee('Foto (almeno una)');
     }
 
     public function test_foto_facoltativa_e_salvata(): void

@@ -47,32 +47,16 @@ class OperaioDashboardController extends Controller
     public function smista(Request $request, Segnalazione $segnalazione): RedirectResponse
     {
         $user = auth()->user();
+        $servizio = app(\App\Services\Segnalazioni\SmistaSquadra::class);
 
-        $squadra = $segnalazione->id_squadra_assegnata
-            ? \App\Models\Squadra::where('attiva', true)->find($segnalazione->id_squadra_assegnata)
-            : null;
-
-        abort_unless($squadra && $squadra->id_caposquadra === $user->id, 403);
+        $squadra = $servizio->squadraDiCapo($segnalazione, $user);
+        abort_unless($squadra !== null, 403);
 
         $data = $request->validate([
             'id_membro' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        if (! $squadra->membri()->where('users.id', $data['id_membro'])->exists()) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'id_membro' => 'L\'utente non è membro della squadra.',
-            ]);
-        }
-
-        $segnalazione->update(['id_operatore_assegnato' => $data['id_membro']]);
-
-        StoricoStatoSegnalazione::create([
-            'id_segnalazione'       => $segnalazione->id_segnalazione,
-            'id_stato_segnalazione' => $segnalazione->id_stato_segnalazione,
-            'id_utente'             => $user->id,
-            'id_utente_collegato'   => $data['id_membro'],
-            'id_appalto'            => 0,
-        ]);
+        $servizio->smista($segnalazione, $squadra, $user, (int) $data['id_membro']);
 
         return back()->with('success', 'Lavoro smistato al membro della squadra.');
     }

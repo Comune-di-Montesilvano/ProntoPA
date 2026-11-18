@@ -111,7 +111,8 @@ class SegnalazioneController extends Controller
             'id_plesso'                 => $regolePlesso,
             'livello_priorita'          => ['nullable', 'integer', 'between:1,4'],
             'ubicazione_tipo'           => ['nullable', 'integer', 'between:0,4'],
-            'allegati'                  => ['nullable', 'array', 'max:' . $maxPerRequest],
+            // 1.0.15: le scuole allegano sempre almeno una foto del guasto (il comune no: segnala anche da telefono).
+            'allegati'                  => [$request->user()->isSpid() ? 'required' : 'nullable', 'array', 'max:' . $maxPerRequest],
             'allegati.*'                => [
                 'file',
                 'max:' . ($maxSizeMb * 1024),
@@ -124,6 +125,7 @@ class SegnalazioneController extends Controller
             'id_tipologia_segnalazione.exists'   => 'Scegli una delle tipologie in elenco.',
             'titolo.required'              => 'Scrivi un titolo breve.',
             'titolo.max'                   => 'Il titolo può avere al massimo 100 caratteri.',
+            'allegati.required'            => 'Allega almeno una foto del guasto.',
         ]);
 
         $user = auth()->user();

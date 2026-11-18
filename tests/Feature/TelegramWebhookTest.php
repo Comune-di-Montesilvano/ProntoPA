@@ -137,7 +137,7 @@ class TelegramWebhookTest extends TestCase
 
             return Str::contains($request->url(), 'sendMessage')
                 && Str::contains((string) $request['text'], 'Segnalazione #' . $segnalazione->id_segnalazione)
-                && collect($keyboard)->flatten(1)->contains(fn ($button) => Str::contains((string) ($button['callback_data'] ?? ''), 'azione:' . $segnalazione->id_segnalazione));
+                && collect($keyboard)->flatten(1)->contains(fn ($button) => ($button['callback_data'] ?? '') === 'chi:' . $segnalazione->id_segnalazione);
         });
     }
 
