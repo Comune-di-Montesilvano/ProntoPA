@@ -64,6 +64,7 @@ class IntegrazioniController extends Controller
             'esiti' => $esiti,
             'conProva' => self::CON_PROVA,
             'redirectUri' => $oidc->redirectUri(),
+            'urlTelegram' => app(TelegramBotService::class)->urlWebhook(),
             'syncConfigurata' => $directory->syncConfigurata(),
         ]);
     }
@@ -75,7 +76,53 @@ class IntegrazioniController extends Controller
         // Un esito di prova fallito non deve sopravvivere alla correzione.
         Cache::forget("integrazioni:prova:$sezione");
 
+        if ($sezione === 'telegram') {
+            return $this->collegaTelegram();
+        }
+
         return back()->with('success', 'Impostazioni salvate.');
+    }
+
+    /**
+     * Telegram con un solo tasto (1.0.9): dal token ProntoPA legge il nome del bot, genera il segreto,
+     * registra il webhook, imposta il menu dei comandi e fa la prova. Prima servivano la console
+     * (`telegram:set-webhook`) e BotFather (/setcommands).
+     */
+    private function collegaTelegram(): RedirectResponse
+    {
+        $bot = app(TelegramBotService::class);
+        if (! $bot->isConfigured()) {
+            return back()->with('success', 'Impostazioni salvate.');
+        }
+
+        $username = $bot->botVerificato();
+        if ($username === null) {
+            return $this->esito('telegram', false, 'Telegram non riconosce il token: ricopialo da @BotFather e salva di nuovo.');
+        }
+        Impostazione::set('telegram_bot_username', $username);
+
+        if (! $bot->registraWebhook()) {
+            return $this->esito('telegram', false, "Il bot @{$username} esiste, ma Telegram ha rifiutato il collegamento: l'indirizzo {$bot->urlWebhook()} deve essere pubblico e in HTTPS.");
+        }
+
+        $comandi = $bot->impostaComandi();
+        [$ok, $messaggio] = $this->provaTelegram();
+        if ($ok) {
+            $messaggio = 'Salvato e collegato. '.$messaggio.($comandi ? ' Menu dei comandi impostato.' : ' Il menu dei comandi non è stato impostato: salva di nuovo per riprovare.');
+        }
+
+        return $this->esito('telegram', $ok, $messaggio);
+    }
+
+    private function esito(string $sezione, bool $ok, string $messaggio): RedirectResponse
+    {
+        Cache::put("integrazioni:prova:$sezione", [
+            'ok' => $ok,
+            'messaggio' => $messaggio,
+            'quando' => now()->toIso8601String(),
+        ], now()->addMinutes(30));
+
+        return back()->with($ok ? 'success' : 'error', $messaggio);
     }
 
     public function prova(string $sezione): RedirectResponse
@@ -88,13 +135,7 @@ class IntegrazioniController extends Controller
             default => abort(404),
         };
 
-        Cache::put("integrazioni:prova:$sezione", [
-            'ok' => $ok,
-            'messaggio' => $messaggio,
-            'quando' => now()->toIso8601String(),
-        ], now()->addMinutes(30));
-
-        return back()->with($ok ? 'success' : 'error', $messaggio);
+        return $this->esito($sezione, $ok, $messaggio);
     }
 
     /** @return array{0: bool, 1: string} */
@@ -115,10 +156,25 @@ class IntegrazioniController extends Controller
             return [false, 'Manca il token del bot.'];
         }
         $username = $bot->botVerificato();
+        if ($username === null) {
+            return [false, 'Telegram non risponde o il token non è valido.'];
+        }
 
-        return $username !== null
-            ? [true, "Telegram collegato al bot @{$username}."]
-            : [false, 'Telegram non risponde o il token non è valido.'];
+        $info = $bot->infoWebhook();
+        $atteso = $bot->urlWebhook();
+        if ($info === null) {
+            return [false, "Il bot @{$username} esiste, ma non riesco a leggere lo stato del collegamento."];
+        }
+        if ($info['url'] !== $atteso) {
+            return [false, $info['url'] === ''
+                ? "Il bot @{$username} esiste ma non è collegato a ProntoPA: premi «Salva» per collegarlo."
+                : "Il bot @{$username} è collegato a un altro indirizzo ({$info['url']}): premi «Salva» per collegarlo qui."];
+        }
+        if ($info['errore'] !== null) {
+            return [false, "Telegram non riesce a consegnare i messaggi a {$atteso}: «{$info['errore']}». L'indirizzo deve essere raggiungibile da internet in HTTPS."];
+        }
+
+        return [true, "Telegram collegato al bot @{$username}: i messaggi arrivano a ProntoPA."];
     }
 
     /** @return array{0: bool, 1: string} */

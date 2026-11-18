@@ -56,6 +56,23 @@
                     </div>
                 @endif
 
+                @if($slug === 'telegram')
+                    <details class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700" @if(! $attivo['telegram']) open @endif>
+                        <summary class="cursor-pointer font-medium text-gray-800">Come si configura</summary>
+                        <ol class="mt-3 list-decimal space-y-2 pl-5">
+                            <li>Su Telegram apri <strong>@BotFather</strong> (quello con la spunta blu), scrivi <code>/newbot</code> e scegli un nome visibile (es. «ProntoPA Comune») e un nome utente che finisca in <code>bot</code> (es. <code>prontopa_comune_bot</code>).</li>
+                            <li>BotFather risponde con il <strong>token</strong> (tipo <code>123456789:AA…</code>): incollalo qui sotto e premi <strong>Salva</strong>. Il token è come una password: non condividerlo.</li>
+                            <li>Al salvataggio ProntoPA fa il resto: legge il nome del bot, lo collega a questo indirizzo, imposta il menu dei comandi (lista, oggi, apri, chiudi, note, priorita) e prova che tutto funzioni. L'indirizzo deve essere raggiungibile da internet in HTTPS:
+                                <code class="mt-1 block rounded border border-gray-200 bg-white px-2 py-1 text-xs break-all">{{ $urlTelegram }}</code>
+                                @unless(str_starts_with($urlTelegram, 'https://'))
+                                    <span class="mt-1 block text-xs text-red-700">L'indirizzo dell'applicazione non è in HTTPS: Telegram non lo accetta.</span>
+                                @endunless
+                            </li>
+                        </ol>
+                        <p class="mt-3 text-xs text-gray-600">Poi ogni gestore e operaio collega il proprio account da <strong>Profilo → Telegram</strong>: genera il codice e lo invia al bot con <code>/start</code>. Il bot risponde solo a chi è collegato.</p>
+                    </details>
+                @endif
+
                 <form method="POST" action="{{ route('admin.integrazioni.update', $slug) }}" class="space-y-4">
                     @csrf @method('PATCH')
                     @switch($slug)
@@ -67,10 +84,11 @@
                                 aiuto="Se cambi la chiave dell'applicazione va reinserito." />
                             @break
                         @case('telegram')
-                            <x-pa.impostazione chiave="telegram_bot_token" tipo="segreto" etichetta="Token del bot" />
-                            <x-pa.impostazione chiave="telegram_bot_username" etichetta="Nome del bot" aiuto="Senza la @." />
-                            <x-pa.impostazione chiave="telegram_webhook_secret" tipo="segreto" etichetta="Segreto del collegamento"
-                                aiuto="Serve a Telegram per autenticare le sue chiamate." />
+                            <x-pa.impostazione chiave="telegram_bot_token" tipo="segreto" etichetta="Token del bot"
+                                aiuto="Salvando, ProntoPA collega il bot e imposta i comandi. Se qualcosa cambia (indirizzo del sito, bot), salva di nuovo." />
+                            @if(filled(\App\Models\Impostazione::get('telegram_bot_username')))
+                                <p class="text-sm text-gray-700">Bot: <strong>{{ '@'.\App\Models\Impostazione::get('telegram_bot_username') }}</strong></p>
+                            @endif
                             @break
                         @case('webhook')
                             <x-pa.impostazione chiave="webhook_cittadini_url" tipo="url" etichetta="Indirizzo a cui inviare gli aggiornamenti" />
@@ -111,10 +129,12 @@
                 </form>
 
                 @if(in_array($slug, $conProva, true))
-                    <form method="POST" action="{{ route('admin.integrazioni.prova', $slug) }}">
-                        @csrf
-                        <button type="submit" class="{{ $bottoneChiaro }}">Prova adesso</button>
-                    </form>
+                    <div class="flex flex-wrap gap-2">
+                        <form method="POST" action="{{ route('admin.integrazioni.prova', $slug) }}">
+                            @csrf
+                            <button type="submit" class="{{ $bottoneChiaro }}">Prova adesso</button>
+                        </form>
+                    </div>
                 @endif
             </section>
         @endforeach

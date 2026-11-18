@@ -16,6 +16,7 @@
     @endphp
 
     <div class="flex flex-col gap-4">
+        <x-pa.invito-telegram />
         <div class="grid grid-cols-3 gap-3">
             @foreach([
                 ['valore' => $kpi['aperte'], 'testo' => 'assegnate'],
