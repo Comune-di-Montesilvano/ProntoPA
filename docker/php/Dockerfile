@@ -1,4 +1,4 @@
-FROM php:8.4-fpm-alpine@sha256:93aa3f61216b73cc6f878235c9772849449f4efc18dfe3d6678eed645076c00d
+FROM php:8.5-fpm-alpine@sha256:951fb5b1780219b81d5daffa4cebef8e0077c537f3893d9790a5dfcd66ca334d
 
 # System dependencies
 RUN apk add --no-cache \
@@ -18,7 +18,7 @@ RUN apk add --no-cache \
     nodejs \
     npm
 
-# PHP extensions
+# PHP extensions (opcache: da PHP 8.5 è nel motore, non si installa)
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install \
         pdo_mysql \
@@ -29,8 +29,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
         gd \
         zip \
         intl \
-        ldap \
-        opcache
+        ldap
 
 # Redis extension
 RUN apk add --no-cache $PHPIZE_DEPS \
