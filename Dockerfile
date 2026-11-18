@@ -17,17 +17,26 @@ RUN --mount=type=cache,id=apk-${TARGETARCH},target=/var/cache/apk \
 
 # Layer 2: compile deps + build extensions + cleanup in singolo layer
 # (PHPIZE_DEPS e *-dev non devono finire nel layer finale)
+# phpredis dal sorgente con checksum, non `pecl install`: con PHP 8.5 pecl falliva a tratti
+# ("unable to unpack redis-x.tgz", 1.0.10-1.0.12). Nuova versione = aggiornare entrambi gli ARG.
+ARG PHPREDIS_VERSION=6.3.0
+ARG PHPREDIS_SHA256=0d5141f634bd1db6c1ddcda053d25ecf2c4fc1c395430d534fd3f8d51dd7f0b5
 RUN --mount=type=cache,id=apk-${TARGETARCH},target=/var/cache/apk \
     apk add \
         $PHPIZE_DEPS linux-headers \
         libpng-dev libjpeg-turbo-dev libwebp-dev freetype-dev \
         libzip-dev oniguruma-dev icu-dev openldap-dev \
+    && docker-php-source extract \
+    && curl -fsSL "https://pecl.php.net/get/redis-${PHPREDIS_VERSION}.tgz" -o /tmp/redis.tgz \
+    && echo "${PHPREDIS_SHA256}  /tmp/redis.tgz" | sha256sum -c - \
+    && tar xzf /tmp/redis.tgz -C /tmp \
+    && mv "/tmp/redis-${PHPREDIS_VERSION}" /usr/src/php/ext/redis \
+    && rm /tmp/redis.tgz /tmp/package.xml \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     # opcache: da PHP 8.5 è compilato nel motore, non va installato (si configura in zz-opcache.ini)
     && docker-php-ext-install \
-        pdo_mysql mbstring exif pcntl bcmath gd zip intl ldap \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+        pdo_mysql mbstring exif pcntl bcmath gd zip intl ldap redis \
+    && docker-php-source delete \
     && apk del \
         $PHPIZE_DEPS linux-headers \
         libpng-dev libjpeg-turbo-dev libwebp-dev freetype-dev \

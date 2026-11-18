@@ -31,10 +31,18 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
         intl \
         ldap
 
-# Redis extension
+# Redis extension: dal sorgente con checksum come nel Dockerfile di prod (pecl con PHP 8.5 falliva a tratti)
+ARG PHPREDIS_VERSION=6.3.0
+ARG PHPREDIS_SHA256=0d5141f634bd1db6c1ddcda053d25ecf2c4fc1c395430d534fd3f8d51dd7f0b5
 RUN apk add --no-cache $PHPIZE_DEPS \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+    && docker-php-source extract \
+    && curl -fsSL "https://pecl.php.net/get/redis-${PHPREDIS_VERSION}.tgz" -o /tmp/redis.tgz \
+    && echo "${PHPREDIS_SHA256}  /tmp/redis.tgz" | sha256sum -c - \
+    && tar xzf /tmp/redis.tgz -C /tmp \
+    && mv "/tmp/redis-${PHPREDIS_VERSION}" /usr/src/php/ext/redis \
+    && rm /tmp/redis.tgz /tmp/package.xml \
+    && docker-php-ext-install redis \
+    && docker-php-source delete \
     && apk del $PHPIZE_DEPS
 
 # Composer
