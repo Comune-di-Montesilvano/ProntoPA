@@ -25,6 +25,16 @@ class Plesso extends Model
         return ['latitudine' => 'float', 'longitudine' => 'float', 'geocodifica_tentata_at' => 'datetime'];
     }
 
+    /**
+     * Sedi senza un telefono da chiamare (1.0.16): il MIUR non lo pubblica, va scritto a mano.
+     *
+     * @param  Builder<Plesso>|\Illuminate\Database\Eloquent\Relations\Relation<Plesso, *, *>  $query
+     */
+    public static function senzaRecapiti($query): void
+    {
+        $query->where(fn ($q) => $q->whereNull('recapiti')->orWhereRaw("TRIM(recapiti) = ''"));
+    }
+
     /** Sedi con indirizzo, senza posizione e mai provate: il lavoro del giro automatico. */
     public function scopeDaGeocodificare(Builder $query): Builder
     {

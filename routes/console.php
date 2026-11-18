@@ -20,6 +20,9 @@ Schedule::command('ldap:sincronizza')->dailyAt('05:30')->withoutOverlapping()->r
 // Sedi nuove o con indirizzo cambiato: posizione trovata senza che nessuno la chieda (1.0.2).
 Schedule::command('sedi:geocodifica')->dailyAt('06:10')->runInBackground();
 
+// Anagrafe scuole MIUR riscaricata ogni mese (1.0.16): nomi, indirizzi ed email delle sedi importate.
+Schedule::command('miur:scarica')->monthlyOn(1, '04:00')->runInBackground();
+
 Schedule::command('deleghe:scadenze')->dailyAt('06:30')->runInBackground();
 Schedule::command('deleghe:rinnovi')->monthlyOn(1, '07:00')->runInBackground();
 

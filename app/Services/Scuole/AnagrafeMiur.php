@@ -3,7 +3,10 @@
 namespace App\Services\Scuole;
 
 use Illuminate\Contracts\Filesystem\Filesystem;
+use App\Jobs\ScaricaAnagrafeMiur;
+use App\Models\Impostazione;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
@@ -127,6 +130,36 @@ class AnagrafeMiur
      * Download in corso e non abbandonato: un worker ucciso o un OOM non
      * passano dal catch del job, lo stato resterebbe "in_corso" per sempre.
      */
+    /**
+     * Avvia lo scarico in coda (pulsante in Enti e sedi e `miur:scarica` mensile).
+     * Null se avviato, altrimenti il motivo per cui non parte.
+     */
+    public function avvia(): ?string
+    {
+        // Controllo e impostazione dello stato atomici: un doppio click non accoda due download.
+        $lock = Cache::lock('anagrafe-miur:scarica', 10);
+        if (! $lock->get()) {
+            return 'Download già in corso.';
+        }
+
+        try {
+            if ($this->inCorso()) {
+                return 'Download già in corso.';
+            }
+            $url = (string) Impostazione::get('miur_anagrafe_url', '');
+            if ($url === '') {
+                return 'Configura il link in Admin → Ente e sistema → Integrazioni → Anagrafe scuole MIUR.';
+            }
+
+            $this->salvaStato(['stato' => 'in_corso', 'messaggio' => null, 'avviato_at' => now()->toIso8601String()]);
+            ScaricaAnagrafeMiur::dispatch($url);
+
+            return null;
+        } finally {
+            $lock->release();
+        }
+    }
+
     public function inCorso(): bool
     {
         $stato = $this->stato();

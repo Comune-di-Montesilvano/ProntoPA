@@ -25,6 +25,9 @@ class StatoSistema
 
     private const GIORNI_MIUR_VECCHIO = 365;
 
+    /** Con il link configurato lo scarico è mensile (1.0.16): oltre questi giorni non sta riuscendo. */
+    private const GIORNI_MIUR_MENSILE = 45;
+
     public function __construct(
         private readonly SincronizzaUtentiAd $sync,
         private readonly Directory $directory,
@@ -47,6 +50,7 @@ class StatoSistema
             $this->orfane(),
             $this->deleghe(),
             $this->sedi(),
+            $this->recapiti(),
             $this->conProva('telegram', 'Telegram', filled(Impostazione::get('telegram_bot_token'))),
             $this->conProva('ai', 'Assistente AI', (bool) Impostazione::get('ai_enabled', false)),
             $this->conProva('antivirus', 'Antivirus allegati', (bool) Impostazione::get('antivirus_enabled', false)),
@@ -176,8 +180,23 @@ class StatoSistema
         $quando = $this->miur->stato()['scaricato_at'] ?? null;
         $data = $quando ? CarbonImmutable::parse($quando) : null;
 
+        $stato = $this->miur->stato();
+        if ($stato['stato'] === 'errore') {
+            return new Riquadro('miur', 'Elenco scuole del Ministero', Riquadro::PROBLEMA,
+                'L\'ultimo scarico non è riuscito'.($stato['messaggio'] ? ': '.$stato['messaggio'] : '').'.', $url);
+        }
         if ($data === null) {
             return new Riquadro('miur', 'Elenco scuole del Ministero', Riquadro::ATTENZIONE, 'Non è mai stato scaricato.', $url);
+        }
+        if (filled(Impostazione::get('miur_anagrafe_url')) && $data->lt(now()->subDays(self::GIORNI_MIUR_MENSILE))) {
+            return new Riquadro('miur', 'Elenco scuole del Ministero', Riquadro::ATTENZIONE,
+                'Scaricato il '.$data->format('d/m/Y').': lo scarico automatico di ogni mese non sta riuscendo.', $url);
+        }
+        // Il file è annuale (es. SCUANAGRAFESTAT202526…): quello nuovo esce a settembre-ottobre, il link va cambiato a mano.
+        $annoLink = $this->annoScolasticoDelLink((string) Impostazione::get('miur_anagrafe_url', ''));
+        if ($annoLink !== null && now()->gte(CarbonImmutable::create($annoLink + 1, 11, 1))) {
+            return new Riquadro('miur', 'Elenco scuole del Ministero', Riquadro::ATTENZIONE,
+                'Il link è del file dell\'anno scolastico '.$annoLink.'/'.substr((string) ($annoLink + 1), 2).': mettici quello del nuovo anno (Integrazioni → Anagrafe scuole MIUR).', $url);
         }
         if ($data->lt(now()->subDays(self::GIORNI_MIUR_VECCHIO))) {
             return new Riquadro('miur', 'Elenco scuole del Ministero', Riquadro::ATTENZIONE, 'Scaricato il '.$data->format('d/m/Y').': è passato più di un anno.', $url);
@@ -215,6 +234,29 @@ class StatoSistema
 
         return new Riquadro('sedi', $titolo, Riquadro::ATTENZIONE,
             ($n === 1 ? '1 sede senza posizione' : "$n sedi senza posizione").': usa "Trova le posizioni mancanti" in Enti e sedi.'.$ultimo, $url);
+    }
+
+    /** Primo anno dell'anno scolastico nel nome del file MIUR («SCUANAGRAFESTAT202526…» → 2025), null se non si capisce. */
+    private function annoScolasticoDelLink(string $url): ?int
+    {
+        return preg_match('/SCUANAGRAFESTAT(\d{4})(\d{2})/i', $url, $m) === 1 && (int) $m[2] === ((int) $m[1] + 1) % 100
+            ? (int) $m[1]
+            : null;
+    }
+
+    /** Sedi senza telefono: chi va sul posto non ha chi chiamare (il MIUR non li pubblica). Nessuna chiamata di rete. */
+    private function recapiti(): Riquadro
+    {
+        $url = route('admin.enti.index', ['senza_recapiti' => 1]);
+        $titolo = 'Recapiti delle sedi';
+        $query = \App\Models\Plesso::whereHas('istituto', fn ($q) => $q->where('attivo', true));
+        \App\Models\Plesso::senzaRecapiti($query);
+        $n = $query->count();
+
+        return $n === 0
+            ? new Riquadro('recapiti', $titolo, Riquadro::OK, 'Tutte le sedi hanno un telefono.', $url)
+            : new Riquadro('recapiti', $titolo, Riquadro::ATTENZIONE,
+                ($n === 1 ? '1 sede senza recapiti' : "$n sedi senza recapiti").': ditte e operai non hanno chi chiamare. Il Ministero non pubblica i telefoni: vanno scritti nella sede.', $url);
     }
 
     private function deleghe(): Riquadro

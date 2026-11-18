@@ -121,6 +121,7 @@ class StatoSistemaTest extends TestCase
 
     public function test_miur_mai_scaricato_o_vecchio_gialla(): void
     {
+        Impostazione::set('miur_anagrafe_url', ''); // senza link: solo la regola dell'anno (1.0.16)
         $this->assertSame(Riquadro::ATTENZIONE, $this->riquadro('miur')->stato);
 
         app(\App\Services\Scuole\AnagrafeMiur::class)->salvaStato(['scaricato_at' => now()->subDays(400)->toIso8601String()]);
