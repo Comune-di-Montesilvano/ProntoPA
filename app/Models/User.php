@@ -46,6 +46,7 @@ class User extends Authenticatable
         'telegram_link_token',
         'telegram_link_expires_at',
         'telegram_verified_at',
+        'telegram_invito_nascosto_fino',
         'last_login',
     ];
 
@@ -71,6 +72,7 @@ class User extends Authenticatable
             'annual_verification_reminder_at' => 'datetime',
             'telegram_link_expires_at'=> 'datetime',
             'telegram_verified_at'    => 'datetime',
+            'telegram_invito_nascosto_fino' => 'datetime',
             'password'                => 'hashed',
             'amministratore'          => 'boolean',
             'gestore_segnalazioni'    => 'boolean',
@@ -82,7 +84,23 @@ class User extends Authenticatable
 
     public function routeNotificationForTelegram(): ?string
     {
-        return $this->telegram_chat_id;
+        return $this->usaTelegram() ? $this->telegram_chat_id : null;
+    }
+
+    /** Telegram serve a chi lavora le segnalazioni (1.0.9): gestori, operai, ditte; admin per provarlo. Mai scuole e segnalatori. */
+    public function usaTelegram(): bool
+    {
+        return $this->hasAnyRole(['gestore', 'operaio', 'impresa', 'admin']);
+    }
+
+    /** Invito in cima agli elenchi: bot configurato, account non collegato, non ignorato negli ultimi 30 giorni. Admin escluso. */
+    public function mostraInvitoTelegram(): bool
+    {
+        return $this->telegram_chat_id === null
+            && $this->hasAnyRole(['gestore', 'operaio', 'impresa'])
+            && ($this->telegram_invito_nascosto_fino === null || \Illuminate\Support\Carbon::parse($this->telegram_invito_nascosto_fino)->isPast())
+            && filled(Impostazione::get('telegram_bot_token'))
+            && filled(Impostazione::get('telegram_bot_username'));
     }
 
     // --- Helpers ruolo ---

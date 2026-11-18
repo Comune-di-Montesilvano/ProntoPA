@@ -57,8 +57,10 @@
                                 Collega il tuo account in pochi secondi per iniziare a utilizzare i comandi operativi.
                             </p>
                             <div class="mt-3 space-y-1 text-xs text-gray-500 list-decimal list-inside">
+                                <p>1. Premi <strong>"Collega Telegram"</strong>: si apre il bot, premi <strong>Avvia</strong> e hai finito.</p>
+                                <p>Oppure, se il bot non si apre:</p>
                                 <p>1. Clicca su <strong>"Genera token Telegram"</strong> in basso.</p>
-                                <p>2. Cerca il bot su Telegram: <a href="https://t.me/{{ ltrim($botUsername, '@') }}" target="_blank" class="text-blue-600 hover:underline font-semibold inline-flex items-center gap-0.5">@{{ ltrim($botUsername, '@') }} <svg class="h-3 w-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a></p>
+                                <p>2. Cerca il bot su Telegram: <a href="https://t.me/{{ ltrim($botUsername, '@') }}" target="_blank" class="text-blue-600 hover:underline font-semibold inline-flex items-center gap-0.5">{{ '@'.ltrim($botUsername, '@') }} <svg class="h-3 w-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a></p>
                                 <p>3. Invia il codice che verrà generato per attivare il collegamento.</p>
                             </div>
                         </div>
@@ -85,7 +87,7 @@
                         </p>
                         <a href="https://t.me/{{ ltrim($botUsername, '@') }}?start={{ $user->telegram_link_token }}" target="_blank" 
                            class="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-md hover:bg-blue-700 transition mt-2 shadow-sm">
-                            Apri ed avvia @{{ ltrim($botUsername, '@') }}
+                            Apri ed avvia {{ '@'.ltrim($botUsername, '@') }}
                             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                             </svg>
@@ -97,7 +99,7 @@
                     <div>
                         <p class="font-semibold text-xs text-blue-800 uppercase tracking-wider">Metodo Manuale</p>
                         <p class="mt-1 text-xs leading-relaxed">
-                            Se preferisci, apri Telegram, cerca <strong>@{{ ltrim($botUsername, '@') }}</strong> e invia manualmente questo testo in chat entro il <strong>{{ optional($user->telegram_link_expires_at)->format('d/m/Y H:i') }}</strong>:
+                            Se preferisci, apri Telegram, cerca <strong>{{ '@'.ltrim($botUsername, '@') }}</strong> e invia manualmente questo testo in chat entro il <strong>{{ optional($user->telegram_link_expires_at)->format('d/m/Y H:i') }}</strong>:
                         </p>
                         <div class="mt-1.5 bg-white border border-blue-200 rounded-md px-3 py-2 shadow-inner">
                             <a href="https://t.me/{{ ltrim($botUsername, '@') }}?start={{ $user->telegram_link_token }}" target="_blank" 
@@ -113,9 +115,16 @@
         {{-- Pulsanti d'azione --}}
         @if($botUsername)
             <div class="flex flex-wrap items-center gap-3 pt-2">
+                @unless($user->telegram_chat_id)
+                    <form method="POST" action="{{ route('profile.telegram.store') }}" target="_blank">
+                        @csrf
+                        <input type="hidden" name="apri" value="1">
+                        <x-primary-button>Collega Telegram</x-primary-button>
+                    </form>
+                @endunless
                 <form method="POST" action="{{ route('profile.telegram.store') }}">
                     @csrf
-                    <x-primary-button>Genera token Telegram</x-primary-button>
+                    <x-secondary-button type="submit">Genera token Telegram</x-secondary-button>
                 </form>
 
                 @if($user->telegram_chat_id || $user->telegram_link_token)

@@ -8,6 +8,7 @@
     </x-slot>
 
     <div class="flex flex-col gap-4">
+        <x-pa.invito-telegram />
         {{-- KPI --}}
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
             @foreach([
