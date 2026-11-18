@@ -173,8 +173,44 @@ class IntegrazioniTest extends TestCase
             'api.telegram.org/*/getMe' => Http::response($getMe, $statoGetMe),
             'api.telegram.org/*/setWebhook' => Http::response(['ok' => true, 'result' => true]),
             'api.telegram.org/*/setMyCommands' => Http::response(['ok' => true, 'result' => true]),
+            'api.telegram.org/*/setMyName' => Http::response(['ok' => true, 'result' => true]),
+            'api.telegram.org/*/setMyDescription' => Http::response(['ok' => true, 'result' => true]),
+            'api.telegram.org/*/setMyShortDescription' => Http::response(['ok' => true, 'result' => true]),
+            'api.telegram.org/*/setMyProfilePhoto' => Http::response(['ok' => true, 'result' => true]),
             'api.telegram.org/*/getWebhookInfo' => Http::response(['ok' => true, 'result' => ['url' => 'https://prontopa.ente.it/api/telegram/webhook']]),
         ]);
+    }
+
+    private function salvaTelegram(): void
+    {
+        $this->actingAs($this->admin)->patch(route('admin.integrazioni.update', 'telegram'), ['impostazioni' => ['telegram_bot_token' => '123:abc']])
+            ->assertRedirect()->assertSessionHas('success');
+    }
+
+    public function test_salva_telegram_imposta_nome_descrizioni_e_foto_dell_ente(): void
+    {
+        Impostazione::set('ente_nome', 'Comune di Montesilvano');
+        $this->fakeTelegram();
+
+        $this->salvaTelegram();
+
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/setMyName') && $r['name'] === 'ProntoPA · Comune di Montesilvano');
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/setMyShortDescription')
+            && str_contains($r['short_description'], 'Comune di Montesilvano') && mb_strlen($r['short_description']) <= 120);
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/setMyDescription')
+            && str_contains($r['description'], 'Collega Telegram') && mb_strlen($r['description']) <= 512);
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/setMyProfilePhoto') && $r->isMultipart());
+        $this->assertStringContainsString('foto', session('success'));
+    }
+
+    public function test_foto_del_bot_ricaricata_solo_se_il_logo_cambia(): void
+    {
+        $this->fakeTelegram();
+        $this->salvaTelegram();
+        $this->salvaTelegram();
+
+        Http::assertSentCount(2 * 8 + 1); // 2 giri completi (getMe, setWebhook, comandi, nome, 2 descrizioni, getMe+info della prova) + 1 sola foto
+        $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/setMyProfilePhoto')));
     }
 
     public function test_salva_telegram_collega_tutto_in_un_colpo(): void

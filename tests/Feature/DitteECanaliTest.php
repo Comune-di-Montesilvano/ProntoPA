@@ -203,9 +203,12 @@ class DitteECanaliTest extends TestCase
             if (!str_contains($request->url(), 'sendMessage')) {
                 return false;
             }
-            return str_contains($request['text'], 'Lavori per priorità:')
-                && str_contains($request['text'], 'Priorità: Critica')
-                && str_contains($request['text'], 'Priorità: Alta');
+            $pulsanti = collect($request['reply_markup']['inline_keyboard'] ?? [])->flatten(1)->pluck('text')->values();
+
+            return str_contains($request['text'], 'I tuoi lavori')
+                && $pulsanti->count() === 2
+                && str_contains($pulsanti[0], 'Critica')
+                && str_contains($pulsanti[1], 'Alta');
         });
     }
 
