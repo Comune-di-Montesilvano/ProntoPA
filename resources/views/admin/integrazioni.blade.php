@@ -62,7 +62,7 @@
                         <ol class="mt-3 list-decimal space-y-2 pl-5">
                             <li>Su Telegram apri <strong>@BotFather</strong> (quello con la spunta blu), scrivi <code>/newbot</code> e scegli un nome visibile (es. «ProntoPA Comune») e un nome utente che finisca in <code>bot</code> (es. <code>prontopa_comune_bot</code>).</li>
                             <li>BotFather risponde con il <strong>token</strong> (tipo <code>123456789:AA…</code>): incollalo qui sotto e premi <strong>Salva</strong>. Il token è come una password: non condividerlo.</li>
-                            <li>Al salvataggio ProntoPA fa il resto: legge il nome del bot, lo collega a questo indirizzo, imposta il menu dei comandi (lista, oggi, apri, chiudi, note, priorita) e prova che tutto funzioni. L'indirizzo deve essere raggiungibile da internet in HTTPS:
+                            <li>Al salvataggio ProntoPA fa il resto: legge il nome del bot, lo collega a questo indirizzo, imposta il menu dei comandi, nome, descrizione e foto (il logo dell'ente, caricato di nuovo solo se cambia) e prova che tutto funzioni. L'indirizzo deve essere raggiungibile da internet in HTTPS:
                                 <code class="mt-1 block rounded border border-gray-200 bg-white px-2 py-1 text-xs break-all">{{ $urlTelegram }}</code>
                                 @unless(str_starts_with($urlTelegram, 'https://'))
                                     <span class="mt-1 block text-xs text-red-700">L'indirizzo dell'applicazione non è in HTTPS: Telegram non lo accetta.</span>

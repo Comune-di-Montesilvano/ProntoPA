@@ -24,7 +24,14 @@ class TelegramBotService
         return filled($this->token());
     }
 
-    public function sendMessage(string $chatId, string $text, ?array $inlineKeyboard = null): bool
+    /** Tastiera fissa sotto la chat (1.0.11): il testo di ogni tasto vale come il comando corrispondente. */
+    public const TASTIERA = [['📋 Lista', '📅 Oggi', '🔥 Priorità']];
+
+    /**
+     * @param  array<int, array<int, array<string, mixed>>>|null  $inlineKeyboard  pulsanti sotto il messaggio
+     * @param  bool  $tastiera  mostra (o riporta) la tastiera fissa TASTIERA; ignorato se ci sono pulsanti inline
+     */
+    public function sendMessage(string $chatId, string $text, ?array $inlineKeyboard = null, bool $tastiera = false): bool
     {
         if (! $this->isConfigured()) {
             return false;
@@ -38,6 +45,12 @@ class TelegramBotService
         if ($inlineKeyboard) {
             $payload['reply_markup'] = [
                 'inline_keyboard' => $inlineKeyboard,
+            ];
+        } elseif ($tastiera) {
+            $payload['reply_markup'] = [
+                'keyboard' => array_map(fn ($riga) => array_map(fn ($testo) => ['text' => $testo], $riga), self::TASTIERA),
+                'resize_keyboard' => true,
+                'is_persistent' => true,
             ];
         }
 
@@ -94,6 +107,52 @@ class TelegramBotService
         }
 
         return $this->post('setMyCommands', ['commands' => $comandi]);
+    }
+
+    /**
+     * Nome e descrizioni del bot dai dati dell'ente (1.0.11; prima a mano da BotFather).
+     * Limiti di Telegram: nome 64, descrizione breve 120, descrizione 512 caratteri.
+     */
+    public function impostaProfilo(string $ente): bool
+    {
+        if (! $this->isConfigured()) {
+            return false;
+        }
+
+        $ente = trim($ente) !== '' ? trim($ente) : 'ProntoPA';
+        $nome = $ente === 'ProntoPA' ? 'ProntoPA' : 'ProntoPA · '.$ente;
+        $breve = "Segnalazioni e lavori di manutenzione di {$ente}: avvisi e comandi rapidi per comune, operai e ditte.";
+        $descrizione = "ProntoPA, {$ente}.\n\n"
+            ."Avvisi sui lavori assegnati e sulle scadenze, e le segnalazioni a portata di mano: lista, lavori di oggi, priorità, note e foto.\n\n"
+            .'Per collegarti: in ProntoPA apri Profilo → Telegram → «Collega Telegram», poi premi Avvia qui. '
+            .'Riservato a personale del comune, operai e ditte.';
+
+        $ok = $this->post('setMyName', ['name' => Str::limit($nome, 64, '')]);
+        $ok = $this->post('setMyShortDescription', ['short_description' => Str::limit($breve, 120, '')]) && $ok;
+
+        return $this->post('setMyDescription', ['description' => Str::limit($descrizione, 512, '')]) && $ok;
+    }
+
+    /** Foto del profilo del bot (JPG). Telegram non riusa le foto: ogni chiamata ne aggiunge una, chiamare solo se cambia. */
+    public function impostaFoto(string $jpeg): bool
+    {
+        if (! $this->isConfigured()) {
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(20)
+                ->attach('foto', $jpeg, 'foto.jpg', ['Content-Type' => 'image/jpeg'])
+                ->post($this->apiBaseUrl().'/setMyProfilePhoto', [
+                    'photo' => json_encode(['type' => 'static', 'photo' => 'attach://foto']),
+                ]);
+
+            return $response->successful() && (bool) $response->json('ok', false);
+        } catch (\Throwable $exception) {
+            Log::warning('Telegram setMyProfilePhoto failed', ['error' => $this->senzaToken($exception->getMessage())]);
+
+            return false;
+        }
     }
 
     /**

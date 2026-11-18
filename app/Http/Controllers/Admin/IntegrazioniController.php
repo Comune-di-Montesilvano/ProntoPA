@@ -11,6 +11,7 @@ use App\Services\Oidc\OidcClient;
 use App\Services\Oidc\OidcConfig;
 use App\Services\OllamaService;
 use App\Services\TelegramBotService;
+use App\Support\FotoBotTelegram;
 use App\Support\Impostazioni\Sezioni;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -105,10 +106,27 @@ class IntegrazioniController extends Controller
             return $this->esito('telegram', false, "Il bot @{$username} esiste, ma Telegram ha rifiutato il collegamento: l'indirizzo {$bot->urlWebhook()} deve essere pubblico e in HTTPS.");
         }
 
-        $comandi = $bot->impostaComandi();
+        // Menu dei comandi, nome, descrizioni e foto del bot: tutto dai dati dell'ente (1.0.11).
+        $esiti = [
+            'menu dei comandi' => $bot->impostaComandi(),
+            'nome e descrizione' => $bot->impostaProfilo((string) Impostazione::get('ente_nome', '')),
+        ];
+        // Telegram non riusa le foto (ogni invio si aggiunge allo storico del bot): solo se il logo è cambiato.
+        $foto = FotoBotTelegram::daLogo();
+        if ($foto !== null && $foto['hash'] !== Impostazione::get('telegram_foto_hash')) {
+            $esiti['foto (logo dell\'ente)'] = $bot->impostaFoto($foto['jpeg']);
+            if ($esiti['foto (logo dell\'ente)']) {
+                Impostazione::set('telegram_foto_hash', $foto['hash']);
+            }
+        }
+        $fatti = array_keys(array_filter($esiti));
+        $mancati = array_keys(array_filter($esiti, fn ($ok) => ! $ok));
+
         [$ok, $messaggio] = $this->provaTelegram();
         if ($ok) {
-            $messaggio = 'Salvato e collegato. '.$messaggio.($comandi ? ' Menu dei comandi impostato.' : ' Il menu dei comandi non è stato impostato: salva di nuovo per riprovare.');
+            $messaggio = 'Salvato e collegato. '.$messaggio
+                .($fatti !== [] ? ' Impostati: '.implode(', ', $fatti).'.' : '')
+                .($mancati !== [] ? ' Non impostati: '.implode(', ', $mancati).' (salva di nuovo per riprovare).' : '');
         }
 
         return $this->esito('telegram', $ok, $messaggio);

@@ -92,9 +92,11 @@ class TelegramWebhookTest extends TestCase
         $response->assertOk();
 
         Http::assertSent(function ($request) {
+            $pulsanti = collect($request['reply_markup']['inline_keyboard'] ?? [])->flatten(1);
+
             return Str::contains($request->url(), 'sendMessage')
                 && Str::contains((string) $request['text'], 'Segnalazioni aperte')
-                && Str::contains((string) $request['text'], 'Lampione spento');
+                && $pulsanti->contains(fn ($p) => Str::contains($p['text'], 'Lampione spento'));
         });
     }
 

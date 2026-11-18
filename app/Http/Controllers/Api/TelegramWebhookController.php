@@ -19,6 +19,9 @@ use Illuminate\Support\Str;
 
 class TelegramWebhookController extends Controller
 {
+    /** Testo dei tasti di TelegramBotService::TASTIERA => comando. */
+    private const TASTI = ['📋 Lista' => '/lista', '📅 Oggi' => '/oggi', '🔥 Priorità' => '/priorita'];
+
     public function __construct(
         private readonly TelegramBotService $telegram,
         private readonly SegnalazioneWorkflowService $workflow,
@@ -84,6 +87,9 @@ class TelegramWebhookController extends Controller
             return;
         }
 
+        // Tasti della tastiera fissa (1.0.11): valgono come i comandi.
+        $text = self::TASTI[$text] ?? $text;
+
         if ($text === '/lista') {
             $this->handleListCommand($user);
             return;
@@ -114,7 +120,7 @@ class TelegramWebhookController extends Controller
             return;
         }
 
-        $this->telegram->sendMessage($chatId, $this->buildHelpMessage($user));
+        $this->telegram->sendMessage($chatId, $this->buildHelpMessage($user), null, true);
     }
 
     private function handleStartCommand(string $chatId, string $token): void
@@ -153,7 +159,7 @@ class TelegramWebhookController extends Controller
             'telegram_link_expires_at' => null,
         ])->save();
 
-        $this->telegram->sendMessage($chatId, "Account collegato con successo. Usa /lista per vedere le segnalazioni assegnate o visibili.");
+        $this->telegram->sendMessage($chatId, "Account collegato. Usa i tasti qui sotto: 📋 Lista, 📅 Oggi, 🔥 Priorità. Tocca una segnalazione per aprirla.", null, true);
     }
 
     private function handleListCommand(User $user): void
@@ -165,29 +171,46 @@ class TelegramWebhookController extends Controller
             ->limit(10)
             ->get();
 
+        $this->inviaElenco($user, 'Segnalazioni aperte, le più recenti:', 'Nessuna segnalazione aperta.', $segnalazioni,
+            fn (Segnalazione $s) => $s->stato?->descrizione ?? '');
+    }
+
+    /** Titolo per Telegram: quelli scritti tutti in maiuscolo diventano una frase normale. */
+    private function titolo(Segnalazione $s, int $limite): string
+    {
+        $titolo = trim($s->titoloLeggibile($limite));
+        if ($titolo !== '' && mb_strtoupper($titolo) === $titolo) {
+            $titolo = mb_ucfirst(mb_strtolower($titolo));
+        }
+
+        return Str::limit($titolo, $limite);
+    }
+
+    /**
+     * Elenco a pulsanti (1.0.11): un pulsante per segnalazione, toccandolo si apre il dettaglio.
+     *
+     * @param  \Illuminate\Support\Collection<int, Segnalazione>  $segnalazioni
+     * @param  callable(Segnalazione): string  $coda  testo dopo il titolo (stato, priorità…)
+     */
+    private function inviaElenco(User $user, string $intestazione, string $vuoto, $segnalazioni, callable $coda): void
+    {
         if ($segnalazioni->isEmpty()) {
-            $this->telegram->sendMessage($user->telegram_chat_id, 'Nessuna segnalazione aperta disponibile.');
+            $this->telegram->sendMessage($user->telegram_chat_id, $vuoto, null, true);
             return;
         }
 
-        $lines = ['Segnalazioni aperte:'];
-        foreach ($segnalazioni as $segnalazione) {
-            $lines[] = sprintf(
-                '#%d - %s (%s)',
-                $segnalazione->id_segnalazione,
-                Str::limit($segnalazione->testo_segnalazione, 40),
-                $segnalazione->stato?->descrizione ?? 'N/D'
-            );
-        }
-        $lines[] = 'Usa /apri <id> per il dettaglio.';
+        $pulsanti = $segnalazioni->map(fn (Segnalazione $s) => [[
+            'text' => trim('#'.$s->id_segnalazione.' · '.$this->titolo($s, 40).' · '.$coda($s), ' ·'),
+            'callback_data' => 'apri:'.$s->id_segnalazione,
+        ]])->values()->all();
 
-        $this->telegram->sendMessage($user->telegram_chat_id, implode("\n", $lines));
+        $this->telegram->sendMessage($user->telegram_chat_id, $intestazione, $pulsanti);
     }
 
     private function handleOpenCommand(User $user, int $idSegnalazione): void
     {
         $segnalazione = Segnalazione::visibileA($user)
-            ->with(['stato', 'tipologia', 'appalto.impresa', 'operatore'])
+            ->with(['stato', 'tipologia', 'appalto.impresa', 'operatore', 'plesso'])
             ->find($idSegnalazione);
 
         if (! $segnalazione) {
@@ -197,21 +220,28 @@ class TelegramWebhookController extends Controller
 
         $azioni = $this->azioniTelegram($segnalazione, $user)->take(6)->values();
 
-        $keyboard = $azioni->isNotEmpty()
-            ? $azioni->chunk(2)->map(fn ($chunk) => $chunk->map(fn ($azione) => [
-                'text' => $azione->descrizione,
-                'callback_data' => sprintf('azione:%d:%d', $segnalazione->id_segnalazione, $azione->id_azione),
-            ])->all())->all()
-            : null;
+        $id = $segnalazione->id_segnalazione;
+        $keyboard = $azioni->chunk(2)->map(fn ($chunk) => $chunk->map(fn ($azione) => [
+            'text' => $azione->descrizione,
+            'callback_data' => sprintf('azione:%d:%d', $id, $azione->id_azione),
+        ])->values()->all())->values()->all();
+        $keyboard[] = [
+            ['text' => '📝 Note', 'callback_data' => 'note:'.$id],
+            ['text' => '⬅️ Lista', 'callback_data' => 'lista'],
+        ];
 
-        $message = implode("\n", [
-            'Segnalazione #' . $segnalazione->id_segnalazione,
+        $message = implode("\n", array_filter([
+            'Segnalazione #' . $id . ' · ' . $this->titolo($segnalazione, 120),
             'Stato: ' . ($segnalazione->stato?->descrizione ?? 'N/D'),
-            'Tipologia: ' . ($segnalazione->tipologia?->descrizione ?? 'N/D'),
+            'Tipologia: ' . ($segnalazione->tipologia?->nomeLeggibile() ?? 'N/D'),
+            $segnalazione->plesso ? 'Sede: ' . $segnalazione->plesso->nomeLeggibile() : null,
             'Operatore: ' . ($segnalazione->operatore?->name ?? 'Non assegnato'),
-            'Impresa: ' . ($segnalazione->appalto?->impresa?->ragione_sociale ?? 'Nessuna'),
-            'Testo: ' . Str::limit($segnalazione->testo_segnalazione, 300),
-        ]);
+            $segnalazione->appalto?->impresa ? 'Impresa: ' . $segnalazione->appalto->impresa->ragione_sociale : null,
+            '',
+            Str::limit($segnalazione->testo_segnalazione, 600),
+            '',
+            'Per una foto: inviala con #' . $id . ' nella didascalia.',
+        ], fn ($riga) => $riga !== null));
 
         $this->telegram->sendMessage($user->telegram_chat_id, $message, $keyboard);
     }
@@ -229,6 +259,23 @@ class TelegramWebhookController extends Controller
 
         if (! $user) {
             $this->telegram->answerCallbackQuery($callbackId, 'Account Telegram non collegato.');
+            return;
+        }
+
+        // Pulsanti di navigazione (1.0.11): visibilità controllata dai metodi chiamati (visibileA).
+        if (preg_match('/^apri:(\d+)$/', $data, $m) === 1) {
+            $this->telegram->answerCallbackQuery($callbackId, '');
+            $this->handleOpenCommand($user, (int) $m[1]);
+            return;
+        }
+        if (preg_match('/^note:(\d+)$/', $data, $m) === 1) {
+            $this->telegram->answerCallbackQuery($callbackId, '');
+            $this->handleNoteCommand($user, (int) $m[1], '');
+            return;
+        }
+        if ($data === 'lista') {
+            $this->telegram->answerCallbackQuery($callbackId, '');
+            $this->handleListCommand($user);
             return;
         }
 
@@ -318,17 +365,22 @@ class TelegramWebhookController extends Controller
 
         $ultime = $segnalazione->note()->visibiliA($user)->latest()->limit(3)->get();
 
+        $aggiungi = 'Per aggiungerne una scrivi: /note ' . $idSegnalazione . ' testo della nota';
+        $indietro = [[['text' => '⬅️ Torna a #' . $idSegnalazione, 'callback_data' => 'apri:' . $idSegnalazione]]];
+
         if ($ultime->isEmpty()) {
-            $this->telegram->sendMessage($user->telegram_chat_id, 'Nessuna nota per #' . $idSegnalazione . '.');
+            $this->telegram->sendMessage($user->telegram_chat_id, 'Nessuna nota per #' . $idSegnalazione . ".\n" . $aggiungi, $indietro);
             return;
         }
 
         $lines = ['Ultime note su #' . $idSegnalazione . ':'];
         foreach ($ultime as $nota) {
-            $lines[] = '— ' . Str::limit($nota->testo, 100);
+            $lines[] = '— ' . Str::limit($nota->testo, 200);
         }
+        $lines[] = '';
+        $lines[] = $aggiungi;
 
-        $this->telegram->sendMessage($user->telegram_chat_id, implode("\n", $lines));
+        $this->telegram->sendMessage($user->telegram_chat_id, implode("\n", $lines), $indietro);
     }
 
     private function handlePrioritaCommand(User $user): void
@@ -340,27 +392,13 @@ class TelegramWebhookController extends Controller
             ->limit(10)
             ->get();
 
-        if ($segnalazioni->isEmpty()) {
-            $this->telegram->sendMessage($user->telegram_chat_id, 'Nessuna segnalazione aperta.');
-            return;
-        }
-
-        $lines = ['Segnalazioni per priorità:'];
-        foreach ($segnalazioni as $s) {
-            $lines[] = sprintf(
-                '[%s] #%d — %s',
-                $s->label_priorita,
-                $s->id_segnalazione,
-                Str::limit($s->tipologia?->descrizione ?? $s->testo_segnalazione, 40)
-            );
-        }
-
-        $this->telegram->sendMessage($user->telegram_chat_id, implode("\n", $lines));
+        $this->inviaElenco($user, 'Segnalazioni aperte, le più urgenti:', 'Nessuna segnalazione aperta.', $segnalazioni,
+            fn (Segnalazione $s) => (string) $s->label_priorita);
     }
 
     private function buildHelpMessage(User $user): string
     {
-        return "Comandi disponibili:\n/lista\n/oggi\n/apri <id>\n/chiudi <id>\n/note <id> [testo]\n/priorita";
+        return "Usa i tasti qui sotto: 📋 Lista, 📅 Oggi, 🔥 Priorità. Tocca una segnalazione per aprirla.\n\nSi possono anche scrivere: /apri <id>, /chiudi <id>, /note <id> testo.";
     }
 
     private function buildUnlinkedMessage(): string
@@ -390,24 +428,8 @@ class TelegramWebhookController extends Controller
             ->limit(10)
             ->get();
 
-        if ($segnalazioni->isEmpty()) {
-            $this->telegram->sendMessage($user->telegram_chat_id, 'Nessun lavoro programmato per oggi.');
-            return;
-        }
-
-        $lines = ['Lavori per priorità:'];
-        foreach ($segnalazioni as $s) {
-            $prioritaStr = $s->label_priorita;
-            $lines[] = sprintf(
-                "• #%d - %s\n  Stato: %s | Priorità: %s",
-                $s->id_segnalazione,
-                $s->tipologia?->descrizione ?? 'Intervento',
-                $s->stato?->descrizione ?? 'N/D',
-                $prioritaStr
-            );
-        }
-
-        $this->telegram->sendMessage($user->telegram_chat_id, implode("\n\n", $lines));
+        $this->inviaElenco($user, 'I tuoi lavori, i più urgenti prima:', 'Nessun lavoro assegnato a te.', $segnalazioni,
+            fn (Segnalazione $s) => (string) $s->label_priorita);
     }
 
     private function handlePhotoMessage(User $user, array $message): void

@@ -4,6 +4,17 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.11] - 2026-11-18
+
+### Modificato
+- Bot Telegram a pulsanti, senza scrivere comandi: tastiera fissa (📋 Lista, 📅 Oggi, 🔥 Priorità),
+  ogni segnalazione dell'elenco è un pulsante che apre il dettaglio, nel dettaglio pulsanti per le
+  azioni, 📝 Note e ⬅️ Lista. Titoli scritti tutto in maiuscolo resi leggibili. I comandi scritti
+  restano validi.
+- Integrazioni → Telegram: al Salva ProntoPA imposta anche nome del bot («ProntoPA · ente»),
+  descrizione, descrizione breve e foto (logo dell'ente, ricaricata solo se cambia). Niente più
+  BotFather oltre alla creazione del bot.
+
 ## [1.0.10] - 2026-11-18
 
 ### Modificato
