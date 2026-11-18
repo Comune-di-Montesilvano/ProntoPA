@@ -21,7 +21,7 @@
             </div>
             <div class="pa-field">
                 <label for="chiudi-foto" class="pa-field-label">Foto (facoltative)</label>
-                <input id="chiudi-foto" type="file" name="allegati[]" multiple accept="{{ $mime }}" class="text-sm">
+                <x-pa.foto id="chiudi-foto" :mime="$mime" />
                 <x-input-error :messages="array_merge($errors->get('allegati'), $errors->get('allegati.*'))" />
             </div>
             <x-input-error :messages="$errors->get('azione')" />

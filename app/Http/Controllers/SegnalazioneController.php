@@ -451,24 +451,7 @@ class SegnalazioneController extends Controller
         $this->authorize('sollecita', $segnalazione);
 
         $data = $request->validate(['testo' => ['nullable', 'string', 'max:2000']]);
-        $testo = 'Sollecito: '.(trim((string) ($data['testo'] ?? '')) ?: 'aggiornare sullo stato del lavoro.');
-
-        $segnalazione->note()->create([
-            'testo'            => $testo,
-            'id_utente'        => auth()->id(),
-            'visibile_web'     => false,
-            'visibile_impresa' => (bool) $segnalazione->id_appalto,
-            'origine'          => \App\Models\NotaSegnalazione::ORIGINE_SOLLECITO,
-        ]);
-
-        $destinatari = DestinatariAssegnatario::per($segnalazione, auth()->user());
-        $notifica = new SollecitoNotification($segnalazione, $testo);
-        if ($destinatari['utenti']->isNotEmpty()) {
-            Notification::send($destinatari['utenti'], $notifica);
-        }
-        foreach ($destinatari['email'] as $email) {
-            Notification::route('mail', $email)->notify($notifica);
-        }
+        app(\App\Services\Segnalazioni\Sollecito::class)->invia($segnalazione, $request->user(), (string) ($data['testo'] ?? ''));
 
         return redirect()->route('segnalazioni.show', $segnalazione->id_segnalazione)
             ->with('success', 'Sollecito inviato.');

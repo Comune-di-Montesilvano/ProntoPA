@@ -10,7 +10,7 @@
         <div class="flex flex-1 flex-col gap-4 px-6 py-5">
             <div class="pa-field">
                 <label for="fine-foto" class="pa-field-label">Foto del lavoro finito (facoltative)</label>
-                <input id="fine-foto" type="file" name="allegati[]" multiple accept="{{ $mime }}" capture="environment" class="text-sm">
+                <x-pa.foto id="fine-foto" :mime="$mime" />
                 <x-input-error :messages="array_merge($errors->get('allegati'), $errors->get('allegati.*'))" />
             </div>
             <div class="pa-field">
