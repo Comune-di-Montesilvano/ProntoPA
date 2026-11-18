@@ -11,12 +11,14 @@ class TelegramBotService
 {
     /** Menu dei comandi del bot (setMyCommands): gli stessi gestiti da TelegramWebhookController. */
     public const COMANDI = [
-        'lista' => 'Segnalazioni assegnate o visibili',
-        'oggi' => 'Lavori in programma oggi',
+        'lista' => 'Segnalazioni aperte, le più recenti',
+        'oggi' => 'I lavori assegnati a te',
+        'priorita' => 'Segnalazioni più urgenti',
+        'scadenze' => 'Scadute o in scadenza entro 24 ore',
         'apri' => 'Dettaglio di una segnalazione: /apri 1234',
         'chiudi' => 'Chiude una segnalazione: /chiudi 1234',
         'note' => 'Note di una segnalazione, o aggiungine una: /note 1234 testo',
-        'priorita' => 'Segnalazioni più urgenti',
+        'aiuto' => 'Cosa fa ogni tasto',
     ];
 
     public function isConfigured(): bool
@@ -25,7 +27,10 @@ class TelegramBotService
     }
 
     /** Tastiera fissa sotto la chat (1.0.11): il testo di ogni tasto vale come il comando corrispondente. */
-    public const TASTIERA = [['📋 Lista', '📅 Oggi', '🔥 Priorità']];
+    public const TASTIERA = [
+        ['📋 Lista', '📅 Oggi', '🔥 Priorità'],
+        ['⏰ Scadenze', '🔍 Cerca n°', '❓ Aiuto'],
+    ];
 
     /**
      * @param  array<int, array<int, array<string, mixed>>>|null  $inlineKeyboard  pulsanti sotto il messaggio
