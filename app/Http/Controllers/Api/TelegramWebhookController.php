@@ -9,6 +9,7 @@ use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Models\User;
 use App\Services\SegnalazioneWorkflowService;
+use App\Services\Telegram\AzioniBot;
 use App\Services\TelegramBotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,6 +30,7 @@ class TelegramWebhookController extends Controller
     public function __construct(
         private readonly TelegramBotService $telegram,
         private readonly SegnalazioneWorkflowService $workflow,
+        private readonly AzioniBot $azioni,
     ) {}
 
     public function __invoke(Request $request): JsonResponse
@@ -100,6 +102,17 @@ class TelegramWebhookController extends Controller
 
         // Tasti della tastiera fissa (1.0.11): valgono come i comandi.
         $text = self::TASTI[$text] ?? $text;
+
+        // Il bot aspettava un testo (motivo, fine lavori, nota: 1.0.14)? Un comando o un tasto annulla l'attesa.
+        if (str_starts_with($text, '/')) {
+            $this->azioni->annullaAttesa($user);
+        } elseif ($text !== '' && ($esito = $this->azioni->consumaTesto($user, $text)) !== null) {
+            $this->telegram->sendMessage($user->telegram_chat_id, $esito['risposta']);
+            if ($esito['apri'] !== null) {
+                $this->handleOpenCommand($user, $esito['apri']);
+            }
+            return;
+        }
 
         if ($text === '/lista') {
             $this->handleListCommand($user);
@@ -273,13 +286,8 @@ class TelegramWebhookController extends Controller
             return;
         }
 
-        $azioni = $this->azioniTelegram($segnalazione, $user)->take(6)->values();
-
         $id = $segnalazione->id_segnalazione;
-        $keyboard = $azioni->chunk(2)->map(fn ($chunk) => $chunk->map(fn ($azione) => [
-            'text' => $azione->descrizione,
-            'callback_data' => sprintf('azione:%d:%d', $id, $azione->id_azione),
-        ])->values()->all())->values()->all();
+        $keyboard = $this->azioni->pulsanti($segnalazione, $user);
         $keyboard[] = [
             ['text' => '📝 Note', 'callback_data' => 'note:'.$id],
             ['text' => '⬅️ Lista', 'callback_data' => 'lista'],
@@ -331,6 +339,16 @@ class TelegramWebhookController extends Controller
         if ($data === 'lista') {
             $this->telegram->answerCallbackQuery($callbackId, '');
             $this->handleListCommand($user);
+            return;
+        }
+
+        // Azioni della scheda a pulsanti (1.0.14): assegna, senza intervento, fine lavori, rimanda…
+        $esito = $this->azioni->gestisci($user, $data);
+        if ($esito !== null) {
+            $this->telegram->answerCallbackQuery($callbackId, $esito['risposta']);
+            if ($esito['apri'] !== null) {
+                $this->handleOpenCommand($user, $esito['apri']);
+            }
             return;
         }
 
@@ -502,12 +520,18 @@ class TelegramWebhookController extends Controller
         $chatId = (string) data_get($message, 'chat.id', '');
         $caption = trim((string) data_get($message, 'caption', ''));
 
-        if (preg_match('/#?(\d+)/', $caption, $matches) !== 1) {
+        // Durante "Fine lavori" (1.0.14) la foto senza didascalia va a quella segnalazione, come foto "dopo".
+        $attesa = $this->azioni->attesa($user);
+        $perFineLavori = $attesa !== null && $attesa['tipo'] === 'fl' && preg_match('/#?(\d+)/', $caption) !== 1;
+
+        if ($perFineLavori) {
+            $idSegnalazione = (int) $attesa['id'];
+        } elseif (preg_match('/#?(\d+)/', $caption, $matches) === 1) {
+            $idSegnalazione = (int) $matches[1];
+        } else {
             $this->telegram->sendMessage($chatId, "Per favore, invia nuovamente la foto specificando il numero della segnalazione nella didascalia (es: 'Foto intervento #123' o '123').");
             return;
         }
-
-        $idSegnalazione = (int) $matches[1];
         $segnalazione = Segnalazione::visibileA($user)->find($idSegnalazione);
 
         if (! $segnalazione) {
@@ -552,7 +576,7 @@ class TelegramWebhookController extends Controller
             $mime = 'image/png';
         }
 
-        $fase = $user->hasRole('impresa') ? 'dopo' : 'prima';
+        $fase = $user->hasRole('impresa') || $perFineLavori ? 'dopo' : 'prima';
 
         AllegatoSegnalazione::create([
             'id_segnalazione'     => $segnalazione->id_segnalazione,
@@ -566,8 +590,10 @@ class TelegramWebhookController extends Controller
 
         $reply = "Foto caricata con successo per la segnalazione #{$segnalazione->id_segnalazione} (Fase: " . ($fase === 'dopo' ? 'Dopo' : 'Prima') . ").";
 
-        if ($user->hasRole('impresa')) {
-            $reply .= "\n\nPer comunicare la fine dei lavori apri la scheda:\n" . route('segnalazioni.show', $segnalazione->id_segnalazione);
+        if ($perFineLavori) {
+            $reply = "📷 Foto aggiunta a #{$segnalazione->id_segnalazione}. Mandane altre o scrivi cosa è stato fatto per finire.";
+        } elseif ($user->hasRole('impresa')) {
+            $reply .= "\n\nPer comunicare la fine dei lavori apri la segnalazione e premi 🏁 Fine lavori, oppure dalla scheda:\n" . route('segnalazioni.show', $segnalazione->id_segnalazione);
         }
 
         $this->telegram->sendMessage($chatId, $reply);

@@ -4,6 +4,20 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.14] - 2026-11-18
+
+### Aggiunto
+- Bot Telegram: le azioni della scheda a pulsanti. Comune: 🙋 Assegna a me, 👷 Assegna… (operaio,
+  squadra o ditta, come nel pannello Assegna), ✅ Chiudi, 🚫 Senza intervento… (motivo; «Altro» chiede
+  il testo), 🔔 Sollecita, 👎 Rifiuta preventivo, 🔄 Riapri. Operai e ditte: 🏁 Fine lavori (foto senza
+  didascalia, poi cosa è stato fatto) e ↩️ Rimanda al comune. Per tutti ✍️ Scrivi nota. Stesse regole
+  della scheda (policy e workflow); le azioni che chiedono un testo aspettano il messaggio successivo
+  (✖️ Annulla, oppure un tasto/comando).
+
+### Corretto
+- Fine lavori (ditta, operaio) e Chiudi: le foto si scelgono anche dalla galleria, più di una, con
+  anteprima («Scatta foto» + «Scegli dalla galleria»). Prima sul telefono si apriva solo la fotocamera.
+
 ## [1.0.13] - 2026-11-18
 
 ### Corretto
