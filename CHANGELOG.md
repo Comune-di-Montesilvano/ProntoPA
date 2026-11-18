@@ -13,6 +13,16 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
   pagina, con l'indirizzo che deve essere pubblico in HTTPS.
 - «Prova adesso» di Telegram controlla anche il collegamento: bot non collegato, collegato a un altro
   indirizzo o messaggi non consegnati (con l'errore riportato da Telegram).
+- Elenchi di gestori, operai e ditte: invito a collegare Telegram con «Collega Telegram» (apre il bot,
+  basta premere Avvia) e «Ignora» (non lo ripropone per 30 giorni, su ogni dispositivo).
+
+### Modificato
+- Telegram solo per chi lavora le segnalazioni (gestori, operai, ditte; admin per provarlo): scuole e
+  segnalatori non vedono più la sezione nel profilo, il bot non li collega né risponde ai loro comandi
+  e non ricevono più avvisi su Telegram (restano le email).
+
+### Corretto
+- Profilo → Telegram: il nome del bot compariva come codice (`{{ ltrim($botUsername, '@') }}`).
 
 ## [1.0.8] - 2026-11-17
 

@@ -121,7 +121,8 @@ class VisibilitaNoteTest extends TestCase
         $this->assertNotContains('NOTA-INTERNA', $note);
     }
 
-    public function test_telegram_note_del_segnalante_esclude_note_interne(): void
+    /** 1.0.9: il bot non è per i segnalanti, quindi nessuna nota (nemmeno quelle a loro visibili) via Telegram. */
+    public function test_telegram_segnalante_non_riceve_note_dal_bot(): void
     {
         Http::fake(['https://api.telegram.org/*' => Http::response(['ok' => true], 200)]);
         Impostazione::set('telegram_bot_token', '123456:telegram-test-token');
@@ -132,8 +133,6 @@ class VisibilitaNoteTest extends TestCase
             'message' => ['chat' => ['id' => '445566'], 'text' => '/note ' . $this->segnalazione->id_segnalazione],
         ], ['X-Telegram-Bot-Api-Secret-Token' => 'secret-token'])->assertOk();
 
-        Http::assertSent(fn ($request) => Str::contains($request->url(), 'sendMessage')
-            && Str::contains((string) $request['text'], 'NOTA-PER-SEGNALANTE')
-            && ! Str::contains((string) $request['text'], 'NOTA-INTERNA'));
+        Http::assertNotSent(fn ($request) => Str::contains((string) ($request['text'] ?? ''), 'NOTA-'));
     }
 }

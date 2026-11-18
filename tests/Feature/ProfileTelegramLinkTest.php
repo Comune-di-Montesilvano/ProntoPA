@@ -16,11 +16,13 @@ class ProfileTelegramLinkTest extends TestCase
         parent::setUp();
 
         $this->withoutMiddleware(PreventRequestForgery::class);
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
     }
 
     public function test_user_can_generate_a_telegram_link_token_from_profile(): void
     {
         $user = User::factory()->create();
+        $user->assignRole('gestore');
 
         $response = $this->actingAs($user)
             ->from('/profile')
@@ -43,6 +45,7 @@ class ProfileTelegramLinkTest extends TestCase
             'telegram_link_expires_at' => now()->addHour(),
             'telegram_verified_at' => now(),
         ]);
+        $user->assignRole('gestore');
 
         $response = $this->actingAs($user)
             ->from('/profile')
