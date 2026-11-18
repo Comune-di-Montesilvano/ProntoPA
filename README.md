@@ -7,7 +7,7 @@
 **Sistema open-source di pronto intervento e manutenzione per la Pubblica Amministrazione**
 
 [![License: EUPL-1.2](https://img.shields.io/badge/License-EUPL--1.2-blue.svg)](https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12)
-[![PHP](https://img.shields.io/badge/PHP-8.4-purple.svg)](https://php.net)
+[![PHP](https://img.shields.io/badge/PHP-8.5-purple.svg)](https://php.net)
 [![Laravel](https://img.shields.io/badge/Laravel-13-red.svg)](https://laravel.com)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://docker.com)
 
@@ -40,7 +40,7 @@ nessuna modifica al codice richiesta per adattarlo al proprio ente.
 | Layer | Tecnologia |
 |---|---|
 | Framework | Laravel 13 |
-| PHP | 8.4 (PHP-FPM) |
+| PHP | 8.5 (PHP-FPM) |
 | Web Server | Nginx 1.27 |
 | Database | MariaDB 12.3 LTS |
 | Cache/Sessioni | Redis |

@@ -23,8 +23,9 @@ RUN --mount=type=cache,id=apk-${TARGETARCH},target=/var/cache/apk \
         libpng-dev libjpeg-turbo-dev libwebp-dev freetype-dev \
         libzip-dev oniguruma-dev icu-dev openldap-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    # opcache: da PHP 8.5 è compilato nel motore, non va installato (si configura in zz-opcache.ini)
     && docker-php-ext-install \
-        pdo_mysql mbstring exif pcntl bcmath gd zip intl ldap opcache \
+        pdo_mysql mbstring exif pcntl bcmath gd zip intl ldap \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apk del \

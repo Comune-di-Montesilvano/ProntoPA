@@ -18,7 +18,7 @@ RUN apk add --no-cache \
     nodejs \
     npm
 
-# PHP extensions
+# PHP extensions (opcache: da PHP 8.5 è nel motore, non si installa)
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install \
         pdo_mysql \
@@ -29,8 +29,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
         gd \
         zip \
         intl \
-        ldap \
-        opcache
+        ldap
 
 # Redis extension
 RUN apk add --no-cache $PHPIZE_DEPS \

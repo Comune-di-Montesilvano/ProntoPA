@@ -4,6 +4,13 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.10] - 2026-11-18
+
+### Modificato
+- PHP 8.5 (era 8.4) in produzione, sviluppo e CI. opcache non si installa più come estensione: da
+  8.5 è nel motore (configurazione invariata). Costante SSL di MySQL aggiornata (`\Pdo\Mysql`), deprecata in 8.5.
+- PHPUnit 13 (solo test).
+
 ## [1.0.9] - 2026-11-18
 
 ### Aggiunto
