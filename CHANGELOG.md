@@ -4,6 +4,17 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.12] - 2026-11-18
+
+### Modificato
+- Bot Telegram: tastiera fissa su due righe, 📋 Lista · 📅 Oggi · 🔥 Priorità e ⏰ Scadenze (scadute o
+  in scadenza entro 24 ore) · 🔍 Cerca n° (si scrive il numero, anche #3592, e si apre) · ❓ Aiuto.
+  Comandi `scadenze` e `aiuto` anche nel Menu.
+
+### Corretto
+- Bot Telegram: `/start` da un account già collegato rispondeva «Account non collegato»; ora mostra
+  l'aiuto con la tastiera (chi si era collegato prima della 1.0.11 non l'aveva mai ricevuta).
+
 ## [1.0.11] - 2026-11-18
 
 ### Modificato

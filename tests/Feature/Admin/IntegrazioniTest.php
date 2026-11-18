@@ -227,7 +227,7 @@ class IntegrazioniTest extends TestCase
             && $r['url'] === 'https://prontopa.ente.it/api/telegram/webhook'
             && $r['secret_token'] === $segreto);
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/setMyCommands')
-            && collect($r['commands'])->pluck('command')->all() === ['lista', 'oggi', 'apri', 'chiudi', 'note', 'priorita']);
+            && collect($r['commands'])->pluck('command')->all() === ['lista', 'oggi', 'priorita', 'scadenze', 'apri', 'chiudi', 'note', 'aiuto']);
         $this->assertTrue(Cache::get('integrazioni:prova:telegram')['ok']);
     }
 

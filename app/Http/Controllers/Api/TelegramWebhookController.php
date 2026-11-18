@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\SegnalazioneStato;
 use App\Http\Controllers\Controller;
 use App\Models\AllegatoSegnalazione;
 use App\Models\Impostazione;
@@ -20,7 +21,10 @@ use Illuminate\Support\Str;
 class TelegramWebhookController extends Controller
 {
     /** Testo dei tasti di TelegramBotService::TASTIERA => comando. */
-    private const TASTI = ['📋 Lista' => '/lista', '📅 Oggi' => '/oggi', '🔥 Priorità' => '/priorita'];
+    private const TASTI = [
+        '📋 Lista' => '/lista', '📅 Oggi' => '/oggi', '🔥 Priorità' => '/priorita',
+        '⏰ Scadenze' => '/scadenze', '🔍 Cerca n°' => '/cerca', '❓ Aiuto' => '/aiuto',
+    ];
 
     public function __construct(
         private readonly TelegramBotService $telegram,
@@ -68,7 +72,14 @@ class TelegramWebhookController extends Controller
         }
 
         if (preg_match('/^\/start(?:\s+(.+))?$/', $text, $matches) === 1) {
-            $this->handleStartCommand($chatId, trim((string) ($matches[1] ?? '')));
+            $token = trim((string) ($matches[1] ?? ''));
+            $giaCollegato = $token === '' ? User::where('telegram_chat_id', $chatId)->where('attivo', true)->first() : null;
+            if ($giaCollegato && $giaCollegato->usaTelegram()) {
+                // Riporta la tastiera fissa (chi era collegato prima della 1.0.11 non l'aveva mai ricevuta).
+                $this->telegram->sendMessage($chatId, $this->buildHelpMessage($giaCollegato), null, true);
+                return;
+            }
+            $this->handleStartCommand($chatId, $token);
             return;
         }
 
@@ -120,6 +131,27 @@ class TelegramWebhookController extends Controller
             return;
         }
 
+        if ($text === '/scadenze') {
+            $this->handleScadenzeCommand($user);
+            return;
+        }
+
+        if ($text === '/aiuto' || $text === '/help') {
+            $this->telegram->sendMessage($user->telegram_chat_id, $this->buildHelpMessage($user), null, true);
+            return;
+        }
+
+        if ($text === '/cerca') {
+            $this->telegram->sendMessage($user->telegram_chat_id, 'Scrivi il numero della segnalazione, ad esempio 3592.', null, true);
+            return;
+        }
+
+        // Un numero da solo (3592 o #3592) apre la segnalazione: è la risposta a «🔍 Cerca n°».
+        if (preg_match('/^#?(\d{1,9})$/', $text, $matches) === 1) {
+            $this->handleOpenCommand($user, (int) $matches[1]);
+            return;
+        }
+
         $this->telegram->sendMessage($chatId, $this->buildHelpMessage($user), null, true);
     }
 
@@ -160,6 +192,29 @@ class TelegramWebhookController extends Controller
         ])->save();
 
         $this->telegram->sendMessage($chatId, "Account collegato. Usa i tasti qui sotto: 📋 Lista, 📅 Oggi, 🔥 Priorità. Tocca una segnalazione per aprirla.", null, true);
+    }
+
+    /** Scadute o in scadenza entro 24 ore, le più vicine prima (come i filtri rapidi dell'elenco web). */
+    private function handleScadenzeCommand(User $user): void
+    {
+        $segnalazioni = Segnalazione::visibileA($user)
+            ->with(['stato'])
+            ->aperte()
+            ->where('id_stato_segnalazione', '!=', SegnalazioneStato::ATTESA_RISPOSTA->value)
+            ->whereNotNull('data_scadenza_sla')
+            ->where('data_scadenza_sla', '<=', now()->addDay())
+            ->orderBy('data_scadenza_sla')
+            ->limit(10)
+            ->get();
+
+        $this->inviaElenco($user, 'Scadute o in scadenza entro 24 ore:', 'Niente in scadenza nelle prossime 24 ore.', $segnalazioni,
+            function (Segnalazione $s): string {
+                $scadenza = \Illuminate\Support\Carbon::parse($s->data_scadenza_sla);
+
+                return $scadenza->isPast()
+                    ? 'scaduta'
+                    : 'scade '.($scadenza->isToday() ? 'oggi' : 'domani').' alle '.$scadenza->format('H:i');
+            });
     }
 
     private function handleListCommand(User $user): void
@@ -398,7 +453,17 @@ class TelegramWebhookController extends Controller
 
     private function buildHelpMessage(User $user): string
     {
-        return "Usa i tasti qui sotto: 📋 Lista, 📅 Oggi, 🔥 Priorità. Tocca una segnalazione per aprirla.\n\nSi possono anche scrivere: /apri <id>, /chiudi <id>, /note <id> testo.";
+        return implode("\n", [
+            'Usa i tasti qui sotto:',
+            '📋 Lista: segnalazioni aperte, le più recenti',
+            '📅 Oggi: i lavori assegnati a te',
+            '🔥 Priorità: le più urgenti',
+            '⏰ Scadenze: scadute o in scadenza entro 24 ore',
+            '🔍 Cerca n°: scrivi il numero e si apre',
+            '',
+            'Tocca una segnalazione per aprirla: lì trovi le azioni e le note.',
+            'Per allegare una foto inviala con il numero nella didascalia, ad esempio #3592.',
+        ]);
     }
 
     private function buildUnlinkedMessage(): string

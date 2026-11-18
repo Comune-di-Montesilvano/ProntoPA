@@ -128,4 +128,55 @@ class TelegramPulsantiTest extends TestCase
             return str_ends_with($r->url(), '/sendMessage') && $tasti->contains('📋 Lista') && $tasti->contains('📅 Oggi');
         });
     }
+
+    public function test_tastiera_fissa_su_due_righe_da_tre(): void
+    {
+        $this->scrivi('ciao');
+
+        Http::assertSent(function ($r) {
+            $righe = $r['reply_markup']['keyboard'] ?? [];
+            $testi = collect($righe)->flatten(1)->pluck('text');
+
+            return count($righe) === 2 && count($righe[0]) === 3 && count($righe[1]) === 3
+                && $testi->contains('⏰ Scadenze') && $testi->contains('🔍 Cerca n°') && $testi->contains('❓ Aiuto');
+        });
+    }
+
+    public function test_scadenze_mostra_scadute_ed_entro_24_ore_non_le_altre(): void
+    {
+        $this->segnalazione->update(['data_scadenza_sla' => now()->subHour()]);
+        $vicina = Segnalazione::factory()->create(['id_stato_segnalazione' => 2, 'data_scadenza_sla' => now()->addHours(5)]);
+        $lontana = Segnalazione::factory()->create(['id_stato_segnalazione' => 2, 'data_scadenza_sla' => now()->addDays(5)]);
+
+        $this->scrivi('⏰ Scadenze');
+
+        $dati = collect($this->pulsantiInviati())->pluck('callback_data')->values();
+        $this->assertSame(['apri:'.$this->segnalazione->id_segnalazione, 'apri:'.$vicina->id_segnalazione], $dati->all());
+        $this->assertNotContains('apri:'.$lontana->id_segnalazione, $dati);
+    }
+
+    public function test_cerca_chiede_il_numero_e_il_numero_apre_la_segnalazione(): void
+    {
+        $this->scrivi('🔍 Cerca n°');
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/sendMessage') && str_contains((string) $r['text'], 'numero'));
+
+        $this->scrivi('#'.$this->segnalazione->id_segnalazione);
+        Http::assertSent(fn ($r) => str_contains((string) ($r['text'] ?? ''), 'Tombini ostruiti davanti alla scuola'));
+    }
+
+    public function test_aiuto_spiega_i_tasti(): void
+    {
+        $this->scrivi('❓ Aiuto');
+
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/sendMessage')
+            && str_contains((string) $r['text'], 'Scadenze') && str_contains((string) $r['text'], 'foto'));
+    }
+
+    public function test_start_da_account_gia_collegato_manda_la_tastiera(): void
+    {
+        $this->scrivi('/start');
+
+        Http::assertNotSent(fn ($r) => str_contains((string) ($r['text'] ?? ''), 'non collegato'));
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/sendMessage') && isset($r['reply_markup']['keyboard']));
+    }
 }
