@@ -315,7 +315,7 @@ CSRF/throttle non auto-bypassati nei Feature test nonostante `APP_ENV=testing` (
 
 **Gotcha suite locale (Windows bind mount)**: nel container `RecursiveDirectoryIterator` di PHP può vedere solo una parte di `tests/Feature` (visto: 53 file su 153, `find` li vede tutti) → `php artisan test` passa "verde" con pochi test e `--filter` dice "No tests found". Controlla il totale (~1300); se basso: `docker compose exec php sh -c 'php artisan test $(find tests/Unit tests/Feature -name "*Test.php" | sort)'`. In CI non succede.
 
-Prima del push: **suite intera**, non solo `--filter` (vecchi test che verificano il comportamento appena tolto restano rossi in CI).
+Prima del push: in locale solo i test toccati (+ quelli che cercano il comportamento cambiato: `grep` nei test) e `composer run analyse`. La **suite intera la fa la CI** (`test`, check obbligatorio: rosso = merge bloccato), niente giro locale da 12 min (decisione committente 2026-11-18).
 
 **Prova di aggiornamento su dati veri** (DB dev = copia prod): `mariadb-dump --single-transaction` nello scratchpad → `migrate` + `AllineamentoSeeder` ×2 → smoke curl delle pagine; per rifarla `DROP/CREATE DATABASE` + reimport del dump.
 
