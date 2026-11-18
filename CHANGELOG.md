@@ -4,6 +4,13 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.13] - 2026-11-18
+
+### Corretto
+- Build delle immagini: phpredis compilato dal sorgente (versione e checksum fissati) invece che con
+  `pecl install`, che con PHP 8.5 falliva a tratti («unable to unpack redis-6.3.0.tgz») e bloccava
+  rilasci e controlli.
+
 ## [1.0.12] - 2026-11-18
 
 ### Modificato

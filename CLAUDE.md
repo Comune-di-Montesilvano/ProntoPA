@@ -57,7 +57,7 @@ docker compose exec php composer run analyse   # larastan, baseline in phpstan-b
 
 **Gotcha versione PHP**: `docker/php/Dockerfile` (dev) e `Dockerfile` (prod, usato anche da CI) possono disallinearsi silenziosamente — verifica `php -v` nel container dev contro `tests.yml` prima di fidarti che riproducano lo stesso ambiente (es. differenze `phpstan`/larastan tra versioni PHP).
 
-**Gotcha build dev**: `pecl install redis` nel build dell'immagine PHP fallisce a volte con "No releases available" (flakiness rete pecl) — retry del build risolve, non è un problema del Dockerfile.
+**phpredis** (1.0.13): compilato dal sorgente in entrambi i Dockerfile (`ARG PHPREDIS_VERSION` + `PHPREDIS_SHA256`, `docker-php-source extract` → `ext/redis` → `docker-php-ext-install`), non `pecl install` (con PHP 8.5 falliva a tratti "unable to unpack"). Dependabot non lo aggiorna: nuova versione = cambiare entrambi gli ARG (sha256 del .tgz di pecl.php.net).
 
 **Gotcha PHPStan CI**: `phpstan.neon` ha `reportUnmatchedIgnoredErrors: false` e `treatPhpDocTypesAsCertain: false` — un run locale pulito non garantisce CI verde, larastan risolve i cast dei model (`casts(): array`) in modo leggermente diverso tra ambienti per motivi mai isolati con certezza. Se tocchi `phpstan-baseline.neon`, verifica sempre su CI (push), non fidarti solo del locale.
 
