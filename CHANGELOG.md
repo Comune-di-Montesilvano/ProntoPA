@@ -4,6 +4,18 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.16] - 2026-11-18
+
+### Aggiunto
+- Stato del sistema: riquadro «Recapiti delle sedi» con le sedi attive senza telefono (il Ministero
+  non pubblica i telefoni nei dati aperti: vanno scritti nella sede); filtro «senza recapiti» in Enti e sedi.
+- Anagrafe scuole MIUR riscaricata in automatico il 1° di ogni mese alle 04:00 (`miur:scarica`), solo se
+  ci sono sedi importate dal MIUR e il link è configurato.
+
+### Modificato
+- Riquadro dell'anagrafe MIUR: rosso se l'ultimo scarico è fallito, giallo se lo scarico mensile non riesce
+  da oltre 45 giorni o se il link è di un anno scolastico ormai passato (dal 1° novembre dell'anno dopo).
+
 ## [1.0.15] - 2026-11-18
 
 ### Aggiunto

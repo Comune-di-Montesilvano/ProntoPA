@@ -54,27 +54,9 @@ class AnagrafeMiurController extends Controller
 
     public function scarica(): RedirectResponse
     {
-        // Controllo e impostazione dello stato atomici: un doppio click non
-        // accoda due download.
-        $lock = Cache::lock('anagrafe-miur:scarica', 10);
-        if (! $lock->get()) {
-            return back()->with('error', 'Download già in corso.');
-        }
-
-        try {
-            if ($this->anagrafe->inCorso()) {
-                return back()->with('error', 'Download già in corso.');
-            }
-
-            $url = (string) Impostazione::get('miur_anagrafe_url', '');
-            if ($url === '') {
-                return back()->with('error', 'Configura il link in Admin → Ente e sistema → Integrazioni → Anagrafe scuole MIUR.');
-            }
-
-            $this->anagrafe->salvaStato(['stato' => 'in_corso', 'messaggio' => null, 'avviato_at' => now()->toIso8601String()]);
-            ScaricaAnagrafeMiur::dispatch($url);
-        } finally {
-            $lock->release();
+        $errore = $this->anagrafe->avvia();
+        if ($errore !== null) {
+            return back()->with('error', $errore);
         }
 
         return back()->with('success', 'Download avviato: può richiedere qualche minuto. Ricarica la pagina per vedere lo stato.');
