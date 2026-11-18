@@ -253,9 +253,9 @@
                 <x-input-error :messages="$errors->get('ubicazione_tipo')" class="mt-1" />
             </div>
 
-            {{-- 8. Foto (facoltative) --}}
+            {{-- 8. Foto: obbligatorie per le scuole (1.0.15), facoltative per il comune --}}
             <div>
-                <x-input-label for="allegati_create" value="Foto (facoltative)" />
+                <x-input-label for="allegati_create" :value="auth()->user()->isSpid() ? 'Foto (almeno una)' : 'Foto (facoltative)'" />
                 <p class="text-xs text-gray-500 mb-2">
                     Fino a {{ $allegatiMaxPerRequest }} file, {{ $allegatiMaxSizeMb }}&nbsp;MB ciascuno.
                 </p>

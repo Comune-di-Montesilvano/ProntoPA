@@ -11,6 +11,7 @@ use App\Models\Squadra;
 use App\Models\User;
 use App\Services\SegnalazioneWorkflowService;
 use App\Services\Segnalazioni\FineLavoriService;
+use App\Services\Segnalazioni\SmistaSquadra;
 use App\Services\Segnalazioni\Sollecito;
 use App\Services\TelegramBotService;
 use App\Support\Segnalazioni\AppaltiPerTipologia;
@@ -40,7 +41,6 @@ class AzioniBot
     private const PER_PAGINA = 12;
 
     private const ETICHETTE_RAPIDE = [
-        'chiudi' => '✅ Chiudi',
         'riapri' => '🔄 Riapri',
         'riprendi' => '▶️ Riprendi',
         'accetta_preventivo' => '👍 Accetta preventivo',
@@ -52,7 +52,13 @@ class AzioniBot
         'rim' => 'Scrivi perché rimandi #%d al comune e invialo.',
         'rp' => 'Scrivi perché rifiuti il preventivo di #%d e invialo.',
         'alt' => 'Scrivi il motivo della chiusura senza intervento di #%d e invialo.',
+        'chi' => "Chiudi #%d: scrivi una nota finale e inviala, oppure premi «Chiudi ora».\nPrima puoi mandare foto del lavoro: 📎 → Fotocamera.",
+        'prev' => "Preventivo per #%d: scrivi l'importo in euro e cosa comprende, ad esempio «1250,50 sostituzione caldaia».",
+        'foto' => "Manda le foto per #%d: 📎 → Fotocamera (o Galleria), anche più di una, senza scrivere il numero.\nQuando hai finito premi «Fatto».",
     ];
+
+    /** Mentre il bot aspetta questi testi, le foto senza didascalia vanno alla segnalazione in attesa. */
+    private const ATTESE_CON_FOTO = ['fl', 'chi', 'foto'];
 
     public function __construct(
         private readonly TelegramBotService $telegram,
@@ -81,6 +87,15 @@ class AzioniBot
                 $pulsanti[] = $this->tasto($etichetta, sprintf('azione:%d:%d', $id, $disponibili[$codice]->id_azione));
             }
         }
+        if ($disponibili->has('chiudi')) {
+            $pulsanti[] = $this->tasto('✅ Chiudi', "chi:$id");
+        }
+        if ($disponibili->has('presenta_preventivo')) {
+            $pulsanti[] = $this->tasto('💶 Presenta preventivo', "txt:$id:prev");
+        }
+        if (app(SmistaSquadra::class)->squadraDiCapo($s, $user) !== null) {
+            $pulsanti[] = $this->tasto('👥 Smista', "smi:$id");
+        }
         if ($disponibili->has('rifiuta_preventivo')) {
             $pulsanti[] = $this->tasto('👎 Rifiuta preventivo', "txt:$id:rp");
         }
@@ -97,6 +112,7 @@ class AzioniBot
             $pulsanti[] = $this->tasto('🚫 Senza intervento…', "si:$id");
         }
         if (! $s->isChiusa()) {
+            $pulsanti[] = $this->tasto('📷 Aggiungi foto', "txt:$id:foto");
             $pulsanti[] = $this->tasto('✍️ Scrivi nota', "txt:$id:nota");
         }
 
@@ -116,10 +132,11 @@ class AzioniBot
             return ['risposta' => 'Annullato.', 'apri' => null];
         }
 
-        if (preg_match('/^(me|asg|si|sol):(\d+)$/', $dati, $m) === 1
+        if (preg_match('/^(me|asg|si|sol|chi|chn|smi):(\d+)$/', $dati, $m) === 1
             || preg_match('/^(asl|ass):(\d+):([osd]):(\d+)$/', $dati, $m) === 1
             || preg_match('/^(sim):(\d+):([a-z_]+)$/', $dati, $m) === 1
-            || preg_match('/^(txt):(\d+):(nota|fl|rim|rp)$/', $dati, $m) === 1) {
+            || preg_match('/^(sms):(\d+):(\d+)$/', $dati, $m) === 1
+            || preg_match('/^(txt):(\d+):(nota|fl|rim|rp|prev|foto)$/', $dati, $m) === 1) {
             $s = Segnalazione::visibileA($user)->with('stato')->find((int) $m[2]);
             if (! $s) {
                 return ['risposta' => 'Segnalazione non accessibile.', 'apri' => null];
@@ -135,6 +152,10 @@ class AzioniBot
                     'sim' => $this->senzaIntervento($s, $user, $m[3]),
                     'sol' => $this->sollecita($s, $user),
                     'txt' => $this->chiediTesto($s, $user, $m[3]),
+                    'chi' => $this->chiediTesto($s, $user, 'chi'),
+                    'chn' => $this->chiudi($s, $user, ''),
+                    'smi' => $this->menuSmista($s, $user),
+                    'sms' => $this->smista($s, $user, (int) $m[3]),
                 };
             } catch (ValidationException $e) {
                 return ['risposta' => Str::limit((string) collect($e->errors())->flatten()->first(), 190), 'apri' => null];
@@ -150,6 +171,23 @@ class AzioniBot
         $attesa = Cache::get($this->chiaveAttesa($user));
 
         return is_array($attesa) ? $attesa : null;
+    }
+
+    /**
+     * Foto senza didascalia mentre il bot aspetta (fine lavori, chiusura, «Aggiungi foto»):
+     * segnalazione e fase da usare, null se non c'è un'attesa che le accetta.
+     *
+     * @return array{id: int, fase: string}|null
+     */
+    public function fotoInAttesa(User $user): ?array
+    {
+        $attesa = $this->attesa($user);
+        if ($attesa === null || ! in_array($attesa['tipo'], self::ATTESE_CON_FOTO, true)) {
+            return null;
+        }
+        $lavoro = $attesa['tipo'] !== 'foto' || $user->hasRole('impresa') || $user->hasRole('operaio');
+
+        return ['id' => (int) $attesa['id'], 'fase' => $lavoro ? 'dopo' : 'prima'];
     }
 
     public function annullaAttesa(User $user): void
@@ -169,6 +207,9 @@ class AzioniBot
             return null;
         }
         Cache::forget($this->chiaveAttesa($user));
+        if ($attesa['tipo'] === 'foto') {
+            return null; // finite le foto: il messaggio vale per quello che è
+        }
 
         $s = Segnalazione::visibileA($user)->with('stato')->find((int) $attesa['id']);
         if (! $s) {
@@ -183,6 +224,8 @@ class AzioniBot
                 'rim' => $this->rimanda($s, $user, $testo),
                 'rp' => $this->esegui($s, $user, 'rifiuta_preventivo', ['nota' => $testo]),
                 'alt' => $this->esegui($s, $user, 'annulla', ['motivo' => 'altro', 'nota' => $testo]),
+                'chi' => $this->chiudi($s, $user, $testo),
+                'prev' => $this->preventivo($s, $user, $testo),
                 default => ['risposta' => 'Annullato.', 'apri' => null],
             };
         } catch (ValidationException $e) {
@@ -351,6 +394,9 @@ class AzioniBot
             'rim' => Gate::forUser($user)->allows('rimanda', $s),
             'rp' => $this->disponibili($s, $user)->has('rifiuta_preventivo'),
             'alt' => $this->disponibili($s, $user)->has('annulla'),
+            'chi' => $this->disponibili($s, $user)->has('chiudi'),
+            'prev' => $this->disponibili($s, $user)->has('presenta_preventivo'),
+            'foto' => ! $s->isChiusa(),
             default => false,
         };
         if (! $ammesso) {
@@ -358,10 +404,76 @@ class AzioniBot
         }
 
         Cache::put($this->chiaveAttesa($user), ['tipo' => $tipo, 'id' => $s->id_segnalazione], now()->addMinutes(30));
-        $this->telegram->sendMessage($user->telegram_chat_id, sprintf(self::RICHIESTE_TESTO[$tipo], $s->id_segnalazione),
-            [[$this->tasto('✖️ Annulla', 'ann')]]);
+        $id = $s->id_segnalazione;
+        $pulsanti = match ($tipo) {
+            'chi' => [[$this->tasto('✅ Chiudi ora', "chn:$id"), $this->tasto('✖️ Annulla', 'ann')]],
+            'foto' => [[$this->tasto('✅ Fatto', "apri:$id")]],
+            default => [[$this->tasto('✖️ Annulla', 'ann')]],
+        };
+        $this->telegram->sendMessage($user->telegram_chat_id, sprintf(self::RICHIESTE_TESTO[$tipo], $id), $pulsanti);
 
         return ['risposta' => '', 'apri' => null];
+    }
+
+    /** Chiusura del comune: nota facoltativa (le foto sono già arrivate durante l'attesa). */
+    private function chiudi(Segnalazione $s, User $user, string $nota): array
+    {
+        Cache::forget($this->chiaveAttesa($user));
+
+        return $this->esegui($s, $user, 'chiudi', $nota !== '' ? ['nota' => $nota] : []);
+    }
+
+    /** Preventivo della ditta: importo in testa («1.250,50 …» o «1250.50 …»), il resto è la descrizione. */
+    private function preventivo(Segnalazione $s, User $user, string $testo): array
+    {
+        if (preg_match('/^\s*(?:€\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:€|euro)?\s*(.*)$/isu', $testo, $m) !== 1) {
+            Cache::put($this->chiaveAttesa($user), ['tipo' => 'prev', 'id' => $s->id_segnalazione], now()->addMinutes(30));
+            $this->telegram->sendMessage($user->telegram_chat_id, 'Manca l\'importo: scrivilo all\'inizio, ad esempio «1250,50 sostituzione caldaia».',
+                [[$this->tasto('✖️ Annulla', 'ann')]]);
+
+            return ['risposta' => '', 'apri' => null];
+        }
+        // «1250.50» (un punto e 1-2 decimali) è decimale; altrimenti il punto separa le migliaia («1.250,50», «1.250»).
+        $importo = preg_match('/^\d+\.\d{1,2}$/', $m[1]) === 1
+            ? (float) $m[1]
+            : (float) str_replace(',', '.', str_replace('.', '', $m[1]));
+        $descrizione = trim($m[2]);
+
+        return $this->esegui($s, $user, 'presenta_preventivo', array_filter([
+            'importo_preventivo' => $importo,
+            'nota' => $descrizione !== '' ? 'Preventivo: '.$descrizione : null,
+        ], fn ($v) => $v !== null));
+    }
+
+    /** @return array{risposta: string, apri: ?int} */
+    private function menuSmista(Segnalazione $s, User $user): array
+    {
+        $servizio = app(SmistaSquadra::class);
+        $squadra = $servizio->squadraDiCapo($s, $user);
+        if ($squadra === null) {
+            return ['risposta' => 'Solo il caposquadra può smistare.', 'apri' => null];
+        }
+        $id = $s->id_segnalazione;
+        $righe = $servizio->membri($squadra)
+            ->map(fn (User $u) => [$this->tasto(((int) $u->id === (int) $s->id_operatore_assegnato ? '✓ ' : '').$u->name, "sms:$id:{$u->id}")])
+            ->values()->all();
+        $righe[] = [$this->tasto('⬅️ Torna a #'.$id, "apri:$id")];
+        $this->telegram->sendMessage($user->telegram_chat_id, 'A chi della squadra '.$squadra->nome.' passi #'.$id.'?', $righe);
+
+        return ['risposta' => '', 'apri' => null];
+    }
+
+    /** @return array{risposta: string, apri: ?int} */
+    private function smista(Segnalazione $s, User $user, int $idMembro): array
+    {
+        $servizio = app(SmistaSquadra::class);
+        $squadra = $servizio->squadraDiCapo($s, $user);
+        if ($squadra === null) {
+            return ['risposta' => 'Solo il caposquadra può smistare.', 'apri' => null];
+        }
+        $servizio->smista($s, $squadra, $user, $idMembro);
+
+        return ['risposta' => '👥 Lavoro passato.', 'apri' => $s->id_segnalazione];
     }
 
     /** @return array{risposta: string, apri: ?int} */

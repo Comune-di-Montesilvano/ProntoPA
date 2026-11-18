@@ -205,10 +205,13 @@ class DitteECanaliTest extends TestCase
             }
             $pulsanti = collect($request['reply_markup']['inline_keyboard'] ?? [])->flatten(1)->pluck('text')->values();
 
-            return str_contains($request['text'], 'I tuoi lavori')
+            // 1.0.15: la priorità sta nella seconda riga del testo, i pulsanti sono corti.
+            $testo = (string) $request['text'];
+
+            return str_contains($testo, 'I tuoi lavori')
                 && $pulsanti->count() === 2
-                && str_contains($pulsanti[0], 'Critica')
-                && str_contains($pulsanti[1], 'Alta');
+                && mb_strpos($testo, 'Critica') !== false
+                && mb_strpos($testo, 'Critica') < mb_strpos($testo, 'Alta');
         });
     }
 

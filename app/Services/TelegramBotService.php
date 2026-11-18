@@ -62,6 +62,48 @@ class TelegramBotService
         return $this->post('sendMessage', $payload);
     }
 
+    /**
+     * Foto in un album (1.0.15): una → sendPhoto, 2-10 → sendMediaGroup, oltre a gruppi da 10.
+     *
+     * @param  list<array{contenuto: string, didascalia: ?string}>  $foto
+     */
+    public function inviaFoto(string $chatId, array $foto): bool
+    {
+        if (! $this->isConfigured() || $foto === []) {
+            return false;
+        }
+
+        $ok = true;
+        foreach (array_chunk($foto, 10) as $gruppo) {
+            try {
+                if (count($gruppo) === 1) {
+                    $richiesta = Http::timeout(30)->attach('photo', $gruppo[0]['contenuto'], 'foto.jpg');
+                    $response = $richiesta->post($this->apiBaseUrl().'/sendPhoto', array_filter([
+                        'chat_id' => $chatId,
+                        'caption' => $gruppo[0]['didascalia'],
+                    ], fn ($v) => $v !== null));
+                } else {
+                    $richiesta = Http::timeout(30);
+                    $media = [];
+                    foreach ($gruppo as $i => $una) {
+                        $richiesta = $richiesta->attach('f'.$i, $una['contenuto'], 'f'.$i.'.jpg');
+                        $media[] = array_filter(['type' => 'photo', 'media' => 'attach://f'.$i, 'caption' => $una['didascalia']], fn ($v) => $v !== null);
+                    }
+                    $response = $richiesta->post($this->apiBaseUrl().'/sendMediaGroup', [
+                        'chat_id' => $chatId,
+                        'media' => json_encode($media),
+                    ]);
+                }
+                $ok = $ok && $response->successful() && (bool) $response->json('ok', false);
+            } catch (\Throwable $exception) {
+                Log::warning('Telegram invio foto fallito', ['error' => $this->senzaToken($exception->getMessage())]);
+                $ok = false;
+            }
+        }
+
+        return $ok;
+    }
+
     public function answerCallbackQuery(string $callbackQueryId, string $text): bool
     {
         if (! $this->isConfigured() || $callbackQueryId === '') {

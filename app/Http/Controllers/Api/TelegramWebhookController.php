@@ -10,6 +10,7 @@ use App\Models\Segnalazione;
 use App\Models\User;
 use App\Services\SegnalazioneWorkflowService;
 use App\Services\Telegram\AzioniBot;
+use App\Support\Segnalazioni\LetturaScheda;
 use App\Services\TelegramBotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -267,18 +268,27 @@ class TelegramWebhookController extends Controller
             return;
         }
 
+        // 1.0.15: nel testo due righe per segnalazione (titolo; sede · stato · dettaglio), i pulsanti restano corti.
+        (new \Illuminate\Database\Eloquent\Collection($segnalazioni->all()))->loadMissing(['plesso', 'stato']);
+        $righe = $segnalazioni->map(fn (Segnalazione $s) => '#'.$s->id_segnalazione.' · '.$this->titolo($s, 60)."\n"
+            .'   '.implode(' · ', array_unique(array_filter([
+                $s->plesso?->nomeLeggibile(),
+                $s->stato?->descrizione,
+                $coda($s),
+            ]))))->all();
+
         $pulsanti = $segnalazioni->map(fn (Segnalazione $s) => [[
-            'text' => trim('#'.$s->id_segnalazione.' · '.$this->titolo($s, 40).' · '.$coda($s), ' ·'),
+            'text' => '#'.$s->id_segnalazione.' · '.$this->titolo($s, 40),
             'callback_data' => 'apri:'.$s->id_segnalazione,
         ]])->values()->all();
 
-        $this->telegram->sendMessage($user->telegram_chat_id, $intestazione, $pulsanti);
+        $this->telegram->sendMessage($user->telegram_chat_id, $intestazione."\n\n".implode("\n\n", $righe), $pulsanti);
     }
 
     private function handleOpenCommand(User $user, int $idSegnalazione): void
     {
         $segnalazione = Segnalazione::visibileA($user)
-            ->with(['stato', 'tipologia', 'appalto.impresa', 'operatore', 'plesso'])
+            ->with(['stato', 'tipologia', 'appalto.impresa', 'operatore', 'plesso', 'utente'])
             ->find($idSegnalazione);
 
         if (! $segnalazione) {
@@ -288,25 +298,102 @@ class TelegramWebhookController extends Controller
 
         $id = $segnalazione->id_segnalazione;
         $keyboard = $this->azioni->pulsanti($segnalazione, $user);
-        $keyboard[] = [
+        $plesso = $segnalazione->plesso;
+        $naviga = $this->linkNaviga($segnalazione);
+        // Foto solo su richiesta (1.0.15): il tasto compare se ce ne sono, con quante.
+        $quanteFoto = $this->fotoVisibili($segnalazione)->count();
+        if ($quanteFoto > 0) {
+            $keyboard[] = [['text' => '🖼️ Vedi foto ('.$quanteFoto.')', 'callback_data' => 'fot:'.$id]];
+        }
+        $keyboard[] = array_values(array_filter([
+            $naviga ? ['text' => '🗺️ Naviga', 'url' => $naviga] : null,
             ['text' => '📝 Note', 'callback_data' => 'note:'.$id],
             ['text' => '⬅️ Lista', 'callback_data' => 'lista'],
-        ];
+        ]));
+
+        // Chi ha aperto e i suoi contatti: solo al comune, come nella scheda (1.0.15). La sede e il referente a tutti.
+        /** @var User|null $autore */
+        $autore = LetturaScheda::per($user) === 'gestore' ? $segnalazione->utente : null;
+        $scadenza = $segnalazione->data_scadenza_sla && ! $segnalazione->isChiusa()
+            ? \Illuminate\Support\Carbon::parse($segnalazione->data_scadenza_sla) : null;
 
         $message = implode("\n", array_filter([
             'Segnalazione #' . $id . ' · ' . $this->titolo($segnalazione, 120),
             'Stato: ' . ($segnalazione->stato?->descrizione ?? 'N/D'),
             'Tipologia: ' . ($segnalazione->tipologia?->nomeLeggibile() ?? 'N/D'),
-            $segnalazione->plesso ? 'Sede: ' . $segnalazione->plesso->nomeLeggibile() : null,
+            $scadenza ? 'Scadenza: ' . $scadenza->format('d/m/Y H:i') . ($scadenza->isPast() ? ' (superata)' : '') : null,
             'Operatore: ' . ($segnalazione->operatore?->name ?? 'Non assegnato'),
             $segnalazione->appalto?->impresa ? 'Impresa: ' . $segnalazione->appalto->impresa->ragione_sociale : null,
             '',
             Str::limit($segnalazione->testo_segnalazione, 600),
-            '',
-            'Per una foto: inviala con #' . $id . ' nella didascalia.',
+            $plesso || $segnalazione->ubicazione_tipo ? '' : null,
+            $plesso ? '📍 ' . $plesso->nomeLeggibile() . ($plesso->indirizzo ? ', ' . $plesso->indirizzo : '') : null,
+            $segnalazione->ubicazione_tipo ? '🚪 ' . $segnalazione->label_ubicazione : null,
+            $plesso?->referente ? '🙋 Referente: ' . $plesso->referente : null,
+            $plesso?->recapiti ? '📞 ' . $plesso->recapiti : null,
+            $autore ? '' : null,
+            $autore ? '👤 Aperta da ' . $autore->name . ($segnalazione->data_segnalazione ? ' il ' . $segnalazione->data_segnalazione->format('d/m/Y H:i') : '') : null,
+            $autore?->telefono ? '📞 ' . $autore->telefono : null,
+            $autore?->email ? '✉️ ' . $autore->email : null,
         ], fn ($riga) => $riga !== null));
 
         $this->telegram->sendMessage($user->telegram_chat_id, $message, $keyboard);
+    }
+
+    /**
+     * Foto della segnalazione inviabili: solo immagini, mai quelle in quarantena; prima quelle
+     * della segnalazione, poi quelle dopo l'intervento.
+     *
+     * @return \Illuminate\Support\Collection<int, AllegatoSegnalazione>
+     */
+    private function fotoVisibili(Segnalazione $segnalazione): \Illuminate\Support\Collection
+    {
+        return AllegatoSegnalazione::where('id_segnalazione', $segnalazione->id_segnalazione)
+            ->where('tipo', 'like', 'image/%')
+            ->where(fn ($q) => $q->whereNull('stato_scansione')->orWhere('stato_scansione', '!=', 'infetto'))
+            ->orderByRaw("CASE WHEN fase = 'dopo' THEN 1 ELSE 0 END")
+            ->orderBy('id_allegato')
+            ->get();
+    }
+
+    private function inviaFotoSegnalazione(User $user, int $idSegnalazione): void
+    {
+        $segnalazione = Segnalazione::visibileA($user)->find($idSegnalazione);
+        if (! $segnalazione) {
+            $this->telegram->sendMessage($user->telegram_chat_id, 'Segnalazione non trovata o non accessibile.');
+            return;
+        }
+
+        $disco = Storage::disk(Impostazione::get('allegati_storage_disk', 'local'));
+        $fasi = [];
+        $foto = $this->fotoVisibili($segnalazione)
+            ->filter(fn (AllegatoSegnalazione $a) => $disco->exists($a->percorso))
+            ->map(function (AllegatoSegnalazione $a) use ($disco, &$fasi, $idSegnalazione) {
+                $fase = $a->fase === 'dopo' ? 'dopo' : 'prima';
+                // Didascalia solo sulla prima foto di ogni gruppo.
+                $didascalia = isset($fasi[$fase]) ? null : ($fase === 'dopo' ? "#{$idSegnalazione} · dopo l'intervento" : "#{$idSegnalazione} · foto della segnalazione");
+                $fasi[$fase] = true;
+
+                return ['contenuto' => (string) $disco->get($a->percorso), 'didascalia' => $didascalia];
+            })->values()->all();
+
+        if ($foto === []) {
+            $this->telegram->sendMessage($user->telegram_chat_id, 'Nessuna foto per #'.$idSegnalazione.'.');
+            return;
+        }
+        $this->telegram->inviaFoto($user->telegram_chat_id, $foto);
+    }
+
+    /** Link a Maps per arrivare alla sede (coordinate, altrimenti indirizzo), come «Naviga» della scheda. */
+    private function linkNaviga(Segnalazione $segnalazione): ?string
+    {
+        $posizione = $segnalazione->posizione();
+        if ($posizione !== null) {
+            return 'https://www.google.com/maps/search/?api=1&query=' . $posizione['lat'] . ',' . $posizione['lng'];
+        }
+        $indirizzo = $segnalazione->plesso?->indirizzo;
+
+        return $indirizzo ? 'https://www.google.com/maps/search/?api=1&query=' . urlencode($indirizzo) : null;
     }
 
     private function handleCallbackQuery(array $callbackQuery): void
@@ -334,6 +421,11 @@ class TelegramWebhookController extends Controller
         if (preg_match('/^note:(\d+)$/', $data, $m) === 1) {
             $this->telegram->answerCallbackQuery($callbackId, '');
             $this->handleNoteCommand($user, (int) $m[1], '');
+            return;
+        }
+        if (preg_match('/^fot:(\d+)$/', $data, $m) === 1) {
+            $this->telegram->answerCallbackQuery($callbackId, '');
+            $this->inviaFotoSegnalazione($user, (int) $m[1]);
             return;
         }
         if ($data === 'lista') {
@@ -520,12 +612,12 @@ class TelegramWebhookController extends Controller
         $chatId = (string) data_get($message, 'chat.id', '');
         $caption = trim((string) data_get($message, 'caption', ''));
 
-        // Durante "Fine lavori" (1.0.14) la foto senza didascalia va a quella segnalazione, come foto "dopo".
-        $attesa = $this->azioni->attesa($user);
-        $perFineLavori = $attesa !== null && $attesa['tipo'] === 'fl' && preg_match('/#?(\d+)/', $caption) !== 1;
+        // Durante Fine lavori, Chiudi o «Aggiungi foto» (1.0.14-1.0.15) la foto senza didascalia va a quella segnalazione.
+        $inAttesa = preg_match('/#?(\d+)/', $caption) !== 1 ? $this->azioni->fotoInAttesa($user) : null;
+        $perFineLavori = $inAttesa !== null;
 
-        if ($perFineLavori) {
-            $idSegnalazione = (int) $attesa['id'];
+        if ($inAttesa !== null) {
+            $idSegnalazione = $inAttesa['id'];
         } elseif (preg_match('/#?(\d+)/', $caption, $matches) === 1) {
             $idSegnalazione = (int) $matches[1];
         } else {
@@ -576,7 +668,7 @@ class TelegramWebhookController extends Controller
             $mime = 'image/png';
         }
 
-        $fase = $user->hasRole('impresa') || $perFineLavori ? 'dopo' : 'prima';
+        $fase = $inAttesa['fase'] ?? ($user->hasRole('impresa') ? 'dopo' : 'prima');
 
         AllegatoSegnalazione::create([
             'id_segnalazione'     => $segnalazione->id_segnalazione,
@@ -591,7 +683,7 @@ class TelegramWebhookController extends Controller
         $reply = "Foto caricata con successo per la segnalazione #{$segnalazione->id_segnalazione} (Fase: " . ($fase === 'dopo' ? 'Dopo' : 'Prima') . ").";
 
         if ($perFineLavori) {
-            $reply = "📷 Foto aggiunta a #{$segnalazione->id_segnalazione}. Mandane altre o scrivi cosa è stato fatto per finire.";
+            $reply = "📷 Foto aggiunta a #{$segnalazione->id_segnalazione}. Puoi mandarne altre.";
         } elseif ($user->hasRole('impresa')) {
             $reply .= "\n\nPer comunicare la fine dei lavori apri la segnalazione e premi 🏁 Fine lavori, oppure dalla scheda:\n" . route('segnalazioni.show', $segnalazione->id_segnalazione);
         }
