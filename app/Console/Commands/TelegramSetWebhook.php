@@ -29,6 +29,7 @@ class TelegramSetWebhook extends Command
         }
 
         if ($telegram->setWebhook($url, $secret)) {
+            $telegram->impostaComandi();
             $this->info('Webhook Telegram registrato: ' . $url);
             return self::SUCCESS;
         }

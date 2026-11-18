@@ -70,6 +70,9 @@ class TelegramWebhookController extends Controller
         }
 
         $user = User::where('telegram_chat_id', $chatId)->where('attivo', true)->first(); // disattivato = non collegato
+        if ($user && ! $user->usaTelegram()) {
+            $user = null; // scuole e segnalatori: Telegram non è per loro (1.0.9)
+        }
 
         if (! $user) {
             $this->telegram->sendMessage($chatId, $this->buildUnlinkedMessage());
@@ -128,6 +131,11 @@ class TelegramWebhookController extends Controller
 
         if (! $user) {
             $this->telegram->sendMessage($chatId, 'Token non valido o scaduto. Genera un nuovo collegamento dal profilo utente.');
+            return;
+        }
+
+        if (! $user->usaTelegram()) {
+            $this->telegram->sendMessage($chatId, 'Il bot è riservato a chi lavora le segnalazioni (comune, operai, ditte).');
             return;
         }
 
@@ -215,6 +223,9 @@ class TelegramWebhookController extends Controller
         $data = (string) data_get($callbackQuery, 'data', '');
 
         $user = User::where('telegram_chat_id', $chatId)->where('attivo', true)->first(); // disattivato = non collegato
+        if ($user && ! $user->usaTelegram()) {
+            $user = null; // scuole e segnalatori: Telegram non è per loro (1.0.9)
+        }
 
         if (! $user) {
             $this->telegram->answerCallbackQuery($callbackId, 'Account Telegram non collegato.');

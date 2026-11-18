@@ -46,6 +46,7 @@
     </x-slot>
 
     <div class="flex flex-col gap-4">
+        <x-pa.invito-telegram />
         @can('gestisci-organizzazione')
             @include('organizzazione._orfane', [...\App\Http\Controllers\Organizzazione\TipologieGestoriController::datiOrfane(app(\App\Services\Segnalazioni\CoperturaTipologie::class)), 'compatto' => true])
         @endcan

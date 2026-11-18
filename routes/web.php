@@ -344,6 +344,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::post('/profile/telegram/link', [TelegramAccountController::class, 'store'])->name('profile.telegram.store');
     Route::delete('/profile/telegram/link', [TelegramAccountController::class, 'destroy'])->name('profile.telegram.destroy');
+    Route::post('/profile/telegram/ignora', [TelegramAccountController::class, 'ignora'])->name('profile.telegram.ignora');
 });
 
 require __DIR__.'/auth.php';

@@ -99,7 +99,10 @@ class IntegrazioniTest extends TestCase
         $this->assertFalse(Cache::get('integrazioni:prova:telegram')['ok']);
 
         Impostazione::set('telegram_bot_token', 'abc');
-        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['username' => 'prontopa_bot']])]);
+        Http::fake([
+            'api.telegram.org/*/getMe' => Http::response(['ok' => true, 'result' => ['username' => 'prontopa_bot']]),
+            'api.telegram.org/*/getWebhookInfo' => Http::response(['ok' => true, 'result' => ['url' => 'https://prontopa.ente.it/api/telegram/webhook']]),
+        ]);
         $this->actingAs($this->admin)->post(route('admin.integrazioni.prova', 'telegram'));
         $esito = Cache::get('integrazioni:prova:telegram');
         $this->assertTrue($esito['ok']);
@@ -126,13 +129,98 @@ class IntegrazioniTest extends TestCase
 
     public function test_salvataggio_cancella_l_esito_della_prova(): void
     {
-        Cache::put('integrazioni:prova:telegram', ['ok' => false, 'messaggio' => 'x', 'quando' => now()->toIso8601String()], 600);
-        Cache::put('integrazioni:prova:ai', ['ok' => true, 'messaggio' => 'y', 'quando' => now()->toIso8601String()], 600);
+        Cache::put('integrazioni:prova:ai', ['ok' => false, 'messaggio' => 'x', 'quando' => now()->toIso8601String()], 600);
+        Cache::put('integrazioni:prova:spid', ['ok' => true, 'messaggio' => 'y', 'quando' => now()->toIso8601String()], 600);
 
-        $this->actingAs($this->admin)->patch(route('admin.integrazioni.update', 'telegram'), ['impostazioni' => ['telegram_bot_token' => 'nuovo']])
+        $this->actingAs($this->admin)->patch(route('admin.integrazioni.update', 'ai'), ['impostazioni' => ['ai_modello' => 'nuovo']])
             ->assertSessionHasNoErrors();
 
-        $this->assertNull(Cache::get('integrazioni:prova:telegram'));
-        $this->assertNotNull(Cache::get('integrazioni:prova:ai'));
+        $this->assertNull(Cache::get('integrazioni:prova:ai'));
+        $this->assertNotNull(Cache::get('integrazioni:prova:spid'));
+    }
+
+    public function test_prova_telegram_dice_se_il_bot_non_e_collegato(): void
+    {
+        Impostazione::set('telegram_bot_token', 'abc');
+        Http::fake([
+            'api.telegram.org/*/getMe' => Http::response(['ok' => true, 'result' => ['username' => 'prontopa_bot']]),
+            'api.telegram.org/*/getWebhookInfo' => Http::response(['ok' => true, 'result' => ['url' => '']]),
+        ]);
+        $this->actingAs($this->admin)->post(route('admin.integrazioni.prova', 'telegram'));
+        $esito = Cache::get('integrazioni:prova:telegram');
+        $this->assertFalse($esito['ok']);
+        $this->assertStringContainsString('Salva', $esito['messaggio']);
+    }
+
+    public function test_prova_telegram_riporta_l_errore_di_consegna(): void
+    {
+        Impostazione::set('telegram_bot_token', 'abc');
+        Http::fake([
+            'api.telegram.org/*/getMe' => Http::response(['ok' => true, 'result' => ['username' => 'prontopa_bot']]),
+            'api.telegram.org/*/getWebhookInfo' => Http::response(['ok' => true, 'result' => [
+                'url' => 'https://prontopa.ente.it/api/telegram/webhook', 'last_error_message' => 'Connection timed out',
+            ]]),
+        ]);
+        $this->actingAs($this->admin)->post(route('admin.integrazioni.prova', 'telegram'));
+        $esito = Cache::get('integrazioni:prova:telegram');
+        $this->assertFalse($esito['ok']);
+        $this->assertStringContainsString('Connection timed out', $esito['messaggio']);
+    }
+
+    private function fakeTelegram(array $getMe = ['ok' => true, 'result' => ['username' => 'prontopa_bot']], int $statoGetMe = 200): void
+    {
+        Http::fake([
+            'api.telegram.org/*/getMe' => Http::response($getMe, $statoGetMe),
+            'api.telegram.org/*/setWebhook' => Http::response(['ok' => true, 'result' => true]),
+            'api.telegram.org/*/setMyCommands' => Http::response(['ok' => true, 'result' => true]),
+            'api.telegram.org/*/getWebhookInfo' => Http::response(['ok' => true, 'result' => ['url' => 'https://prontopa.ente.it/api/telegram/webhook']]),
+        ]);
+    }
+
+    public function test_salva_telegram_collega_tutto_in_un_colpo(): void
+    {
+        $this->fakeTelegram();
+
+        $this->actingAs($this->admin)->patch(route('admin.integrazioni.update', 'telegram'), ['impostazioni' => ['telegram_bot_token' => '123:abc']])
+            ->assertRedirect()->assertSessionHas('success');
+
+        $this->assertSame('prontopa_bot', Impostazione::get('telegram_bot_username'));
+        $segreto = Impostazione::get('telegram_webhook_secret');
+        $this->assertNotEmpty($segreto);
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/setWebhook')
+            && $r['url'] === 'https://prontopa.ente.it/api/telegram/webhook'
+            && $r['secret_token'] === $segreto);
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/setMyCommands')
+            && collect($r['commands'])->pluck('command')->all() === ['lista', 'oggi', 'apri', 'chiudi', 'note', 'priorita']);
+        $this->assertTrue(Cache::get('integrazioni:prova:telegram')['ok']);
+    }
+
+    public function test_salva_telegram_con_token_non_valido_non_collega(): void
+    {
+        $this->fakeTelegram(['ok' => false, 'description' => 'Unauthorized'], 401);
+
+        $this->actingAs($this->admin)->patch(route('admin.integrazioni.update', 'telegram'), ['impostazioni' => ['telegram_bot_token' => 'sbagliato']])
+            ->assertRedirect()->assertSessionHas('error');
+
+        Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/setWebhook'));
+        $this->assertFalse(Cache::get('integrazioni:prova:telegram')['ok']);
+    }
+
+    public function test_salva_telegram_senza_token_non_chiama_telegram(): void
+    {
+        Http::fake();
+        $this->actingAs($this->admin)->patch(route('admin.integrazioni.update', 'telegram'), ['impostazioni' => ['telegram_bot_token' => '']])
+            ->assertRedirect();
+        Http::assertNothingSent();
+    }
+
+    public function test_pagina_mostra_guida_telegram_e_indirizzo_webhook(): void
+    {
+        $this->actingAs($this->admin)->get(route('admin.integrazioni'))->assertOk()
+            ->assertSee('@BotFather')
+            ->assertSee('https://prontopa.ente.it/api/telegram/webhook')
+            ->assertSee('menu dei comandi')
+            ->assertDontSee('name="impostazioni[telegram_bot_username]"', false)
+            ->assertDontSee('name="impostazioni[telegram_webhook_secret]"', false);
     }
 }

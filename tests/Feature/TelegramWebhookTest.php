@@ -41,6 +41,7 @@ class TelegramWebhookTest extends TestCase
             'telegram_link_token' => 'ABC123TOKEN',
             'telegram_link_expires_at' => now()->addHour(),
         ]);
+        $user->syncRoles(['operaio']);
 
         $response = $this->postJson('/api/telegram/webhook', [
             'message' => [
@@ -66,8 +67,9 @@ class TelegramWebhookTest extends TestCase
         $user = User::factory()->create([
             'telegram_chat_id' => '112233',
             'telegram_verified_at' => now(),
+            'supervisore_segnalazioni' => true,
         ]);
-        $user->syncRoles(['segnalatore']);
+        $user->syncRoles(['gestore']);
 
         Segnalazione::create([
             'id_tipologia_segnalazione' => 1,

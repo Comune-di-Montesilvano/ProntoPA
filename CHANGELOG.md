@@ -4,6 +4,26 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.9] - 2026-11-18
+
+### Aggiunto
+- Integrazioni → Telegram: basta incollare il token e premere Salva. ProntoPA legge il nome del bot,
+  genera il segreto, collega il bot (prima serviva la console: `telegram:set-webhook`), imposta il
+  menu dei comandi (prima /setcommands a mano da BotFather) e fa la prova. Guida passo passo nella
+  pagina, con l'indirizzo che deve essere pubblico in HTTPS.
+- «Prova adesso» di Telegram controlla anche il collegamento: bot non collegato, collegato a un altro
+  indirizzo o messaggi non consegnati (con l'errore riportato da Telegram).
+- Elenchi di gestori, operai e ditte: invito a collegare Telegram con «Collega Telegram» (apre il bot,
+  basta premere Avvia) e «Ignora» (non lo ripropone per 30 giorni, su ogni dispositivo).
+
+### Modificato
+- Telegram solo per chi lavora le segnalazioni (gestori, operai, ditte; admin per provarlo): scuole e
+  segnalatori non vedono più la sezione nel profilo, il bot non li collega né risponde ai loro comandi
+  e non ricevono più avvisi su Telegram (restano le email).
+
+### Corretto
+- Profilo → Telegram: il nome del bot compariva come codice (`{{ ltrim($botUsername, '@') }}`).
+
 ## [1.0.8] - 2026-11-17
 
 ### Corretto
