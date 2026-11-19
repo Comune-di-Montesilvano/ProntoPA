@@ -304,6 +304,7 @@ Heredoc Bash altera i backslash (`\App\...`) → modifiche PHP con Edit tool o u
 - Plesso nelle select: `Plesso::etichetta()` / `dettagli()` (ordine scuola da codice, codice, indirizzo). Sedi con storico non si eliminano: `admin.sedi.unisci`.
 - **CSP `img-src 'self' data: https:`**: niente `blob:` → anteprime di file locali con `FileReader.readAsDataURL`, non `URL.createObjectURL`
 - Mappa Leaflet nuova → `@include('partials.strati-mappa')` dopo leaflet.js + `window.paStratiMappa(mappa)` (Strade/Satellite, scelta in localStorage `pa-mappa-sfondo`)
+- Foto mostrate → `segnalazioni/scheda/_miniatura` (rotta inline `segnalazioni.allegati.foto`, `AllegatoSegnalazione::isFotoVisibile()`, carosello `resources/js/galleria.js` su `a[data-galleria]`, 1.0.17)
 - Allegati foto → `<x-pa.foto id=… mime=…>`: "Scatta foto" (`capture`) + galleria, file sommati via DataTransfer nell'input vero `allegati[]`
 - Email: Laravel Notifications → Mailpit dev, SMTP/PEC prod
 

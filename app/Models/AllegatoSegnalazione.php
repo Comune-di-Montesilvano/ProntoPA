@@ -53,6 +53,15 @@ class AllegatoSegnalazione extends Model
         });
     }
 
+    /** Formati che il browser mostra da sé (1.0.17). Mai SVG: può contenere script. */
+    public const TIPI_FOTO_INLINE = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
+
+    /** Foto apribile nel browser e nel carosello: formato raster e non in quarantena. */
+    public function isFotoVisibile(): bool
+    {
+        return in_array(strtolower((string) $this->tipo), self::TIPI_FOTO_INLINE, true) && ! $this->isInfetto();
+    }
+
     public function isInfetto(): bool
     {
         return $this->stato_scansione === 'infetto';

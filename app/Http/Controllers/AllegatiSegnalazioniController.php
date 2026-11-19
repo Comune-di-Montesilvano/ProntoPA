@@ -81,6 +81,22 @@ class AllegatiSegnalazioniController extends Controller
         return Storage::disk($this->disk())->download($allegato->percorso, $allegato->nome_originale);
     }
 
+    /** Foto aperta nel browser (1.0.17): stessa autorizzazione del download, ma inline e solo formati raster. */
+    public function foto(Segnalazione $segnalazione, AllegatoSegnalazione $allegato): StreamedResponse
+    {
+        $this->authorize('view', $segnalazione);
+        abort_if($allegato->id_segnalazione !== $segnalazione->id_segnalazione, 404);
+        abort_if($allegato->isInfetto(), 403, 'File in quarantena: rilevato come infetto dalla scansione antivirus.');
+        abort_unless($allegato->isFotoVisibile(), 404);
+        abort_unless(Storage::disk($this->disk())->exists($allegato->percorso), 404);
+
+        return Storage::disk($this->disk())->response($allegato->percorso, $allegato->nome_originale, [
+            'Content-Type' => strtolower((string) $allegato->tipo),
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=3600',
+        ], 'inline');
+    }
+
     // ── Elimina allegato ──────────────────────────────────────────────────────
 
     public function destroy(Segnalazione $segnalazione, AllegatoSegnalazione $allegato): RedirectResponse

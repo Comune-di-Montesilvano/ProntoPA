@@ -485,3 +485,31 @@
 @media (max-width: 1535px) {
   .pa-legenda { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 }
+
+/* Carosello delle foto (1.0.17, resources/js/galleria.js) */
+.pa-galleria { position: fixed; inset: 0; z-index: 80; background: rgb(2 6 23 / .97); backdrop-filter: blur(6px); display: flex;
+    align-items: center; justify-content: center; padding: 3.5rem .5rem 1rem; color: #fff; }
+.pa-galleria[hidden] { display: none; }
+html.pa-galleria-aperta { overflow: hidden; }
+.pa-galleria-barra { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center;
+    justify-content: space-between; gap: .5rem; padding: .5rem .75rem; font-size: .875rem; }
+.pa-galleria-azioni { display: flex; gap: .25rem; }
+.pa-galleria-tasto { display: inline-flex; align-items: center; gap: .4rem; min-height: 2.5rem; min-width: 2.5rem;
+    justify-content: center; padding: 0 .75rem; border-radius: .375rem; color: #fff; font-weight: 600;
+    background: rgb(255 255 255 / .12); }
+.pa-galleria-tasto:hover, .pa-galleria-tasto:focus-visible { background: rgb(255 255 255 / .25); }
+.pa-galleria-figura { margin: 0; display: flex; flex-direction: column; align-items: center; gap: .5rem;
+    max-width: 100%; max-height: 100%; }
+.pa-galleria-figura img { max-width: min(100%, 90vw); max-height: calc(100vh - 7rem); object-fit: contain;
+    border-radius: .25rem; background: #0f172a; }
+.pa-galleria-figura figcaption { font-size: .875rem; color: rgb(255 255 255 / .8); text-align: center; }
+.pa-galleria-freccia { position: absolute; top: 50%; transform: translateY(-50%); width: 3rem; height: 3rem;
+    border-radius: 9999px; background: rgb(255 255 255 / .14); color: #fff; font-size: 1.25rem; }
+.pa-galleria-freccia:hover, .pa-galleria-freccia:focus-visible { background: rgb(255 255 255 / .3); }
+.pa-galleria-freccia[hidden] { display: none; }
+.pa-galleria-prec { left: .5rem; }
+.pa-galleria-succ { right: .5rem; }
+@media (max-width: 640px) {
+    .pa-galleria-testo { display: none; }
+    .pa-galleria-freccia { width: 2.5rem; height: 2.5rem; top: auto; bottom: 1rem; transform: none; }
+}

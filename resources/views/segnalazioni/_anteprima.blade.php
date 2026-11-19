@@ -6,7 +6,7 @@
         ? ($segnalazione->nomeAssegnatario() ?? ($stato === \App\Enums\SegnalazioneStato::NUOVA ? 'da assegnare' : null))
         : null;
     $foto = $segnalazione->allegati
-        ->filter(fn ($a) => $a->fase === 'prima' && str_starts_with((string) $a->tipo, 'image/') && ! $a->isInfetto());
+        ->filter(fn ($a) => $a->fase === 'prima' && $a->isFotoVisibile());
     $volte = $lettura === 'gestore' ? $segnalazione->volteSegnalata() : 1;
 @endphp
 <div class="pa-anteprima-corpo">
@@ -45,7 +45,7 @@
     @if($foto->isNotEmpty())
         <div class="pa-anteprima-foto">
             @foreach($foto->take(3) as $allegato)
-                <img src="{{ route('segnalazioni.allegati.download', [$segnalazione->id_segnalazione, $allegato->id_allegato]) }}"
+                <img src="{{ route('segnalazioni.allegati.foto', [$segnalazione->id_segnalazione, $allegato->id_allegato]) }}"
                      alt="{{ $allegato->nome_originale }}" loading="lazy">
             @endforeach
             @if($foto->count() > 3)<span>+{{ $foto->count() - 3 }}</span>@endif

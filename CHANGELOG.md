@@ -4,6 +4,14 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.17] - 2026-11-19
+
+### Aggiunto
+- Foto delle segnalazioni aperte nella stessa pagina in un carosello (frecce, scorrimento col dito,
+  tastiera, Esc), senza scaricarle; «Scarica» resta nel carosello per l'originale.
+- Rotta `segnalazioni.allegati.foto`: foto servite inline (solo JPEG/PNG/GIF/WebP/AVIF, mai SVG;
+  `nosniff`), stesse regole del download (visibilità, quarantena).
+
 ## [1.0.16] - 2026-11-18
 
 ### Aggiunto
