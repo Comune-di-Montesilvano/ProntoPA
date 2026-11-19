@@ -64,10 +64,8 @@
                             <div class="mt-2 flex flex-wrap items-center gap-3">
                                 @if($allegato->isInfetto())
                                     <span class="text-sm pa-testo-rose font-semibold">{{ $allegato->nome_originale }} — infetto, in quarantena</span>
-                                @elseif(str_starts_with((string) $allegato->tipo, 'image/'))
-                                    <a href="{{ $url }}" class="block overflow-hidden rounded-md border border-[var(--slate-200)]">
-                                        <img src="{{ $url }}" alt="{{ $allegato->nome_originale }}" loading="lazy" class="h-24 w-32 object-cover">
-                                    </a>
+                                @elseif($allegato->isFotoVisibile())
+                                    @include('segnalazioni.scheda._miniatura', ['classe' => 'h-24 w-32 object-cover'])
                                 @else
                                     <a href="{{ $url }}" class="text-sm font-semibold text-[var(--ente-primary)] underline">{{ $allegato->nome_originale }}</a>
                                 @endif

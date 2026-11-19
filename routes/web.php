@@ -93,6 +93,9 @@ Route::middleware('auth')->group(function () {
     Route::get('segnalazioni/{segnalazione}/allegati/{allegato}/download', [AllegatiSegnalazioniController::class, 'download'])
         ->name('segnalazioni.allegati.download');
 
+    Route::get('segnalazioni/{segnalazione}/allegati/{allegato}/foto', [AllegatiSegnalazioniController::class, 'foto'])
+        ->name('segnalazioni.allegati.foto');
+
     Route::delete('segnalazioni/{segnalazione}/allegati/{allegato}', [AllegatiSegnalazioniController::class, 'destroy'])
         ->name('segnalazioni.allegati.destroy');
 
