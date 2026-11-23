@@ -24,7 +24,10 @@ class DelegheScuolaController extends Controller
             ->where('attivo', true)
             ->where('richieste_delega_spid', true)
             ->whereHas('plessi')
-            ->where(fn ($w) => $w->where('descrizione', 'like', "%{$q}%")->orWhere('codice_meccanografico', 'like', "%{$q}%"))
+            // anche codice o nome di un plesso: chi conosce solo il codice della propria sede
+            ->where(fn ($w) => $w->where('descrizione', 'like', "%{$q}%")
+                ->orWhere('codice_meccanografico', 'like', "%{$q}%")
+                ->orWhereHas('plessi', fn ($p) => $p->where('codice_meccanografico', 'like', "%{$q}%")->orWhere('nome', 'like', "%{$q}%")))
             ->orderBy('descrizione')
             ->limit(30)
             ->get();
@@ -38,12 +41,16 @@ class DelegheScuolaController extends Controller
 
     public function create(Request $request, Istituto $istituto): View
     {
-        abort_unless($request->user()->isSpid(), 403);
+        $user = $request->user();
+        abort_unless($user->isSpid(), 403);
         abort_unless($istituto->accettaRichiesteSpid() && $istituto->plessi()->exists(), 404);
 
         return view('scuola.deleghe.create', [
             'istituto' => $istituto,
             'plessi' => $istituto->plessi()->orderBy('nome')->get(),
+            'copertura' => $this->deleghe->copertura($istituto, (string) $user->codice_fiscale, $user->id),
+            'inAttesa' => Delega::where('user_id', $user->id)->where('id_istituto', $istituto->id_istituto)
+                ->where('stato', Delega::RICHIESTA)->exists(),
         ]);
     }
 

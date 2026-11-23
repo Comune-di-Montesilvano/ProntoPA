@@ -55,6 +55,58 @@ class AreaDelegatoTest extends TestCase
             ->assertDontSee('IC PEIC000000');
     }
 
+    public function test_ricerca_per_codice_o_nome_di_un_plesso(): void
+    {
+        $this->istitutoConPlessi('PEIC828004');
+        $this->istitutoConPlessi('PEIC999009');
+
+        // codice del plesso 2 (non della sede): 'PEIC8280' + '2'
+        $this->actingAs($this->utenteSpid())->get(route('scuola.deleghe.index', ['q' => 'peic82802']))
+            ->assertOk()
+            ->assertSee('IC PEIC828004')
+            ->assertDontSee('IC PEIC999009');
+
+        $this->actingAs($this->utenteSpid('VRDLGU75B02H501K'))->get(route('scuola.deleghe.index', ['q' => 'Plesso 2 PEIC999009']))
+            ->assertSee('IC PEIC999009')
+            ->assertDontSee('IC PEIC828004');
+    }
+
+    public function test_form_segna_plessi_gia_delegati_e_in_attesa(): void
+    {
+        $ist = $this->istitutoConPlessi(plessi: 3);
+        [$p1, $p2, $p3] = $this->idPlessi($ist);
+        $user = $this->utenteSpid();
+        $this->delega($user, $ist, $p1);
+        // pre-delega admin non ancora agganciata (user_id null) per lo stesso codice fiscale
+        Delega::create([
+            'codice_fiscale' => $user->codice_fiscale, 'id_istituto' => $ist->id_istituto, 'id_plesso' => $p2,
+            'gruppo_richiesta' => 'g', 'stato' => Delega::ATTIVA, 'valida_fino_at' => now()->addYear(),
+        ]);
+
+        $this->actingAs($user)->get(route('scuola.deleghe.create', $ist))
+            ->assertOk()
+            ->assertSee('data-gia-delegato="'.$p1.'"', false)
+            ->assertSee('data-gia-delegato="'.$p2.'"', false)
+            ->assertDontSee('data-gia-delegato="'.$p3.'"', false)
+            ->assertSee('già delegato');
+    }
+
+    public function test_richiesta_salta_plessi_di_una_pre_delega_non_agganciata(): void
+    {
+        $ist = $this->istitutoConPlessi();
+        [$p1, $p2] = $this->idPlessi($ist);
+        $user = $this->utenteSpid();
+        Delega::create([
+            'codice_fiscale' => $user->codice_fiscale, 'id_istituto' => $ist->id_istituto, 'id_plesso' => $p1,
+            'gruppo_richiesta' => 'g', 'stato' => Delega::ATTIVA, 'valida_fino_at' => now()->addYear(),
+        ]);
+
+        $this->actingAs($user)->post(route('scuola.deleghe.store', $ist), ['plessi' => [$p1, $p2]])
+            ->assertRedirect(route('scuola.deleghe.index'));
+
+        $this->assertSame([$p2], Delega::where('stato', Delega::RICHIESTA)->pluck('id_plesso')->map(fn ($id) => (int) $id)->all());
+    }
+
     public function test_richiesta_dal_form(): void
     {
         $ist = $this->istitutoConPlessi();

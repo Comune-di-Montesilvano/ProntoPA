@@ -49,10 +49,25 @@ class DelegheController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $cf = strtoupper(trim((string) $request->query('codice_fiscale', '')));
+        $cf = preg_match('/^[A-Z0-9]{16}$/', $cf) === 1 ? $cf : '';
+
+        // Deleghe attive già intestate a quel codice fiscale, per istituto:
+        // plessi da mostrare spuntati e non selezionabili.
+        $coperti = $cf === '' ? collect() : Delega::attive()->where('codice_fiscale', $cf)->get(['id_istituto', 'id_plesso'])
+            ->groupBy('id_istituto')
+            ->map(fn ($righe) => [
+                'intero' => $righe->contains(fn (Delega $d) => $d->id_plesso === null),
+                'plessi' => $righe->pluck('id_plesso')->filter()->map(fn ($id) => (int) $id)->all(),
+            ]);
+
         return view('admin.deleghe.create', [
             'istituti' => Istituto::where('attivo', true)->whereHas('plessi')->with('plessi')->orderBy('descrizione')->get(),
+            'codiceFiscale' => $cf,
+            'idIstituto' => (string) $request->integer('id_istituto') ?: '',
+            'coperti' => $coperti,
         ]);
     }
 
@@ -67,7 +82,7 @@ class DelegheController extends Controller
         ], ['codice_fiscale.regex' => 'Codice fiscale di 16 caratteri.']);
 
         try {
-            $this->deleghe->predelega(
+            $esclusi = $this->deleghe->predelega(
                 $data['codice_fiscale'],
                 Istituto::findOrFail($data['id_istituto']),
                 array_map('intval', $data['plessi'] ?? []),
@@ -78,7 +93,12 @@ class DelegheController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('admin.deleghe.index')->with('success', 'Pre-delega creata: sarà agganciata al primo accesso SPID della persona.');
+        $messaggio = 'Pre-delega creata: sarà agganciata al primo accesso SPID della persona.';
+        if ($esclusi > 0) {
+            $messaggio .= ' Saltat'.($esclusi === 1 ? 'o 1 plesso già delegato' : "i {$esclusi} plessi già delegati").'.';
+        }
+
+        return redirect()->route('admin.deleghe.index')->with('success', $messaggio);
     }
 
     public function attiva(Request $request, string $gruppo): RedirectResponse

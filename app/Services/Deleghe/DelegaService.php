@@ -98,21 +98,13 @@ class DelegaService
         }
 
         $idPlessi = $this->plessiDellIstituto($istituto, $idPlessi);
+        $copertura = $this->copertura($istituto, (string) $user->codice_fiscale, $user->id);
 
-        if (Delega::attive()->where('user_id', $user->id)->where('id_istituto', $istituto->id_istituto)->whereNull('id_plesso')->exists()) {
+        if ($copertura['intero']) {
             throw new RichiestaDelegaRifiutata("Hai già una delega attiva per tutto l'istituto.");
         }
 
-        $esclusi = 0;
-        if ($idPlessi !== []) {
-            $miei = Delega::plessiCopertiDa($user)->pluck('id_plesso')->map(fn ($id) => (int) $id)->all();
-            $restanti = array_values(array_diff($idPlessi, $miei));
-            $esclusi = count($idPlessi) - count($restanti);
-            if ($restanti === []) {
-                throw new RichiestaDelegaRifiutata('Hai già una delega attiva per i plessi selezionati.');
-            }
-            $idPlessi = $restanti;
-        }
+        [$idPlessi, $esclusi] = $this->togliCoperti($idPlessi, $copertura['plessi'], 'Hai già una delega attiva per i plessi selezionati.');
 
         $gruppo = (string) Str::uuid();
 
@@ -465,13 +457,23 @@ class DelegaService
      * Delega decisa dall'ente (go-live, casi noti): attiva subito, nessuna
      * email alla segreteria; agganciata al primo accesso SPID di quel CF.
      *
+     * Salta i plessi già delegati a quella persona (anche da una delega chiesta da
+     * lei o da una pre-delega non ancora agganciata): restituisce quanti.
+     *
      * @param list<int> $idPlessi vuoto = tutto l'istituto
      */
-    public function predelega(string $codiceFiscale, Istituto $istituto, array $idPlessi, string $motivo, User $admin): void
+    public function predelega(string $codiceFiscale, Istituto $istituto, array $idPlessi, string $motivo, User $admin): int
     {
         $cf = strtoupper(trim($codiceFiscale));
         $idPlessi = $this->plessiDellIstituto($istituto, $idPlessi);
         $user = User::where('codice_fiscale', $cf)->where('auth_source', 'spid')->first();
+
+        $copertura = $this->copertura($istituto, $cf, $user?->id);
+        if ($copertura['intero']) {
+            throw new RichiestaDelegaRifiutata("La persona ha già una delega attiva per tutto l'istituto.");
+        }
+        [$idPlessi, $esclusi] = $this->togliCoperti($idPlessi, $copertura['plessi'], 'La persona ha già una delega attiva per i plessi selezionati.');
+
         $gruppo = (string) Str::uuid();
         $validaFino = now()->addMonthsNoOverflow($this->regola('deleghe_mesi_validita'));
 
@@ -496,6 +498,56 @@ class DelegaService
                 }
             }
         });
+
+        return $esclusi;
+    }
+
+    /**
+     * Deleghe attive di una persona su un istituto, per codice fiscale (comprese
+     * le pre-deleghe non ancora agganciate) o per utente.
+     *
+     * @return array{intero: bool, plessi: list<int>}
+     */
+    public function copertura(Istituto $istituto, string $codiceFiscale, ?int $userId = null): array
+    {
+        $cf = strtoupper(trim($codiceFiscale));
+        if ($cf === '' && $userId === null) {
+            return ['intero' => false, 'plessi' => []];
+        }
+
+        $attive = Delega::attive()
+            ->where('id_istituto', $istituto->id_istituto)
+            ->where(fn ($q) => $q
+                ->when($cf !== '', fn ($w) => $w->orWhere('codice_fiscale', $cf))
+                ->when($userId !== null, fn ($w) => $w->orWhere('user_id', $userId)))
+            ->get(['id_plesso']);
+
+        return [
+            'intero' => $attive->contains(fn (Delega $d) => $d->id_plesso === null),
+            'plessi' => $attive->pluck('id_plesso')->filter()->map(fn ($id) => (int) $id)->unique()->values()->all(),
+        ];
+    }
+
+    /**
+     * Toglie dalla richiesta i plessi già coperti; vuoto (= tutto l'istituto) resta
+     * vuoto: la delega intera assorbe quelle per plesso.
+     *
+     * @param list<int> $idPlessi
+     * @param list<int> $coperti
+     * @return array{0: list<int>, 1: int}
+     */
+    private function togliCoperti(array $idPlessi, array $coperti, string $seTuttiCoperti): array
+    {
+        if ($idPlessi === []) {
+            return [[], 0];
+        }
+
+        $restanti = array_values(array_diff($idPlessi, $coperti));
+        if ($restanti === []) {
+            throw new RichiestaDelegaRifiutata($seTuttiCoperti);
+        }
+
+        return [$restanti, count($idPlessi) - count($restanti)];
     }
 
     public function attivaDUfficio(string $gruppo, string $motivo, User $admin): void

@@ -71,7 +71,11 @@
                     @forelse($deleghe as $delega)
                         <tr>
                             <td class="px-3 py-2">{{ $delega->user?->name ?? 'non ancora entrato' }}<br><span class="text-xs text-gray-500">{{ $delega->codice_fiscale }}</span></td>
-                            <td class="px-3 py-2">{{ $delega->istituto?->descrizione }}</td>
+                            <td class="px-3 py-2">{{ $delega->istituto?->descrizione }}
+                                @if($delega->stato === 'attiva' && $delega->id_plesso !== null)
+                                    <br><a href="{{ route('admin.deleghe.create', ['codice_fiscale' => $delega->codice_fiscale, 'id_istituto' => $delega->id_istituto]) }}" class="text-xs text-blue-700 hover:underline">Aggiungi altri plessi</a>
+                                @endif
+                            </td>
                             <td class="px-3 py-2">{{ $delega->descrizioneAmbito() }}</td>
                             <td class="px-3 py-2">{{ $delega->stato }}@if($delega->stato === 'richiesta' && ! $delega->richiesta_inviata_at) <span class="text-xs text-amber-700">(in coda)</span>@endif
                                 @if($delega->motivo)
