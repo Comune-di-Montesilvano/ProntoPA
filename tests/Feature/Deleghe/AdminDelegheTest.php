@@ -92,6 +92,78 @@ class AdminDelegheTest extends TestCase
         $this->assertSame($user->id, $pre->fresh()->user_id);
     }
 
+    public function test_pre_delega_salta_plessi_gia_delegati_alla_persona(): void
+    {
+        $ist = $this->istitutoConPlessi(plessi: 3);
+        [$p1, $p2, $p3] = $this->idPlessi($ist);
+        $user = $this->utenteSpid();
+        $this->delega($user, $ist, $p1); // delega chiesta dalla persona e approvata
+
+        $this->actingAs($this->admin)->post(route('admin.deleghe.store'), [
+            'codice_fiscale' => 'RSSMRA80A01G482X', 'id_istituto' => $ist->id_istituto, 'plessi' => [$p1, $p2, $p3], 'motivo' => 'Altri plessi',
+        ])->assertRedirect(route('admin.deleghe.index'))
+            ->assertSessionHas('success', fn ($m) => str_contains($m, '1 plesso'));
+
+        $this->assertSame(1, Delega::where('id_plesso', $p1)->count());
+        $this->assertSame([$p1, $p2, $p3], Delega::attive()->orderBy('id_plesso')->pluck('id_plesso')->map(fn ($id) => (int) $id)->all());
+    }
+
+    public function test_pre_delega_tutta_gia_delegata_rifiutata(): void
+    {
+        $ist = $this->istitutoConPlessi();
+        [$p1, $p2] = $this->idPlessi($ist);
+        // pre-delega non ancora agganciata: conta il codice fiscale
+        $this->actingAs($this->admin)->post(route('admin.deleghe.store'), [
+            'codice_fiscale' => 'RSSMRA80A01G482X', 'id_istituto' => $ist->id_istituto, 'plessi' => [$p1, $p2], 'motivo' => 'Prima',
+        ]);
+
+        $this->actingAs($this->admin)->post(route('admin.deleghe.store'), [
+            'codice_fiscale' => 'rssmra80a01g482x', 'id_istituto' => $ist->id_istituto, 'plessi' => [$p2], 'motivo' => 'Doppia',
+        ])->assertSessionHas('error');
+
+        $this->assertSame(2, Delega::count());
+    }
+
+    public function test_pre_delega_con_istituto_intero_gia_delegato_rifiutata(): void
+    {
+        $ist = $this->istitutoConPlessi();
+        [$p1] = $this->idPlessi($ist);
+        $this->delega($this->utenteSpid(), $ist, null);
+
+        $this->actingAs($this->admin)->post(route('admin.deleghe.store'), [
+            'codice_fiscale' => 'RSSMRA80A01G482X', 'id_istituto' => $ist->id_istituto, 'plessi' => [$p1], 'motivo' => 'Doppia',
+        ])->assertSessionHas('error');
+        $this->actingAs($this->admin)->post(route('admin.deleghe.store'), [
+            'codice_fiscale' => 'RSSMRA80A01G482X', 'id_istituto' => $ist->id_istituto, 'motivo' => 'Doppia',
+        ])->assertSessionHas('error');
+
+        $this->assertSame(1, Delega::count());
+    }
+
+    public function test_form_pre_delega_segna_plessi_gia_delegati(): void
+    {
+        $ist = $this->istitutoConPlessi();
+        [$p1, $p2] = $this->idPlessi($ist);
+        $this->delega($this->utenteSpid(), $ist, $p1);
+        $this->delega($this->utenteSpid('VRDLGU75B02H501K'), $ist, $p2);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.deleghe.create', ['codice_fiscale' => 'rssmra80a01g482x', 'id_istituto' => $ist->id_istituto]))
+            ->assertOk()
+            ->assertSee('value="RSSMRA80A01G482X"', false)
+            ->assertSee('data-gia-delegato="'.$p1.'"', false)
+            ->assertDontSee('data-gia-delegato="'.$p2.'"', false);
+    }
+
+    public function test_elenco_link_per_aggiungere_altri_plessi(): void
+    {
+        $ist = $this->istitutoConPlessi();
+        $this->delega($this->utenteSpid(), $ist, $this->idPlessi($ist)[0]);
+
+        $this->actingAs($this->admin)->get(route('admin.deleghe.index'))
+            ->assertSee(e(route('admin.deleghe.create', ['codice_fiscale' => 'RSSMRA80A01G482X', 'id_istituto' => $ist->id_istituto])), false);
+    }
+
     public function test_pre_delega_valida_codice_fiscale(): void
     {
         $ist = $this->istitutoConPlessi();

@@ -4,6 +4,20 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.18] - 2026-11-23
+
+### Aggiunto
+- Le mie deleghe: la ricerca della scuola trova l'istituto anche con codice meccanografico o nome di un
+  suo plesso (chi conosce solo il codice della propria sede non lo trovava).
+- Pre-delega admin: plessi già delegati a quel codice fiscale segnati e non selezionabili (la pagina si
+  ricarica al cambio del codice fiscale); in elenco deleghe «Aggiungi altri plessi» apre il form già compilato.
+
+### Corretto
+- Pre-delega admin duplicava deleghe già attive: ora salta i plessi già coperti (anche da delega chiesta
+  dalla persona o da pre-delega non agganciata) e rifiuta se è tutto coperto o c'è già l'istituto intero.
+- Richiesta di delega della scuola: plessi di una pre-delega non ancora agganciata non più richiesti di
+  nuovo; nel form plessi già delegati segnati, avviso se c'è una richiesta in attesa.
+
 ## [1.0.17] - 2026-11-19
 
 ### Aggiunto
