@@ -130,7 +130,6 @@ class EntiController extends Controller
             'nome'                  => ['required', 'string', 'max:255'],
             'codice_meccanografico' => ['nullable', 'string', 'max:50'],
             'indirizzo'             => ['nullable', 'string', 'max:255'],
-            'referente'             => ['nullable', 'string', 'max:50'],
             'email'                 => ['nullable', 'email', 'max:50'],
             'recapiti'              => ['nullable', 'string', 'max:50'],
         ]);
@@ -152,7 +151,6 @@ class EntiController extends Controller
             'codice_meccanografico' => ['nullable', 'string', 'max:50'],
             'partita_iva'           => ['nullable', 'digits:11'],
             'codice_fiscale'        => ['nullable', 'string', 'max:16'],
-            'dirigente'             => ['nullable', 'string', 'max:50'],
             'email'                 => ['nullable', 'email', 'max:50'],
             'domini_email_istituzionali' => ['nullable', 'string', 'max:255'],
             'recapiti'              => ['nullable', 'string', 'max:50'],

@@ -90,7 +90,6 @@ class SediController extends Controller
             'nome'                  => ['required', 'string', 'max:255'],
             'codice_meccanografico' => ['nullable', 'string', 'max:50'],
             'indirizzo'             => ['nullable', 'string', 'max:255'],
-            'referente'             => ['nullable', 'string', 'max:50'],
             'email'                 => ['nullable', 'email', 'max:50'],
             'recapiti'              => ['nullable', 'string', 'max:50'],
             'latitudine'            => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitudine'],

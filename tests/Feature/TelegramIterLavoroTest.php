@@ -229,12 +229,12 @@ class TelegramIterLavoroTest extends TestCase
         $this->assertSame($capo->id, (int) $s->refresh()->id_operatore_assegnato);
     }
 
-    /** @return array{0: Segnalazione, 1: string} segnalazione in una sede con referente, testo del dettaglio inviato */
+    /** @return array{0: Segnalazione, 1: string} segnalazione in una sede con telefono, testo del dettaglio inviato */
     private function dettaglioDi(string $chat, array $extra = []): array
     {
         $ente = Istituto::create(['descrizione' => 'IC RODARI', 'id_categoria' => CategoriaEnte::factory()->create()->id_categoria, 'attivo' => true]);
         $plesso = Plesso::create(['id_istituto' => $ente->id_istituto, 'nome' => 'Plesso Rodari', 'indirizzo' => 'Via Roma 1',
-            'referente' => 'Anna Bianchi', 'recapiti' => '085 1234567; 333 9876543']);
+            'recapiti' => '085 1234567; 333 9876543']);
         $autore = User::factory()->create(['name' => 'Luca Verdi', 'email' => 'luca.verdi@scuola.it', 'telefono' => '347 1112223']);
         $s = Segnalazione::factory()->create(array_merge(['id_plesso' => $plesso->id_plesso, 'id_utente_segnalazione' => $autore->id], $extra));
 
@@ -252,17 +252,16 @@ class TelegramIterLavoroTest extends TestCase
         $this->assertStringContainsString('Luca Verdi', $testo);
         $this->assertStringContainsString('347 1112223', $testo);
         $this->assertStringContainsString('luca.verdi@scuola.it', $testo);
-        $this->assertStringContainsString('Anna Bianchi', $testo);
+        $this->assertStringNotContainsString('Referente', $testo);
         $this->assertStringContainsString('085 1234567; 333 9876543', $testo);
         $this->assertStringContainsString('Via Roma 1', $testo);
     }
 
-    public function test_dettaglio_per_la_ditta_con_referente_ma_senza_dati_di_chi_ha_aperto(): void
+    public function test_dettaglio_per_la_ditta_con_telefono_della_sede_ma_senza_dati_di_chi_ha_aperto(): void
     {
         [, $appalto] = $this->ditta();
         [, $testo] = $this->dettaglioDi('300', ['id_stato_segnalazione' => 4, 'id_appalto' => $appalto->id_appalto]);
 
-        $this->assertStringContainsString('Anna Bianchi', $testo);
         $this->assertStringContainsString('085 1234567', $testo);
         $this->assertStringNotContainsString('luca.verdi@scuola.it', $testo);
         $this->assertStringNotContainsString('347 1112223', $testo);

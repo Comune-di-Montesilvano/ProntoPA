@@ -1,4 +1,4 @@
-{{-- Dove: minimappa, sede, indirizzo, ubicazione, referente. La lettura lavoro aggiunge Naviga e Chiama. --}}
+{{-- Dove: minimappa, sede, indirizzo, ubicazione, telefono della sede. La lettura lavoro aggiunge Naviga e Chiama. --}}
 @php
     $conAzioni = $conAzioni ?? false;
     $conMappa = $conMappa ?? false;
@@ -43,12 +43,12 @@
         </p>
     @endif
 
-    @if($plesso?->referente)
+    @if(! $conAzioni && $plesso?->recapiti)
         <div class="mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--slate-100)] pt-2">
-            <div><span class="block text-xs text-[var(--slate-500)]">Referente</span><strong class="text-[var(--ink)]">{{ $plesso->referente }}</strong></div>
-            @if(! $conAzioni && $telefono)
+            <span class="text-xs text-[var(--slate-500)]">Telefono della sede</span>
+            @if($telefono)
                 <x-pa.btn href="tel:{{ $telefono }}" variant="outline" size="sm"><span aria-hidden="true"><i class="fas fa-phone"></i></span> {{ $primoNumero }}</x-pa.btn>
-            @elseif(! $conAzioni && $plesso->recapiti)
+            @else
                 <span>{{ $plesso->recapiti }}</span>
             @endif
         </div>
@@ -60,7 +60,7 @@
                 <x-pa.btn :href="$naviga" variant="primary" size="lg" target="_blank" rel="noopener" class="w-full sm:w-auto">Naviga</x-pa.btn>
             @endif
             @if($telefono)
-                <x-pa.btn href="tel:{{ $telefono }}" variant="outline" size="lg" class="w-full sm:w-auto">Chiama il referente</x-pa.btn>
+                <x-pa.btn href="tel:{{ $telefono }}" variant="outline" size="lg" class="w-full sm:w-auto">Chiama la sede</x-pa.btn>
             @endif
         </div>
     @endif

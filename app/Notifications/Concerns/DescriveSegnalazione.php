@@ -45,8 +45,8 @@ trait DescriveSegnalazione
         }
 
         $m->line('**Cosa è stato segnalato:** '.Str::limit((string) $s->testo_segnalazione, 500));
-        if ($plesso && (filled($plesso->referente) || filled($plesso->recapiti))) {
-            $m->line('**Referente:** '.implode(' · ', array_filter([$plesso->referente, $plesso->recapiti], 'filled')));
+        if ($plesso && filled($plesso->recapiti)) {
+            $m->line('**Telefono della sede:** '.$plesso->recapiti);
         }
         if ($s->data_scadenza_sla) {
             $m->line('**Scadenza:** '.Carbon::parse($s->data_scadenza_sla)->format('d/m/Y H:i'));

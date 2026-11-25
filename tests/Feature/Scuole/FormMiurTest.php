@@ -39,7 +39,7 @@ class FormMiurTest extends TestCase
         return [
             'descrizione' => 'NOME CAMBIATO', 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria,
             'codice_meccanografico' => 'XXXX', 'email' => 'altro@example.it',
-            'dirigente' => 'Dott.ssa Rossi', 'recapiti' => '085 123', 'attivo' => '1',
+            'recapiti' => '085 123', 'attivo' => '1',
         ];
     }
 
@@ -53,7 +53,7 @@ class FormMiurTest extends TestCase
         $this->assertSame('IC SILONE', $ist->descrizione);
         $this->assertSame('PEIC828004', $ist->codice_meccanografico);
         $this->assertSame('peic828004@istruzione.it', $ist->email);
-        $this->assertSame('Dott.ssa Rossi', $ist->dirigente);
+        $this->assertSame('085 123', $ist->recapiti);
     }
 
     public function test_istituto_manuale_modificabile(): void
@@ -73,13 +73,13 @@ class FormMiurTest extends TestCase
 
         $this->actingAs($this->admin)->patch(route('admin.sedi.update', $sede), [
             'id_istituto' => $altro->id_istituto, 'nome' => 'X', 'codice_meccanografico' => 'Y',
-            'indirizzo' => 'Z', 'email' => 'z@example.it', 'referente' => 'Bidello Mario', 'recapiti' => '085 1',
+            'indirizzo' => 'Z', 'email' => 'z@example.it', 'recapiti' => '085 1',
         ])->assertRedirect();
 
         $sede->refresh();
         $this->assertSame($ist->id_istituto, $sede->id_istituto);
         $this->assertSame('MEDIA', $sede->nome);
-        $this->assertSame('Bidello Mario', $sede->referente);
+        $this->assertSame('085 1', $sede->recapiti);
     }
 
     public function test_sede_manuale_accetta_nome_lungo(): void

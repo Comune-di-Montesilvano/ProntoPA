@@ -50,13 +50,7 @@
     </div>
 </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-    <div>
-        <x-input-label for="dirigente" value="Dirigente / Referente" />
-        <x-text-input id="dirigente" name="dirigente" type="text" class="mt-1 block w-full"
-                      :value="old('dirigente', $ente->dirigente)" maxlength="50" />
-        <x-input-error :messages="$errors->get('dirigente')" class="mt-1" />
-    </div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
     <div>
         <x-input-label for="email" value="Email" />
         <x-text-input id="email" name="email" :readonly="$miur" type="email" class="mt-1 block w-full"

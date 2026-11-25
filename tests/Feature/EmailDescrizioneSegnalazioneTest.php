@@ -54,7 +54,7 @@ class EmailDescrizioneSegnalazioneTest extends TestCase
     private function segnalazione(array $attr = []): Segnalazione
     {
         $ente = Istituto::create(['descrizione' => 'IC Rodari', 'id_categoria' => CategoriaEnte::factory()->create()->id_categoria, 'attivo' => true]);
-        $plesso = Plesso::create(['id_istituto' => $ente->id_istituto, 'nome' => 'Primaria Lazio', 'indirizzo' => 'Via Lazio 1', 'referente' => 'Maria Verdi', 'recapiti' => '085 123']);
+        $plesso = Plesso::create(['id_istituto' => $ente->id_istituto, 'nome' => 'Primaria Lazio', 'indirizzo' => 'Via Lazio 1', 'recapiti' => '085 123']);
 
         return Segnalazione::factory()->create(array_merge([
             'id_stato_segnalazione' => 3,
@@ -103,7 +103,7 @@ class EmailDescrizioneSegnalazioneTest extends TestCase
         $this->assertStringContainsString('Termosifoni freddi aula 3B', $oggetto);
     }
 
-    public function test_assegnazione_operaio_ha_testo_sede_referente_nota(): void
+    public function test_assegnazione_operaio_ha_testo_sede_telefono_nota(): void
     {
         $s = $this->segnalazione();
 
@@ -112,7 +112,8 @@ class EmailDescrizioneSegnalazioneTest extends TestCase
 
         $this->assertStringContainsString('Da lunedì i termosifoni della 3B sono freddi.', $righe);
         $this->assertStringContainsString('Primaria Lazio', $righe);
-        $this->assertStringContainsString('Maria Verdi', $righe);
+        $this->assertStringContainsString('Telefono della sede:** 085 123', $righe);
+        $this->assertStringNotContainsString('Referente', $righe);
         $this->assertStringContainsString('Chiavi in portineria', $righe);
     }
 

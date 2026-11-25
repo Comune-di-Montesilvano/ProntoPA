@@ -41,15 +41,15 @@
             @if($plesso->indirizzo)
                 <div class="plesso-indirizzo">{{ $plesso->indirizzo }}</div>
             @endif
-            @if($plesso->referente || $plesso->recapiti)
-                <div class="plesso-referente">
-                    REFERENTE : {{ $plesso->referente }}{{ $plesso->recapiti ? ' - ' . $plesso->recapiti : '' }}
+            @if($plesso->recapiti)
+                <div class="plesso-recapiti">
+                    TELEFONO : {{ $plesso->recapiti }}
                 </div>
             @endif
-            @if($istituto && ($istituto->dirigente || $istituto->recapiti))
-                <div class="dirigente">
-                    <span class="label">Dirigente Scolastico :</span>
-                    {{ $istituto->dirigente }}{{ $istituto->recapiti ? ' - ' . $istituto->recapiti : '' }}
+            @if($istituto?->recapiti)
+                <div class="istituto-recapiti">
+                    <span class="label">Telefono {{ $istituto->descrizione }} :</span>
+                    {{ $istituto->recapiti }}
                 </div>
             @endif
         </div>

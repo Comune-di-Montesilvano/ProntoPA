@@ -34,7 +34,6 @@
                             <tr>
                                 <th class="py-2 text-left">Nome</th>
                                 <th class="py-2 text-left">Indirizzo</th>
-                                <th class="py-2 text-left">Referente</th>
                                 <th class="py-2 text-left">Contatti</th>
                                 <th class="py-2"></th>
                             </tr>
@@ -49,7 +48,6 @@
                                         @endunless
                                     </td>
                                     <td class="py-2 text-gray-500">{{ $sede->indirizzo ?? '—' }}</td>
-                                    <td class="py-2 text-gray-500">{{ $sede->referente ?? '—' }}</td>
                                     <td class="py-2 text-gray-400 text-xs">
                                         @if($sede->email)<div>{{ $sede->email }}</div>@endif
                                         @if($sede->recapiti)<div>{{ $sede->recapiti }}</div>@endif
@@ -74,7 +72,7 @@
             <form method="POST" action="{{ route('admin.enti.sedi.store', $ente) }}" class="border-t border-gray-100 pt-4 space-y-3">
                 @csrf
                 <h3 class="text-sm font-semibold text-gray-700">Aggiungi sede</h3>
-                <p class="text-xs text-gray-500">Referente, email e recapiti si completano poi da "Modifica".</p>
+                <p class="text-xs text-gray-500">Email e recapiti si completano poi da "Modifica".</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <x-input-label for="sede_nome" value="Nome sede *" />

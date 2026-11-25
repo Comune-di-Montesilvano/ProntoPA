@@ -130,7 +130,6 @@ class ImportLegacy extends Command
                 'descrizione'           => $r->descrizione,
                 'id_categoria'          => $idCategoria,
                 'codice_meccanografico' => $codice,
-                'dirigente'             => $r->dirigente,
                 'email'                 => $r->email,
                 'recapiti'              => $r->recapiti,
             ]);
@@ -175,7 +174,6 @@ class ImportLegacy extends Command
                 'nome'                  => trim((string) $r->nome),
                 'codice_meccanografico' => $codice,
                 'indirizzo'             => $r->indirizzo,
-                'referente'             => $r->referente,
                 'email'                 => $r->email,
                 'recapiti'              => $r->recapiti,
             ]);
