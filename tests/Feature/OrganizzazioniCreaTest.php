@@ -39,7 +39,6 @@ class OrganizzazioniCreaTest extends TestCase
             'codice_meccanografico' => '',
             'partita_iva'           => '',
             'codice_fiscale'        => '',
-            'dirigente'             => '',
             'email'                 => '',
             'recapiti'              => '',
             'domini_email_istituzionali' => '',

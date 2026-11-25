@@ -75,11 +75,11 @@
             font-size: 9pt;
             margin-top: 2px;
         }
-        .plesso-block .plesso-referente {
+        .plesso-block .plesso-recapiti {
             color: #1d4ed8;
             font-size: 9pt;
         }
-        .plesso-block .dirigente {
+        .plesso-block .istituto-recapiti {
             font-size: 10pt;
             margin-top: 3px;
         }

@@ -19,7 +19,6 @@ class Istituto extends Model
         'codice_meccanografico',
         'partita_iva',
         'codice_fiscale',
-        'dirigente',
         'email',
         'domini_email_istituzionali',
         'fonte_dati',

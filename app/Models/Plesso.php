@@ -16,7 +16,7 @@ class Plesso extends Model
     public    $timestamps = false;
 
     protected $fillable = [
-        'id_istituto', 'nome', 'codice_meccanografico', 'indirizzo', 'referente', 'email', 'recapiti', 'fonte_dati',
+        'id_istituto', 'nome', 'codice_meccanografico', 'indirizzo', 'email', 'recapiti', 'fonte_dati',
         'latitudine', 'longitudine', 'geocodifica_tentata_at',
     ];
 

@@ -66,14 +66,7 @@
                 <x-input-error :messages="$errors->get('indirizzo')" class="mt-1" />
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                <div>
-                    <x-input-label for="referente" value="Referente" />
-                    <x-text-input id="referente" name="referente" type="text"
-                                  class="mt-1 block w-full"
-                                  :value="old('referente', $sede->referente)" maxlength="50" />
-                    <x-input-error :messages="$errors->get('referente')" class="mt-1" />
-                </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                     <x-input-label for="email" value="Email" />
                     <x-text-input id="email" name="email" :readonly="$miur" type="email"

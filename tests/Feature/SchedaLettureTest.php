@@ -207,15 +207,17 @@ class SchedaLettureTest extends TestCase
             ->assertSee('Messaggi con il comune');
     }
 
-    public function test_ditta_vede_chiama_referente(): void
+    public function test_ditta_vede_chiama_la_sede(): void
     {
         $istituto = Istituto::create(['descrizione' => 'IC Rodari', 'id_categoria' => \App\Models\CategoriaEnte::perImportMiur()->id_categoria, 'attivo' => true]);
-        $plesso = Plesso::create(['id_istituto' => $istituto->id_istituto, 'nome' => 'Plesso Rodari', 'referente' => 'Maria Bianchi', 'recapiti' => '085 123456']);
+        $plesso = Plesso::create(['id_istituto' => $istituto->id_istituto, 'nome' => 'Plesso Rodari', 'recapiti' => '085 123456']);
         $this->s->update(['id_plesso' => $plesso->id_plesso]);
 
         $this->actingAs($this->ditta)->get(route('segnalazioni.show', $this->s))
             ->assertOk()
-            ->assertSee('tel:085123456', false);
+            ->assertSee('tel:085123456', false)
+            ->assertSee('Chiama la sede')
+            ->assertDontSee('Referente');
     }
 
     public function test_segnalante_non_vede_nomi_interni(): void

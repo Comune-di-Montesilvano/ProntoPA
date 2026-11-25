@@ -79,13 +79,13 @@ class EntiTest extends TestCase
         $ente = $this->ente($cat, 'IC SILONE', ['fonte_dati' => 'miur', 'codice_meccanografico' => 'PEIC828004']);
 
         $this->actingAs($this->admin)->patch(route('admin.enti.update', $ente), [
-            'descrizione' => 'CAMBIATO', 'id_categoria' => $cat->id_categoria, 'codice_meccanografico' => 'XXXX', 'dirigente' => 'Rossi', 'attivo' => '1',
+            'descrizione' => 'CAMBIATO', 'id_categoria' => $cat->id_categoria, 'codice_meccanografico' => 'XXXX', 'recapiti' => '085 9', 'attivo' => '1',
         ])->assertRedirect(route('admin.enti.show', $ente));
 
         $ente->refresh();
         $this->assertSame('IC SILONE', $ente->descrizione);
         $this->assertSame('PEIC828004', $ente->codice_meccanografico);
-        $this->assertSame('Rossi', $ente->dirigente);
+        $this->assertSame('085 9', $ente->recapiti);
     }
 
     public function test_categoria_non_vuota_non_si_cancella(): void

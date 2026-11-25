@@ -311,7 +311,7 @@ class TelegramWebhookController extends Controller
             ['text' => '⬅️ Lista', 'callback_data' => 'lista'],
         ]));
 
-        // Chi ha aperto e i suoi contatti: solo al comune, come nella scheda (1.0.15). La sede e il referente a tutti.
+        // Chi ha aperto e i suoi contatti: solo al comune, come nella scheda (1.0.15). La sede e il suo telefono a tutti.
         /** @var User|null $autore */
         $autore = LetturaScheda::per($user) === 'gestore' ? $segnalazione->utente : null;
         $scadenza = $segnalazione->data_scadenza_sla && ! $segnalazione->isChiusa()
@@ -329,7 +329,6 @@ class TelegramWebhookController extends Controller
             $plesso || $segnalazione->ubicazione_tipo ? '' : null,
             $plesso ? '📍 ' . $plesso->nomeLeggibile() . ($plesso->indirizzo ? ', ' . $plesso->indirizzo : '') : null,
             $segnalazione->ubicazione_tipo ? '🚪 ' . $segnalazione->label_ubicazione : null,
-            $plesso?->referente ? '🙋 Referente: ' . $plesso->referente : null,
             $plesso?->recapiti ? '📞 ' . $plesso->recapiti : null,
             $autore ? '' : null,
             $autore ? '👤 Aperta da ' . $autore->name . ($segnalazione->data_segnalazione ? ' il ' . $segnalazione->data_segnalazione->format('d/m/Y H:i') : '') : null,
