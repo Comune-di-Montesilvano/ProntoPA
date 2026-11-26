@@ -4,6 +4,20 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.20] - 2026-11-26
+
+### Corretto
+- Segnalazioni con più foto rifiutate dal reverse proxy dell'ente («413 Payload Too Large», limite 1 MB a
+  richiesta): ogni foto viene ridotta nel browser (lato lungo 2048 px, JPEG, posizione GPS tolta) e caricata
+  subito, da sola, a blocchi da 512 KB; il form invia solo i riferimenti. Vale per nuova segnalazione,
+  aggiornamento, chiusura, fine lavori, note e risposta alle richieste di informazioni. Invio premuto durante
+  il caricamento: parte da solo appena le foto sono arrivate; foto non riuscita: «Riprova» o togli.
+  Foto caricate e mai inviate cancellate dopo 24 ore (`allegati:pulisci-temporanei`, ogni ora).
+
+### Sicurezza
+- Symfony 8.1.12 (http-kernel, http-foundation, mailer, mime, routing, serializer, var-dumper): avvisi
+  del 2026-11-25.
+
 ## [1.0.19] - 2026-11-25
 
 ### Rimosso

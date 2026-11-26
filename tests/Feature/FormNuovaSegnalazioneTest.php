@@ -70,7 +70,7 @@ class FormNuovaSegnalazioneTest extends TestCase
             ->assertSee('Scatta foto')
             ->assertSee('Scegli dalla galleria')
             ->assertSee('capture="environment"', false)
-            ->assertSee('id="allegati_create" type="file" name="allegati[]"', false);
+            ->assertSee('id="allegati_create" type="file"', false);
     }
 
     public function test_prima_istituto_poi_sede_senza_categoria_ne_codice(): void

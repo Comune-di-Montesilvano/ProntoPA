@@ -22,6 +22,7 @@ use App\Http\Controllers\Organizzazione\TipologieGestoriController;
 use App\Http\Controllers\Admin\UtentiController;
 use App\Http\Controllers\AdesioniSegnalazioniController;
 use App\Http\Controllers\AllegatiSegnalazioniController;
+use App\Http\Controllers\AllegatiTemporaneiController;
 use App\Http\Controllers\AppaltiController;
 use App\Http\Controllers\GestioneController;
 use App\Http\Controllers\ImpreseDashboardController;
@@ -86,6 +87,12 @@ Route::middleware('auth')->group(function () {
     // Anteprima in sola lettura al passaggio del mouse sugli elenchi (1.0.6).
     Route::get('segnalazioni/{segnalazione}/anteprima', [SegnalazioneController::class, 'anteprima'])
         ->name('segnalazioni.anteprima');
+
+    // Foto caricate a blocchi prima dell'invio dei form (1.0.20): il proxy dell'ente accetta al massimo 1 MB.
+    Route::post('allegati-temporanei', [AllegatiTemporaneiController::class, 'store'])
+        ->middleware('throttle:240,1')->name('allegati.temporanei.store');
+    Route::delete('allegati-temporanei/{id}', [AllegatiTemporaneiController::class, 'destroy'])
+        ->name('allegati.temporanei.destroy');
 
     Route::post('segnalazioni/{segnalazione}/allegati', [AllegatiSegnalazioniController::class, 'store'])
         ->name('segnalazioni.allegati.store');

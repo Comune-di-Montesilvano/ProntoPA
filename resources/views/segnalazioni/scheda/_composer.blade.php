@@ -4,13 +4,14 @@
     $mime = \App\Models\Impostazione::get('allegati_mime_consentiti', 'image/jpeg,image/png');
 @endphp
 <form id="scrivi" method="POST" action="{{ route('segnalazioni.nota', $segnalazione->id_segnalazione) }}"
-      enctype="multipart/form-data" class="flex flex-col gap-3" x-data="{ foto: 0 }">
+      class="flex flex-col gap-3" x-data="{ foto: 0 }" x-on:foto-cambiate="foto = $event.detail">
     @csrf
     <label for="testo-nota" class="sr-only">{{ $comune ? 'Scrivi una nota' : 'Scrivi al comune' }}</label>
     <textarea id="testo-nota" name="testo" rows="3" maxlength="2000" required class="pa-textarea"
               placeholder="{{ $comune ? 'Scrivi una nota…' : 'Vuoi aggiungere qualcosa?' }}">{{ old('_pannello') ? '' : old('testo') }}</textarea>
     <x-input-error :messages="$errors->get('testo')" />
     <x-input-error :messages="array_merge($errors->get('allegati'), $errors->get('allegati.*'))" />
+    <x-pa.foto id="nota-foto" :mime="$mime" />
 
     <div class="flex flex-wrap items-center gap-3">
         @if($comune)
@@ -26,12 +27,6 @@
                 <input type="hidden" name="visibile_web" :value="chi === 'web' ? 1 : 0" value="0">
             </fieldset>
         @endif
-
-        <label class="pa-btn pa-btn-outline pa-btn-sm cursor-pointer">
-            <input type="file" name="allegati[]" multiple accept="{{ $mime }}" class="sr-only"
-                   x-on:change="foto = $event.target.files.length">
-            <span x-text="foto ? foto + (foto === 1 ? ' file scelto' : ' file scelti') : '{{ $comune ? 'Allega' : 'Aggiungi foto' }}'">{{ $comune ? 'Allega' : 'Aggiungi foto' }}</span>
-        </label>
 
         <x-pa.btn type="submit" variant="primary" size="sm" class="ml-auto">{{ $comune ? 'Pubblica nota' : 'Invia al comune' }}</x-pa.btn>
     </div>
