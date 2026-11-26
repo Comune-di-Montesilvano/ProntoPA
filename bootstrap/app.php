@@ -38,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\InvalidaSessioniDopoRipristino::class,
             \App\Http\Middleware\EnsureUserIsActive::class,
             \App\Http\Middleware\LimitaAccessoSpid::class,
+            \App\Http\Middleware\RicomponiAllegatiCaricati::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

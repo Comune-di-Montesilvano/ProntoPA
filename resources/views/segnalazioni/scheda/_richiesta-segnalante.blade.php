@@ -6,17 +6,14 @@
     <p class="m-0 text-[var(--slate-700)]">
         Rispondi entro {{ $richiesta->termine_at->locale('it')->isoFormat('dddd D MMMM') }}@if($richiesta->chiudi_senza_risposta): senza risposta la segnalazione verrà chiusa.@else.@endif
     </p>
-    <form method="POST" action="{{ route('segnalazioni.aggiornamento', $segnalazione) }}" enctype="multipart/form-data"
-          class="flex flex-col gap-3" x-data="{ foto: 0 }">
+    <form method="POST" action="{{ route('segnalazioni.aggiornamento', $segnalazione) }}" class="flex flex-col gap-3">
         @csrf
         <label for="risposta-testo" class="sr-only">La tua risposta</label>
         <textarea id="risposta-testo" name="testo" rows="3" maxlength="2000" class="pa-textarea" placeholder="La tua risposta"></textarea>
         <x-input-error :messages="$errors->get('testo')" />
+        <x-input-error :messages="array_merge($errors->get('allegati'), $errors->get('allegati.*'))" />
+        <x-pa.foto id="risposta-foto" :mime="$mime" />
         <div class="flex flex-wrap items-center gap-3">
-            <label class="pa-btn pa-btn-outline pa-btn-sm cursor-pointer">
-                <input type="file" name="allegati[]" multiple accept="{{ $mime }}" class="sr-only" x-on:change="foto = $event.target.files.length">
-                <span x-text="foto ? foto + (foto === 1 ? ' foto scelta' : ' foto scelte') : 'Aggiungi foto'">Aggiungi foto</span>
-            </label>
             <x-pa.btn type="submit" variant="primary" class="ml-auto">Rispondi</x-pa.btn>
         </div>
     </form>
