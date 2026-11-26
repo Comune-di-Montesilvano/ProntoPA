@@ -14,6 +14,10 @@ completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
   il caricamento: parte da solo appena le foto sono arrivate; foto non riuscita: «Riprova» o togli.
   Foto caricate e mai inviate cancellate dopo 24 ore (`allegati:pulisci-temporanei`, ogni ora).
 
+### Sicurezza
+- Symfony 8.1.12 (http-kernel, http-foundation, mailer, mime, routing, serializer, var-dumper): avvisi
+  del 2026-11-25.
+
 ## [1.0.19] - 2026-11-25
 
 ### Rimosso
