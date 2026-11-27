@@ -461,6 +461,95 @@ class InviaAvvisiTest extends TestCase
         $this->assertNotContains('e:ufficio@ediladriatica.it', $chiavi);
     }
 
+    public function test_mattino_su_un_giro_orario_una_sola_email_con_quadro(): void
+    {
+        Impostazione::set('digest_enabled', true);
+        Impostazione::set('digest_ora', '10:00');
+        $this->alle(self::LUNEDI.' 09:20');
+        $this->assegna(2);
+
+        // Lo scheduler lancia entrambi i giri alle 10:00, in un ordine qualsiasi.
+        $this->alle(self::LUNEDI.' 10:00');
+        $this->artisan('avvisi:invia --ritmo=ora')->assertExitCode(0);
+        $this->artisan('avvisi:invia --ritmo=giorno')->assertExitCode(0);
+
+        $partite = $this->partite(RiepilogoAvvisiNotification::class, $this->operaio);
+        $this->assertCount(1, $partite, 'una sola email');
+        $this->assertTrue($partite[0]->notification->mattino);
+        $this->assertCount(2, $partite[0]->notification->composizione->quadro['da_fare']);
+        $this->assertSame(0, $this->inAttesa());
+
+        // Il giro orario dopo il mattino riprende normalmente.
+        $this->assegna(2);
+        $this->alle(self::LUNEDI.' 11:00');
+        $this->artisan('avvisi:invia --ritmo=ora')->assertExitCode(0);
+        $this->assertCount(2, $this->partite(RiepilogoAvvisiNotification::class, $this->operaio));
+    }
+
+    public function test_giro_orario_non_salta_le_10_se_il_mattino_e_alle_7_30(): void
+    {
+        Impostazione::set('digest_ora', '07:30');
+        $this->alle(self::LUNEDI.' 09:20');
+        $this->assegna(2);
+        $this->alle(self::LUNEDI.' 10:00');
+        $this->artisan('avvisi:invia --ritmo=ora')->assertExitCode(0);
+        $this->assertCount(1, $this->partite(RiepilogoAvvisiNotification::class, $this->operaio));
+    }
+
+    public function test_lock_dei_giri_scade_dopo_10_minuti(): void
+    {
+        $eventi = collect(app(\Illuminate\Console\Scheduling\Schedule::class)->events())
+            ->filter(fn ($e) => str_contains((string) $e->command, 'avvisi:invia'));
+
+        $this->assertCount(2, $eventi);
+        foreach ($eventi as $e) {
+            $this->assertTrue($e->withoutOverlapping);
+            $this->assertSame(10, $e->expiresAt);
+        }
+    }
+
+    public function test_mittente_d_esempio_prevale_sugli_avvisi_non_consegnati(): void
+    {
+        Impostazione::set('mail_from_address', 'noreply@example.it');
+        DB::table('avvisi_in_attesa')->insert([
+            'id_notifica' => (string) \Illuminate\Support\Str::uuid(), 'destinatario_tipo' => 'utente',
+            'id_utente' => $this->operaio->id, 'email' => '', 'categoria' => 'assegnazioni', 'ritmo' => 'ora',
+            'id_segnalazione' => 1, 'tipo' => 'OperatoreAssegnatoNotification', 'notifica' => 'x', 'tentativi' => 3,
+            'scartata_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $r = $this->riquadroEmail();
+        $this->assertSame(Riquadro::ATTENZIONE, $r->stato);
+        $this->assertStringContainsString('indirizzo di esempio', $r->messaggio);
+
+        Impostazione::set('mail_from_address', '');
+        $this->assertSame(Riquadro::PROBLEMA, $this->riquadroEmail()->stato);
+    }
+
+    /** Percorso intero: notify() vero sulla coda sync → attesa → giro → un riepilogo, storico coi tipi originali. */
+    public function test_end_to_end_due_assegnazioni_un_riepilogo_e_storico(): void
+    {
+        $this->alle(self::LUNEDI.' 09:20');
+        $this->assegna(2);
+        $this->assertSame([], $this->partite(), 'trattenute, niente email subito');
+        $ids = AvvisoInAttesa::pluck('id_segnalazione')->map(fn ($id) => (int) $id)->sort()->values()->all();
+        $this->assertCount(2, $ids);
+
+        $this->alle(self::LUNEDI.' 10:00');
+        $this->artisan('avvisi:invia --forza')->assertExitCode(0);
+
+        $partite = $this->partite();
+        $this->assertCount(1, $partite);
+        $this->assertInstanceOf(RiepilogoAvvisiNotification::class, $partite[0]->notification);
+        $this->assertSame($this->operaio->id, $partite[0]->notifiable->id);
+
+        $storico = \App\Models\NotificaSegnalazione::query()->orderBy('id_segnalazione')->get();
+        $this->assertSame($ids, $storico->pluck('id_segnalazione')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame(['OperatoreAssegnatoNotification'], $storico->pluck('tipo')->unique()->values()->all());
+        $this->assertSame(['mail:riepilogo'], $storico->pluck('canale')->unique()->values()->all());
+        $this->assertSame(0, $this->inAttesa());
+    }
+
     private function riquadroEmail(): Riquadro
     {
         Storage::fake('local');

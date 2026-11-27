@@ -31,7 +31,8 @@ Schedule::command('deleghe:rinnovi')->monthlyOn(1, '07:00')->runInBackground();
 
 // Riepilogo degli avvisi: ogni ora piena in orario d'ufficio e alla chiusura (il comando decide),
 // poi il giro del mattino con il quadro di oggi (sostituisce digest:invia, che resta come comando).
-Schedule::command('avvisi:invia --ritmo=ora')->everyFifteenMinutes()->withoutOverlapping()->runInBackground();
+// Lock di 10 minuti (non le 24 h di default): uno scheduler ucciso non blocca i giri per un giorno.
+Schedule::command('avvisi:invia --ritmo=ora')->everyFifteenMinutes()->withoutOverlapping(10)->runInBackground();
 
 Schedule::command('avvisi:invia --ritmo=giorno')
     ->dailyAt((function () {
@@ -42,7 +43,7 @@ Schedule::command('avvisi:invia --ritmo=giorno')
             return '07:30'; // DB non disponibile (es. primo deploy)
         }
     })())
-    ->withoutOverlapping()
+    ->withoutOverlapping(10)
     ->runInBackground();
 
 // Difesa in profondità se Sentry non è configurato: senza questo, job

@@ -55,14 +55,14 @@ class InviaAvvisi extends Command
         $chiavi = [];
         foreach ($righe->groupBy(fn (AvvisoInAttesa $r) => $r->chiaveDestinatario()) as $chiave => $gruppo) {
             $chiave = (string) $chiave;
-            $chiavi[$chiave] = true;
             $giro = (string) Str::uuid();
             $prenotate = AvvisoInAttesa::query()->whereIn('id', $gruppo->pluck('id')->all())
                 ->whereNull('giro')->inAttesa()
                 ->update(['giro' => $giro]);
             if ($prenotate === 0) {
-                continue; // già prese da un giro concorrente
+                continue; // già prese da un giro concorrente: il quadro, se serve, parte sotto
             }
+            $chiavi[$chiave] = true;
             InviaRiepilogo::dispatch($giro, $chiave, $mattino && $this->primoQuadroDiOggi($chiave));
             $accodati++;
         }
@@ -99,7 +99,14 @@ class InviaAvvisi extends Command
             return true;
         }
 
-        return ProssimoGiro::daImpostazioni()->eOrarioDelGiro($adesso);
+        $giri = ProssimoGiro::daImpostazioni();
+        // All'ora del mattino parte solo il giro del mattino, che prende anche gli avvisi orari:
+        // altrimenti due email a pochi minuti, e la seconda senza quadro.
+        if ($giri->mattino($adesso->copy()->subMinute())?->equalTo($adesso)) {
+            return false;
+        }
+
+        return $giri->eOrarioDelGiro($adesso);
     }
 
     /** Una sola volta al giorno per destinatario, anche se il giro del mattino viene rilanciato. */
