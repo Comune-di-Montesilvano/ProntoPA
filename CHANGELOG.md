@@ -4,6 +4,26 @@ Formato basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/).
 Per il dettaglio funzionalità per release vedi [TODO.md](TODO.md) (roadmap
 completata) e [PIANO-SVILUPPO.md](PIANO-SVILUPPO.md) (piano/motivazioni).
 
+## [1.0.21] - 2026-11-27
+
+### Modificato
+- Avvisi sulle segnalazioni: niente più una email (e un Telegram) per ogni evento. Gli avvisi si
+  accumulano e partono come **un solo riepilogo per persona**, con una riga per segnalazione e lo stato
+  al momento dell'invio; gli avvisi diventati inutili (riassegnata, già chiusa...) spariscono.
+  Ogni ora in orario d'ufficio (anche alla chiusura) per assegnazioni, solleciti, lavori e richieste di
+  informazioni; una volta al giorno (mattina) per nuove segnalazioni, scadenze, inattività ed esiti.
+  Mai di notte, nei festivi o nel weekend. Gli avvisi di sistema (backup, sincronizzazione AD, deleghe)
+  restano immediati.
+- Regole di lavoro → Avvisi: scelta del ritmo (ogni ora / una volta al giorno) per categoria di avviso.
+  Tolte le opzioni «notifiche Telegram» per evento e «salta il weekend» del digest: valgono l'orario
+  d'ufficio e i festivi.
+- Il digest del mattino diventa il «quadro del mattino» dentro il riepilogo: da fare, in ritardo e nuove,
+  una riga per segnalazione.
+
+### Aggiunto
+- Scheda (gestore): storico degli avvisi inviati e avvisi in attesa con l'orario in cui partiranno.
+- Telegram: il riepilogo arriva anche sul bot (impostazione `telegram_riepiloghi`).
+
 ## [1.0.20] - 2026-11-26
 
 ### Corretto
