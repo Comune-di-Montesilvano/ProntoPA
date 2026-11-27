@@ -6,6 +6,9 @@ use App\Models\Segnalazione;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
 use App\Notifications\Concerns\DescriveSegnalazione;
 use Carbon\CarbonInterface;
+use App\Notifications\Riepilogo\Raggruppa;
+use App\Notifications\Riepilogo\Raggruppabile;
+use App\Enums\SegnalazioneStato;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -13,11 +16,12 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
 
 /** Il comune chiede informazioni a chi ha segnalato: rispondere fa ripartire il lavoro. */
-class RichiestaInformazioniNotification extends Notification implements ShouldQueue
+class RichiestaInformazioniNotification extends Notification implements ShouldQueue, Raggruppabile
 {
     use BuildsNotificationMailMessage;
     use DescriveSegnalazione;
     use Queueable;
+    use Raggruppa;
 
     public function __construct(
         public readonly Segnalazione $segnalazione,
@@ -26,6 +30,31 @@ class RichiestaInformazioniNotification extends Notification implements ShouldQu
         public readonly bool $promemoria = false,
     ) {
         $this->afterCommit();
+    }
+
+    public function categoriaRiepilogo(): string
+    {
+        return 'richieste';
+    }
+
+    public function segnalazioneRiepilogo(): int
+    {
+        return (int) $this->segnalazione->id_segnalazione;
+    }
+
+    public function rigaRiepilogo(object $notifiable): string
+    {
+        return $this->rigaSegnalazione($this->segnalazione);
+    }
+
+    public function motivoRiepilogo(): string
+    {
+        return $this->promemoria ? 'Promemoria: informazioni' : 'Ti chiediamo informazioni';
+    }
+
+    public function ancoraValida(object $notifiable): bool
+    {
+        return $this->segnalazioneAttuale()?->statoEnum() === SegnalazioneStato::ATTESA_RISPOSTA;
     }
 
     /** @return list<string> */

@@ -7,7 +7,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 /**
  * Mappa delle impostazioni modificabili, per sezione: chiave => tipo.
  * Tipi: testo url email intero bool colore ora decimale segreto
- * segreto_cifrato stato disco orario patrono. Le chiavi interne
+ * segreto_cifrato stato disco orario patrono ritmo. Le chiavi interne
  * (Impostazione::CHIAVI_INTERNE) non compaiono mai.
  */
 final class Sezioni
@@ -49,12 +49,17 @@ final class Sezioni
     ];
 
     public const AVVISI = [
-        'digest_enabled'                           => 'bool',
-        'digest_ora'                               => 'ora',
-        'digest_skip_weekend'                      => 'bool',
-        'telegram_notifica_operatore_assegnazione' => 'bool',
-        'telegram_notifica_sla_warning'            => 'bool',
-        'telegram_notifica_nuova_nota'             => 'bool',
+        'digest_enabled'               => 'bool',
+        'digest_ora'                   => 'ora',
+        'avvisi_ritmo_assegnazioni'    => 'ritmo',
+        'avvisi_ritmo_solleciti'       => 'ritmo',
+        'avvisi_ritmo_richieste'       => 'ritmo',
+        'avvisi_ritmo_lavoro'          => 'ritmo',
+        'avvisi_ritmo_scadenze'        => 'ritmo',
+        'avvisi_ritmo_nuove'           => 'ritmo',
+        'avvisi_ritmo_inattivita'      => 'ritmo',
+        'avvisi_ritmo_esiti'           => 'ritmo',
+        'telegram_riepiloghi'          => 'bool',
     ];
 
     public const SQUADRE = [

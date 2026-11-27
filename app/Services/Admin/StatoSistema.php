@@ -2,6 +2,7 @@
 
 namespace App\Services\Admin;
 
+use App\Models\AvvisoInAttesa;
 use App\Models\Delega;
 use App\Models\Impostazione;
 use App\Services\Auth\EsitoSyncAd;
@@ -160,6 +161,11 @@ class StatoSistema
         $dominio = mb_strtolower((string) substr(strrchr($mittente, '@') ?: '', 1));
         if (preg_match('/(^|\.)example(\.|$)/', $dominio) === 1) {
             return new Riquadro('email', 'Email in uscita', Riquadro::ATTENZIONE, 'Indirizzo mittente da impostare: quello attuale è un indirizzo di esempio.', $url);
+        }
+        // Solo con il mittente a posto: altrimenti il problema da mostrare è quello.
+        $scartati = AvvisoInAttesa::query()->where('scartata_at', '>=', now()->subDays(7))->count();
+        if ($scartati > 0) {
+            return new Riquadro('email', 'Email in uscita', Riquadro::ATTENZIONE, $scartati === 1 ? '1 avviso non consegnato negli ultimi 7 giorni.' : "$scartati avvisi non consegnati negli ultimi 7 giorni.", $url);
         }
 
         return new Riquadro('email', 'Email in uscita', Riquadro::OK, 'Indirizzo del mittente impostato.', $url);

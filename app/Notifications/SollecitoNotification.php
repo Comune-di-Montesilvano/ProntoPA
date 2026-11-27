@@ -6,6 +6,8 @@ use App\Models\Segnalazione;
 use App\Models\User;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
 use App\Notifications\Concerns\DescriveSegnalazione;
+use App\Notifications\Riepilogo\Raggruppa;
+use App\Notifications\Riepilogo\Raggruppabile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -13,17 +15,43 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
 
 /** Il comune, o chi ha aperto la segnalazione, chiede a chi ha il lavoro un aggiornamento. */
-class SollecitoNotification extends Notification implements ShouldQueue
+class SollecitoNotification extends Notification implements ShouldQueue, Raggruppabile
 {
     use BuildsNotificationMailMessage;
     use DescriveSegnalazione;
     use Queueable;
+    use Raggruppa;
 
     public function __construct(
         public readonly Segnalazione $segnalazione,
         public readonly string $testo,
         public readonly bool $dalSegnalante = false,
     ) {}
+
+    public function categoriaRiepilogo(): string
+    {
+        return 'solleciti';
+    }
+
+    public function segnalazioneRiepilogo(): int
+    {
+        return (int) $this->segnalazione->id_segnalazione;
+    }
+
+    public function rigaRiepilogo(object $notifiable): string
+    {
+        return $this->rigaSegnalazione($this->segnalazione);
+    }
+
+    public function motivoRiepilogo(): string
+    {
+        return 'Sollecito';
+    }
+
+    public function ancoraValida(object $notifiable): bool
+    {
+        return $this->segnalazioneAperta();
+    }
 
     /** @return list<string> */
     public function via(object $notifiable): array

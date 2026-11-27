@@ -5,6 +5,8 @@ namespace App\Notifications;
 use App\Models\Segnalazione;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
 use App\Notifications\Concerns\DescriveSegnalazione;
+use App\Notifications\Riepilogo\Raggruppa;
+use App\Notifications\Riepilogo\Raggruppabile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -12,11 +14,12 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
 
 /** Chi ha segnalato ha risposto alla richiesta di informazioni: la segnalazione è tornata dov'era. */
-class RispostaInformazioniNotification extends Notification implements ShouldQueue
+class RispostaInformazioniNotification extends Notification implements ShouldQueue, Raggruppabile
 {
     use BuildsNotificationMailMessage;
     use DescriveSegnalazione;
     use Queueable;
+    use Raggruppa;
 
     public function __construct(
         public readonly Segnalazione $segnalazione,
@@ -25,6 +28,31 @@ class RispostaInformazioniNotification extends Notification implements ShouldQue
         public readonly bool $senzaRisposta = false,
     ) {
         $this->afterCommit();
+    }
+
+    public function categoriaRiepilogo(): string
+    {
+        return 'lavoro';
+    }
+
+    public function segnalazioneRiepilogo(): int
+    {
+        return (int) $this->segnalazione->id_segnalazione;
+    }
+
+    public function rigaRiepilogo(object $notifiable): string
+    {
+        return $this->rigaSegnalazione($this->segnalazione);
+    }
+
+    public function motivoRiepilogo(): string
+    {
+        return $this->senzaRisposta ? 'Nessuna risposta' : 'Hanno risposto';
+    }
+
+    public function ancoraValida(object $notifiable): bool
+    {
+        return $this->segnalazioneEsiste();
     }
 
     /** @return list<string> */

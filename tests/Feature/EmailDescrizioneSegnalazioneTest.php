@@ -140,6 +140,10 @@ class EmailDescrizioneSegnalazioneTest extends TestCase
             return $q;
         };
 
+        // Primo giro a vuoto: scalda la cache delle impostazioni del brand (prima la scaldava l'avviso
+        // "nuova segnalazione", che ora resta in attesa del riepilogo invece di partire).
+        $conta(1);
+
         $this->assertSame($conta(1), $conta(5));
     }
 

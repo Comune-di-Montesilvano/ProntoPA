@@ -5,23 +5,55 @@ namespace App\Notifications;
 use App\Models\Segnalazione;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
 use App\Notifications\Concerns\DescriveSegnalazione;
+use App\Notifications\Riepilogo\Raggruppa;
+use App\Notifications\Riepilogo\Raggruppabile;
+use App\Services\Avvisi\QuadroMattino;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /** Ai gestori della tipologia: nuova segnalazione, o spostata nella loro tipologia. */
-class NuovaSegnalazioneNotification extends Notification implements ShouldQueue
+class NuovaSegnalazioneNotification extends Notification implements ShouldQueue, Raggruppabile
 {
     use BuildsNotificationMailMessage;
     use DescriveSegnalazione;
     use Queueable;
+    use Raggruppa;
 
     public function __construct(
         public readonly Segnalazione $segnalazione,
         public readonly bool $riclassificata = false,
     ) {
         $this->afterCommit();
+    }
+
+    public function categoriaRiepilogo(): string
+    {
+        return 'nuove';
+    }
+
+    public function segnalazioneRiepilogo(): int
+    {
+        return (int) $this->segnalazione->id_segnalazione;
+    }
+
+    public function rigaRiepilogo(object $notifiable): string
+    {
+        return $this->rigaSegnalazione($this->segnalazione);
+    }
+
+    public function motivoRiepilogo(): string
+    {
+        return $this->riclassificata ? 'Riclassificata' : 'Nuova';
+    }
+
+    /** Vale finché la segnalazione è da smistare: presa in carico o affidata non è più «nuova». */
+    public function ancoraValida(object $notifiable): bool
+    {
+        $s = $this->segnalazioneAttuale();
+
+        return $s !== null && QuadroMattino::daSmistare($s);
     }
 
     /** @return list<string> */
