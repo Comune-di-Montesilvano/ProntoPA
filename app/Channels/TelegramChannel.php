@@ -30,11 +30,16 @@ class TelegramChannel
             return;
         }
 
-        $this->telegram->sendMessage(
+        $inviato = $this->telegram->sendMessage(
             chatId: (string) $chatId,
             text: $message['text'],
             inlineKeyboard: $message['inline_keyboard'] ?? $this->pulsanteApri($notification),
         );
+
+        // Solo le notifiche che lo chiedono (riepilogo) vogliono sapere dell'invio fallito.
+        if (! $inviato && ($notification->esigeEsito ?? false) === true) {
+            throw new \RuntimeException('Telegram: invio non riuscito');
+        }
     }
 
     /**

@@ -41,12 +41,15 @@ final class ComponiRiepilogo
         // 1. Solo le notifiche ricostruibili e ancora valide; per segnalazione e categoria vince la più recente.
         /** @var array<int, array<string, Raggruppabile>> $perSegnalazione */
         $perSegnalazione = [];
+        /** @var array<int, list<string>> $tipiPerSegnalazione */
+        $tipiPerSegnalazione = [];
         foreach ($righe as $riga) {
             $notifica = $riga->notifica();
             if (! $notifica instanceof Raggruppabile || ! $notifica->ancoraValida($chi)) {
                 continue;
             }
             $perSegnalazione[$notifica->segnalazioneRiepilogo()][$notifica->categoriaRiepilogo()] = $notifica;
+            $tipiPerSegnalazione[$notifica->segnalazioneRiepilogo()][] = class_basename($notifica);
         }
 
         $segnalazioni = $perSegnalazione === []
@@ -71,6 +74,7 @@ final class ComponiRiepilogo
                 array_values(array_unique(array_map(fn (Raggruppabile $n) => $n->motivoRiepilogo(), array_values($perCategoria)))),
                 $vincente->rigaRiepilogo($chi),
                 $vincente,
+                array_values(array_unique($tipiPerSegnalazione[$id] ?? [])),
             );
         }
 
@@ -87,7 +91,7 @@ final class ComponiRiepilogo
                         continue;
                     }
                     $motivi = isset($voci[$id]) ? $voci[$id]->motivi : [];
-                    $quadro[$sezione][] = new Voce($s, $sezione, $motivi, $this->rigaSegnalazione($s), null);
+                    $quadro[$sezione][] = new Voce($s, $sezione, $motivi, $this->rigaSegnalazione($s), null, isset($voci[$id]) ? $voci[$id]->tipi : []);
                     $assorbite[$id] = true;
                 }
             }

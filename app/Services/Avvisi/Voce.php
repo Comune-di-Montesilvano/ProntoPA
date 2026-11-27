@@ -15,6 +15,7 @@ final class Voce
      * @param  string  $categoria  chiave di `Categorie` oppure, nel quadro, `nuove`|`da_fare`|`in_ritardo`
      * @param  list<string>  $motivi
      * @param  Raggruppabile|null  $notifica  la notifica della categoria vincente; null nel quadro
+     * @param  list<string>  $tipi  class basename di tutte le notifiche assorbite dalla voce (per il tracciamento)
      */
     public function __construct(
         public readonly Segnalazione $segnalazione,
@@ -22,5 +23,6 @@ final class Voce
         public readonly array $motivi,
         public readonly string $riga,
         public readonly ?Raggruppabile $notifica,
+        public readonly array $tipi = [],
     ) {}
 }
