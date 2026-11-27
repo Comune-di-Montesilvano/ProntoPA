@@ -3,16 +3,19 @@
 namespace Tests\Feature;
 
 use App\Models\Appalto;
+use App\Models\AvvisoInAttesa;
 use App\Models\Impresa;
 use App\Models\NotificaSegnalazione;
 use App\Models\Segnalazione;
 use App\Models\SlaConfigurazione;
 use App\Models\User;
+use App\Notifications\SollecitoNotification;
 use Database\Seeders\ImpostazioniSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\TabelleRiferimentoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 /** Ogni notifica che riguarda una segnalazione resta tracciata e si vede nella scheda del comune. */
@@ -57,14 +60,16 @@ class TracciaNotificheTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_sollecito_tracciato_per_utente_e_email_aziendale(): void
+    /** Il sollecito non parte subito: resta in attesa del riepilogo, una riga per destinatario. */
+    public function test_sollecito_in_attesa_per_utente_e_email_aziendale(): void
     {
         $this->actingAs($this->gestore)->post(route('segnalazioni.sollecita', $this->s), ['testo' => 'aggiornare'])->assertRedirect();
 
-        $righe = NotificaSegnalazione::where('id_segnalazione', $this->s->id_segnalazione)->get();
-        $this->assertTrue($righe->contains(fn ($r) => $r->tipo === 'SollecitoNotification' && $r->id_utente === $this->ditta->id && $r->canale === 'mail'));
-        $this->assertTrue($righe->contains(fn ($r) => $r->destinatario === 'ufficio@ediladriatica.it' && $r->id_utente === null));
+        $righe = AvvisoInAttesa::where('id_segnalazione', $this->s->id_segnalazione)->where('tipo', 'SollecitoNotification')->get();
+        $this->assertTrue($righe->contains(fn ($r) => $r->destinatario_tipo === 'utente' && (int) $r->id_utente === $this->ditta->id));
+        $this->assertTrue($righe->contains(fn ($r) => $r->destinatario_tipo === 'email' && $r->email === 'ufficio@ediladriatica.it'));
         $this->assertSame(1, $righe->where('id_utente', $this->ditta->id)->count(), 'una riga sola: listener registrato una volta');
+        $this->assertFalse(NotificaSegnalazione::where('tipo', 'SollecitoNotification')->exists(), 'non ancora inviato');
     }
 
     public function test_riepilogo_inattivita_tracciato_su_ogni_segnalazione(): void
@@ -74,14 +79,19 @@ class TracciaNotificheTest extends TestCase
 
         $this->artisan('segnalazioni:inattivita')->expectsOutputToContain('1 avvisate')->assertSuccessful();
 
+        // Il riepilogo ai supervisori parte subito; l'avviso di inattività aspetta il riepilogo avvisi.
         $tipi = NotificaSegnalazione::where('id_segnalazione', $this->s->id_segnalazione)->pluck('tipo');
-        $this->assertContains('InattivitaNotification', $tipi);
         $this->assertContains('RiepilogoInattivitaNotification', $tipi);
+        $this->assertTrue(AvvisoInAttesa::where('id_segnalazione', $this->s->id_segnalazione)->where('tipo', 'InattivitaNotification')->exists());
     }
 
     public function test_scheda_comune_mostra_notifiche_segnalante_e_ditta_no(): void
     {
-        $this->actingAs($this->gestore)->post(route('segnalazioni.sollecita', $this->s), ['testo' => 'aggiornare']);
+        // Come al reinvio dal riepilogo: parte subito e viene tracciato.
+        $sollecito = new SollecitoNotification($this->s, 'aggiornare');
+        $sollecito->daRiepilogo = true;
+        $this->ditta->notify($sollecito);
+        Notification::route('mail', 'ufficio@ediladriatica.it')->notify($sollecito);
 
         $this->actingAs($this->gestore)->get(route('segnalazioni.show', $this->s))
             ->assertOk()

@@ -6,6 +6,8 @@ use App\Models\Segnalazione;
 use App\Models\User;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
 use App\Notifications\Concerns\DescriveSegnalazione;
+use App\Notifications\Riepilogo\Raggruppa;
+use App\Notifications\Riepilogo\Raggruppabile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -17,11 +19,12 @@ use Illuminate\Support\Str;
  * Variante "lavoro": a chi ha in mano la vecchia (è di nuovo sollecitata).
  * Variante "segnalante": a chi ha mandato la nuova (segua la vecchia).
  */
-class AccorpataNotification extends Notification implements ShouldQueue
+class AccorpataNotification extends Notification implements ShouldQueue, Raggruppabile
 {
     use BuildsNotificationMailMessage;
     use DescriveSegnalazione;
     use Queueable;
+    use Raggruppa;
 
     public function __construct(
         public readonly Segnalazione $destinazione,
@@ -33,6 +36,36 @@ class AccorpataNotification extends Notification implements ShouldQueue
     public function segnalazioniTracciate(): array
     {
         return [$this->destinazione->id_segnalazione, $this->nuova->id_segnalazione];
+    }
+
+    public function categoriaRiepilogo(): string
+    {
+        return 'esiti';
+    }
+
+    public function segnalazioneRiepilogo(): int
+    {
+        return (int) $this->destinazione->id_segnalazione;
+    }
+
+    public function rigaRiepilogo(object $notifiable): string
+    {
+        $id = $this->destinazione->id_segnalazione;
+
+        // A chi ha segnalato la nuova: la sua, senza il titolo della vecchia (come nell'email).
+        return $this->variante === 'segnalante'
+            ? "#{$id} ha assorbito la ".$this->rigaSegnalazione($this->nuova)
+            : $this->rigaSegnalazione($this->destinazione)." — ha assorbito la #{$this->nuova->id_segnalazione}";
+    }
+
+    public function motivoRiepilogo(): string
+    {
+        return 'Accorpata';
+    }
+
+    public function ancoraValida(object $notifiable): bool
+    {
+        return $this->segnalazioneEsiste();
     }
 
     /** @return list<string> */

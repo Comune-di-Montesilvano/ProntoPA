@@ -3,33 +3,59 @@
 namespace App\Notifications;
 
 use App\Channels\TelegramChannel;
-use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
 use App\Notifications\Concerns\DescriveSegnalazione;
+use App\Notifications\Riepilogo\Raggruppa;
+use App\Notifications\Riepilogo\Raggruppabile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class SlaWarningNotification extends Notification implements ShouldQueue
+class SlaWarningNotification extends Notification implements ShouldQueue, Raggruppabile
 {
     use BuildsNotificationMailMessage;
     use DescriveSegnalazione;
     use Queueable;
+    use Raggruppa;
 
     public function __construct(
         public readonly Segnalazione $segnalazione,
     ) {}
 
+    public function categoriaRiepilogo(): string
+    {
+        return 'scadenze';
+    }
+
+    public function segnalazioneRiepilogo(): int
+    {
+        return (int) $this->segnalazione->id_segnalazione;
+    }
+
+    public function rigaRiepilogo(object $notifiable): string
+    {
+        return $this->rigaSegnalazione($this->segnalazione);
+    }
+
+    public function motivoRiepilogo(): string
+    {
+        return 'In scadenza';
+    }
+
+    public function ancoraValida(object $notifiable): bool
+    {
+        $s = $this->segnalazioneAttuale();
+
+        return $s !== null && ! $s->statoEnum()->isTerminale() && ! $s->sla_violato;
+    }
+
     public function via(object $notifiable): array
     {
         $channels = ['mail'];
 
-        if (
-            Impostazione::get('telegram_notifica_sla_warning', true) &&
-            $notifiable->routeNotificationForTelegram()
-        ) {
+        if ($notifiable->routeNotificationForTelegram()) {
             $channels[] = TelegramChannel::class;
         }
 

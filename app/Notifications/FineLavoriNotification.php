@@ -6,6 +6,8 @@ use App\Models\NotaSegnalazione;
 use App\Models\Segnalazione;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
 use App\Notifications\Concerns\DescriveSegnalazione;
+use App\Notifications\Riepilogo\Raggruppa;
+use App\Notifications\Riepilogo\Raggruppabile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -13,11 +15,12 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
 
 /** Avvisa il comune che ditta o operaio hanno finito: resta da verificare e chiudere. */
-class FineLavoriNotification extends Notification implements ShouldQueue
+class FineLavoriNotification extends Notification implements ShouldQueue, Raggruppabile
 {
     use BuildsNotificationMailMessage;
     use DescriveSegnalazione;
     use Queueable;
+    use Raggruppa;
 
     public function __construct(
         public readonly Segnalazione $segnalazione,
@@ -25,6 +28,32 @@ class FineLavoriNotification extends Notification implements ShouldQueue
         public readonly string $mittente,
         public readonly bool $chiusa = false,
     ) {}
+
+    public function categoriaRiepilogo(): string
+    {
+        return 'lavoro';
+    }
+
+    public function segnalazioneRiepilogo(): int
+    {
+        return (int) $this->segnalazione->id_segnalazione;
+    }
+
+    public function rigaRiepilogo(object $notifiable): string
+    {
+        return $this->rigaSegnalazione($this->segnalazione);
+    }
+
+    public function motivoRiepilogo(): string
+    {
+        return 'Fine lavori';
+    }
+
+    public function ancoraValida(object $notifiable): bool
+    {
+        // Chiusa con la fine lavori: è un esito, resta da dire. Altrimenti serve solo se c'è ancora da verificare.
+        return $this->chiusa ? $this->segnalazioneEsiste() : $this->segnalazioneAperta();
+    }
 
     /** @return list<string> */
     public function via(object $notifiable): array

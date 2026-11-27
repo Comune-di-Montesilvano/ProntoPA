@@ -8,17 +8,19 @@ use App\Models\User;
 use App\Notifications\Concerns\BuildsNotificationMailMessage;
 use App\Notifications\Concerns\DescriveSegnalazione;
 use App\Channels\TelegramChannel;
-use App\Models\Impostazione;
+use App\Notifications\Riepilogo\Raggruppa;
+use App\Notifications\Riepilogo\Raggruppabile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class OperatoreAssegnatoNotification extends Notification implements ShouldQueue
+class OperatoreAssegnatoNotification extends Notification implements ShouldQueue, Raggruppabile
 {
     use BuildsNotificationMailMessage;
     use DescriveSegnalazione;
     use Queueable;
+    use Raggruppa;
 
     public function __construct(
         public readonly Segnalazione $segnalazione,
@@ -27,11 +29,39 @@ class OperatoreAssegnatoNotification extends Notification implements ShouldQueue
         public readonly ?string $nota = null,
     ) {}
 
+    public function categoriaRiepilogo(): string
+    {
+        return 'assegnazioni';
+    }
+
+    public function segnalazioneRiepilogo(): int
+    {
+        return (int) $this->segnalazione->id_segnalazione;
+    }
+
+    public function rigaRiepilogo(object $notifiable): string
+    {
+        return $this->rigaSegnalazione($this->segnalazione);
+    }
+
+    public function motivoRiepilogo(): string
+    {
+        return 'Assegnata a te';
+    }
+
+    public function ancoraValida(object $notifiable): bool
+    {
+        $s = $this->segnalazioneAttuale();
+
+        return $s !== null && ! $s->statoEnum()->isTerminale()
+            && $notifiable instanceof User && (int) $s->id_operatore_assegnato === $notifiable->id;
+    }
+
     public function via(object $notifiable): array
     {
         $channels = ['mail'];
 
-        if ($notifiable->routeNotificationForTelegram() && Impostazione::get('telegram_notifica_operatore_assegnazione', true)) {
+        if ($notifiable->routeNotificationForTelegram()) {
             $channels[] = TelegramChannel::class;
         }
 
