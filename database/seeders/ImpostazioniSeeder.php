@@ -256,13 +256,6 @@ class ImpostazioniSeeder extends Seeder
                 'descrizione' => 'Orario di invio del digest (HH:MM)',
             ],
             [
-                'chiave'      => 'digest_skip_weekend',
-                'valore'      => '1',
-                'tipo'        => 'boolean',
-                'gruppo'      => 'digest',
-                'descrizione' => 'Non inviare il digest il sabato e la domenica',
-            ],
-            [
                 'chiave'      => 'squadre_enabled',
                 'valore'      => '0',
                 'tipo'        => 'boolean',
