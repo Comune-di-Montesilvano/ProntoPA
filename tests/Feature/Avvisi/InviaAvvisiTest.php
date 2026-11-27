@@ -5,6 +5,7 @@ namespace Tests\Feature\Avvisi;
 use App\Channels\TelegramChannel;
 use App\Jobs\InviaRiepilogo;
 use App\Models\AvvisoInAttesa;
+use App\Models\Impresa;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Models\User;
@@ -45,6 +46,8 @@ class InviaAvvisiTest extends TestCase
     /** @var list<NotificationSent> */
     private array $inviate = [];
 
+    private bool $telegramOk = true;
+
     /** Lunedì 30 novembre 2026, giorno lavorativo. */
     private const LUNEDI = '2026-11-30';
 
@@ -61,7 +64,9 @@ class InviaAvvisiTest extends TestCase
         $this->operaio = User::factory()->create(['auth_source' => 'ldap']);
         $this->operaio->syncRoles(['operaio']);
         Mail::fake();
-        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true]), '*' => Http::response()]);
+        Http::fake(fn ($richiesta) => str_contains($richiesta->url(), 'api.telegram.org')
+            ? Http::response(['ok' => $this->telegramOk])
+            : Http::response());
         // Mail::fake() non registra le email delle notifiche (non sono Mailable): si contano gli invii veri.
         Event::listen(NotificationSent::class, function (NotificationSent $e) {
             $this->inviate[] = $e;
@@ -321,7 +326,7 @@ class InviaAvvisiTest extends TestCase
 
         $r = $this->riquadroEmail();
         $this->assertSame(Riquadro::ATTENZIONE, $r->stato);
-        $this->assertSame('1 riepiloghi non consegnati negli ultimi 7 giorni.', $r->messaggio);
+        $this->assertSame('1 avviso non consegnato negli ultimi 7 giorni.', $r->messaggio);
 
         // Al giro dopo la riga scartata non riparte.
         $this->alle(self::LUNEDI.' 13:00');
@@ -351,6 +356,109 @@ class InviaAvvisiTest extends TestCase
         $this->assertNotNull(AvvisoInAttesa::find($recente));
         $this->assertNull(AvvisoInAttesa::find($bloccata)->giro, 'prenotazione di oltre 3 ore liberata');
         $this->assertSame('adesso', AvvisoInAttesa::find($inCorso)->giro);
+    }
+
+    public function test_scheduler_in_ritardo_non_perde_il_giro(): void
+    {
+        $this->alle(self::LUNEDI.' 09:20');
+        $this->assegna(2);
+        $this->alle(self::LUNEDI.' 10:01:30');
+        $this->artisan('avvisi:invia --ritmo=ora')->assertExitCode(0);
+        $this->assertCount(1, $this->partite(RiepilogoAvvisiNotification::class));
+
+        $this->assegna(2);
+        $this->alle(self::LUNEDI.' 10:16');
+        $this->artisan('avvisi:invia --ritmo=ora')->assertExitCode(0);
+        $this->assertCount(1, $this->partite(RiepilogoAvvisiNotification::class), '10:16 = quarto d\'ora 10:15: niente');
+
+        foreach (['14:00:59', '14:01:30'] as $i => $ora) {
+            $this->assegna(2);
+            $this->alle(self::LUNEDI.' '.$ora);
+            $this->artisan('avvisi:invia --ritmo=ora')->assertExitCode(0);
+            $this->assertCount(2 + $i, $this->partite(RiepilogoAvvisiNotification::class), "chiusura alle $ora");
+        }
+    }
+
+    public function test_chiusura_non_all_ora_piena_con_scheduler_in_ritardo(): void
+    {
+        Impostazione::set('orario_lun', '08:00-13:45');
+        $this->alle(self::LUNEDI.' 13:10');
+        $this->assegna(2);
+        $this->alle(self::LUNEDI.' 13:46:30');
+        $this->artisan('avvisi:invia --ritmo=ora')->assertExitCode(0);
+        $this->assertCount(1, $this->partite(RiepilogoAvvisiNotification::class));
+    }
+
+    public function test_festivo_nessun_giro_orario(): void
+    {
+        Impostazione::set('orario_ven', '08:00-14:00');
+        $this->alle('2026-12-25 09:20'); // Natale, venerdì
+        $this->assegna(2);
+        $this->alle('2026-12-25 10:00');
+        $this->artisan('avvisi:invia --ritmo=ora')->assertExitCode(0);
+
+        $this->assertSame([], $this->partite());
+        $this->assertSame(2, $this->inAttesa());
+    }
+
+    public function test_mail_consegnata_telegram_fallito_righe_inviate(): void
+    {
+        Impostazione::set('telegram_bot_token', '123:abc');
+        $this->operaio->forceFill(['telegram_chat_id' => '555'])->save();
+        $this->alle(self::LUNEDI.' 09:20');
+        $this->assegna(2);
+        $this->telegramOk = false;
+        Log::spy();
+
+        $this->alle(self::LUNEDI.' 10:00');
+        $this->artisan('avvisi:invia --ritmo=ora')->assertExitCode(0);
+
+        $partite = $this->partite(null, $this->operaio);
+        $this->assertCount(1, $partite);
+        $this->assertSame('mail', $partite[0]->channel);
+        $this->assertSame(0, $this->inAttesa());
+        $this->assertSame(0, (int) AvvisoInAttesa::max('tentativi'));
+        Log::shouldHaveReceived('warning')->with('Riepilogo avvisi: canale non consegnato', Mockery::type('array'))->once();
+
+        // Il giro dopo non rispedisce la mail.
+        $this->alle(self::LUNEDI.' 11:00');
+        $this->artisan('avvisi:invia --ritmo=ora')->assertExitCode(0);
+        $this->assertCount(1, $this->partite(null, $this->operaio));
+    }
+
+    public function test_solo_telegram_fallito_conta_il_tentativo(): void
+    {
+        Impostazione::set('telegram_bot_token', '123:abc');
+        $this->operaio->forceFill(['telegram_chat_id' => '555', 'email' => ''])->save();
+        $this->alle(self::LUNEDI.' 09:20');
+        $this->assegna(2);
+        $this->telegramOk = false;
+
+        $this->alle(self::LUNEDI.' 10:00');
+        $this->artisan('avvisi:invia --ritmo=ora')->assertExitCode(0);
+
+        $this->assertSame([], $this->partite());
+        $this->assertSame(2, $this->inAttesa());
+        $this->assertSame(1, (int) AvvisoInAttesa::min('tentativi'));
+        $this->assertSame(0, AvvisoInAttesa::whereNotNull('giro')->count());
+    }
+
+    public function test_quadro_email_aziendale_saltata_se_coincide_con_una_persona_della_ditta(): void
+    {
+        Impostazione::set('digest_enabled', true);
+        $stessa = Impresa::create(['ragione_sociale' => 'Edil Adriatica', 'email' => ' Ufficio@EdilAdriatica.it', 'attiva' => true]);
+        $persona = User::factory()->create(['auth_source' => 'spid', 'email' => 'ufficio@ediladriatica.it', 'id_impresa' => $stessa->id_impresa]);
+        $persona->syncRoles(['impresa']);
+        Impresa::create(['ragione_sociale' => 'Termo Sud', 'email' => 'Info@TermoSud.it', 'attiva' => true]);
+
+        Queue::fake();
+        $this->alle(self::LUNEDI.' 07:30');
+        $this->artisan('avvisi:invia --ritmo=giorno')->assertExitCode(0);
+
+        $chiavi = Queue::pushed(InviaRiepilogo::class)->map(fn (InviaRiepilogo $j) => $j->chiave)->all();
+        $this->assertContains('u:'.$persona->id, $chiavi);
+        $this->assertContains('e:info@termosud.it', $chiavi);
+        $this->assertNotContains('e:ufficio@ediladriatica.it', $chiavi);
     }
 
     private function riquadroEmail(): Riquadro

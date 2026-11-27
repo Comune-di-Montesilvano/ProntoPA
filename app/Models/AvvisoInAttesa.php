@@ -49,7 +49,7 @@ class AvvisoInAttesa extends Model
     {
         return $this->destinatario_tipo === self::TIPO_UTENTE
             ? 'u:'.$this->id_utente
-            : 'e:'.mb_strtolower((string) $this->email);
+            : 'e:'.mb_strtolower(trim((string) $this->email));
     }
 
     /** Utente attivo o destinatario anonimo via email; null se non c'è più o è disattivato. */

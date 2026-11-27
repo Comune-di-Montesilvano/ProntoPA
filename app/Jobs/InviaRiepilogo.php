@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Channels\TelegramChannel;
 use App\Models\AvvisoInAttesa;
-use App\Models\Impostazione;
 use App\Models\User;
 use App\Notifications\RiepilogoAvvisiNotification;
 use App\Services\Avvisi\ComponiRiepilogo;
@@ -67,26 +66,50 @@ class InviaRiepilogo implements ShouldQueue
         }
     }
 
+    /**
+     * Un canale alla volta: basta che uno consegni perché il giro sia riuscito (l'altro canale fallito
+     * resta solo nel log, senza riprovare: la mail già partita non va rispedita). Nessun canale
+     * consegnato → rilancia il primo errore, per il percorso dei tentativi.
+     */
     private function invia(Composizione $c, User|AnonymousNotifiable $chi): void
     {
         $unica = $c->unica;
-        if (! $unica instanceof Notification) {
-            $chi->notifyNow(new RiepilogoAvvisiNotification($c, $this->mattino));
-
-            return;
-        }
-
         // Un solo avviso: l'email di sempre, solo in ritardo; su Telegram il riepilogo a una riga.
-        if (property_exists($unica, 'daRiepilogo')) {
+        $riepilogo = new RiepilogoAvvisiNotification(
+            $unica instanceof Notification ? new Composizione($c->quadro, $c->sezioni, $c->idRigheUsate, null) : $c,
+            $this->mattino,
+        );
+        if ($unica instanceof Notification && property_exists($unica, 'daRiepilogo')) {
             $unica->daRiepilogo = true;
         }
-        $chi->notifyNow($unica, ['mail']);
 
-        if ($chi instanceof User && $chi->routeNotificationForTelegram() && Impostazione::get('telegram_riepiloghi', true)) {
-            $chi->notifyNow(
-                new RiepilogoAvvisiNotification(new Composizione($c->quadro, $c->sezioni, $c->idRigheUsate, null), $this->mattino),
-                [TelegramChannel::class],
-            );
+        $invii = [];
+        if (filled($chi->routeNotificationFor('mail'))) {
+            $mail = $unica instanceof Notification ? $unica : $riepilogo;
+            $invii['mail'] = fn () => $chi->notifyNow($mail, ['mail']);
+        }
+        if (RiepilogoAvvisiNotification::vaSuTelegram($chi)) {
+            $invii['telegram'] = fn () => $chi->notifyNow($riepilogo, [TelegramChannel::class]);
+        }
+
+        $consegnati = 0;
+        $errori = [];
+        $primoErrore = null;
+        foreach ($invii as $canale => $invio) {
+            try {
+                $invio();
+                $consegnati++;
+            } catch (Throwable $e) {
+                $primoErrore ??= $e;
+                $errori[$canale] = $e->getMessage();
+            }
+        }
+
+        if ($primoErrore !== null && $consegnati === 0) {
+            throw $primoErrore;
+        }
+        if ($errori !== []) {
+            Log::warning('Riepilogo avvisi: canale non consegnato', ['destinatario' => $this->chiave, 'errori' => $errori]);
         }
     }
 

@@ -159,7 +159,7 @@ class StatoSistema
         }
         $scartati = AvvisoInAttesa::query()->where('scartata_at', '>=', now()->subDays(7))->count();
         if ($scartati > 0) {
-            return new Riquadro('email', 'Email in uscita', Riquadro::ATTENZIONE, "$scartati riepiloghi non consegnati negli ultimi 7 giorni.", $url);
+            return new Riquadro('email', 'Email in uscita', Riquadro::ATTENZIONE, $scartati === 1 ? '1 avviso non consegnato negli ultimi 7 giorni.' : "$scartati avvisi non consegnati negli ultimi 7 giorni.", $url);
         }
         // Indirizzo d'esempio (quello di partenza o un dominio "example"): le email partono ma da un mittente finto.
         $dominio = mb_strtolower((string) substr(strrchr($mittente, '@') ?: '', 1));

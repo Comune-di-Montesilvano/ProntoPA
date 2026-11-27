@@ -40,13 +40,19 @@ class RiepilogoAvvisiNotification extends Notification
     {
         $canali = ['mail'];
 
-        if (method_exists($notifiable, 'routeNotificationForTelegram')
-            && $notifiable->routeNotificationForTelegram()
-            && Impostazione::get('telegram_riepiloghi', true)) {
+        if (self::vaSuTelegram($notifiable)) {
             $canali[] = TelegramChannel::class;
         }
 
         return $canali;
+    }
+
+    /** Il riepilogo va anche su Telegram: account collegato (e abilitato al bot) e riepiloghi Telegram attivi. */
+    public static function vaSuTelegram(object $notifiable): bool
+    {
+        return method_exists($notifiable, 'routeNotificationForTelegram')
+            && $notifiable->routeNotificationForTelegram()
+            && Impostazione::get('telegram_riepiloghi', true);
     }
 
     /** @return list<int> */

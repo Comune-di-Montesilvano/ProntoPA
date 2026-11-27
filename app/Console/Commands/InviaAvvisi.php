@@ -87,7 +87,10 @@ class InviaAvvisi extends Command
     private function momentoGiusto(string $ritmo): bool
     {
         $calendario = CalendarioUfficio::daImpostazioni();
+        // Al quarto d'ora: con `schedule:run; sleep 60` e runInBackground il comando può partire
+        // il minuto dopo quello schedulato, e il giro non va perso.
         $adesso = now()->setTimezone((string) config('app.timezone'))->startOfMinute();
+        $adesso->setTime($adesso->hour, intdiv($adesso->minute, 15) * 15);
         $fascia = $calendario->fascia($adesso);
         if ($fascia === null) {
             return false;
