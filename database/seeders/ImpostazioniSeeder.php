@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Services\Sla\CalendarioUfficio;
+use App\Support\Avvisi\Categorie;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -168,27 +169,14 @@ class ImpostazioniSeeder extends Seeder
                 'descrizione' => 'Secret inviato da Telegram nell\'header del webhook',
             ],
 
-            // Notifiche Telegram — toggle per tipo evento
+            // Riepilogo avvisi: ritmo per categoria (ora | giorno) e riepiloghi su Telegram
+            ...$this->ritmiAvvisi(),
             [
-                'chiave'      => 'telegram_notifica_operatore_assegnazione',
+                'chiave'      => 'telegram_riepiloghi',
                 'valore'      => '1',
                 'tipo'        => 'boolean',
-                'gruppo'      => 'notifiche_telegram',
-                'descrizione' => 'Notifica Telegram quando viene assegnato un operatore',
-            ],
-            [
-                'chiave'      => 'telegram_notifica_sla_warning',
-                'valore'      => '1',
-                'tipo'        => 'boolean',
-                'gruppo'      => 'notifiche_telegram',
-                'descrizione' => 'Notifica Telegram per avvisi SLA in scadenza',
-            ],
-            [
-                'chiave'      => 'telegram_notifica_nuova_nota',
-                'valore'      => '0',
-                'tipo'        => 'boolean',
-                'gruppo'      => 'notifiche_telegram',
-                'descrizione' => 'Notifica Telegram quando viene aggiunta una nota visibile',
+                'gruppo'      => 'avvisi',
+                'descrizione' => 'Manda i riepiloghi degli avvisi anche su Telegram',
             ],
 
             // Allegati segnalazioni
@@ -424,6 +412,23 @@ class ImpostazioniSeeder extends Seeder
                 'updated_at' => now(),
             ]));
         }
+    }
+
+    /** Ritmo di invio per categoria di avviso: default in Categorie::DEFAULT. */
+    private function ritmiAvvisi(): array
+    {
+        $righe = [];
+        foreach (Categorie::DEFAULT as $categoria => $ritmo) {
+            $righe[] = [
+                'chiave'      => "avvisi_ritmo_$categoria",
+                'valore'      => $ritmo,
+                'tipo'        => 'text',
+                'gruppo'      => 'avvisi',
+                'descrizione' => 'Ritmo degli avvisi «' . Categorie::etichetta($categoria) . '»: ora (ogni ora in orario d\'ufficio) o giorno (la mattina)',
+            ];
+        }
+
+        return $righe;
     }
 
     /** Orario d'ufficio (scadenze SLA): una fascia per giorno, vuota = chiuso. */

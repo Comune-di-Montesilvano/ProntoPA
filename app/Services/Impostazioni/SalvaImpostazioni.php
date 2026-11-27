@@ -129,7 +129,8 @@ class SalvaImpostazioni
                 'segreto', 'segreto_cifrato' => ['nullable', 'string', 'max:500'],
                 'stato'    => ['nullable', 'integer', 'exists:db_stato_segnalazioni,id_stato'],
                 'disco'    => ['required', 'in:local,s3'],
-                default    => null, // bool, orario, patrono: sotto
+                'ritmo'    => ['required', 'in:ora,giorno'],
+                default   => null, // bool, orario, patrono: sotto
             };
             if ($regola !== null) {
                 $regole["impostazioni.$chiave"] = $regola;

@@ -20,6 +20,7 @@
     $opzioni = match ($tipo) {
         'stato' => StatoSegnalazione::orderBy('id_stato')->pluck('descrizione', 'id_stato')->all(),
         'disco' => ['local' => 'Sul server', 's3' => 'S3 o compatibile'],
+        'ritmo' => ['ora' => "Ogni ora (in orario d'ufficio)", 'giorno' => 'Una volta al giorno, la mattina'],
         default => [],
     };
 
@@ -47,7 +48,7 @@
     @else
         <label for="{{ $id }}" class="text-sm font-medium text-gray-800">{{ $etichetta }}</label>
 
-        @if($opzioni || in_array($tipo, ['stato', 'disco'], true))
+        @if($opzioni || in_array($tipo, ['stato', 'disco', 'ritmo'], true))
             <select id="{{ $id }}" name="{{ $nome }}" class="{{ $campo }}">
                 @if($tipo === 'stato')
                     <option value="">Nessuno</option>
