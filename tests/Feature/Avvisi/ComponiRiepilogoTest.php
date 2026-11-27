@@ -206,4 +206,29 @@ class ComponiRiepilogoTest extends TestCase
         $this->assertCount(1, $c->sezioni['assegnazioni']);
         $this->assertInstanceOf(OperatoreAssegnatoNotification::class, $c->unica);
     }
+
+    public function test_supervisore_non_assegnata_scaduta_solo_in_ritardo(): void
+    {
+        Impostazione::set('digest_enabled', true);
+        $supervisore = $this->utente('gestore', ['gestore_segnalazioni' => true, 'supervisore_segnalazioni' => true]);
+        $s = $this->segnalazione([
+            'id_stato_segnalazione' => SegnalazioneStato::NUOVA->value,
+            'id_operatore_assegnato' => 0,
+            'sla_violato' => true,
+            'data_scadenza_sla' => now()->subDay(),
+        ]);
+        $a = $this->riga($supervisore, new SlaViolazioneNotification($s));
+
+        $c = ComponiRiepilogo::componi($this->righe([$a]), $supervisore, true);
+
+        $this->assertSame(['nuove', 'da_fare', 'in_ritardo'], array_keys($c->quadro));
+        $this->assertSame([], $c->quadro['nuove']);
+        $this->assertSame([], $c->quadro['da_fare']);
+        $this->assertCount(1, $c->quadro['in_ritardo']);
+        $this->assertSame(['Scaduta'], $c->quadro['in_ritardo'][0]->motivi);
+        $this->assertSame([], $c->sezioni);
+        $voci = array_sum(array_map('count', $c->quadro));
+        $this->assertSame($voci, $c->totaleSegnalazioni());
+        $this->assertSame(1, $c->totaleSegnalazioni());
+    }
 }

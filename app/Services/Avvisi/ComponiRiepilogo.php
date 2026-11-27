@@ -20,7 +20,11 @@ final class ComponiRiepilogo
 {
     use DescriveSegnalazione;
 
+    /** Ordine di visualizzazione delle sezioni del quadro. */
     private const SEZIONI_QUADRO = ['nuove', 'da_fare', 'in_ritardo'];
+
+    /** Chi vince se la stessa segnalazione è in più sezioni del quadro. */
+    private const PRECEDENZA_QUADRO = ['in_ritardo', 'da_fare', 'nuove'];
 
     /** @param  Collection<int, AvvisoInAttesa>  $righe */
     public static function componi(Collection $righe, User|AnonymousNotifiable $chi, bool $conQuadro): Composizione
@@ -71,12 +75,17 @@ final class ComponiRiepilogo
         }
 
         // 3. Quadro del mattino: le segnalazioni che vi compaiono assorbono i loro avvisi.
+        // Una segnalazione sta in una sola sezione del quadro (in ritardo > da fare > nuove).
         $quadro = array_fill_keys(self::SEZIONI_QUADRO, []);
         if ($conQuadro) {
             $assorbite = [];
-            foreach (QuadroMattino::per($chi) as $sezione => $elenco) {
-                foreach ($elenco as $s) {
+            $elenchi = QuadroMattino::per($chi);
+            foreach (self::PRECEDENZA_QUADRO as $sezione) {
+                foreach ($elenchi[$sezione] as $s) {
                     $id = (int) $s->id_segnalazione;
+                    if (isset($assorbite[$id])) {
+                        continue;
+                    }
                     $motivi = isset($voci[$id]) ? $voci[$id]->motivi : [];
                     $quadro[$sezione][] = new Voce($s, $sezione, $motivi, $this->rigaSegnalazione($s), null);
                     $assorbite[$id] = true;
@@ -92,14 +101,15 @@ final class ComponiRiepilogo
         uksort($sezioni, fn (string $a, string $b) => self::posizione($a) <=> self::posizione($b));
 
         // 4. Un solo avviso (una segnalazione, un motivo) e niente quadro: si reinvia l'originale.
-        $unica = null;
-        $quadroVuoto = array_merge(...array_values($quadro)) === [];
-        if ($quadroVuoto && count($voci) === 1) {
-            $voce = reset($voci);
-            $unica = count($voce->motivi) === 1 ? $voce->notifica : null;
+        $composizione = new Composizione($quadro, $sezioni, $idRigheUsate, null);
+        if (! $composizione->quadroVuoto() || count($voci) !== 1) {
+            return $composizione;
         }
+        $voce = reset($voci);
 
-        return new Composizione($quadro, $sezioni, $idRigheUsate, $unica);
+        return count($voce->motivi) === 1
+            ? new Composizione($quadro, $sezioni, $idRigheUsate, $voce->notifica)
+            : $composizione;
     }
 
     /** Posizione in `Categorie::ORDINE`; categoria sconosciuta in fondo. */
