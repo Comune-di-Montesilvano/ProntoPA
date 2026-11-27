@@ -48,7 +48,7 @@ class QuadroMattino
         $daFare = match (true) {
             $chi->hasRole('operaio') => self::lavoriOperaio($chi),
             $chi->isGestore() => self::base()
-                ->where('id_stato_segnalazione', SegnalazioneStato::IN_CARICO->value)
+                ->whereIn('id_stato_segnalazione', [SegnalazioneStato::IN_CARICO->value, SegnalazioneStato::ATTESA_RISPOSTA->value])
                 ->where('id_operatore_assegnato', $chi->id),
             default => null,
         };

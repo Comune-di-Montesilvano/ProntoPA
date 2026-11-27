@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Avvisi;
 
+use App\Enums\SegnalazioneStato;
 use App\Models\Appalto;
 use App\Models\Impostazione;
 use App\Models\Impresa;
@@ -62,15 +63,32 @@ class QuadroMattinoTest extends TestCase
         $this->assertSame([$suo->id_segnalazione], $quadro['nuove']->pluck('id_segnalazione')->all());
     }
 
+    public function test_gestore_da_fare_include_in_carico_e_attesa_risposta_ed_esclude_in_ritardo(): void
+    {
+        $gestore = $this->utente('gestore', ['gestore_segnalazioni' => true, 'gestore_tutte_tipologie' => false]);
+        $altro = $this->utente('gestore', ['gestore_segnalazioni' => true]);
+        $mio = ['id_operatore_assegnato' => $gestore->id];
+
+        $inCarico = $this->segnalazione($mio + ['id_stato_segnalazione' => SegnalazioneStato::IN_CARICO->value]);
+        $attesa = $this->segnalazione($mio + ['id_stato_segnalazione' => SegnalazioneStato::ATTESA_RISPOSTA->value]);
+        $ritardo = $this->segnalazione($mio + ['id_stato_segnalazione' => SegnalazioneStato::IN_CARICO->value, 'sla_violato' => true, 'data_scadenza_sla' => now()->subDay()]);
+        $this->segnalazione(['id_operatore_assegnato' => $altro->id, 'id_stato_segnalazione' => SegnalazioneStato::IN_CARICO->value]);
+
+        $quadro = QuadroMattino::per($gestore);
+
+        $this->assertEqualsCanonicalizing([$inCarico->id_segnalazione, $attesa->id_segnalazione], $quadro['da_fare']->pluck('id_segnalazione')->all());
+        $this->assertSame([$ritardo->id_segnalazione], $quadro['in_ritardo']->pluck('id_segnalazione')->all());
+    }
+
     public function test_operaio_da_fare_include_squadra_da_caposquadra(): void
     {
         $operaio = $this->utente('operaio');
         $squadra = Squadra::create(['nome' => 'Idraulici', 'id_caposquadra' => $operaio->id, 'attiva' => true]);
 
-        $diSquadra = $this->segnalazione(['id_stato_segnalazione' => 3, 'id_squadra_assegnata' => $squadra->id_squadra]);
-        $sua = $this->segnalazione(['id_stato_segnalazione' => 3, 'id_operatore_assegnato' => $operaio->id]);
-        $this->segnalazione(['id_stato_segnalazione' => 3, 'id_operatore_assegnato' => $this->utente('operaio')->id]);
-        $this->segnalazione(['id_stato_segnalazione' => 7, 'id_operatore_assegnato' => $operaio->id, 'data_chiusura' => now()]);
+        $diSquadra = $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_OPERATORE->value, 'id_squadra_assegnata' => $squadra->id_squadra]);
+        $sua = $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_OPERATORE->value, 'id_operatore_assegnato' => $operaio->id]);
+        $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_OPERATORE->value, 'id_operatore_assegnato' => $this->utente('operaio')->id]);
+        $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::COMPLETATA->value, 'id_operatore_assegnato' => $operaio->id, 'data_chiusura' => now()]);
 
         $quadro = QuadroMattino::per($operaio);
 
@@ -87,9 +105,9 @@ class QuadroMattinoTest extends TestCase
         $appalto = Appalto::create(['descrizione' => 'Edile', 'id_impresa' => $impresa->id_impresa, 'valido' => true]);
         $altra = Appalto::create(['descrizione' => 'Altro', 'id_impresa' => Impresa::factory()->create()->id_impresa, 'valido' => true]);
 
-        $nelTermine = $this->segnalazione(['id_stato_segnalazione' => 4, 'id_appalto' => $appalto->id_appalto]);
-        $ritardo = $this->segnalazione(['id_stato_segnalazione' => 4, 'id_appalto' => $appalto->id_appalto, 'sla_violato' => true, 'data_scadenza_sla' => now()->subDay()]);
-        $this->segnalazione(['id_stato_segnalazione' => 4, 'id_appalto' => $altra->id_appalto]);
+        $nelTermine = $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_IMPRESA->value, 'id_appalto' => $appalto->id_appalto]);
+        $ritardo = $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_IMPRESA->value, 'id_appalto' => $appalto->id_appalto, 'sla_violato' => true, 'data_scadenza_sla' => now()->subDay()]);
+        $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_IMPRESA->value, 'id_appalto' => $altra->id_appalto]);
 
         $quadro = QuadroMattino::per((new AnonymousNotifiable)->route('mail', 'info@ditta.it'));
 
@@ -103,9 +121,9 @@ class QuadroMattinoTest extends TestCase
     public function test_supervisore_in_ritardo_tutte(): void
     {
         $sup = $this->utente('gestore', ['gestore_segnalazioni' => true, 'supervisore_segnalazioni' => true]);
-        $a = $this->segnalazione(['id_stato_segnalazione' => 3, 'sla_violato' => true, 'data_scadenza_sla' => now()->subDays(2)]);
-        $b = $this->segnalazione(['id_stato_segnalazione' => 4, 'sla_violato' => true, 'data_scadenza_sla' => now()->subDay()]);
-        $this->segnalazione(['id_stato_segnalazione' => 3, 'sla_violato' => false]);
+        $a = $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_OPERATORE->value, 'sla_violato' => true, 'data_scadenza_sla' => now()->subDays(2)]);
+        $b = $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_IMPRESA->value, 'sla_violato' => true, 'data_scadenza_sla' => now()->subDay()]);
+        $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_OPERATORE->value, 'sla_violato' => false]);
 
         $quadro = QuadroMattino::per($sup);
 
@@ -114,7 +132,7 @@ class QuadroMattinoTest extends TestCase
 
     public function test_segnalante_quadro_vuoto(): void
     {
-        $this->segnalazione(['id_stato_segnalazione' => 1]);
+        $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::NUOVA->value]);
         $scuola = $this->utente('segnalatore', ['auth_source' => 'spid']);
         $urp = $this->utente('segnalatore', ['auth_source' => 'ldap']);
 
@@ -128,7 +146,7 @@ class QuadroMattinoTest extends TestCase
     {
         Impostazione::set('digest_enabled', false);
         $sup = $this->utente('gestore', ['gestore_segnalazioni' => true, 'supervisore_segnalazioni' => true]);
-        $this->segnalazione(['id_stato_segnalazione' => 1]);
+        $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::NUOVA->value]);
 
         $quadro = QuadroMattino::per($sup);
 
