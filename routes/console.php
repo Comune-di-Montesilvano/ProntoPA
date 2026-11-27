@@ -29,7 +29,11 @@ Schedule::command('allegati:pulisci-temporanei')->hourly()->runInBackground();
 Schedule::command('deleghe:scadenze')->dailyAt('06:30')->runInBackground();
 Schedule::command('deleghe:rinnovi')->monthlyOn(1, '07:00')->runInBackground();
 
-Schedule::command('digest:invia')
+// Riepilogo degli avvisi: ogni ora piena in orario d'ufficio e alla chiusura (il comando decide),
+// poi il giro del mattino con il quadro di oggi (sostituisce digest:invia, che resta come comando).
+Schedule::command('avvisi:invia --ritmo=ora')->everyFifteenMinutes()->withoutOverlapping()->runInBackground();
+
+Schedule::command('avvisi:invia --ritmo=giorno')
     ->dailyAt((function () {
         try {
             $ora = \App\Models\Impostazione::get('digest_ora', '07:30');
@@ -38,6 +42,7 @@ Schedule::command('digest:invia')
             return '07:30'; // DB non disponibile (es. primo deploy)
         }
     })())
+    ->withoutOverlapping()
     ->runInBackground();
 
 // Difesa in profondità se Sentry non è configurato: senza questo, job

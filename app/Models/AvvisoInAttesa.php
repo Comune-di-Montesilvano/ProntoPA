@@ -55,17 +55,26 @@ class AvvisoInAttesa extends Model
     /** Utente attivo o destinatario anonimo via email; null se non c'è più o è disattivato. */
     public function notificabile(): User|AnonymousNotifiable|null
     {
-        if ($this->destinatario_tipo === self::TIPO_UTENTE) {
-            if (! $this->id_utente) {
+        return self::notificabileDaChiave($this->chiaveDestinatario());
+    }
+
+    /** Dalla chiave del destinatario (`u:<id>` | `e:<email>`): utente attivo o rotta email; null altrimenti. */
+    public static function notificabileDaChiave(string $chiave): User|AnonymousNotifiable|null
+    {
+        if (str_starts_with($chiave, 'u:')) {
+            $id = (int) substr($chiave, 2);
+            if ($id <= 0) {
                 return null;
             }
-            $utente = User::find($this->id_utente);
+            $utente = User::find($id);
 
             return $utente && $utente->attivo !== false ? $utente : null;
         }
 
-        if ($this->destinatario_tipo === self::TIPO_EMAIL && (string) $this->email !== '') {
-            return NotificationFacade::route('mail', $this->email);
+        if (str_starts_with($chiave, 'e:')) {
+            $email = trim(substr($chiave, 2));
+
+            return $email !== '' ? NotificationFacade::route('mail', $email) : null;
         }
 
         return null;
