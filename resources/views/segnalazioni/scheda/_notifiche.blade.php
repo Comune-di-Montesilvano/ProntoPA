@@ -1,6 +1,7 @@
 {{-- Avvisi partiti per questa segnalazione (solo lettura comune: contiene nomi ed email di terzi). --}}
 @php
     $riepilogo = \App\Models\NotificaSegnalazione::riepilogoPer($segnalazione);
+    $inAttesa = \App\Models\NotificaSegnalazione::inAttesaPer($segnalazione);
     $quando = fn ($d) => $d?->isToday() ? 'oggi '.$d->format('H:i') : $d?->locale('it')->isoFormat('ddd D, HH:mm');
 @endphp
 
@@ -30,5 +31,15 @@
                 @endforeach
             </ul>
         </details>
+    @endif
+    @if($inAttesa !== [])
+        <ul class="m-0 mt-3 flex list-none flex-col gap-1.5 p-0 text-sm" data-avvisi-in-attesa>
+            @foreach($inAttesa as $a)
+                <li class="text-[var(--slate-600)]">
+                    <span class="font-medium text-[var(--ink)]">{{ $a['etichetta'] }}</span>
+                    — {{ $a['quando'] }}@if($a['destinatari'] > 1) <span class="text-[var(--slate-500)]">({{ $a['destinatari'] }} destinatari)</span>@endif
+                </li>
+            @endforeach
+        </ul>
     @endif
 </x-pa.card>

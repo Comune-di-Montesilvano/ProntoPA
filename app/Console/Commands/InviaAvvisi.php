@@ -8,8 +8,8 @@ use App\Models\Impostazione;
 use App\Models\Impresa;
 use App\Models\User;
 use App\Services\Sla\CalendarioUfficio;
+use App\Support\Avvisi\ProssimoGiro;
 use Illuminate\Console\Command;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
@@ -99,19 +99,7 @@ class InviaAvvisi extends Command
             return true;
         }
 
-        [$apertura, $chiusura] = $fascia;
-        $allOraPiena = $adesso->minute === 0 && $adesso->betweenIncluded($apertura, $chiusura);
-
-        return $allOraPiena || $adesso->equalTo(self::aiQuartiDOra($chiusura));
-    }
-
-    /** Chiusura portata al quarto d'ora successivo (lo schedule gira ogni 15 minuti). */
-    private static function aiQuartiDOra(Carbon $chiusura): Carbon
-    {
-        $c = $chiusura->copy()->startOfMinute();
-        $resto = $c->minute % 15;
-
-        return $resto === 0 ? $c : $c->addMinutes(15 - $resto);
+        return ProssimoGiro::daImpostazioni()->eOrarioDelGiro($adesso);
     }
 
     /** Una sola volta al giorno per destinatario, anche se il giro del mattino viene rilanciato. */

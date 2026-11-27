@@ -72,6 +72,19 @@ class TracciaNotificheTest extends TestCase
         $this->assertFalse(NotificaSegnalazione::where('tipo', 'SollecitoNotification')->exists(), 'non ancora inviato');
     }
 
+    /** Dopo il giro l'avviso singolo parte come l'originale: tipo e canale di sempre, una riga sola. */
+    public function test_sollecito_tracciato_dopo_il_giro_con_il_tipo_originale(): void
+    {
+        $this->actingAs($this->gestore)->post(route('segnalazioni.sollecita', $this->s), ['testo' => 'aggiornare'])->assertRedirect();
+
+        $this->artisan('avvisi:invia', ['--forza' => true])->assertSuccessful();
+
+        $righe = NotificaSegnalazione::where('id_segnalazione', $this->s->id_segnalazione)->where('tipo', 'SollecitoNotification')->get();
+        $this->assertCount(2, $righe, 'persona della ditta + email aziendale, nessun doppione');
+        $this->assertSame(['mail'], $righe->pluck('canale')->unique()->all());
+        $this->assertSame(1, $righe->where('id_utente', $this->ditta->id)->count());
+    }
+
     public function test_riepilogo_inattivita_tracciato_su_ogni_segnalazione(): void
     {
         SlaConfigurazione::create(['livello_priorita' => 2, 'ore_target' => 10, 'unita' => 'giorni', 'ore_warning' => 8, 'giorni_avviso_inattivita' => 15]);

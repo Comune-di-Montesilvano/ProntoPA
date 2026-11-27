@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Channels\TelegramChannel;
 use App\Models\NotificaSegnalazione;
 use App\Models\Segnalazione;
 use App\Models\User;
@@ -16,8 +17,21 @@ class TracciaNotificaInviata
 {
     public function handle(NotificationSent $evento): void
     {
-        $ids = self::segnalazioni($evento->notification);
-        if ($ids === []) {
+        $notifica = $evento->notification;
+        if (method_exists($notifica, 'tipiTracciati')) {
+            // Riepilogo: una riga per (segnalazione, tipo originale), canale col suffisso `:riepilogo`.
+            $righe = [];
+            foreach ($notifica->tipiTracciati() as $id => $nomi) {
+                foreach ($nomi as $nome) {
+                    $righe[] = [(int) $id, $nome];
+                }
+            }
+            $suffisso = ':riepilogo';
+        } else {
+            $righe = array_map(fn (int $id) => [$id, class_basename($notifica)], self::segnalazioni($notifica));
+            $suffisso = '';
+        }
+        if ($righe === []) {
             return;
         }
 
@@ -25,16 +39,23 @@ class TracciaNotificaInviata
         $utente = $notifiable instanceof User ? $notifiable : null;
         $destinatario = $utente?->name
             ?: ($notifiable instanceof AnonymousNotifiable ? (string) ($notifiable->routes[$evento->channel] ?? '') : '');
+        $canale = mb_substr(self::nomeCanale((string) $evento->channel).$suffisso, 0, 30);
 
-        foreach ($ids as $id) {
+        foreach ($righe as [$id, $tipo]) {
             NotificaSegnalazione::create([
                 'id_segnalazione' => $id,
-                'tipo'            => class_basename($evento->notification),
-                'canale'          => mb_substr((string) $evento->channel, 0, 30),
+                'tipo'            => $tipo,
+                'canale'          => $canale,
                 'id_utente'       => $utente?->id,
                 'destinatario'    => mb_substr($destinatario ?: '—', 0, 191),
             ]);
         }
+    }
+
+    /** La classe del canale Telegram diventa `telegram` (come lo mostra la scheda). */
+    private static function nomeCanale(string $canale): string
+    {
+        return $canale === TelegramChannel::class ? 'telegram' : $canale;
     }
 
     /** @return list<int> */
