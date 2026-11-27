@@ -17,12 +17,19 @@ use Illuminate\Support\Collection;
  */
 class QuadroMattino
 {
+    /** Massimo di righe per le sezioni senza un tetto naturale (nuove, in ritardo dei supervisori). */
     public const LIMITE_NUOVE = 50;
 
-    /** @return array{nuove: Collection<int, Segnalazione>, da_fare: Collection<int, Segnalazione>, in_ritardo: Collection<int, Segnalazione>} */
+    private const NESSUNA_ALTRA = ['nuove' => 0, 'da_fare' => 0, 'in_ritardo' => 0];
+
+    /**
+     * `altre`: quante non mostrate per sezione (oltre il limite), per il «e altre N».
+     *
+     * @return array{nuove: Collection<int, Segnalazione>, da_fare: Collection<int, Segnalazione>, in_ritardo: Collection<int, Segnalazione>, altre: array{nuove: int, da_fare: int, in_ritardo: int}}
+     */
     public static function per(User|AnonymousNotifiable $chi): array
     {
-        $vuoto = ['nuove' => collect(), 'da_fare' => collect(), 'in_ritardo' => collect()];
+        $vuoto = ['nuove' => collect(), 'da_fare' => collect(), 'in_ritardo' => collect(), 'altre' => self::NESSUNA_ALTRA];
 
         if (! Impostazione::get('digest_enabled', false)) {
             return $vuoto;
@@ -42,7 +49,7 @@ class QuadroMattino
             return $vuoto;
         }
 
-        $nuove = self::nuove($chi);
+        [$nuove, $altreNuove] = self::nuoveConAltre($chi);
         $supervisore = $chi->isSupervisore();
 
         $daFare = match (true) {
@@ -56,15 +63,51 @@ class QuadroMattino
         $inRitardo = $daFare ? (clone $daFare)->where('sla_violato', true) : null;
         $daFare = $daFare?->where('sla_violato', false);
 
+        // Supervisori: tutte le scadute dell'ente, quindi con un tetto come le nuove.
+        $limiteRitardo = $supervisore ? self::LIMITE_NUOVE : null;
         if ($supervisore) {
             $inRitardo = self::base()->where('sla_violato', true);
         }
+        [$elencoRitardo, $altreRitardo] = $inRitardo
+            ? self::conLimite($inRitardo->orderBy('data_scadenza_sla'), $limiteRitardo)
+            : [collect(), 0];
 
         return [
             'nuove'      => $nuove,
             'da_fare'    => $daFare ? self::ordinaPerPriorita($daFare)->get() : collect(),
-            'in_ritardo' => $inRitardo ? $inRitardo->orderBy('data_scadenza_sla')->get() : collect(),
+            'in_ritardo' => $elencoRitardo,
+            'altre'      => ['nuove' => $altreNuove, 'da_fare' => 0, 'in_ritardo' => $altreRitardo],
         ];
+    }
+
+    /**
+     * Le prime `$limite` (tutte se null) e quante ne restano fuori; il conteggio solo se il limite è pieno.
+     *
+     * @param  Builder<Segnalazione>  $query
+     * @return array{0: Collection<int, Segnalazione>, 1: int}
+     */
+    private static function conLimite(Builder $query, ?int $limite): array
+    {
+        if ($limite === null) {
+            return [$query->get(), 0];
+        }
+        $conteggio = (clone $query)->reorder();
+        $elenco = $query->limit($limite)->get();
+
+        return [$elenco, $elenco->count() < $limite ? 0 : max(0, $conteggio->count() - $limite)];
+    }
+
+    /**
+     * Aperta e da smistare: nessun gestore, operaio, squadra o ditta. Stessa regola di `nuove()`,
+     * usata dagli avvisi «Nuova»/«Riclassificata» per sapere se valgono ancora.
+     */
+    public static function daSmistare(Segnalazione $s): bool
+    {
+        return ! $s->statoEnum()->isTerminale()
+            && $s->data_chiusura === null
+            && ! $s->id_operatore_assegnato
+            && ! $s->id_squadra_assegnata
+            && ! $s->id_appalto;
     }
 
     /**
@@ -76,19 +119,27 @@ class QuadroMattino
      */
     public static function nuove(User $gestore): Collection
     {
+        return self::nuoveConAltre($gestore)[0];
+    }
+
+    /** @return array{0: Collection<int, Segnalazione>, 1: int} le nuove e quante oltre il limite */
+    private static function nuoveConAltre(User $gestore): array
+    {
         if (! $gestore->isSupervisore() && ! $gestore->hasRole('gestore')) {
-            return collect();
+            return [collect(), 0];
         }
 
         $query = Segnalazione::aperte()
             ->with(['tipologia', 'plesso'])
-            ->where(fn ($q) => $q->where('id_operatore_assegnato', 0)->orWhereNull('id_operatore_assegnato'));
+            ->where(fn ($q) => $q->where('id_operatore_assegnato', 0)->orWhereNull('id_operatore_assegnato'))
+            ->where(fn ($q) => $q->where('id_squadra_assegnata', 0)->orWhereNull('id_squadra_assegnata'))
+            ->where(fn ($q) => $q->where('id_appalto', 0)->orWhereNull('id_appalto'));
 
         if (! $gestore->isSupervisore() && ! $gestore->gestore_tutte_tipologie) {
             $query->whereIn('id_tipologia_segnalazione', $gestore->tipologieGestite()->pluck('tipologie_segnalazioni.id_tipologia_segnalazione')->all());
         }
 
-        return self::ordinaPerPriorita($query)->limit(self::LIMITE_NUOVE)->get();
+        return self::conLimite(self::ordinaPerPriorita($query), self::LIMITE_NUOVE);
     }
 
     /** @return Builder<Segnalazione> */
@@ -124,7 +175,7 @@ class QuadroMattino
         });
     }
 
-    /** @return array{nuove: Collection<int, Segnalazione>, da_fare: Collection<int, Segnalazione>, in_ritardo: Collection<int, Segnalazione>} */
+    /** @return array{nuove: Collection<int, Segnalazione>, da_fare: Collection<int, Segnalazione>, in_ritardo: Collection<int, Segnalazione>, altre: array{nuove: int, da_fare: int, in_ritardo: int}} */
     private static function quadroDitta(int $idImpresa): array
     {
         $ditta = self::base()->whereHas('appalto', fn ($q) => $q->where('id_impresa', $idImpresa));
@@ -133,6 +184,7 @@ class QuadroMattino
             'nuove'      => collect(),
             'da_fare'    => self::ordinaPerPriorita((clone $ditta)->where('sla_violato', false))->get(),
             'in_ritardo' => (clone $ditta)->where('sla_violato', true)->orderBy('data_scadenza_sla')->get(),
+            'altre'      => self::NESSUNA_ALTRA,
         ];
     }
 

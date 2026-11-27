@@ -8,10 +8,13 @@ use App\Models\Azione;
 use App\Models\Impostazione;
 use App\Models\Segnalazione;
 use App\Models\User;
+use App\Notifications\AccorpataNotification;
 use App\Notifications\OperatoreAssegnatoNotification;
 use App\Notifications\Riepilogo\Raggruppabile;
+use App\Notifications\RiepilogoAvvisiNotification;
 use App\Notifications\SlaViolazioneNotification;
 use App\Services\Avvisi\ComponiRiepilogo;
+use App\Services\Avvisi\QuadroMattino;
 use Database\Seeders\ImpostazioniSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\TabelleRiferimentoSeeder;
@@ -19,7 +22,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Mockery;
 use Tests\TestCase;
 
 class ComponiRiepilogoTest extends TestCase
@@ -230,5 +235,70 @@ class ComponiRiepilogoTest extends TestCase
         $voci = array_sum(array_map('count', $c->quadro));
         $this->assertSame($voci, $c->totaleSegnalazioni());
         $this->assertSame(1, $c->totaleSegnalazioni());
+    }
+
+    public function test_avviso_che_lancia_scartato_con_avvertimento_il_resto_parte(): void
+    {
+        $operaio = $this->utente('operaio');
+        $mia = ['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_OPERATORE->value, 'id_operatore_assegnato' => $operaio->id];
+        $rotta = $this->segnalazione($mia);
+        $buona = $this->segnalazione($mia);
+        $altra = $this->segnalazione($mia);
+        $a = $this->riga($operaio, new AssegnazioneCheEsplode($rotta, Azione::findOrFail(2), $this->attore), 10);
+        $b = $this->riga($operaio, $this->assegnazione($buona), 5);
+        $c2 = $this->riga($operaio, $this->assegnazione($altra), 1);
+        Log::spy();
+
+        $c = ComponiRiepilogo::componi($this->righe([$a, $b, $c2]), $operaio, false);
+
+        $this->assertEqualsCanonicalizing(
+            [$buona->id_segnalazione, $altra->id_segnalazione],
+            array_map(fn ($v) => $v->segnalazione->id_segnalazione, $c->sezioni['assegnazioni']),
+        );
+        $this->assertEqualsCanonicalizing([$a->id, $b->id, $c2->id], $c->idRigheUsate, 'la riga rotta si marca: non riprova per sempre');
+        Log::shouldHaveReceived('warning')->with('Riepilogo avvisi: avviso scartato', Mockery::on(
+            fn (array $ctx) => $ctx['id'] === $a->id && $ctx['tipo'] === 'AssegnazioneCheEsplode' && $ctx['errore'] === 'boom',
+        ))->once();
+    }
+
+    public function test_accorpata_tracciata_su_entrambe_le_segnalazioni(): void
+    {
+        $gestore = $this->utente('gestore', ['gestore_segnalazioni' => true]);
+        $destinazione = $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::IN_CARICO->value, 'id_operatore_assegnato' => $gestore->id, 'sla_violato' => true, 'data_scadenza_sla' => now()->subDay()]);
+        $nuova = $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::DUPLICATA->value]);
+        $a = $this->riga($gestore, new AccorpataNotification($destinazione, $nuova, 'lavoro'), 5);
+        $b = $this->riga($gestore, new SlaViolazioneNotification($destinazione), 1);
+
+        $c = ComponiRiepilogo::componi($this->righe([$a, $b]), $gestore, false);
+        $n = new RiepilogoAvvisiNotification($c, false);
+
+        $this->assertSame([
+            $destinazione->id_segnalazione => ['AccorpataNotification', 'SlaViolazioneNotification'],
+            $nuova->id_segnalazione        => ['AccorpataNotification'],
+        ], $n->tipiTracciati());
+        $this->assertEqualsCanonicalizing([$destinazione->id_segnalazione, $nuova->id_segnalazione], $n->segnalazioniTracciate());
+    }
+
+    public function test_quadro_porta_il_conto_delle_altre(): void
+    {
+        Impostazione::set('digest_enabled', true);
+        $sup = $this->utente('gestore', ['gestore_segnalazioni' => true, 'supervisore_segnalazioni' => true]);
+        for ($i = 0; $i < QuadroMattino::LIMITE_NUOVE + 2; $i++) {
+            $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_OPERATORE->value, 'id_operatore_assegnato' => $sup->id, 'sla_violato' => true, 'data_scadenza_sla' => now()->subDay()]);
+        }
+
+        $c = ComponiRiepilogo::componi(collect(), $sup, true);
+
+        $this->assertCount(QuadroMattino::LIMITE_NUOVE, $c->quadro['in_ritardo']);
+        $this->assertSame(2, $c->altreQuadro['in_ritardo']);
+    }
+}
+
+/** Notifica che fallisce al giro: dati vecchi incompatibili, bug in una regola. */
+class AssegnazioneCheEsplode extends OperatoreAssegnatoNotification
+{
+    public function ancoraValida(object $notifiable): bool
+    {
+        throw new \RuntimeException('boom');
     }
 }

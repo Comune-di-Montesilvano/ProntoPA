@@ -106,6 +106,18 @@ class StoricoRiepilogoTest extends TestCase
             ->assertOk()->assertDontSee('riepilogo delle 11:00');
     }
 
+    public function test_scheda_non_mostra_avvisi_che_il_giro_scarterebbe(): void
+    {
+        $this->sollecita($this->a);
+        $this->assertNotSame([], NotificaSegnalazione::inAttesaPer($this->a));
+        $righe = AvvisoInAttesa::query()->inAttesa()->count();
+
+        Segnalazione::whereKey($this->a->id_segnalazione)->update(['id_stato_segnalazione' => 7, 'data_chiusura' => now()]);
+
+        $this->assertSame([], NotificaSegnalazione::inAttesaPer($this->a->fresh()));
+        $this->assertSame($righe, AvvisoInAttesa::query()->inAttesa()->count(), 'le righe restano: le scarta il giro');
+    }
+
     public function test_ritmo_giorno_parte_domattina_o_nel_prossimo_giorno_lavorativo(): void
     {
         $giri = ProssimoGiro::daImpostazioni();
@@ -136,7 +148,7 @@ class StoricoRiepilogoTest extends TestCase
         AvvisoInAttesa::create([
             'id_notifica' => 'x1', 'destinatario_tipo' => 'utente', 'id_utente' => $this->gestore->id, 'email' => '',
             'categoria' => 'scadenze', 'ritmo' => 'giorno', 'id_segnalazione' => $this->a->id_segnalazione,
-            'tipo' => 'SlaWarningNotification', 'notifica' => 'x',
+            'tipo' => 'SlaWarningNotification', 'notifica' => serialize(new \App\Notifications\SlaWarningNotification($this->a)),
         ]);
 
         $elenco = NotificaSegnalazione::inAttesaPer($this->a);

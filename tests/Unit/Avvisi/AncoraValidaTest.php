@@ -2,11 +2,14 @@
 
 namespace Tests\Unit\Avvisi;
 
+use App\Models\Appalto;
 use App\Models\Azione;
+use App\Models\Impresa;
 use App\Models\Segnalazione;
 use App\Models\Squadra;
 use App\Models\User;
 use App\Notifications\AccorpataNotification;
+use App\Notifications\NuovaSegnalazioneNotification;
 use App\Notifications\OperatoreAssegnatoNotification;
 use App\Notifications\RichiestaInformazioniNotification;
 use App\Notifications\SlaViolazioneNotification;
@@ -127,6 +130,33 @@ class AncoraValidaTest extends TestCase
         Segnalazione::whereKey($s->id_segnalazione)->update(['id_stato_segnalazione' => 2]);
 
         $this->assertFalse($notifica->ancoraValida($this->gestore));
+    }
+
+    /** «Nuova» e «Riclassificata» valgono finché la segnalazione è da smistare (aperta e non assegnata). */
+    public function test_nuova_vale_solo_finche_non_e_assegnata(): void
+    {
+        $capo = $this->operaio();
+        $squadra = Squadra::create(['nome' => 'Elettricisti', 'id_caposquadra' => $capo->id, 'attiva' => true]);
+        $appalto = Appalto::create(['descrizione' => 'Edile', 'id_impresa' => Impresa::factory()->create()->id_impresa, 'valido' => true]);
+
+        foreach ([false, true] as $riclassificata) {
+            $assegnazioni = [
+                'in carico al gestore' => ['id_stato_segnalazione' => 2, 'id_operatore_assegnato' => $this->gestore->id],
+                'operaio'              => ['id_stato_segnalazione' => 3, 'id_operatore_assegnato' => $capo->id],
+                'squadra'              => ['id_stato_segnalazione' => 3, 'id_operatore_assegnato' => 0, 'id_squadra_assegnata' => $squadra->id_squadra],
+                'ditta'                => ['id_stato_segnalazione' => 4, 'id_operatore_assegnato' => 0, 'id_appalto' => $appalto->id_appalto],
+                'chiusa'               => ['id_stato_segnalazione' => 9],
+            ];
+            foreach ($assegnazioni as $come => $attr) {
+                $s = Segnalazione::factory()->create(['id_stato_segnalazione' => 1, 'id_squadra_assegnata' => null]);
+                $notifica = new NuovaSegnalazioneNotification($s, $riclassificata);
+                $this->assertTrue($notifica->ancoraValida($this->gestore), "da smistare ($come)");
+
+                Segnalazione::whereKey($s->id_segnalazione)->update($attr);
+
+                $this->assertFalse($notifica->ancoraValida($this->gestore), "non più da smistare: $come".($riclassificata ? ' (riclassificata)' : ''));
+            }
+        }
     }
 
     public function test_segnalazione_eliminata_non_vale_piu(): void

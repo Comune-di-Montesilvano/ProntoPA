@@ -10,6 +10,8 @@ use App\Notifications\Riepilogo\Raggruppabile;
 use App\Support\Avvisi\Categorie;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Dalle righe in attesa di UN destinatario al contenuto del riepilogo (spec «Cosa si invia» 1-3 e
@@ -39,17 +41,44 @@ final class ComponiRiepilogo
         $idRigheUsate = $righe->map(fn (AvvisoInAttesa $r) => (int) $r->id)->values()->all();
 
         // 1. Solo le notifiche ricostruibili e ancora valide; per segnalazione e categoria vince la più recente.
-        /** @var array<int, array<string, Raggruppabile>> $perSegnalazione */
+        // Una notifica che lancia (dati vecchi, bug in una regola) è come non più valida: la riga resta tra
+        // le usate (si marca, non riprova per sempre) e il resto del riepilogo parte.
+        /** @var array<int, array<string, array{notifica: Raggruppabile, motivo: string, riga: string}>> $perSegnalazione */
         $perSegnalazione = [];
         /** @var array<int, list<string>> $tipiPerSegnalazione */
         $tipiPerSegnalazione = [];
+        /** @var array<int, array<int, list<string>>> $altrePerSegnalazione */
+        $altrePerSegnalazione = [];
         foreach ($righe as $riga) {
             $notifica = $riga->notifica();
-            if (! $notifica instanceof Raggruppabile || ! $notifica->ancoraValida($chi)) {
+            if (! $notifica instanceof Raggruppabile) {
                 continue;
             }
-            $perSegnalazione[$notifica->segnalazioneRiepilogo()][$notifica->categoriaRiepilogo()] = $notifica;
-            $tipiPerSegnalazione[$notifica->segnalazioneRiepilogo()][] = class_basename($notifica);
+            try {
+                if (! $notifica->ancoraValida($chi)) {
+                    continue;
+                }
+                $id = $notifica->segnalazioneRiepilogo();
+                $voce = ['notifica' => $notifica, 'motivo' => $notifica->motivoRiepilogo(), 'riga' => $notifica->rigaRiepilogo($chi)];
+                $categoria = $notifica->categoriaRiepilogo();
+                $altre = method_exists($notifica, 'segnalazioniTracciate')
+                    ? array_diff(array_map('intval', $notifica->segnalazioniTracciate()), [$id])
+                    : [];
+            } catch (Throwable $e) {
+                Log::warning('Riepilogo avvisi: avviso scartato', [
+                    'id'     => (int) $riga->id,
+                    'tipo'   => class_basename($notifica),
+                    'errore' => $e->getMessage(),
+                ]);
+
+                continue;
+            }
+            $tipo = class_basename($notifica);
+            $perSegnalazione[$id][$categoria] = $voce;
+            $tipiPerSegnalazione[$id][] = $tipo;
+            foreach ($altre as $altra) {
+                $altrePerSegnalazione[$id][$altra][] = $tipo;
+            }
         }
 
         $segnalazioni = $perSegnalazione === []
@@ -71,27 +100,30 @@ final class ComponiRiepilogo
             $voci[$id] = new Voce(
                 $segnalazione,
                 $categoria,
-                array_values(array_unique(array_map(fn (Raggruppabile $n) => $n->motivoRiepilogo(), array_values($perCategoria)))),
-                $vincente->rigaRiepilogo($chi),
-                $vincente,
+                array_values(array_unique(array_column(array_values($perCategoria), 'motivo'))),
+                $vincente['riga'],
+                $vincente['notifica'],
                 array_values(array_unique($tipiPerSegnalazione[$id] ?? [])),
+                array_map(fn (array $tipi) => array_values(array_unique($tipi)), $altrePerSegnalazione[$id] ?? []),
             );
         }
 
         // 3. Quadro del mattino: le segnalazioni che vi compaiono assorbono i loro avvisi.
         // Una segnalazione sta in una sola sezione del quadro (in ritardo > da fare > nuove).
         $quadro = array_fill_keys(self::SEZIONI_QUADRO, []);
+        $altreQuadro = [];
         if ($conQuadro) {
             $assorbite = [];
             $elenchi = QuadroMattino::per($chi);
+            $altreQuadro = array_filter($elenchi['altre']);
             foreach (self::PRECEDENZA_QUADRO as $sezione) {
                 foreach ($elenchi[$sezione] as $s) {
                     $id = (int) $s->id_segnalazione;
                     if (isset($assorbite[$id])) {
                         continue;
                     }
-                    $motivi = isset($voci[$id]) ? $voci[$id]->motivi : [];
-                    $quadro[$sezione][] = new Voce($s, $sezione, $motivi, $this->rigaSegnalazione($s), null, isset($voci[$id]) ? $voci[$id]->tipi : []);
+                    $avvisi = $voci[$id] ?? null;
+                    $quadro[$sezione][] = new Voce($s, $sezione, $avvisi->motivi ?? [], $this->rigaSegnalazione($s), null, $avvisi->tipi ?? [], $avvisi->altreTracciate ?? []);
                     $assorbite[$id] = true;
                 }
             }
@@ -105,14 +137,14 @@ final class ComponiRiepilogo
         uksort($sezioni, fn (string $a, string $b) => self::posizione($a) <=> self::posizione($b));
 
         // 4. Un solo avviso (una segnalazione, un motivo) e niente quadro: si reinvia l'originale.
-        $composizione = new Composizione($quadro, $sezioni, $idRigheUsate, null);
+        $composizione = new Composizione($quadro, $sezioni, $idRigheUsate, null, $altreQuadro);
         if (! $composizione->quadroVuoto() || count($voci) !== 1) {
             return $composizione;
         }
         $voce = reset($voci);
 
         return count($voce->motivi) === 1
-            ? new Composizione($quadro, $sezioni, $idRigheUsate, $voce->notifica)
+            ? new Composizione($quadro, $sezioni, $idRigheUsate, $voce->notifica, $altreQuadro)
             : $composizione;
     }
 

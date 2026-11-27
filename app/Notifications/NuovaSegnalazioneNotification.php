@@ -7,6 +7,7 @@ use App\Notifications\Concerns\BuildsNotificationMailMessage;
 use App\Notifications\Concerns\DescriveSegnalazione;
 use App\Notifications\Riepilogo\Raggruppa;
 use App\Notifications\Riepilogo\Raggruppabile;
+use App\Services\Avvisi\QuadroMattino;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -47,9 +48,12 @@ class NuovaSegnalazioneNotification extends Notification implements ShouldQueue,
         return $this->riclassificata ? 'Riclassificata' : 'Nuova';
     }
 
+    /** Vale finché la segnalazione è da smistare: presa in carico o affidata non è più «nuova». */
     public function ancoraValida(object $notifiable): bool
     {
-        return $this->segnalazioneAperta();
+        $s = $this->segnalazioneAttuale();
+
+        return $s !== null && QuadroMattino::daSmistare($s);
     }
 
     /** @return list<string> */

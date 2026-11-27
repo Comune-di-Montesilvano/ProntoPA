@@ -16,6 +16,8 @@ final class Voce
      * @param  list<string>  $motivi
      * @param  Raggruppabile|null  $notifica  la notifica della categoria vincente; null nel quadro
      * @param  list<string>  $tipi  class basename di tutte le notifiche assorbite dalla voce (per il tracciamento)
+     * @param  array<int, list<string>>  $altreTracciate  altre segnalazioni che le notifiche riguardano
+     *                                                     (es. la nuova di un'accorpata) => class basename
      */
     public function __construct(
         public readonly Segnalazione $segnalazione,
@@ -24,5 +26,6 @@ final class Voce
         public readonly string $riga,
         public readonly ?Raggruppabile $notifica,
         public readonly array $tipi = [],
+        public readonly array $altreTracciate = [],
     ) {}
 }

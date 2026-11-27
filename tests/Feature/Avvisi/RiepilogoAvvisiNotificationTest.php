@@ -114,6 +114,22 @@ class RiepilogoAvvisiNotificationTest extends TestCase
         $this->assertStringContainsString('Riepilogo ProntoPA — 5 segnalazioni', $testo);
     }
 
+    public function test_quadro_troncato_dice_quante_altre(): void
+    {
+        $ritardo = [$this->voce('in_ritardo'), $this->voce('in_ritardo')];
+        $c = new Composizione(['nuove' => [], 'da_fare' => [], 'in_ritardo' => $ritardo], [], [], null, ['nuove' => 0, 'da_fare' => 0, 'in_ritardo' => 7]);
+        $n = new RiepilogoAvvisiNotification($c, true);
+        $utente = User::factory()->create();
+
+        $mail = $this->mailTesto($n, $utente);
+        $this->assertStringContainsString('In ritardo (9)', $mail);
+        $this->assertStringContainsString('… e altre 7', $mail);
+
+        $telegram = $n->toTelegram($utente)['text'];
+        $this->assertStringContainsString('In ritardo (9)', $telegram);
+        $this->assertStringContainsString('… e altre 7', $telegram);
+    }
+
     public function test_telegram_massimo_10_pulsanti_e_altre_n(): void
     {
         $voci = [];

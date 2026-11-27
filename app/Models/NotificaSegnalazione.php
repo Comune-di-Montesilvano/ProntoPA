@@ -101,8 +101,11 @@ class NotificaSegnalazione extends Model
         $gruppi = [];
         $righe = AvvisoInAttesa::query()->inAttesa()
             ->where('id_segnalazione', $segnalazione->id_segnalazione)
-            ->orderBy('id')->get(['id', 'tipo', 'ritmo', 'destinatario_tipo', 'id_utente', 'email']);
+            ->orderBy('id')->get(['id', 'tipo', 'ritmo', 'destinatario_tipo', 'id_utente', 'email', 'notifica']);
         foreach ($righe as $r) {
+            if (! self::partiraAncora($r)) {
+                continue; // il giro la scarterebbe: non dire «in attesa»
+            }
             $chiave = $r->tipo.'|'.$r->ritmo;
             $gruppi[$chiave] ??= ['tipo' => $r->tipo, 'ritmo' => $r->ritmo, 'chi' => []];
             $gruppi[$chiave]['chi'][$r->chiaveDestinatario()] = true;
@@ -118,6 +121,21 @@ class NotificaSegnalazione extends Model
         }
 
         return $elenco;
+    }
+
+    /** Stessa prova del giro (`ComponiRiepilogo`): destinatario attivo e avviso ancora valido. */
+    private static function partiraAncora(AvvisoInAttesa $riga): bool
+    {
+        $notifica = $riga->notifica();
+        $chi = $riga->notificabile();
+        if (! $notifica instanceof \App\Notifications\Riepilogo\Raggruppabile || $chi === null) {
+            return false;
+        }
+        try {
+            return $notifica->ancoraValida($chi);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private static function quandoParte(string $ritmo, ?\Carbon\CarbonInterface $giro, \Carbon\CarbonInterface $adesso): string

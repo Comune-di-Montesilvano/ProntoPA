@@ -12,12 +12,14 @@ final class Composizione
      * @param  array<string, list<Voce>>  $sezioni  categoria => voci, solo le non vuote, in `Categorie::ORDINE`
      * @param  list<int>  $idRigheUsate  tutte le righe lette (valide, non più valide, assorbite dal quadro)
      * @param  Raggruppabile|null  $unica  resta un solo avviso (quadro vuoto): si reinvia l'originale
+     * @param  array<string, int>  $altreQuadro  sezione del quadro => quante non mostrate (oltre il limite)
      */
     public function __construct(
         public readonly array $quadro,
         public readonly array $sezioni,
         public readonly array $idRigheUsate,
         public readonly ?Raggruppabile $unica,
+        public readonly array $altreQuadro = [],
     ) {}
 
     public function vuota(): bool

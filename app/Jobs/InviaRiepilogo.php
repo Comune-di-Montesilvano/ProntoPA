@@ -76,7 +76,7 @@ class InviaRiepilogo implements ShouldQueue
         $unica = $c->unica;
         // Un solo avviso: l'email di sempre, solo in ritardo; su Telegram il riepilogo a una riga.
         $riepilogo = new RiepilogoAvvisiNotification(
-            $unica instanceof Notification ? new Composizione($c->quadro, $c->sezioni, $c->idRigheUsate, null) : $c,
+            $unica instanceof Notification ? new Composizione($c->quadro, $c->sezioni, $c->idRigheUsate, null, $c->altreQuadro) : $c,
             $this->mattino,
         );
         if ($unica instanceof Notification && property_exists($unica, 'daRiepilogo')) {

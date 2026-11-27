@@ -55,16 +55,26 @@ class RiepilogoAvvisiNotification extends Notification
             && Impostazione::get('telegram_riepiloghi', true);
     }
 
-    /** @return list<int> */
+    /** @return list<int> anche le altre segnalazioni degli avvisi (la nuova di un'accorpata) */
     public function segnalazioniTracciate(): array
     {
-        return array_values(array_unique(array_map(
-            fn (Voce $v) => (int) $v->segnalazione->id_segnalazione,
-            $this->tutteLeVoci(),
-        )));
+        $id = [];
+        foreach ($this->tutteLeVoci() as $voce) {
+            $id[] = (int) $voce->segnalazione->id_segnalazione;
+            foreach (array_keys($voce->altreTracciate) as $altra) {
+                $id[] = (int) $altra;
+            }
+        }
+
+        return array_values(array_unique($id));
     }
 
-    /** @return array<int, list<string>> id segnalazione => class basename degli avvisi originali */
+    /**
+     * Come `segnalazioniTracciate()` delle notifiche originali: l'accorpata finisce nello storico di
+     * entrambe le segnalazioni.
+     *
+     * @return array<int, list<string>> id segnalazione => class basename degli avvisi originali
+     */
     public function tipiTracciati(): array
     {
         $tipi = [];
@@ -74,6 +84,9 @@ class RiepilogoAvvisiNotification extends Notification
             }
             $id = (int) $voce->segnalazione->id_segnalazione;
             $tipi[$id] = array_values(array_unique([...($tipi[$id] ?? []), ...$voce->tipi]));
+            foreach ($voce->altreTracciate as $altra => $nomi) {
+                $tipi[(int) $altra] = array_values(array_unique([...($tipi[(int) $altra] ?? []), ...$nomi]));
+            }
         }
 
         return $tipi;
@@ -91,9 +104,13 @@ class RiepilogoAvvisiNotification extends Notification
                 if ($voci === []) {
                     continue;
                 }
-                $mail->line('**'.$titolo.' ('.count($voci).')**');
+                $altre = $this->altreNelQuadro($chiave);
+                $mail->line('**'.$titolo.' ('.(count($voci) + $altre).')**');
                 foreach ($voci as $voce) {
                     $mail->line($this->rigaLink($voce, $notifiable));
+                }
+                if ($altre > 0) {
+                    $mail->line('… e altre '.$altre);
                 }
             }
         }
@@ -124,10 +141,14 @@ class RiepilogoAvvisiNotification extends Notification
                 if ($voci === []) {
                     continue;
                 }
-                $righe[] = $titolo.' ('.count($voci).')';
+                $altre = $this->altreNelQuadro($chiave);
+                $righe[] = $titolo.' ('.(count($voci) + $altre).')';
                 foreach ($voci as $voce) {
                     $righe[] = '• '.$this->testoRiga($voce);
                     $mostrate[(int) $voce->segnalazione->id_segnalazione] = true;
+                }
+                if ($altre > 0) {
+                    $righe[] = '… e altre '.$altre;
                 }
             }
         }
@@ -163,6 +184,12 @@ class RiepilogoAvvisiNotification extends Notification
         }
 
         return $messaggio;
+    }
+
+    /** Segnalazioni della sezione del quadro rimaste fuori dal limite (`QuadroMattino::LIMITE_NUOVE`). */
+    private function altreNelQuadro(string $sezione): int
+    {
+        return max(0, (int) ($this->composizione->altreQuadro[$sezione] ?? 0));
     }
 
     /** @return list<Voce> */

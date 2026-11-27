@@ -130,6 +130,33 @@ class QuadroMattinoTest extends TestCase
         $this->assertSame([$a->id_segnalazione, $b->id_segnalazione], $quadro['in_ritardo']->pluck('id_segnalazione')->all());
     }
 
+    public function test_nuove_escludono_le_affidate_a_squadra_o_ditta(): void
+    {
+        $sup = $this->utente('gestore', ['gestore_segnalazioni' => true, 'supervisore_segnalazioni' => true]);
+        $capo = $this->utente('operaio');
+        $squadra = Squadra::create(['nome' => 'Elettricisti', 'id_caposquadra' => $capo->id, 'attiva' => true]);
+        $appalto = Appalto::create(['descrizione' => 'Edile', 'id_impresa' => Impresa::factory()->create()->id_impresa, 'valido' => true]);
+
+        $daSmistare = $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::NUOVA->value]);
+        $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_OPERATORE->value, 'id_operatore_assegnato' => 0, 'id_squadra_assegnata' => $squadra->id_squadra]);
+        $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_IMPRESA->value, 'id_operatore_assegnato' => 0, 'id_appalto' => $appalto->id_appalto]);
+
+        $this->assertSame([$daSmistare->id_segnalazione], QuadroMattino::per($sup)['nuove']->pluck('id_segnalazione')->all());
+    }
+
+    public function test_supervisore_in_ritardo_al_massimo_50_con_il_conto_delle_altre(): void
+    {
+        $sup = $this->utente('gestore', ['gestore_segnalazioni' => true, 'supervisore_segnalazioni' => true]);
+        for ($i = 0; $i < QuadroMattino::LIMITE_NUOVE + 3; $i++) {
+            $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::ASSEGNATA_OPERATORE->value, 'id_operatore_assegnato' => $sup->id, 'sla_violato' => true, 'data_scadenza_sla' => now()->subDays(2)]);
+        }
+
+        $quadro = QuadroMattino::per($sup);
+
+        $this->assertCount(QuadroMattino::LIMITE_NUOVE, $quadro['in_ritardo']);
+        $this->assertSame(['nuove' => 0, 'da_fare' => 0, 'in_ritardo' => 3], $quadro['altre']);
+    }
+
     public function test_segnalante_quadro_vuoto(): void
     {
         $this->segnalazione(['id_stato_segnalazione' => SegnalazioneStato::NUOVA->value]);
